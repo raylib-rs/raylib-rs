@@ -22,10 +22,6 @@ use std::path::{Path, PathBuf};
 
 use bindgen::callbacks::{DeriveTrait, ImplementsTrait, ParseCallbacks};
 
-/// latest version on github's release page as of time or writing
-const LATEST_RAYLIB_VERSION: &str = "4.5.0";
-const LATEST_RAYLIB_API_VERSION: &str = "4";
-
 #[derive(Debug)]
 struct TypeOverrideCallback;
 
@@ -117,12 +113,16 @@ fn build_with_cmake(src_path: &str) {
         #[cfg(feature = "opengl_es_20")]
         builder.define("OPENGL_VERSION", "ES 2.0");
 
+        #[cfg(feature = "opengl_es_30")]
+        builder.define("OPENGL_VERSION", "ES 3.0");
+
         // Once again felt this was necessary incase a default was changed :)
         #[cfg(not(any(
             feature = "opengl_33",
             feature = "opengl_21",
             // feature = "opengl_11",
-            feature = "opengl_es_20"
+            feature = "opengl_es_20",
+            feature = "opengl_es_30",
         )))]
         builder.define("OPENGL_VERSION", "OFF");
     }

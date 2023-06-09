@@ -1,6 +1,6 @@
 [package]
 name = "raylib-sys"
-version = "4.5.0"
+version = "4.6.0"
 authors = ["DeltaPHC <phclem@protonmail.com>"]
 license = "Zlib"
 description = "Raw FFI bindings for Raylib"
@@ -37,3 +37,4 @@ opengl_33 = []
 opengl_21 = []
 # opengl_11 = [] I couldn't get this one working, the others were fine in my limited testing (unsure about wayland compatibility)
 opengl_es_20 = []
+opengl_es_30 = []

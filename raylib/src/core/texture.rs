@@ -114,6 +114,21 @@ impl Image {
         }
     }
 
+    /// Export image to memory buffer.
+    #[inline]
+    pub fn export_image_to_memory<C: Sized>(
+        &self,
+        file_type: &str,
+    ) -> Option<RaylibBuffer<'static, C>> {
+        let file_type_cstr = CString::new(file_type).ok()?;
+        let mut len = 0i32;
+
+        unsafe {
+            let data = ffi::ExportImageToMemory(self.0, file_type_cstr.as_ptr(), &mut len);
+            RaylibBuffer::new(data as _, len as usize)
+        }
+    }
+
     /// Get pixel data size in bytes (image or texture)
     pub fn get_pixel_data_size(&self) -> usize {
         unsafe { ffi::GetPixelDataSize(self.width(), self.height(), self.format() as i32) as usize }
@@ -382,6 +397,12 @@ impl Image {
         unsafe { ffi::ImageFlipHorizontal(&mut self.0) }
     }
 
+    /// Rotate image by input angle in degrees (-359 to 359).
+    #[inline]
+    pub fn rotate(&mut self, degrees: i32) {
+        unsafe { ffi::ImageRotate(&mut self.0, degrees) }
+    }
+
     /// Rotates `image` clockwise by 90 degrees (PI/2 radians).
     #[inline]
     pub fn rotate_cw(&mut self) {
@@ -436,16 +457,10 @@ impl Image {
         unsafe { Image(ffi::GenImageColor(width, height, color)) }
     }
 
-    /// Generates an Image containing a vertical gradient.
+    /// Generate image: linear gradient, direction in degrees [0..360], 0=Vertical gradient
     #[inline]
-    pub fn gen_image_gradient_v(width: i32, height: i32, top: Color, bottom: Color) -> Image {
-        unsafe { Image(ffi::GenImageGradientV(width, height, top, bottom)) }
-    }
-
-    /// Generates an Image containing a horizonal gradient.
-    #[inline]
-    pub fn gen_image_gradient_h(width: i32, height: i32, left: Color, right: Color) -> Image {
-        unsafe { Image(ffi::GenImageGradientH(width, height, left, right)) }
+    pub fn gen_image_gradient_linear(width: i32, height: i32, direction: i32, start: Color, end_: Color) -> Image {
+        unsafe { Image(ffi::GenImageGradientLinear(width, height, direction, start, end_)) }
     }
 
     /// Generates an Image containing a radial gradient.
@@ -464,6 +479,12 @@ impl Image {
         }
     }
 
+    /// Generate image: square gradient.
+    #[inline]
+    pub fn gen_image_gradient_square(width: i32, height: i32, density: f32, inner: Color, outer: Color) -> Image {
+        unsafe { Image(ffi::GenImageGradientSquare(width, height, density, inner, outer)) }
+    }
+    
     /// Generates an Image containing a checkerboard pattern.
     #[inline]
     pub fn gen_image_checked(
