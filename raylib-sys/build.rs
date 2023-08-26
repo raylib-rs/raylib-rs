@@ -29,7 +29,6 @@ fn build_with_cmake(_src_path: &str) {}
 
 #[cfg(not(feature = "nobuild"))]
 fn build_with_cmake(src_path: &str) {
-    use cmake::build;
 
     // CMake uses different lib directories on different systems.
     // I do not know how CMake determines what directory to use,
@@ -49,20 +48,14 @@ fn build_with_cmake(src_path: &str) {
     let (platform, platform_os) = platform_from_target(&target);
 
     let mut conf = cmake::Config::new(src_path);
-    let mut builder;
     #[cfg(debug_assertions)]
-    {
-        builder = conf.profile("Debug");
-        builder = builder.define("CMAKE_BUILD_TYPE", "Debug")
-    }
+    conf.profile("Debug").define("CMAKE_BUILD_TYPE", "Debug");
 
     #[cfg(not(debug_assertions))]
-    {
-        builder = conf.profile("Release");
-        builder = builder.define("CMAKE_BUILD_TYPE", "Release")
-    }
+    conf.profile("Release")
+        .define("CMAKE_BUILD_TYPE", "Release");
 
-    builder
+    conf
         .generator("Ninja")
         .define("BUILD_EXAMPLES", "OFF")
         .define("CMAKE_BUILD_TYPE", "Release")
@@ -72,28 +65,28 @@ fn build_with_cmake(src_path: &str) {
     // Enable wayland cmake flag if feature is specified
     #[cfg(feature = "wayland")]
     {
-        builder.define("USE_WAYLAND", "ON");
-        builder.define("USE_EXTERNAL_GLFW", "ON"); // Necessary for wayland support in my testing
+        conf.define("USE_WAYLAND", "ON");
+        conf.define("USE_EXTERNAL_GLFW", "ON"); // Necessary for wayland support in my testing
     }
 
     // This seems redundant, but I felt it was needed incase raylib changes it's default
     #[cfg(not(feature = "wayland"))]
-    builder.define("USE_WAYLAND", "OFF");
+    conf.define("USE_WAYLAND", "OFF");
 
     // Scope implementing flags for forcing OpenGL version
     // See all possible flags at https://github.com/raysan5/raylib/wiki/CMake-Build-Options
     {
         #[cfg(feature = "opengl_33")]
-        builder.define("OPENGL_VERSION", "3.3");
+        conf.define("OPENGL_VERSION", "3.3");
 
         #[cfg(feature = "opengl_21")]
-        builder.define("OPENGL_VERSION", "2.1");
+        conf.define("OPENGL_VERSION", "2.1");
 
         // #[cfg(feature = "opengl_11")]
-        // builder.define("OPENGL_VERSION", "1.1");
+        // conf.define("OPENGL_VERSION", "1.1");
 
         #[cfg(feature = "opengl_es_20")]
-        builder.define("OPENGL_VERSION", "ES 2.0");
+        conf.define("OPENGL_VERSION", "ES 2.0");
 
         // Once again felt this was necessary incase a default was changed :)
         #[cfg(not(any(
@@ -102,7 +95,7 @@ fn build_with_cmake(src_path: &str) {
             // feature = "opengl_11",
             feature = "opengl_es_20"
         )))]
-        builder.define("OPENGL_VERSION", "OFF");
+        conf.define("OPENGL_VERSION", "OFF");
     }
 
     match platform {
@@ -111,6 +104,27 @@ fn build_with_cmake(src_path: &str) {
             .define("PLATFORM", "Web")
             .define("CMAKE_C_FLAGS", "-s ASYNCIFY"),
         Platform::RPI => conf.define("PLATFORM", "Raspberry Pi"),
+        Platform::Android => {
+            // Get android ndk root from ANDROID_NDK_ROOT env variable
+            let android_ndk_root = env::var("ANDROID_NDK_ROOT")
+                .expect("ANDROID_NDK_ROOT must be set when building for Android");
+            // Guess ANDROID_ABI from target
+            let android_abi = match target.split('-').nth(0).unwrap() {
+                "armv7" => "armeabi-v7a",
+                "aarch64" => "arm64-v8a",
+                "i686" => "x86",
+                "x86_64" => "x86_64",
+                _ => panic!("Unknown target for Android cross compilation"),
+            };
+            conf.define("ANDROID_ABI", android_abi)
+                // Define CMAKE_TOOLCHAIN_FILE for Android cross compilation
+                .define(
+                    "CMAKE_TOOLCHAIN_FILE",
+                    format!("{}/build/cmake/android.toolchain.cmake", android_ndk_root),
+                )
+                .define("ANDROID_NDK", &android_ndk_root)
+                .define("PLATFORM", "Android")
+        }
     };
 
     let dst = conf.build();
@@ -155,6 +169,7 @@ fn gen_bindings() {
         Platform::Desktop => "-DPLATFORM_DESKTOP",
         Platform::RPI => "-DPLATFORM_RPI",
         Platform::Web => "-DPLATFORM_WEB",
+        Platform::Android => "-DPLATFORM_ANDROID",
     };
 
     let mut builder = bindgen::Builder::default()
@@ -313,37 +328,28 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
         Platform::Web
     } else if target.contains("armv7-unknown-linux") {
         Platform::RPI
+    } else if target.contains("android") {
+        Platform::Android
     } else {
         Platform::Desktop
     };
 
     let platform_os = if platform == Platform::Desktop {
-        // Determine PLATFORM_OS in case PLATFORM_DESKTOP selected
-        if env::var("OS")
-            .unwrap_or("".to_owned())
-            .contains("Windows_NT")
-            || env::var("TARGET")
-                .unwrap_or("".to_owned())
-                .contains("windows")
-        {
-            // No uname.exe on MinGW!, but OS=Windows_NT on Windows!
-            // ifeq ($(UNAME),Msys) -> Windows
+        if target.contains("windows") {
             PlatformOS::Windows
-        } else {
-            let un: &str = &uname();
-            match un {
-                "Linux" => PlatformOS::Linux,
-                "FreeBSD" => PlatformOS::BSD,
-                "OpenBSD" => PlatformOS::BSD,
-                "NetBSD" => PlatformOS::BSD,
-                "DragonFly" => PlatformOS::BSD,
-                "Darwin" => PlatformOS::OSX,
-                _ => panic!("Unknown platform {}", uname()),
-            }
-        }
-    } else if platform == Platform::RPI {
-        let un: &str = &uname();
-        if un == "Linux" {
+        } else if target.contains("linux") {
+            PlatformOS::Linux
+        } else if target.contains("freebsd") {
+            PlatformOS::BSD
+        } else if target.contains("openbsd") {
+            PlatformOS::BSD
+        } else if target.contains("netbsd") {
+            PlatformOS::BSD
+        } else if target.contains("dragonfly") {
+            PlatformOS::BSD
+        } else if target.contains("darwin") {
+            PlatformOS::OSX
+        } else if platform == Platform::RPI {
             PlatformOS::Linux
         } else {
             PlatformOS::Unknown
@@ -355,23 +361,12 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
     (platform, platform_os)
 }
 
-fn uname() -> String {
-    use std::process::Command;
-    String::from_utf8_lossy(
-        &Command::new("uname")
-            .output()
-            .expect("failed to run uname")
-            .stdout,
-    )
-    .trim()
-    .to_owned()
-}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Platform {
     Web,
     Desktop,
     RPI, // raspberry pi
+    Android,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
