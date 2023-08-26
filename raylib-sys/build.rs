@@ -63,16 +63,16 @@ fn build_with_cmake(src_path: &str) {
         .define("SUPPORT_BUSY_WAIT_LOOP", "OFF");
 
     // Enable wayland cmake flag if feature is specified
-    #[cfg(feature = "wayland")]
+    #[cfg(all(feature = "wayland", not(target_os = "android")))]
     {
         builder.define("USE_WAYLAND", "ON");
         builder.define("USE_EXTERNAL_GLFW", "ON"); // Necessary for wayland support in my testing
     }
 
     // This seems redundant, but I felt it was needed incase raylib changes it's default
-    #[cfg(not(feature = "wayland"))]
+    #[cfg(any(not(feature = "wayland"), target_os = "android"))]
     builder.define("USE_WAYLAND", "OFF");
-    
+
     // Scope implementing flags for forcing OpenGL version
     // See all possible flags at https://github.com/raysan5/raylib/wiki/CMake-Build-Options
     {
@@ -97,11 +97,28 @@ fn build_with_cmake(src_path: &str) {
         )))]
         builder.define("OPENGL_VERSION", "OFF");
     }
-
     match platform {
         Platform::Desktop => conf.define("PLATFORM", "Desktop"),
         Platform::Web => conf.define("PLATFORM", "Web"),
         Platform::RPI => conf.define("PLATFORM", "Raspberry Pi"),
+        Platform::Android => {
+            // Get the Android NDK path from an environment variable
+            let android_ndk_path = env::var("ANDROID_NDK_ROOT")
+                .expect("Please set the ANDROID_NDK_HOME environment variable");
+            // Get cmake toolchain file path using ANDROID_HOME environment variable
+            let toolchain_file = format!("{android_ndk_path}/build/cmake/android.toolchain.cmake");
+            // Detect ANDROID_ABI using the target triple
+            let android_abi = match target.as_str() {
+                "aarch64-linux-android" => "arm64-v8a",
+                "armv7-linux-androideabi" => "armeabi-v7a",
+                _ => panic!("Unsupported target triple for Android"),
+            };
+            conf
+                .define("ANDROID_ABI", android_abi)
+                .define("CMAKE_TOOLCHAIN_FILE", &toolchain_file)
+                .define("PLATFORM", "Android")
+
+        }
     };
 
     let dst = conf.build();
@@ -242,7 +259,7 @@ fn link(platform: Platform, platform_os: PlatformOS) {
         println!("cargo:rustc-link-lib=brcmEGL");
         println!("cargo:rustc-link-lib=brcmGLESv2");
         println!("cargo:rustc-link-lib=vcos");
-   }
+    }
 
     println!("cargo:rustc-link-lib=static=raylib");
 }
@@ -301,6 +318,8 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
         Platform::Web
     } else if target.contains("armv7-unknown-linux") {
         Platform::RPI
+    } else if target.ends_with("linux-android") {
+        Platform::Android
     } else {
         Platform::Desktop
     };
@@ -329,13 +348,8 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
                 _ => panic!("Unknown platform {}", uname()),
             }
         }
-    } else if platform == Platform::RPI {
-        let un: &str = &uname();
-        if un == "Linux" {
-            PlatformOS::Linux
-        } else {
-            PlatformOS::Unknown
-        }
+    } else if matches!(platform, Platform::RPI | Platform::Android) {
+        PlatformOS::Linux
     } else {
         PlatformOS::Unknown
     };
@@ -359,6 +373,7 @@ fn uname() -> String {
 enum Platform {
     Web,
     Desktop,
+    Android,
     RPI, // raspberry pi
 }
 
