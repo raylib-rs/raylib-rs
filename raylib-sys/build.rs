@@ -63,14 +63,14 @@ fn build_with_cmake(src_path: &str) {
         .define("SUPPORT_BUSY_WAIT_LOOP", "OFF");
 
     // Enable wayland cmake flag if feature is specified
-    #[cfg(all(feature = "wayland", not(target_os = "android")))]
+    #[cfg(not(target_os = "android"))]
     {
         builder.define("USE_WAYLAND", "ON");
         builder.define("USE_EXTERNAL_GLFW", "ON"); // Necessary for wayland support in my testing
     }
 
     // This seems redundant, but I felt it was needed incase raylib changes it's default
-    #[cfg(any(not(feature = "wayland"), target_os = "android"))]
+    #[cfg(not(feature = "wayland"), target_os = "android")]
     builder.define("USE_WAYLAND", "OFF");
 
     // Scope implementing flags for forcing OpenGL version
