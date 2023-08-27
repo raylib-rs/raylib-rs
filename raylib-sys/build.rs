@@ -159,6 +159,15 @@ fn build_with_cmake(src_path: &str) {
     }
     // println!("cmake build {}", c.display());
     println!("cargo:rustc-link-search=native={}", dst_lib.display());
+    if platform == Platform::Android {
+        println!("cargo:rustc-link-lib=log");
+        println!("cargo:rustc-link-lib=android");
+        println!("cargo:rustc-link-lib=EGL");
+        println!("cargo:rustc-link-lib=GLESv2");
+        println!("cargo:rustc-link-lib=OpenSLES");
+        println!("cargo:rustc-link-lib=c");
+        println!("cargo:rustc-link-lib=m");
+    }
 }
 
 fn gen_bindings() {
