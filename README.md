@@ -7,7 +7,7 @@
 
 # raylib-rs
 
-raylib-rs is a Rust binding for [raylib](http://www.raylib.com/) 4.5. It currently targets the _stable_ Rust toolchain, version 1.31 or higher.
+raylib-rs is a Rust binding for [raylib](http://www.raylib.com/) 5.0-dev. It currently targets the _stable_ Rust toolchain, version 1.31 or higher.
 
 Please checkout the showcase directory to find usage examples!
 
@@ -40,7 +40,7 @@ Though this binding tries to stay close to the simple C API, it makes some chang
 
 ```toml
 [dependencies]
-raylib = { branch = "4.5.0-redesign", git = "https://github.com/TSnake41/raylib-rs" }
+raylib = { branch = "5.0.0-redesign", git = "https://github.com/TSnake41/raylib-rs" }
 ```
 
 2. Start coding!

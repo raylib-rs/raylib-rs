@@ -255,7 +255,7 @@ impl RaylibHandle<'_> {
     /// Checks if a gesture have been detected.
     #[inline]
     pub fn is_gesture_detected(&self, gesture: Gesture) -> bool {
-        unsafe { ffi::IsGestureDetected(gesture as i32) }
+        unsafe { ffi::IsGestureDetected(gesture as u32) }
     }
 
     /// Gets latest detected gesture.

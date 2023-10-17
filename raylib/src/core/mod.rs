@@ -108,6 +108,15 @@ pub fn init() -> RaylibBuilder {
 }
 
 impl RaylibBuilder {
+    // TODO:
+    // FLAG_INTERLACED_HINT
+    // FLAG_BORDERLESS_WINDOWED_MODE
+    // FLAG_WINDOW_MOUSE_PASSTHROUGH
+    // FLAG_WINDOW_HIGHDPI
+    // FLAG_WINDOW_TRANSPARENT
+    // FLAG_WINDOW_UNFOCUSED
+    // ...
+
     /// Sets the window to be fullscreen.
     pub fn fullscreen(&mut self) -> &mut Self {
         self.fullscreen_mode = true;
@@ -210,7 +219,7 @@ impl RaylibBuilder {
 ///
 /// Attempting to initialize Raylib more than once will result in a panic.
 fn init_window(width: i32, height: i32, title: &str) -> RaylibHandle<'static> {
-    if IS_INITIALIZED.load(Ordering::Relaxed) {
+    if IS_INITIALIZED.fetch_or(true, Ordering::Relaxed) {
         panic!("Attempted to initialize raylib-rs more than once!");
     } else {
         unsafe {
@@ -220,7 +229,6 @@ fn init_window(width: i32, height: i32, title: &str) -> RaylibHandle<'static> {
         if !unsafe { ffi::IsWindowReady() } {
             panic!("Attempting to create window failed!");
         }
-        IS_INITIALIZED.store(true, Ordering::Relaxed);
 
         RaylibHandle(RefCell::new(RaylibDrawHandle(PhantomData, Cell::default())))
     }
