@@ -22,23 +22,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use self::drawing::RaylibDrawHandle;
 
-// shamelessly stolen from imgui
-#[macro_export]
-macro_rules! rstr {
-    ($e:tt) => ({
-        #[allow(unused_unsafe)]
-        unsafe {
-          std::ffi::CStr::from_bytes_with_nul_unchecked(concat!($e, "\0").as_bytes())
-        }
-    });
-    ($e:tt, $($arg:tt)*) => ({
-        #[allow(unused_unsafe)]
-        unsafe {
-          std::ffi::CString::new(format!($e, $($arg)*)).unwrap()
-        }
-    })
-}
-
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 /// This token is used to ensure certain functions are only running on the same
