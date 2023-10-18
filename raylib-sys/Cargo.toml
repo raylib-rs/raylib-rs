@@ -8,7 +8,7 @@ documentation = "https://docs.rs/raylib-sys"
 repository = "https://github.com/deltaphc/raylib-rs"
 keywords = ["bindings", "raylib", "gamedev", "ffi"]
 categories = ["external-ffi-bindings"]
-edition = "2018"
+edition = "2021"
 exclude = [
     "raylib/examples/*",
     "raylib/projects/*",
@@ -19,10 +19,10 @@ exclude = [
 mint = "0.5"
 
 [build-dependencies]
-fs_extra = "1.2"
-cmake = "0.1.49"
+fs_extra = "1.3"
+cmake = "0.1"
 cc = "1.0"
-bindgen = "0.61.0"
+bindgen = "0.68"
 
 [features]
 default = []
@@ -32,9 +32,12 @@ nobuild = []
 # Build for wayland on linux. Should fix #119
 wayland = []
 
+# Use DRM platform on linux.
+drm = []
+
 # OpenGL stuff, intended for fixing #122
 opengl_33 = []
 opengl_21 = []
-# opengl_11 = [] I couldn't get this one working, the others were fine in my limited testing (unsure about wayland compatibility)
+opengl_11 = []
 opengl_es_20 = []
 opengl_es_30 = []

@@ -13,17 +13,23 @@ edition = "2021"
 
 [dependencies]
 raylib-sys = { version = "5.0.0", path = "../raylib-sys" }
-libc = "0.2.137"
-lazy_static = "1.2.0"
-cfg-if = "1.0.0"
-serde = { version = "1.0.125", features = ["derive"], optional = true }
-serde_json = { version = "1.0.64", optional = true }
+libc = "0.2"
+cfg-if = "1.0"
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
 
 [features]
 nightly = []
 nobuild = ["raylib-sys/nobuild"]
 with_serde = ["serde", "serde_json"]
 wayland = ["raylib-sys/wayland"]
+drm = ["raylib-sys/drm"]
+
+opengl_33 = ["raylib-sys/opengl_33"]
+opengl_21 = ["raylib-sys/opengl_21"]
+opengl_11 = ["raylib-sys/opengl_11"]
+opengl_es_20 = ["raylib-sys/opengl_es_20"]
+opengl_es_30 = ["raylib-sys/opengl_es_30"]
 
 [package.metadata.docs.rs]
 features = ["nobuild"]

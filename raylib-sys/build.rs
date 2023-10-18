@@ -28,8 +28,8 @@ struct TypeOverrideCallback;
 impl ParseCallbacks for TypeOverrideCallback {
     fn blocklisted_type_implements_trait(
         &self,
-        _name: &str,
-        _derive_trait: DeriveTrait,
+        name: &str,
+        derive_trait: DeriveTrait,
     ) -> Option<ImplementsTrait> {
         const OK_TRAITS: [DeriveTrait; 3] = [
             DeriveTrait::Copy,
@@ -39,7 +39,7 @@ impl ParseCallbacks for TypeOverrideCallback {
         const OVERRIDEN_TYPES: [&str; 5] =
             ["Vector2", "Vector3", "Vector4", "Matrix", "Quaternion"];
 
-        (OK_TRAITS.contains(&_derive_trait) && OVERRIDEN_TYPES.contains(&_name))
+        (OK_TRAITS.contains(&derive_trait) && OVERRIDEN_TYPES.contains(&name))
             .then_some(ImplementsTrait::Yes)
     }
 }
@@ -107,8 +107,8 @@ fn build_with_cmake(src_path: &str) {
         #[cfg(feature = "opengl_21")]
         builder.define("OPENGL_VERSION", "2.1");
 
-        // #[cfg(feature = "opengl_11")]
-        // builder.define("OPENGL_VERSION", "1.1");
+        #[cfg(feature = "opengl_11")]
+        builder.define("OPENGL_VERSION", "1.1");
 
         #[cfg(feature = "opengl_es_20")]
         builder.define("OPENGL_VERSION", "ES 2.0");
@@ -120,7 +120,7 @@ fn build_with_cmake(src_path: &str) {
         #[cfg(not(any(
             feature = "opengl_33",
             feature = "opengl_21",
-            // feature = "opengl_11",
+            feature = "opengl_11",
             feature = "opengl_es_20",
             feature = "opengl_es_30",
         )))]
@@ -132,7 +132,7 @@ fn build_with_cmake(src_path: &str) {
         Platform::Web => conf
             .define("PLATFORM", "Web")
             .define("CMAKE_C_FLAGS", "-s ASYNCIFY"),
-        Platform::RPI => conf.define("PLATFORM", "Raspberry Pi"),
+        Platform::DRM => conf.define("PLATFORM", "DRM"),
     };
 
     let dst = conf.build();
@@ -173,7 +173,7 @@ fn gen_bindings() {
 
     let plat = match platform {
         Platform::Desktop => "-DPLATFORM_DESKTOP",
-        Platform::RPI => "-DPLATFORM_RPI",
+        Platform::DRM => "-DPLATFORM_DRM",
         Platform::Web => "-DPLATFORM_WEB",
     };
 
@@ -233,8 +233,12 @@ fn link(platform: Platform, platform_os: PlatformOS) {
             println!("cargo:rustc-link-lib=dylib=gdi32");
             println!("cargo:rustc-link-lib=dylib=user32");
             println!("cargo:rustc-link-lib=dylib=shell32");
+
+            // Good old opengl32.dll
+            #[cfg(feature = "opengl_11")]
+            println!("cargo:rustc-link-lib=opengl32");
         }
-        PlatformOS::Linux => {
+        PlatformOS::Linux if platform != Platform::DRM => {
             // X11 linking
             #[cfg(not(feature = "wayland"))]
             {
@@ -249,6 +253,10 @@ fn link(platform: Platform, platform_os: PlatformOS) {
                 println!("cargo:rustc-link-lib=wayland-client");
                 println!("cargo:rustc-link-lib=glfw"); // Link against locally installed glfw
             }
+
+            // OpenGL 1.1 library
+            #[cfg(feature = "opengl_11")]
+            println!("cargo:rustc-link-lib=GL");
         }
         PlatformOS::OSX => {
             println!("cargo:rustc-link-search=native=/usr/local/lib");
@@ -262,12 +270,15 @@ fn link(platform: Platform, platform_os: PlatformOS) {
     }
     if platform == Platform::Web {
         println!("cargo:rustc-link-lib=glfw");
-    } else if platform == Platform::RPI {
-        println!("cargo:rustc-link-search=/opt/vc/lib");
-        println!("cargo:rustc-link-lib=bcm_host");
-        println!("cargo:rustc-link-lib=brcmEGL");
-        println!("cargo:rustc-link-lib=brcmGLESv2");
-        println!("cargo:rustc-link-lib=vcos");
+    } else if platform == Platform::DRM {
+        println!("cargo:rustc-link-lib=GLESv2");
+        println!("cargo:rustc-link-lib=EGL");
+        println!("cargo:rustc-link-lib=pthread");
+        println!("cargo:rustc-link-lib=rt");
+        println!("cargo:rustc-link-lib=gbm");
+        println!("cargo:rustc-link-lib=drm");
+        println!("cargo:rustc-link-lib=atomic");
+        println!("cargo:rustc-link-lib=dl");
     }
 
     println!("cargo:rustc-link-lib=static=raylib");
@@ -334,8 +345,8 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
         // make sure cmake knows that it should bundle glfw in
         // Cargo web takes care of this but better safe than sorry
         Platform::Web
-    } else if target.contains("armv7-unknown-linux") {
-        Platform::RPI
+    } else if cfg!(feature = "drm") {
+        Platform::DRM
     } else {
         Platform::Desktop
     };
@@ -364,13 +375,8 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
                 _ => panic!("Unknown platform {}", uname()),
             }
         }
-    } else if platform == Platform::RPI {
-        let un: &str = &uname();
-        if un == "Linux" {
-            PlatformOS::Linux
-        } else {
-            PlatformOS::Unknown
-        }
+    } else if platform == Platform::DRM {
+        PlatformOS::Linux
     } else {
         PlatformOS::Unknown
     };
@@ -394,7 +400,7 @@ fn uname() -> String {
 enum Platform {
     Web,
     Desktop,
-    RPI, // raspberry pi
+    DRM, // KMS and raspberry pi
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
