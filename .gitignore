@@ -3,9 +3,6 @@
 Cargo.lock
 /.vscode
 /.idea
-raylib-test/test_out/*
-!raylib-test/test_out/.gitkeep
-raylib-test/storage.data
 samples/savegame
 showcase/*.png
 showcase/*.raw

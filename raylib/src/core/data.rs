@@ -3,7 +3,7 @@ use crate::{buffer::RaylibBuffer, ffi};
 
 /// Compress data (DEFLATE algorythm)
 /// ```rust
-/// use raylib::prelude::*;
+/// use raylib::core::data::compress_data;
 /// let data = compress_data(b"1111111111");
 /// let expected: &[u8] = &[61, 193, 33, 1, 0, 0, 0, 128, 160, 77, 254, 63, 103, 3, 98];
 /// assert_eq!(data.unwrap().get_slice(), expected);
@@ -21,7 +21,7 @@ pub fn compress_data(data: &[u8]) -> Result<RaylibBuffer<'static, u8>, String> {
 
 /// Decompress data (DEFLATE algorythm)
 /// ```rust
-/// use raylib::prelude::*;
+/// use raylib::core::data::decompress_data;
 /// let input: &[u8] = &[61, 193, 33, 1, 0, 0, 0, 128, 160, 77, 254, 63, 103, 3, 98];
 /// let expected: &[u8] = b"1111111111";
 /// let data = decompress_data(input);

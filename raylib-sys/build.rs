@@ -180,6 +180,7 @@ fn gen_bindings() {
     let mut builder = bindgen::Builder::default()
         .header("binding/binding.h")
         .rustified_enum(".+")
+        .derive_partialeq(true)
         .blocklist_type("Vector2")
         .blocklist_type("Vector3")
         .blocklist_type("Vector4")
@@ -209,17 +210,6 @@ fn gen_bindings() {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
-}
-
-fn gen_rgui() {
-    // Compile the code and link with cc crate
-    cc::Build::new()
-        .file("binding/wrapper.c")
-        .include("binding")
-        .warnings(false)
-        // .flag("-std=c99")
-        .extra_warnings(false)
-        .compile("rgui");
 }
 
 #[cfg(feature = "nobuild")]
@@ -295,8 +285,6 @@ fn main() {
     gen_bindings();
 
     link(platform, platform_os);
-
-    gen_rgui();
 }
 
 // cp_raylib copy raylib to an out dir
@@ -310,18 +298,6 @@ fn cp_raylib() -> String {
         .unwrap_or_else(|_| panic!("failed to copy raylib source to {}", out.to_string_lossy()));
 
     out.join("raylib").to_string_lossy().to_string()
-}
-
-fn cp_raygui() -> String {
-    let out = env::var("OUT_DIR").unwrap();
-    let out = Path::new(&out); //.join("raylib_source");
-
-    let mut options = fs_extra::dir::CopyOptions::new();
-    options.skip_exist = true;
-    fs_extra::dir::copy("raygui", out, &options)
-        .unwrap_or_else(|_| panic!("failed to copy raygui source to {}", out.to_string_lossy()));
-
-    out.join("raygui").to_string_lossy().to_string()
 }
 
 // run_command runs a command to completion or panics. Used for running curl and powershell.

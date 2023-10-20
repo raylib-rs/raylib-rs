@@ -1,9 +1,8 @@
-use crate::Color;
-use mint::{Vector3, Vector4};
+use crate::{Color, Vector3, Vector4};
 
-impl From<Color> for Vector4<f32> {
+impl From<Color> for Vector4 {
     fn from(val: Color) -> Self {
-        Vector4::<f32> {
+        Vector4 {
             x: val.r as f32 / 255.0,
             y: val.g as f32 / 255.0,
             z: val.b as f32 / 255.0,
@@ -35,18 +34,25 @@ impl Color {
     /// * `color_hex_str` - A string slice, 6 characters long
     /// # Example
     /// ```
-    ///    use raylib::prelude::*;
-    ///     let color_white = Color::from_hex("FFFFFF").unwrap();
-    ///     let color_black = Color::from_hex("000000").unwrap();
-    ///     
-    ///    assert_eq!(color_black, Color::BLACK);
-    ///    assert_eq!(color_white, Color::WHITE);
+    /// use raylib_sys::Color;
+    ///
+    /// let color_white = Color::from_hex("FFFFFF").unwrap();
+    /// let color_black = Color::from_hex("000000").unwrap();
+    /// let color_red = Color::from_hex("FF0000").unwrap();
+    /// let color_lime = Color::from_hex("00FF00").unwrap();
+    /// let color_blue = Color::from_hex("0000FF").unwrap();
+    ///
+    /// assert_eq!(color_black, Color::BLACK);
+    /// assert_eq!(color_white, Color::WHITE);
+    /// assert_eq!(color_red, Color::RED);
+    /// assert_eq!(color_lime, Color::LIME);
+    /// assert_eq!(color_blue, Color::BLUE);
     /// ```
     pub fn from_hex(color_hex_str: &str) -> Result<Color, std::num::ParseIntError> {
-        let color = i32::from_str_radix(color_hex_str, 16)?;
-        let b = color % 0x100;
-        let g = (color - b) / 0x100 % 0x100;
-        let r = (color - g) / 0x10000;
+        let color = u32::from_str_radix(color_hex_str, 16)?;
+        let b = color & 0xFF;
+        let g = (color >> 8) & 0xFF;
+        let r = (color >> 16) & 0xFF;
 
         Ok(Color {
             r: r as u8,
@@ -69,13 +75,13 @@ impl Color {
 
     /// Returns color normalized as float [0..1]
     #[inline]
-    pub fn color_normalize(&self) -> Vector4<f32> {
+    pub fn color_normalize(&self) -> Vector4 {
         unsafe { crate::ColorNormalize(*self) }
     }
 
     /// Returns HSV values for a Color
     #[inline]
-    pub fn color_to_hsv(&self) -> Vector3<f32> {
+    pub fn color_to_hsv(&self) -> Vector3 {
         unsafe { crate::ColorToHSV(*self) }
     }
 
@@ -87,10 +93,11 @@ impl Color {
 
     /// Returns color from normalized values [0..1]
     /// ```rust
+    /// use raylib_sys::{Vector4, Color};
     /// assert_eq!(Color::color_from_normalized(Vector4 { x: 1.0, y: 1.0, z: 1.0, w: 1.0 }), Color::new(255, 255, 255, 255));
     /// ```
     #[inline]
-    pub fn color_from_normalized(normalized: impl Into<Vector4<f32>>) -> Color {
+    pub fn color_from_normalized(normalized: impl Into<Vector4>) -> Color {
         unsafe { crate::ColorFromNormalized(normalized.into()) }
     }
 

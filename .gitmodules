@@ -2,8 +2,3 @@
 	path = raylib-sys/raylib
 	url = https://github.com/raysan5/raylib
 	branch = "4.5.0"
-
-[submodule "raylib-sys/raygui"]
-	path = raylib-sys/raygui
-	url = https://github.com/raysan5/raygui
-	branch = "master"

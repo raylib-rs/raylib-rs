@@ -1,7 +1,6 @@
 use std::mem::transmute;
 
-use super::{Camera3D, CameraProjection, Matrix};
-use mint::Vector3;
+use super::{Vector3, Camera3D, CameraProjection, Matrix};
 
 impl Camera3D {
     pub fn camera_type(&self) -> CameraProjection {
@@ -10,9 +9,9 @@ impl Camera3D {
     /// Create a perspective camera.
     /// fovy is in degrees
     pub fn perspective(
-        position: impl Into<Vector3<f32>>,
-        target: impl Into<Vector3<f32>>,
-        up: impl Into<Vector3<f32>>,
+        position: impl Into<Vector3>,
+        target: impl Into<Vector3>,
+        up: impl Into<Vector3>,
         fovy: f32,
     ) -> Camera3D {
         Camera3D {
@@ -26,9 +25,9 @@ impl Camera3D {
     /// Create a orthographic camera.
     /// fovy is in degrees
     pub fn orthographic(
-        position: impl Into<Vector3<f32>>,
-        target: impl Into<Vector3<f32>>,
-        up: impl Into<Vector3<f32>>,
+        position: impl Into<Vector3>,
+        target: impl Into<Vector3>,
+        up: impl Into<Vector3>,
         fovy: f32,
     ) -> Camera3D {
         let mut c = Self::perspective(position, target, up, fovy);
@@ -36,11 +35,11 @@ impl Camera3D {
         c
     }
 
-    pub fn forward(&self) -> Vector3<f32> {
+    pub fn forward(&self) -> Vector3 {
         unsafe { super::GetCameraForward(self as *const _ as *mut _) }
     }
 
-    pub fn up(&self) -> Vector3<f32> {
+    pub fn up(&self) -> Vector3 {
         unsafe { super::GetCameraUp(self as *const _ as *mut _) }
     }
 

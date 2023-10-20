@@ -8,7 +8,7 @@ use crate::{
 
 /// Returns a random value between min and max (both included)
 /// ```rust
-/// use raylib::*;
+/// use raylib::core::misc::get_random_value;
 /// fn main() {
 ///     let r = get_random_value::<i32>(0, 10);
 ///     println!("random value: {}", r);
@@ -60,8 +60,8 @@ impl RaylibHandle<'_> {
     /// ```rust
     /// use raylib::*;
     /// fn main() {
-    ///     let (mut rl, thread) = ...;
-    ///     let r = rl.get_random_value(0, 10);
+    ///     let (rl, thread) = raylib::init().build();
+    ///     let r: i32 = rl.get_random_value(0, 10);
     ///     println!("random value: {}", r);
     /// }
     pub fn get_random_value<T: From<i32>>(&self, min: i32, max: i32) -> T {

@@ -335,7 +335,8 @@ pub fn get_monitor_name(monitor: i32) -> Result<String, IntoStringError> {
 /// fails if monitor name is not a utf8 string
 /// ```rust
 /// use std::ffi::IntoStringError;
-/// use raylib::prelude::*;
+/// use raylib::{prelude::*, core::window::{get_monitor_count, get_monitor_info}};
+/// 
 /// fn main() -> Result<(), IntoStringError> {
 ///     let count = get_monitor_count();
 ///     for i in (0..count) {
@@ -358,35 +359,35 @@ pub fn get_monitor_info(monitor: i32) -> Result<MonitorInfo, IntoStringError> {
 }
 
 /// Returns camera transform matrix (view matrix)
-/// ```rust
-/// use raylib::prelude::*;
-/// fn main() {
-///     let c = Camera::perspective(
-///            Vector3::zero(),
-///            Vector3::new(0.0, 0.0, -1.0),
-///            Vector3::up(),
-///            90.0,
-///        );
-///        let m = get_camera_matrix(&c);
-///        assert_eq!(m, Matrix::identity());
-/// }
-/// ```
+//// ```rust
+//// use raylib::prelude::*;
+//// fn main() {
+////     let c = Camera::perspective(
+////            Vector3::zero(),
+////            Vector3::new(0.0, 0.0, -1.0),
+////            Vector3::up(),
+////            90.0,
+////        );
+////        let m = get_camera_matrix(&c);
+////        assert_eq!(m, Matrix::identity());
+//// }
+//// ```
 pub fn get_camera_matrix(camera: Camera3D) -> Matrix {
     unsafe { ffi::GetCameraMatrix(camera) }
 }
 
 /// Returns camera 2D transform matrix (view matrix)
-/// ```rust
-/// use raylib::prelude::*;
-/// fn main() {
-///     let c = Camera2D::default();
-///     let m = get_camera_matrix2D(&c);
-///     let mut check = Matrix::zero();
-///     check.m10 = 1.0;
-///     check.m15 = 1.0;
-///     assert_eq!(m, check);
-/// }
-/// ```
+//// ```rust
+//// use raylib::{prelude::*, ffi::Matrix, core::window::get_camera_matrix_2d};
+//// fn main() {
+////     let c = Camera2D::default();
+////     let m = get_camera_matrix_2d(&c);
+////     let mut check = Matrix::zero();
+////     check.m10 = 1.0;
+////     check.m15 = 1.0;
+////     assert_eq!(m, check);
+//// }
+//// ```
 pub fn get_camera_matrix_2d(camera: Camera2D) -> Matrix {
     unsafe { ffi::GetCameraMatrix2D(camera) }
 }

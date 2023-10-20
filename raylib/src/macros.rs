@@ -8,6 +8,13 @@ macro_rules! impl_wrapper {
                 std::mem::forget(self);
                 inner
             }
+
+            /// converts raylib-sys object to a "safe"
+            /// version. Make sure to call this function
+            /// from the thread the resource was created.
+            pub unsafe fn from_raw(raw: $t) -> Self {
+                Self(raw)
+            }
         }
 
         impl Drop for $name {
@@ -32,18 +39,8 @@ macro_rules! impl_wrapper {
         }
 
         impl $name {
-            /// returns the unwrapped raylib-sys object
-            pub fn to_raw(self) -> $t {
-                let raw = self.$rawfield;
-                std::mem::forget(self);
-                raw
-            }
-
-            /// converts raylib-sys object to a "safe"
-            /// version. Make sure to call this function
-            /// from the thread the resource was created.
-            pub unsafe fn from_raw(raw: $t) -> Self {
-                Self(raw)
+            pub fn as_raw(&self) -> &$t {
+                &self.$rawfield
             }
         }
     };
@@ -58,6 +55,13 @@ macro_rules! impl_wrapper_bounded {
                 let inner = self.$rawfield;
                 std::mem::forget(self);
                 inner
+            }
+
+            /// converts raylib-sys object to a "safe"
+            /// version. Make sure to call this function
+            /// from the thread the resource was created.
+            pub unsafe fn from_raw(raw: $t) -> Self {
+                Self(raw, std::marker::PhantomData, std::marker::PhantomData)
             }
         }
 
@@ -83,18 +87,8 @@ macro_rules! impl_wrapper_bounded {
         }
 
         impl<'bind, $lt> $name<'bind, $lt> {
-            /// returns the unwrapped raylib-sys object
-            pub fn to_raw(self) -> $t {
-                let raw = self.$rawfield;
-                std::mem::forget(self);
-                raw
-            }
-
-            /// converts raylib-sys object to a "safe"
-            /// version. Make sure to call this function
-            /// from the thread the resource was created.
-            pub unsafe fn from_raw(raw: $t) -> Self {
-                Self(raw, std::marker::PhantomData, std::marker::PhantomData)
+            pub fn as_raw(&self) -> &$t {
+                &self.$rawfield
             }
         }
     };

@@ -1,7 +1,9 @@
 //! Contains code related to audio. [`RaylibAudio`] plays sounds and music.
-use crate::{buffer::RaylibBuffer, core::RaylibThread};
-use crate::{ffi, make_bound_thin_wrapper, make_thin_wrapper};
 use std::ffi::CString;
+
+use crate::{
+    buffer::RaylibBuffer, core::RaylibThread, ffi, make_bound_thin_wrapper, make_thin_wrapper,
+};
 
 make_thin_wrapper!(Wave, ffi::Wave, ffi::UnloadWave);
 make_bound_thin_wrapper!(Sound, ffi::Sound, ffi::UnloadSound, RaylibAudio);

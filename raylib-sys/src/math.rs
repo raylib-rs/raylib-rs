@@ -24,12 +24,12 @@ impl Rectangle {
 
     /// Gets the overlap between two colliding rectangles.
     /// ```rust
-    /// use raylib::prelude::*;
+    /// use raylib_sys::Rectangle;
     ///
     /// let r1 = Rectangle::new(0.0, 0.0, 10.0, 10.0);
     /// let r2 = Rectangle::new(20.0, 20.0, 10.0, 10.0);
-    /// assert_eq!(None, r1.get_collision_rec(&r2));
-    /// assert_eq!(Some(r1), r1.get_collision_rec(&r1));
+    /// assert_eq!(None, r1.get_collision_rec(r2));
+    /// assert_eq!(Some(r1), r1.get_collision_rec(r1));
     /// ```
     #[inline]
     pub fn get_collision_rec(&self, other: Rectangle) -> Option<Rectangle> {
