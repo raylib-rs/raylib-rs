@@ -5,9 +5,9 @@ use std::ffi::{CStr, CString, IntoStringError, NulError};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::{RaylibHandle, RaylibThread};
-use crate::ffi::{
-    self, Camera2D, Camera3D, ConfigFlags, Matrix, MouseCursor, Ray, Vector2, Vector3,
+use crate::{
+    core::RaylibHandle,
+    ffi::{self, Camera2D, Camera3D, ConfigFlags, Matrix, MouseCursor, Ray, Vector2, Vector3},
 };
 
 #[cfg(feature = "with_serde")]
@@ -336,7 +336,7 @@ pub fn get_monitor_name(monitor: i32) -> Result<String, IntoStringError> {
 /// ```rust
 /// use std::ffi::IntoStringError;
 /// use raylib::{prelude::*, core::window::{get_monitor_count, get_monitor_info}};
-/// 
+///
 /// fn main() -> Result<(), IntoStringError> {
 ///     let count = get_monitor_count();
 ///     for i in (0..count) {
@@ -392,7 +392,7 @@ pub fn get_camera_matrix_2d(camera: Camera2D) -> Matrix {
     unsafe { ffi::GetCameraMatrix2D(camera) }
 }
 
-impl RaylibHandle<'_> {
+impl RaylibHandle {
     /// Get clipboard text content
     pub fn get_clipboard_text(&self) -> Result<String, std::str::Utf8Error> {
         unsafe {
@@ -411,7 +411,7 @@ impl RaylibHandle<'_> {
 }
 
 // Screen-space-related functions
-impl RaylibHandle<'_> {
+impl RaylibHandle {
     /// Returns a ray trace from mouse position
     pub fn get_mouse_ray(&self, mouse_position: Vector2, camera: Camera3D) -> Ray {
         unsafe { ffi::GetMouseRay(mouse_position, camera) }
@@ -445,7 +445,7 @@ impl RaylibHandle<'_> {
 }
 
 // Timing related functions
-impl RaylibHandle<'_> {
+impl RaylibHandle {
     /// Set target FPS (maximum)
     pub fn set_target_fps(&self, fps: u32) {
         unsafe { ffi::SetTargetFPS(fps as i32) }
@@ -468,7 +468,7 @@ impl RaylibHandle<'_> {
 }
 
 // Event management and custom frame control.
-impl RaylibHandle<'_> {
+impl RaylibHandle {
     /// Enable waiting for events on EndDrawing(), no automatic event polling
     pub fn enable_event_waiting(&self) {
         unsafe { ffi::EnableEventWaiting() }
@@ -496,7 +496,7 @@ impl RaylibHandle<'_> {
 }
 
 // Window handling functions
-impl RaylibHandle<'_> {
+impl RaylibHandle {
     /// Checks if `KEY_ESCAPE` or Close icon was pressed.
     /// Do not call on web unless you are compiling with asyncify.
     #[inline]
@@ -641,7 +641,7 @@ impl RaylibHandle<'_> {
 
     /// Sets title for window (only on desktop platforms).
     #[inline]
-    pub fn set_window_title(&self, _: &RaylibThread, title: &str) {
+    pub fn set_window_title(&self, title: &str) {
         let c_title = CString::new(title).unwrap();
         unsafe { ffi::SetWindowTitle(c_title.as_ptr()) }
     }
@@ -692,7 +692,7 @@ impl RaylibHandle<'_> {
 }
 
 // Cursor-related functions
-impl RaylibHandle<'_> {
+impl RaylibHandle {
     /// Shows mouse cursor.
     #[inline]
     pub fn show_cursor(&self) {

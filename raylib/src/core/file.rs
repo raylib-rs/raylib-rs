@@ -5,7 +5,7 @@ use std::ffi::CStr;
 use super::RaylibHandle;
 use crate::ffi;
 
-impl<'a> RaylibHandle<'a> {
+impl RaylibHandle {
     /// Checks if a file has been dropped into the window.
     #[inline]
     pub fn is_file_dropped(&self) -> bool {

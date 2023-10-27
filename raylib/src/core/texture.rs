@@ -1,9 +1,9 @@
 //! Image and texture related functions
 use std::ffi::CString;
 
-use super::{RaylibHandle, RaylibThread};
 use crate::{
     buffer::RaylibBuffer,
+    core::RaylibHandle,
     ffi::{
         self, Color, CubemapLayout, NPatchLayout, PixelFormat, Rectangle, TextureFilter,
         TextureWrap, Vector2,
@@ -40,26 +40,21 @@ pub struct Image(pub(crate) ffi::Image);
 
 impl_wrapper!(Image, ffi::Image, (ffi::UnloadImage), 0);
 
-make_bound_thin_wrapper!(
-    Texture2D,
-    ffi::Texture2D,
-    ffi::UnloadTexture,
-    RaylibHandle<'bind>
-);
+make_bound_thin_wrapper!(Texture2D, ffi::Texture2D, ffi::UnloadTexture, RaylibHandle);
 make_bound_thin_wrapper!(
     RenderTexture2D,
     ffi::RenderTexture2D,
     ffi::UnloadRenderTexture,
-    RaylibHandle<'bind>
+    RaylibHandle
 );
 
-impl<'bind, 'a> AsRef<ffi::Texture2D> for RenderTexture2D<'bind, 'a> {
+impl AsRef<ffi::Texture2D> for RenderTexture2D<'_> {
     fn as_ref(&self) -> &ffi::Texture2D {
         &self.0.texture
     }
 }
 
-impl<'bind, 'a> AsMut<ffi::Texture2D> for RenderTexture2D<'bind, 'a> {
+impl AsMut<ffi::Texture2D> for RenderTexture2D<'_> {
     fn as_mut(&mut self) -> &mut ffi::Texture2D {
         &mut self.0.texture
     }
@@ -467,8 +462,18 @@ impl Image {
 
     /// Generate image: linear gradient, direction in degrees [0..360], 0=Vertical gradient
     #[inline]
-    pub fn gen_image_gradient_linear(width: i32, height: i32, direction: i32, start: Color, end_: Color) -> Image {
-        unsafe { Image(ffi::GenImageGradientLinear(width, height, direction, start, end_)) }
+    pub fn gen_image_gradient_linear(
+        width: i32,
+        height: i32,
+        direction: i32,
+        start: Color,
+        end_: Color,
+    ) -> Image {
+        unsafe {
+            Image(ffi::GenImageGradientLinear(
+                width, height, direction, start, end_,
+            ))
+        }
     }
 
     /// Generates an Image containing a radial gradient.
@@ -489,10 +494,20 @@ impl Image {
 
     /// Generate image: square gradient.
     #[inline]
-    pub fn gen_image_gradient_square(width: i32, height: i32, density: f32, inner: Color, outer: Color) -> Image {
-        unsafe { Image(ffi::GenImageGradientSquare(width, height, density, inner, outer)) }
+    pub fn gen_image_gradient_square(
+        width: i32,
+        height: i32,
+        density: f32,
+        inner: Color,
+        outer: Color,
+    ) -> Image {
+        unsafe {
+            Image(ffi::GenImageGradientSquare(
+                width, height, density, inner, outer,
+            ))
+        }
     }
-    
+
     /// Generates an Image containing a checkerboard pattern.
     #[inline]
     pub fn gen_image_checked(
@@ -621,8 +636,8 @@ impl Image {
     }
 }
 
-impl<'bind, 'a> RaylibTexture2D for Texture2D<'bind, 'a> {}
-impl<'bind, 'a> RaylibTexture2D for RenderTexture2D<'bind, 'a> {}
+impl RaylibTexture2D for Texture2D<'_> {}
+impl RaylibTexture2D for RenderTexture2D<'_> {}
 
 pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     /// Updates GPU texture with new data.
@@ -668,7 +683,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
 
     /// Sets global `texture` scaling filter mode.
     #[inline]
-    fn set_texture_filter(&self, _: &RaylibThread, filter_mode: TextureFilter) {
+    fn set_texture_filter(&self, filter_mode: TextureFilter) {
         unsafe {
             ffi::SetTextureFilter(*self.as_ref(), filter_mode as i32);
         }
@@ -676,7 +691,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
 
     /// Sets global texture wrapping mode.
     #[inline]
-    fn set_texture_wrap(&self, _: &RaylibThread, wrap_mode: TextureWrap) {
+    fn set_texture_wrap(&self, wrap_mode: TextureWrap) {
         unsafe {
             ffi::SetTextureWrap(*self.as_ref(), wrap_mode as i32);
         }
@@ -689,13 +704,9 @@ pub fn get_pixel_data_size(width: i32, height: i32, format: ffi::PixelFormat) ->
     unsafe { ffi::GetPixelDataSize(width, height, format as i32) }
 }
 
-impl<'bind, 'a> RaylibHandle<'_> {
+impl<'bind> RaylibHandle {
     /// Loads texture from file into GPU memory (VRAM).
-    pub fn load_texture(
-        &'bind self,
-        _: &RaylibThread,
-        filename: &str,
-    ) -> Result<Texture2D<'bind, 'a>, String> {
+    pub fn load_texture(&'bind self, filename: &str) -> Result<Texture2D<'bind>, String> {
         let c_filename = CString::new(filename).unwrap();
         let t = unsafe { ffi::LoadTexture(c_filename.as_ptr()) };
         if t.id == 0 {
@@ -707,10 +718,9 @@ impl<'bind, 'a> RaylibHandle<'_> {
     /// Load cubemap from image, multiple image cubemap layouts supported
     pub fn load_texture_cubemap(
         &'bind self,
-        _: &RaylibThread,
         image: &Image,
         layout: CubemapLayout,
-    ) -> Result<Texture2D<'bind, 'a>, String> {
+    ) -> Result<Texture2D<'bind>, String> {
         let t = unsafe { ffi::LoadTextureCubemap(image.0, layout as i32) };
         if t.id == 0 {
             return Err("failed to load image as a texture cubemap.".to_string());
@@ -720,11 +730,7 @@ impl<'bind, 'a> RaylibHandle<'_> {
 
     /// Loads texture from image data.
     #[inline]
-    pub fn load_texture_from_image(
-        &'bind self,
-        _: &RaylibThread,
-        image: &Image,
-    ) -> Result<Texture2D<'bind, 'a>, String> {
+    pub fn load_texture_from_image(&'bind self, image: &Image) -> Result<Texture2D<'bind>, String> {
         let t = unsafe { ffi::LoadTextureFromImage(image.0) };
         if t.id == 0 {
             return Err("failed to load image as a texture.".to_string());
@@ -735,10 +741,9 @@ impl<'bind, 'a> RaylibHandle<'_> {
     /// Loads texture for rendering (framebuffer).
     pub fn load_render_texture(
         &'bind self,
-        _: &RaylibThread,
         width: u32,
         height: u32,
-    ) -> Result<RenderTexture2D<'bind, 'a>, String> {
+    ) -> Result<RenderTexture2D<'bind>, String> {
         let t = unsafe { ffi::LoadRenderTexture(width as i32, height as i32) };
         if t.id == 0 {
             return Err("failed to create render texture.".to_string());

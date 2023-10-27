@@ -3,25 +3,24 @@ use std::ffi::CString;
 use std::mem::ManuallyDrop;
 use std::os::raw::{c_char, c_void};
 
-use super::{RaylibHandle, RaylibThread};
+use super::RaylibHandle;
 use crate::ffi::{self, Matrix, ShaderUniformDataType, Vector2, Vector3, Vector4};
 use crate::make_bound_thin_wrapper;
 
-make_bound_thin_wrapper!(Shader, ffi::Shader, ffi::UnloadShader, RaylibHandle<'bind>);
+make_bound_thin_wrapper!(Shader, ffi::Shader, ffi::UnloadShader, RaylibHandle);
 
 // #[cfg(feature = "nightly")]
 // impl !Send for Shader {}
 // #[cfg(feature = "nightly")]
 // unsafe impl Sync for Shader {}
 
-impl<'bind, 'a, 'rl> RaylibHandle<'rl> {
+impl<'rl> RaylibHandle {
     /// Loads a custom shader and binds default locations.
     pub fn load_shader(
-        &'bind self,
-        _: &RaylibThread,
+        &'rl self,
         vs_filename: Option<&str>,
         fs_filename: Option<&str>,
-    ) -> Result<Shader<'bind, 'a>, String> {
+    ) -> Result<Shader<'rl>, String> {
         let c_vs_filename = vs_filename.map(|f| CString::new(f).unwrap());
         let c_fs_filename = fs_filename.map(|f| CString::new(f).unwrap());
 
@@ -39,11 +38,10 @@ impl<'bind, 'a, 'rl> RaylibHandle<'rl> {
 
     /// Loads shader from code strings and binds default locations.
     pub fn load_shader_from_memory(
-        &'bind self,
-        _: &RaylibThread,
+        &'rl self,
         vs_code: Option<&str>,
         fs_code: Option<&str>,
-    ) -> Shader<'bind, 'a> {
+    ) -> Shader<'rl> {
         let c_vs_code = vs_code.map(|f| CString::new(f).unwrap());
         let c_fs_code = fs_code.map(|f| CString::new(f).unwrap());
 
@@ -67,7 +65,7 @@ impl<'bind, 'a, 'rl> RaylibHandle<'rl> {
     }
 
     /// Get default shader. Modifying it modifies everthing that uses that shader
-    pub fn get_shader_default(&'bind self) -> ManuallyDrop<Shader<'bind, 'a>> {
+    pub fn get_shader_default(&'rl self) -> ManuallyDrop<Shader<'rl>> {
         unsafe {
             ManuallyDrop::new(Shader::from_raw(ffi::Shader {
                 id: ffi::rlGetShaderIdDefault(),
@@ -166,7 +164,7 @@ impl ShaderV for &[i32] {
     }
 }
 
-impl<'bind, 'a> Shader<'bind, 'a> {
+impl<'bind> Shader<'bind> {
     /// Sets shader uniform value
     #[inline]
     pub fn set_shader_value<S: ShaderV>(&mut self, uniform_loc: i32, value: S) {
@@ -215,7 +213,7 @@ impl<'bind, 'a> Shader<'bind, 'a> {
     }
 }
 
-impl<'bind, 'a> RaylibShader for Shader<'bind, 'a> {}
+impl<'bind> RaylibShader for Shader<'bind> {}
 
 pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     #[inline]
@@ -289,10 +287,10 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     }
 }
 
-impl<'a> RaylibHandle<'a> {
+impl RaylibHandle {
     /// Sets a custom projection matrix (replaces internal projection matrix).
     #[inline]
-    pub fn set_matrix_projection(&mut self, _: &RaylibThread, proj: Matrix) {
+    pub fn set_matrix_projection(&mut self, proj: Matrix) {
         unsafe {
             ffi::rlSetMatrixProjection(proj);
         }
@@ -300,7 +298,7 @@ impl<'a> RaylibHandle<'a> {
 
     /// Sets a custom modelview matrix (replaces internal modelview matrix).
     #[inline]
-    pub fn set_matrix_modelview(&mut self, _: &RaylibThread, view: Matrix) {
+    pub fn set_matrix_modelview(&mut self, view: Matrix) {
         unsafe {
             ffi::rlSetMatrixModelview(view);
         }

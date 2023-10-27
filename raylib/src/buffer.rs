@@ -7,7 +7,7 @@ pub(crate) struct ContigousBuffer<'a, T>(NonNull<T>, PhantomData<&'a T>);
 
 impl<'a, T> ContigousBuffer<'a, T> {
     pub fn new(buffer: *mut T) -> Option<Self> {
-        NonNull::new(buffer).and_then(|p| Some(ContigousBuffer(p, PhantomData)))
+        NonNull::new(buffer).map(|p| ContigousBuffer(p, PhantomData))
     }
 
     pub unsafe fn get_slice(&'a self, len: usize) -> &'a [T] {

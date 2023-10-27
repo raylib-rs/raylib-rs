@@ -2,7 +2,7 @@
 use std::ffi::CString;
 
 use crate::{
-    core::{texture::Image, RaylibHandle, RaylibThread},
+    core::{texture::Image, RaylibHandle},
     ffi,
 };
 
@@ -42,20 +42,20 @@ pub unsafe extern "C" fn trace_log_trampoline(
 pub fn set_trace_log_callback<C: Fn(TraceLogLevel, &str)>(callback: C) {}
 */
 
-impl RaylibHandle<'_> {
+impl RaylibHandle {
     /// Load pixels from the screen into a CPU image
-    pub fn load_image_from_screen(&self, _: &RaylibThread) -> Image {
+    pub fn load_image_from_screen(&self) -> Image {
         unsafe { Image(ffi::LoadImageFromScreen()) }
     }
 
     /// Takes a screenshot of current screen (saved a .png)
-    pub fn take_screenshot(&self, _: &RaylibThread, filename: &str) {
+    pub fn take_screenshot(&self, filename: &str) {
         let c_filename = CString::new(filename).unwrap();
         unsafe { ffi::TakeScreenshot(c_filename.as_ptr()) }
     }
 }
 
-impl RaylibHandle<'_> {
+impl RaylibHandle {
     /// Returns a random value between min and max (both included)
     /// ```rust
     /// use raylib::*;

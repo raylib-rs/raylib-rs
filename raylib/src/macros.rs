@@ -48,8 +48,8 @@ macro_rules! impl_wrapper {
 
 #[macro_export]
 macro_rules! impl_wrapper_bounded {
-    ($name:ident, $t:ty, $dropfunc:expr, $rawfield:tt, $lt:lifetime) => {
-        impl<'bind, $lt> $name<'bind, $lt> {
+    ($name:ident, $t:ty, $dropfunc:expr, $rawfield:tt) => {
+        impl<'bind> $name<'bind> {
             /// Take the raw ffi type. Must manually free memory by calling the proper unload function
             pub unsafe fn unwrap(self) -> $t {
                 let inner = self.$rawfield;
@@ -61,11 +61,11 @@ macro_rules! impl_wrapper_bounded {
             /// version. Make sure to call this function
             /// from the thread the resource was created.
             pub unsafe fn from_raw(raw: $t) -> Self {
-                Self(raw, std::marker::PhantomData, std::marker::PhantomData)
+                Self(raw, std::marker::PhantomData)
             }
         }
 
-        impl<'bind, $lt> Drop for $name<'bind, $lt> {
+        impl<'bind> Drop for $name<'bind> {
             #[allow(unused_unsafe)]
             fn drop(&mut self) {
                 unsafe {
@@ -74,19 +74,19 @@ macro_rules! impl_wrapper_bounded {
             }
         }
 
-        impl<'bind, $lt> std::convert::AsRef<$t> for $name<'bind, $lt> {
+        impl<'bind> std::convert::AsRef<$t> for $name<'bind> {
             fn as_ref(&self) -> &$t {
                 &self.$rawfield
             }
         }
 
-        impl<'bind, $lt> std::convert::AsMut<$t> for $name<'bind, $lt> {
+        impl<'bind> std::convert::AsMut<$t> for $name<'bind> {
             fn as_mut(&mut self) -> &mut $t {
                 &mut self.$rawfield
             }
         }
 
-        impl<'bind, $lt> $name<'bind, $lt> {
+        impl<'bind> $name<'bind> {
             pub fn as_raw(&self) -> &$t {
                 &self.$rawfield
             }
@@ -101,7 +101,7 @@ macro_rules! make_thin_wrapper {
         #[derive(Debug)]
         pub struct $name(pub(crate) $t);
 
-        crate::impl_wrapper!($name, $t, $dropfunc, 0);
+        $crate::impl_wrapper!($name, $t, $dropfunc, 0);
     };
 }
 
@@ -110,8 +110,11 @@ macro_rules! make_bound_thin_wrapper {
     ($name:ident, $t:ty, $dropfunc:expr, $binding:ty) => {
         #[repr(transparent)]
         #[derive(Debug)]
-        pub struct $name<'bind: 'a, 'a>(pub(crate) $t, pub(crate) std::marker::PhantomData<&'a Self>, pub(crate) std::marker::PhantomData<&'bind $binding>);
+        pub struct $name<'bind>(
+            pub(crate) $t,
+            pub(crate) std::marker::PhantomData<&'bind $binding>,
+        );
 
-        crate::impl_wrapper_bounded!($name, $t, $dropfunc, 0, 'a);
+        $crate::impl_wrapper_bounded!($name, $t, $dropfunc, 0);
     };
 }

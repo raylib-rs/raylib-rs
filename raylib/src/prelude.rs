@@ -15,6 +15,6 @@ Permission is granted to anyone to use this software for any purpose, including 
 */
 pub use crate::{
     audio::{AudioSample, AudioStream, Music, RaylibAudio, Sound, Wave},
-    core::{drawing::*, init, RaylibBuilder, RaylibHandle, RaylibThread},
+    core::{drawing::*, init, RaylibBuilder, RaylibHandle},
     ffi::{Color, Rectangle},
 };

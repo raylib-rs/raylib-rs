@@ -24,12 +24,6 @@ use self::drawing::RaylibDrawHandle;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
-/// This token is used to ensure certain functions are only running on the same
-/// thread raylib was initialized from. This is useful for architectures like macos
-/// where cocoa can only be called from one thread.
-#[derive(Clone, Debug)]
-pub struct RaylibThread(PhantomData<*const ()>);
-
 /// The main interface into the Raylib API.
 ///
 /// This is the way in which you will use the vast majority of Raylib's functionality. A `RaylibHandle` can be constructed using the [`init_window`] function or through a [`RaylibBuilder`] obtained with the [`init`] function.
@@ -37,16 +31,12 @@ pub struct RaylibThread(PhantomData<*const ()>);
 /// [`init_window`]: fn.init_window.html
 /// [`RaylibBuilder`]: struct.RaylibBuilder.html
 /// [`init`]: fn.init.html
-pub struct RaylibHandle<'rl>(RefCell<RaylibDrawHandle<'rl>>); // inner field is private, preventing manual construction
+pub struct RaylibHandle(RefCell<RaylibDrawHandle>, PhantomData<*const ()>); // inner fields are private, preventing manual construction
 
-impl<'th, 'a: 'th> RaylibHandle<'a> {
+impl RaylibHandle {
     /// Renders a frame.
     /// Returns the frame_fn return value unmodifed.
-    pub fn begin_drawing<R, F: FnOnce(RefMut<'_, RaylibDrawHandle>) -> R>(
-        &self,
-        _: &'th RaylibThread,
-        frame_fn: F,
-    ) -> R {
+    pub fn begin_drawing<R, F: FnOnce(RefMut<'_, RaylibDrawHandle>) -> R>(&self, frame_fn: F) -> R {
         unsafe { ffi::BeginDrawing() };
         let ret = frame_fn(self.0.borrow_mut());
         unsafe { ffi::EndDrawing() };
@@ -55,7 +45,7 @@ impl<'th, 'a: 'th> RaylibHandle<'a> {
     }
 }
 
-impl Drop for RaylibHandle<'_> {
+impl Drop for RaylibHandle {
     fn drop(&mut self) {
         if IS_INITIALIZED.load(Ordering::Relaxed) {
             unsafe {
@@ -166,7 +156,7 @@ impl RaylibBuilder {
     /// # Panics
     ///
     /// Attempting to initialize Raylib more than once will result in a panic.
-    pub fn build(&self) -> (RaylibHandle<'static>, RaylibThread) {
+    pub fn build(&self) -> RaylibHandle {
         use ffi::ConfigFlags::*;
         let mut flags = 0u32;
         if self.fullscreen_mode {
@@ -191,8 +181,8 @@ impl RaylibBuilder {
         unsafe {
             ffi::SetConfigFlags(flags);
         }
-        let rl = init_window(self.width, self.height, &self.title);
-        (rl, RaylibThread(PhantomData))
+
+        init_window(self.width, self.height, &self.title)
     }
 }
 
@@ -201,7 +191,7 @@ impl RaylibBuilder {
 /// # Panics
 ///
 /// Attempting to initialize Raylib more than once will result in a panic.
-fn init_window(width: i32, height: i32, title: &str) -> RaylibHandle<'static> {
+fn init_window(width: i32, height: i32, title: &str) -> RaylibHandle {
     if IS_INITIALIZED.fetch_or(true, Ordering::Relaxed) {
         panic!("Attempted to initialize raylib-rs more than once!");
     } else {
@@ -213,6 +203,6 @@ fn init_window(width: i32, height: i32, title: &str) -> RaylibHandle<'static> {
             panic!("Attempting to create window failed!");
         }
 
-        RaylibHandle(RefCell::new(RaylibDrawHandle(PhantomData, Cell::default())))
+        RaylibHandle(RefCell::new(RaylibDrawHandle(Cell::default())), PhantomData)
     }
 }

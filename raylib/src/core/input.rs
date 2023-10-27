@@ -4,7 +4,7 @@ use std::ffi::{CStr, CString};
 use super::RaylibHandle;
 use crate::ffi::{self, GamepadAxis, GamepadButton, Gesture, KeyboardKey, MouseButton, Vector2};
 
-impl RaylibHandle<'_> {
+impl RaylibHandle {
     /// Detect if a key has been pressed once.
     #[inline]
     pub fn is_key_pressed(&self, key: KeyboardKey) -> bool {

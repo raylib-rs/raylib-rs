@@ -1,9 +1,7 @@
 //! Contains code related to audio. [`RaylibAudio`] plays sounds and music.
 use std::ffi::CString;
 
-use crate::{
-    buffer::RaylibBuffer, core::RaylibThread, ffi, make_bound_thin_wrapper, make_thin_wrapper,
-};
+use crate::{buffer::RaylibBuffer, ffi, make_bound_thin_wrapper, make_thin_wrapper};
 
 make_thin_wrapper!(Wave, ffi::Wave, ffi::UnloadWave);
 make_bound_thin_wrapper!(Sound, ffi::Sound, ffi::UnloadSound, RaylibAudio);
@@ -322,19 +320,19 @@ impl Wave {
     }
 }
 
-impl AsRef<ffi::AudioStream> for Sound<'_, '_> {
+impl AsRef<ffi::AudioStream> for Sound<'_> {
     fn as_ref(&self) -> &ffi::AudioStream {
         &self.0.stream
     }
 }
 
-impl AsMut<ffi::AudioStream> for Sound<'_, '_> {
+impl AsMut<ffi::AudioStream> for Sound<'_> {
     fn as_mut(&mut self) -> &mut ffi::AudioStream {
         &mut self.0.stream
     }
 }
 
-impl<'bind, 'a> Sound<'bind, 'a> {
+impl<'bind> Sound<'_> {
     pub fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
@@ -344,7 +342,7 @@ impl<'bind, 'a> Sound<'bind, 'a> {
         inner
     }
     /// Loads sound from file.
-    pub fn load_sound(_: &'bind RaylibAudio, filename: &str) -> Result<Sound<'bind, 'a>, String> {
+    pub fn load_sound(_: &'bind RaylibAudio, filename: &str) -> Result<Sound<'bind>, String> {
         let c_filename = CString::new(filename).unwrap();
         let s = unsafe { ffi::LoadSound(c_filename.as_ptr()) };
         if s.stream.buffer.is_null() {
@@ -357,7 +355,7 @@ impl<'bind, 'a> Sound<'bind, 'a> {
     pub fn load_sound_from_wave(
         _: &'bind RaylibAudio,
         wave: &Wave,
-    ) -> Result<Sound<'bind, 'a>, String> {
+    ) -> Result<Sound<'bind>, String> {
         let s = unsafe { ffi::LoadSoundFromWave(wave.0) };
         if s.stream.buffer.is_null() {
             return Err("failed to load sound from wave".to_string());
@@ -379,14 +377,13 @@ impl<'bind, 'a> Sound<'bind, 'a> {
     // }
 }
 
-impl<'bind, 'a> Music<'bind, 'a> {
+impl<'bind> Music<'_> {
     /// Loads music stream from file.
     // #[inline]
     pub fn load_music_stream(
         _: &'bind RaylibAudio,
-        _: &RaylibThread,
         filename: &str,
-    ) -> Result<Music<'bind, 'a>, String> {
+    ) -> Result<Music<'bind>, String> {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadMusicStream(c_filename.as_ptr()) };
         if m.stream.buffer.is_null() {
@@ -396,7 +393,7 @@ impl<'bind, 'a> Music<'bind, 'a> {
     }
 }
 
-impl<'bind, 'a> AudioStream<'bind, 'a> {
+impl<'bind> AudioStream<'_> {
     pub fn sample_rate(&self) -> u32 {
         self.0.sampleRate
     }
@@ -416,11 +413,10 @@ impl<'bind, 'a> AudioStream<'bind, 'a> {
     #[inline]
     pub fn load_audio_stream(
         _: &'bind RaylibAudio,
-        _: &RaylibThread,
         sample_rate: u32,
         sample_size: u32,
         channels: u32,
-    ) -> AudioStream<'bind, 'a> {
+    ) -> AudioStream<'bind> {
         unsafe { AudioStream::from_raw(ffi::LoadAudioStream(sample_rate, sample_size, channels)) }
     }
 

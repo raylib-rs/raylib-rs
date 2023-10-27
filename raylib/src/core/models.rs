@@ -6,7 +6,7 @@ use std::{ffi::CString, mem};
 use super::{
     shaders::Shader,
     texture::{Image, Texture2D},
-    RaylibHandle, RaylibThread,
+    RaylibHandle,
 };
 use crate::{
     ffi::{self, BoundingBox, Color, Vector3},
@@ -16,7 +16,7 @@ use crate::{
 fn no_drop<T>(_thing: T) {}
 
 make_thin_wrapper!(Mesh, ffi::Mesh, |mesh: ffi::Mesh| ffi::UnloadMesh(mesh));
-make_bound_thin_wrapper!(Model, ffi::Model, ffi::UnloadModel, RaylibHandle<'bind>);
+make_bound_thin_wrapper!(Model, ffi::Model, ffi::UnloadModel, RaylibHandle);
 make_thin_wrapper!(Material, ffi::Material, ffi::UnloadMaterial);
 make_thin_wrapper!(BoneInfo, ffi::BoneInfo, no_drop);
 make_thin_wrapper!(
@@ -26,14 +26,10 @@ make_thin_wrapper!(
 );
 make_thin_wrapper!(MaterialMap, ffi::MaterialMap, no_drop);
 
-impl<'bind, 'a> RaylibHandle<'a> {
+impl<'bind> RaylibHandle {
     /// Loads model from files (mesh and material).
     // #[inline]
-    pub fn load_model(
-        &'bind self,
-        _: &RaylibThread,
-        filename: &str,
-    ) -> Result<Model<'bind, 'a>, String> {
+    pub fn load_model(&'bind self, filename: &str) -> Result<Model<'bind>, String> {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadModel(c_filename.as_ptr()) };
 
@@ -47,11 +43,7 @@ impl<'bind, 'a> RaylibHandle<'a> {
     }
 
     // Loads model from a generated mesh
-    pub fn load_model_from_mesh(
-        &'bind self,
-        _: &RaylibThread,
-        mesh: &Mesh,
-    ) -> Result<Model<'bind, 'a>, String> {
+    pub fn load_model_from_mesh(&'bind self, mesh: &Mesh) -> Result<Model<'bind>, String> {
         let m = unsafe { ffi::LoadModelFromMesh(mesh.0) };
 
         if m.meshes.is_null() || m.materials.is_null() {
@@ -61,11 +53,7 @@ impl<'bind, 'a> RaylibHandle<'a> {
         Ok(unsafe { Model::from_raw(m) })
     }
 
-    pub fn load_model_animations(
-        &self,
-        _: &RaylibThread,
-        filename: &str,
-    ) -> Result<Vec<ModelAnimation>, String> {
+    pub fn load_model_animations(&self, filename: &str) -> Result<Vec<ModelAnimation>, String> {
         let c_filename = CString::new(filename).unwrap();
         let mut m_size = 0;
         let m_ptr = unsafe { ffi::LoadModelAnimations(c_filename.as_ptr(), &mut m_size) };
@@ -86,7 +74,6 @@ impl<'bind, 'a> RaylibHandle<'a> {
 
     pub fn update_model_animation(
         &self,
-        _: &RaylibThread,
         mut model: impl AsMut<ffi::Model>,
         anim: impl AsRef<ffi::ModelAnimation>,
         frame: i32,
@@ -97,7 +84,7 @@ impl<'bind, 'a> RaylibHandle<'a> {
     }
 }
 
-impl<'bind, 'a> RaylibModel for Model<'bind, 'a> {}
+impl<'bind> RaylibModel for Model<'bind> {}
 
 pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     fn meshes(&self) -> &[Mesh] {
@@ -263,7 +250,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     fn indicies_mut(&mut self) -> &mut [u16] {
         unsafe {
             std::slice::from_raw_parts_mut(
-                self.as_mut().indices as *mut u16,
+                self.as_mut().indices,
                 self.as_mut().vertexCount as usize,
             )
         }
@@ -271,61 +258,61 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
 
     /// Generate polygonal mesh
     #[inline]
-    fn gen_mesh_poly(_: &RaylibThread, sides: i32, radius: f32) -> Mesh {
+    fn gen_mesh_poly(sides: i32, radius: f32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshPoly(sides, radius)) }
     }
 
     /// Generates plane mesh (with subdivisions).
     #[inline]
-    fn gen_mesh_plane(_: &RaylibThread, width: f32, length: f32, res_x: i32, res_z: i32) -> Mesh {
+    fn gen_mesh_plane(width: f32, length: f32, res_x: i32, res_z: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshPlane(width, length, res_x, res_z)) }
     }
 
     /// Generates cuboid mesh.
     #[inline]
-    fn gen_mesh_cube(_: &RaylibThread, width: f32, height: f32, length: f32) -> Mesh {
+    fn gen_mesh_cube(width: f32, height: f32, length: f32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshCube(width, height, length)) }
     }
 
     /// Generates sphere mesh (standard sphere).
     #[inline]
-    fn gen_mesh_sphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
+    fn gen_mesh_sphere(radius: f32, rings: i32, slices: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshSphere(radius, rings, slices)) }
     }
 
     /// Generates half-sphere mesh (no bottom cap).
     #[inline]
-    fn gen_mesh_hemisphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
+    fn gen_mesh_hemisphere(radius: f32, rings: i32, slices: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshHemiSphere(radius, rings, slices)) }
     }
 
     /// Generates cylinder mesh.
     #[inline]
-    fn gen_mesh_cylinder(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
+    fn gen_mesh_cylinder(radius: f32, height: f32, slices: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshCylinder(radius, height, slices)) }
     }
 
     /// Generates torus mesh.
     #[inline]
-    fn gen_mesh_torus(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
+    fn gen_mesh_torus(radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshTorus(radius, size, rad_seg, sides)) }
     }
 
     /// Generates trefoil knot mesh.
     #[inline]
-    fn gen_mesh_knot(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
+    fn gen_mesh_knot(radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshKnot(radius, size, rad_seg, sides)) }
     }
 
     /// Generates heightmap mesh from image data.
     #[inline]
-    fn gen_mesh_heightmap(_: &RaylibThread, heightmap: &Image, size: Vector3) -> Mesh {
+    fn gen_mesh_heightmap(heightmap: &Image, size: Vector3) -> Mesh {
         unsafe { Mesh(ffi::GenMeshHeightmap(heightmap.0, size)) }
     }
 
     /// Generates cubes-based map mesh from image data.
     #[inline]
-    fn gen_mesh_cubicmap(_: &RaylibThread, cubicmap: &Image, cube_size: Vector3) -> Mesh {
+    fn gen_mesh_cubicmap(cubicmap: &Image, cube_size: Vector3) -> Mesh {
         unsafe { Mesh(ffi::GenMeshCubicmap(cubicmap.0, cube_size)) }
     }
 
@@ -338,7 +325,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// Computes mesh tangents.
     // NOTE: New VBO for tangents is generated at default location and also binded to mesh VAO
     #[inline]
-    fn gen_mesh_tangents(&mut self, _: &RaylibThread) {
+    fn gen_mesh_tangents(&mut self) {
         unsafe {
             ffi::GenMeshTangents(self.as_mut());
         }
@@ -493,8 +480,8 @@ impl MaterialMap {
     }
 }
 
-impl<'bind> RaylibHandle<'bind> {
-    pub fn load_material_default(&self, _: &RaylibThread) -> Material {
+impl RaylibHandle {
+    pub fn load_material_default(&self) -> Material {
         Material(unsafe { ffi::LoadMaterialDefault() })
     }
 }

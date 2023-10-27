@@ -5,14 +5,13 @@ use super::{
     shaders::Shader,
     texture::{RenderTexture2D, Texture2D},
     vr::VrStereoConfig,
-    RaylibHandle,
 };
 use crate::ffi::{
     self, BlendMode, BoundingBox, Camera2D, Camera3D, Color, NPatchInfo, Rectangle, Vector2,
     Vector3,
 };
 
-use std::{cell::Cell, convert::AsRef, ffi::CString, marker::PhantomData};
+use std::{cell::Cell, convert::AsRef, ffi::CString};
 
 /// Holds the state of "special" Begin/End modes.
 #[derive(Clone, Default)]
@@ -26,140 +25,137 @@ pub(crate) struct RaylibDrawState {
     scissor: bool,
 }
 
-pub struct RaylibDrawHandle<'bind>(
-    pub(crate) PhantomData<&'bind RaylibHandle<'bind>>,
-    pub(crate) Cell<RaylibDrawState>,
-);
+pub struct RaylibDrawHandle(pub(crate) Cell<RaylibDrawState>);
 
-impl RaylibDrawHandle<'_> {
+impl RaylibDrawHandle {
     pub fn begin_texture<F: FnOnce()>(&self, target: &mut RenderTexture2D, func: F) {
-        let mut state = self.1.take();
+        let mut state = self.0.take();
 
         if state.texture {
             panic!("Nested begin_texture occured !");
         }
 
         state.texture = true;
-        self.1.set(state.clone());
+        self.0.set(state.clone());
 
         unsafe { ffi::BeginTextureMode(target.0) };
         func();
         unsafe { ffi::EndTextureMode() };
 
         state.texture = false;
-        self.1.set(state);
+        self.0.set(state);
     }
 
     pub fn begin_vr<F: FnOnce()>(&self, config: &VrStereoConfig, func: F) {
-        let mut state = self.1.take();
+        let mut state = self.0.take();
 
         if state.vr {
             panic!("Nested begin_vr occured !");
         }
 
         state.vr = true;
-        self.1.set(state.clone());
+        self.0.set(state.clone());
 
         unsafe { ffi::BeginVrStereoMode(config.0) };
         func();
         unsafe { ffi::EndVrStereoMode() };
 
         state.vr = false;
-        self.1.set(state);
+        self.0.set(state);
     }
 
     pub fn begin_camera_2d<F: FnOnce()>(&self, camera: &Camera2D, func: F) {
-        let mut state = self.1.take();
+        let mut state = self.0.take();
 
         if state.camera2d {
             panic!("Nested begin_camera_2d occured !");
         }
 
         state.camera2d = true;
-        self.1.set(state.clone());
+        self.0.set(state.clone());
 
         unsafe { ffi::BeginMode2D(*camera) };
         func();
         unsafe { ffi::EndMode2D() };
 
         state.camera2d = false;
-        self.1.set(state);
+        self.0.set(state);
     }
 
     pub fn begin_camera_3d<F: FnOnce()>(&self, camera: &Camera, func: F) {
-        let mut state = self.1.take();
+        let mut state = self.0.take();
 
         if state.camera3d {
             panic!("Nested begin_camera_3d occured !");
         }
 
         state.camera3d = true;
-        self.1.set(state.clone());
+        self.0.set(state.clone());
 
         unsafe { ffi::BeginMode3D(*camera) };
         func();
         unsafe { ffi::EndMode3D() };
 
         state.camera3d = false;
-        self.1.set(state);
+        self.0.set(state);
     }
 
     pub fn begin_shader<F: FnOnce()>(&self, shader: &Shader, func: F) {
-        let mut state = self.1.take();
+        let mut state = self.0.take();
 
         if state.shader {
             panic!("Nested begin_shader occured !");
         }
 
         state.shader = true;
-        self.1.set(state.clone());
+        self.0.set(state.clone());
 
         unsafe { ffi::BeginShaderMode(shader.0) };
         func();
         unsafe { ffi::EndShaderMode() };
 
         state.shader = false;
-        self.1.set(state);
+        self.0.set(state);
     }
 
     pub fn begin_blend<F: FnOnce()>(&self, blend_mode: BlendMode, func: F) {
-        let mut state = self.1.take();
+        let mut state = self.0.take();
 
         if state.blend {
             panic!("Nested begin_blend occured !");
         }
 
         state.blend = true;
-        self.1.set(state.clone());
+        self.0.set(state.clone());
 
         unsafe { ffi::BeginBlendMode(blend_mode as _) };
         func();
         unsafe { ffi::EndBlendMode() };
 
         state.blend = false;
-        self.1.set(state);
+        self.0.set(state);
     }
 
     pub fn begin_scissors<F: FnOnce()>(&self, x: i32, y: i32, width: i32, height: i32, func: F) {
-        let mut state = self.1.take();
+        let mut state = self.0.take();
 
         if state.scissor {
             panic!("Nested begin_scissors occured !");
         }
 
         state.scissor = true;
-        self.1.set(state.clone());
+        self.0.set(state.clone());
 
         unsafe { ffi::BeginScissorMode(x, y, width, height) };
         func();
         unsafe { ffi::EndScissorMode() };
 
         state.scissor = false;
-        self.1.set(state);
+        self.0.set(state);
     }
 }
 
-impl RaylibDraw for RaylibDrawHandle<'_> {}
+impl RaylibDraw for RaylibDrawHandle {}
 
 // Actual drawing functions
 pub trait RaylibDraw {
