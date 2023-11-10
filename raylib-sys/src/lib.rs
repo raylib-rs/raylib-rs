@@ -6,7 +6,7 @@ pub use mint;
 pub type Vector2 = mint::Vector2<f32>;
 pub type Vector3 = mint::Vector3<f32>;
 pub type Vector4 = mint::Vector4<f32>;
-pub type Matrix = mint::ColumnMatrix4<f32>;
+pub type Matrix = mint::RowMatrix4<f32>;
 pub type Quaternion = mint::Quaternion<f32>;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
