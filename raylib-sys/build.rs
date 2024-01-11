@@ -308,7 +308,7 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
     let platform = if target.contains("wasm32") {
         // make sure cmake knows that it should bundle glfw in
         // Cargo web takes care of this but better safe than sorry
-        env::set_var("EMMAKEN_CFLAGS", "-s USE_GLFW=3");
+        env::set_var("EMCC_FLAGS", "-s USE_GLFW=3");
         Platform::Web
     } else if target.contains("armv7-unknown-linux") {
         Platform::RPI
