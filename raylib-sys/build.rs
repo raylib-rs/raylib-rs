@@ -307,7 +307,7 @@ fn run_command(cmd: &str, args: &[&str]) {
 fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
     let platform = if target.contains("wasm32") {
         // make sure cmake knows that it should bundle glfw in
-        env::set_var("EMCC_CFLAGS", "-sUSE_GLFW=3 -sGL_ENABLE_GET_PROC_ADDRESS");
+        env::set_var("EMCC_CFLAGS", "-sUSE_GLFW=3 -sGL_ENABLE_GET_PROC_ADDRESS -sASYNCIFY");
         Platform::Web
     } else if target.contains("armv7-unknown-linux") {
         Platform::RPI
