@@ -209,6 +209,21 @@ impl WindowState {
         self
     }
 
+    pub fn window_borderless(&self) -> bool {
+        self.0 & (ConfigFlags::FLAG_BORDERLESS_WINDOWED_MODE as i32) != 0
+    }
+    /// Set to support HighDPI
+    pub fn set_window_borderless(mut self, enabled: bool) -> Self {
+        if enabled {
+            // set the bit
+            self.0 |= ConfigFlags::FLAG_BORDERLESS_WINDOWED_MODE as i32;
+        } else {
+            // enable the bit
+            self.0 &= !(ConfigFlags::FLAG_BORDERLESS_WINDOWED_MODE as i32);
+        }
+        self
+    }
+
     pub fn msaa(&self) -> bool {
         self.0 & (ConfigFlags::FLAG_MSAA_4X_HINT as i32) != 0
     }
@@ -562,6 +577,12 @@ impl RaylibHandle {
     #[inline]
     pub fn toggle_fullscreen(&self) {
         unsafe { ffi::ToggleFullscreen() }
+    }
+
+    /// Toggle window state: borderless windowed (only PLATFORM_DESKTOP)
+    #[inline]
+    pub fn toggle_borderless_windowed(&self) {
+        unsafe { ffi::ToggleBorderlessWindowed() }
     }
 
     /// Set window state: maximized, if resizable (only PLATFORM_DESKTOP)
