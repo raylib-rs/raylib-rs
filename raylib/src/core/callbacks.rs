@@ -10,11 +10,12 @@ use std::{
 };
 
 extern "C" {
-    fn sprintf(fmt: *const c_char, ...) -> c_int;
+    fn sprintf(st: *mut c_char, fmt: *const c_char, ...) -> c_int;
 }
 
-#[cfg(target_os = "wasm32")]
+#[cfg(target_family = "wasm")]
 type __va_list_tag = c_void;
+
 #[cfg(target_os = "windows")]
 type __va_list_tag = i8;
 #[cfg(target_os = "linux")]
