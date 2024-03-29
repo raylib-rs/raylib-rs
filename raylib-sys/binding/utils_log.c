@@ -1,4 +1,7 @@
-#include "raylib.h"
+#if !defined(RAYGUI_STANDALONE)
+#include "../raylib/src/raylib.h"
+#endif
+
 #include "utils_log.h"
 #include <stdio.h>	// Required for: vprintf()
 #include <string.h> // Required for: strcpy(), strcat()
