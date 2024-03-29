@@ -1,7 +1,7 @@
 #![allow(non_camel_case_types)]
 
 use crate::{audio::AudioStream, ffi, RaylibHandle};
-use libc::{c_char, c_int, c_void};
+use libc::c_void;
 use parking_lot::Mutex;
 use raylib_sys::TraceLogLevel;
 use std::{
@@ -9,19 +9,10 @@ use std::{
     ptr,
 };
 
+type TraceLogCallback = unsafe extern "C" fn(*mut i8, *const i8, ...);
 extern "C" {
-    fn sprintf(st: *mut c_char, fmt: *const c_char, ...) -> c_int;
+    fn SetTraceLogCallback(cb: Option<TraceLogCallback>);
 }
-
-#[cfg(target_family = "wasm")]
-type __va_list_tag = c_void;
-
-#[cfg(target_os = "windows")]
-type __va_list_tag = i8;
-#[cfg(target_os = "linux")]
-type __va_list_tag = raylib_sys::__va_list_tag;
-#[cfg(target_os = "darwin")]
-type __va_list_tag = raylib_sys::__va_list_tag;
 
 type RustTraceLogCallback = Option<fn(TraceLogLevel, &str)>;
 type RustSaveFileDataCallback = Option<fn(&str, &[u8]) -> bool>;
@@ -76,10 +67,11 @@ fn set_audio_stream_callback(f: RustAudioStreamCallback) {
     *__AUDIO_STREAM_CALLBACK.lock() = f
 }
 
+#[no_mangle]
 extern "C" fn custom_trace_log_callback(
     log_level: ::std::os::raw::c_int,
     text: *const ::std::os::raw::c_char,
-    args: *mut __va_list_tag,
+    len: ::std::os::raw::c_int,
 ) {
     if let Some(trace_log) = trace_log_callback() {
         let a = match log_level {
@@ -96,12 +88,10 @@ extern "C" fn custom_trace_log_callback(
         let b = if text.is_null() {
             CStr::from_bytes_until_nul("(MESSAGE WAS NULL)\0".as_bytes()).unwrap()
         } else {
-            const MAX_TRACELOG_MSG_LENGTH: usize = 386; // chosen because 256 is the max length in raylib's own code and 386 is a bit higher then that.
-            let mut buf: [i8; MAX_TRACELOG_MSG_LENGTH] = [0; MAX_TRACELOG_MSG_LENGTH];
-
-            unsafe { sprintf(buf.as_mut_ptr(), text, args) };
-            let b = buf.as_ptr();
-            unsafe { CStr::from_ptr(b) }
+            unsafe {
+                let b = std::slice::from_raw_parts(text, len as usize);
+                CStr::from_ptr(b.as_ptr())
+            }
         };
 
         trace_log(a, b.to_string_lossy().as_ref())
@@ -180,14 +170,13 @@ impl RaylibHandle {
         &mut self,
         cb: fn(TraceLogLevel, &str),
     ) -> Result<(), SetLogError> {
-        safe_callback_set_func!(
-            cb,
-            trace_log_callback,
-            set_trace_log_callback,
-            ffi::SetTraceLogCallback,
-            custom_trace_log_callback,
-            "trace log"
-        );
+        if let None = trace_log_callback() {
+            set_trace_log_callback(Some(cb));
+            unsafe { ffi::setLogCallbackWrapper() };
+            return Ok(());
+        } else {
+            return Err(SetLogError("trace log"));
+        };
     }
     /// Set custom file binary data saver
     pub fn set_save_file_data_callback(
