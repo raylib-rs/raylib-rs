@@ -43,7 +43,7 @@ impl std::error::Error for RaylibAudioInitError {}
 /// This token is used to indicate audio is initialized. It's also used to create [`Wave`], [`Sound`], [`Music`], [`AudioStream`], and [`SoundAlias`].
 /// All of those have a lifetime that is bound to RaylibAudio. The compiler will disallow you from using them without ensuring that the [`RaylibAudio`] is present while doing so.
 #[derive(Debug, Clone)]
-pub struct RaylibAudio(());
+pub struct RaylibAudio(PhantomData<()>);
 
 impl RaylibAudio {
     /// Initializes audio device and context.
@@ -56,7 +56,7 @@ impl RaylibAudio {
             }
             ffi::InitAudioDevice();
         }
-        Ok(RaylibAudio(()))
+        Ok(RaylibAudio(PhantomData))
     }
 
     /// Checks if audio device is ready.
