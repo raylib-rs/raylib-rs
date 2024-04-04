@@ -5,6 +5,7 @@ use std::ffi::CString;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 use std::ops::{Deref, DerefMut};
+use std::path::Path;
 
 make_thin_wrapper_lifetime!(Wave, ffi::Wave, RaylibAudio, ffi::UnloadWave);
 
@@ -204,8 +205,8 @@ impl<'aud> Wave<'aud> {
 
     /// Export wave file. Extension must be .wav or .raw
     #[inline]
-    pub fn export(&self, filename: &str) -> bool {
-        let c_filename = CString::new(filename).unwrap();
+    pub fn export(&self, filename: impl AsRef<Path>) -> bool {
+        let c_filename = CString::new(filename.as_ref().to_string_lossy().as_bytes()).unwrap();
         unsafe { ffi::ExportWave(self.0, c_filename.as_ptr()) }
     }
 
