@@ -61,7 +61,7 @@ impl RaylibAudio {
 
     /// Checks if audio device is ready.
     #[inline]
-    pub fn ready(&self) -> bool {
+    pub fn is_audio_device_ready(&self) -> bool {
         unsafe { ffi::IsAudioDeviceReady() }
     }
 
@@ -198,7 +198,7 @@ impl<'aud> Wave<'aud> {
         inner
     }
 
-    pub fn ready(&self) -> bool {
+    pub fn is_wave_ready(&self) -> bool {
         unsafe { ffi::IsWaveReady(self.0) }
     }
 
@@ -267,7 +267,7 @@ impl<'aud> AsMut<ffi::AudioStream> for Sound<'aud> {
 }
 
 impl<'aud> Sound<'aud> {
-    pub fn ready(&self) -> bool {
+    pub fn is_sound_ready(&self) -> bool {
         unsafe { ffi::IsSoundReady(self.0) }
     }
 
@@ -354,7 +354,7 @@ impl<'aud> Sound<'aud> {
 }
 
 impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
-    pub fn ready(&self) -> bool {
+    pub fn is_sound_ready(&self) -> bool {
         unsafe { ffi::IsSoundReady(self.0) }
     }
 
@@ -516,7 +516,7 @@ impl<'aud> Music<'aud> {
 }
 
 impl<'aud> AudioStream<'aud> {
-    pub fn ready(&self) -> bool {
+    pub fn is_audio_stream_ready(&self) -> bool {
         unsafe { ffi::IsAudioStreamReady(self.0) }
     }
     pub fn sample_rate(&self) -> u32 {
