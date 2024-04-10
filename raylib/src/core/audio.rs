@@ -80,11 +80,14 @@ impl RaylibAudio {
     }
 
     /// Loads a new sound from file.
-    pub fn new_sound<'aud>(&'aud self, filename: &str) -> Result<Sound<'aud>, String> {
-        let c_filename = CString::new(filename).unwrap();
+    pub fn new_sound<'aud>(&'aud self, filename: impl AsRef<Path>) -> Result<Sound<'aud>, String> {
+        let c_filename = CString::new(filename.as_ref().to_string_lossy().as_bytes()).unwrap();
         let s = unsafe { ffi::LoadSound(c_filename.as_ptr()) };
         if s.stream.buffer.is_null() {
-            return Err(format!("failed to load sound {}", filename));
+            return Err(format!(
+                "failed to load sound {}",
+                filename.as_ref().display()
+            ));
         }
 
         Ok(Sound(s, self))
@@ -100,11 +103,11 @@ impl RaylibAudio {
     }
     /// Loads wave data from file into RAM.
     #[inline]
-    pub fn new_wave<'aud>(&'aud self, filename: &str) -> Result<Wave<'aud>, String> {
-        let c_filename = CString::new(filename).unwrap();
+    pub fn new_wave<'aud>(&'aud self, filename: impl AsRef<Path>) -> Result<Wave<'aud>, String> {
+        let c_filename = CString::new(filename.as_ref().to_string_lossy().as_bytes()).unwrap();
         let w = unsafe { ffi::LoadWave(c_filename.as_ptr()) };
         if w.data.is_null() {
-            return Err(format!("Cannot load wave {}", filename));
+            return Err(format!("Cannot load wave {}", filename.as_ref().display()));
         }
         Ok(Wave(w, self))
     }
@@ -127,11 +130,14 @@ impl RaylibAudio {
 
     /// Loads music stream from file.
     // #[inline]
-    pub fn new_music<'aud>(&'aud self, filename: &str) -> Result<Music<'aud>, String> {
-        let c_filename = CString::new(filename).unwrap();
+    pub fn new_music<'aud>(&'aud self, filename: impl AsRef<Path>) -> Result<Music<'aud>, String> {
+        let c_filename = CString::new(filename.as_ref().to_string_lossy().as_bytes()).unwrap();
         let m = unsafe { ffi::LoadMusicStream(c_filename.as_ptr()) };
         if m.stream.buffer.is_null() {
-            return Err(format!("music could not be loaded from file {}", filename));
+            return Err(format!(
+                "music could not be loaded from file {}",
+                filename.as_ref().display()
+            ));
         }
         Ok(Music(m, self))
     }
