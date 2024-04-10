@@ -3,7 +3,6 @@
 #![allow(non_snake_case)]
 #![allow(clippy::approx_constant)]
 
-use std::ffi::c_char;
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 #[cfg(target_os = "macos")]
