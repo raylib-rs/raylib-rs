@@ -68,7 +68,7 @@ fn set_audio_stream_callback(f: RustAudioStreamCallback) {
 }
 
 #[no_mangle]
-extern "C" fn custom_trace_log_callback(
+pub extern "C" fn custom_trace_log_callback(
     log_level: ::std::os::raw::c_int,
     text: *const ::std::os::raw::c_char,
     len: ::std::os::raw::c_int,
