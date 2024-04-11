@@ -1,6 +1,11 @@
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #if !defined(RAYGUI_STANDALONE)
 #include "../raylib/src/raylib.h"
 #endif
+
 
 #include "utils_log.h"
 #include <stdio.h>	// Required for: vprintf()
@@ -25,3 +30,7 @@ void setLogCallbackWrapper(void)
 {
 	SetTraceLogCallback(rayLogWrapperCallback);
 }
+
+#if defined(__cplusplus)
+}
+#endif
