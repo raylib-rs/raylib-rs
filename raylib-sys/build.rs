@@ -221,7 +221,7 @@ fn gen_rgui() {
     #[cfg(target_os = "windows")]
     {
         cc::Build::new()
-            .files(vec!["binding/rgui_wrapper.cpp", "binding/utils_log.c"])
+            .files(vec!["binding/rgui_wrapper.cpp", "binding/utils_log.cpp"])
             .include("binding")
             .warnings(false)
             // .flag("-std=c99")
