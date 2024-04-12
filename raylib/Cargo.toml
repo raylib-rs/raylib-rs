@@ -37,84 +37,84 @@ opengl_21 = ["raylib-sys/opengl_21"]
 opengl_es_20 = ["raylib-sys/opengl_es_20"]
 
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "specs"
 path = "examples/samples/specs.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "rgui"
 path = "examples/samples/rgui.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "arkanoid"
 path = "examples/samples/arkanoid.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "logo"
 path = "examples/samples/logo.rs"
 doc-scrape-examples = true
 
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "camera2D"
 path = "examples/samples/camera2D.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "raymarch"
 path = "examples/samples/raymarch.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "font"
 path = "examples/samples/font.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "drop"
 path = "examples/samples/drop.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "texture"
 path = "examples/samples/texture.rs"
 doc-scrape-examples = true
 
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "yaw_pitch_roll"
 path = "examples/samples/yaw_pitch_roll.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "roguelike"
 path = "examples/samples/roguelike.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "input"
 path = "examples/samples/input.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "3d_camera_first_person"
 path = "examples/samples/3d_camera_first_person.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "model_shader"
 path = "examples/samples/model_shader.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "extensions"
 path = "examples/samples/extensions.rs"
 doc-scrape-examples = true
 
-[[target.'cfg(not(target_os = "windows"))'.example]]
+[[example]]
 name = "asteroids"
 path = "examples/samples/asteroids.rs"
 doc-scrape-examples = true
