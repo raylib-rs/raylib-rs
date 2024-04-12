@@ -119,5 +119,10 @@ doc-scrape-examples = true
 # path = "examples/samples/asteroids.rs"
 # doc-scrape-examples = true
 
+[[example]]
+name = "floppy"
+path = "examples/samples/floppy.rs"
+doc-scrape-examples = true
+
 [package.metadata.docs.rs]
 cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
