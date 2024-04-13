@@ -53,10 +53,10 @@ name = "rgui"
 path = "examples/samples/rgui.rs"
 doc-scrape-examples = true
 
-# [[example]]
-# name = "arkanoid"
-# path = "examples/samples/arkanoid.rs"
-# doc-scrape-examples = true
+[[example]]
+name = "arkanoid"
+path = "examples/samples/arkanoid.rs"
+doc-scrape-examples = true
 
 [[example]]
 name = "logo"
