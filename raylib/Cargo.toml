@@ -79,10 +79,10 @@ name = "font"
 path = "examples/samples/font.rs"
 doc-scrape-examples = true
 
-# [[example]]
-# name = "drop"
-# path = "examples/samples/drop.rs"
-# doc-scrape-examples = true
+[[example]]
+name = "drop"
+path = "examples/samples/drop.rs"
+doc-scrape-examples = true
 
 [[example]]
 name = "texture"
