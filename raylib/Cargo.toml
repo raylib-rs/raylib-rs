@@ -89,11 +89,10 @@ name = "texture"
 path = "examples/samples/texture.rs"
 doc-scrape-examples = true
 
-
-# [[example]]
-# name = "yaw_pitch_roll"
-# path = "examples/samples/yaw_pitch_roll.rs"
-# doc-scrape-examples = true
+[[example]]
+name = "yaw_pitch_roll"
+path = "examples/samples/yaw_pitch_roll.rs"
+doc-scrape-examples = true
 
 [[example]]
 name = "roguelike"
