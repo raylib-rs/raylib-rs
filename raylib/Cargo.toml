@@ -95,10 +95,11 @@ doc-scrape-examples = true
 # path = "examples/samples/yaw_pitch_roll.rs"
 # doc-scrape-examples = true
 
-# [[example]]
-# name = "roguelike"
-# path = "examples/samples/roguelike.rs"
-# doc-scrape-examples = true
+[[example]]
+name = "roguelike"
+path = "examples/samples/roguelike.rs"
+features = ["with_serde"]
+doc-scrape-examples = true
 
 [[example]]
 name = "input"
