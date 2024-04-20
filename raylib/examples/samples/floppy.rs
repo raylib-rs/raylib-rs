@@ -177,9 +177,6 @@ fn update_game(game: &mut Game, rl: &RaylibHandle) {
 //
 // // Draw game (one frame)
 fn draw_game(game: &mut Game, rl: &mut RaylibHandle, thread: &RaylibThread) {
-    let (w, h) = (rl.get_screen_width(), rl.get_screen_height());
-    let game_pause_text_size = rl.measure_text("GAME PAUSED", 40) / 2;
-    let play_again_text_size = rl.measure_text("PRESS [ENTER] TO PLAY AGAIN", 20) / 2;
     let mut d = rl.begin_drawing(thread);
 
     d.clear_background(Color::RAYWHITE);
@@ -228,7 +225,7 @@ fn draw_game(game: &mut Game, rl: &mut RaylibHandle, thread: &RaylibThread) {
         if game.pause {
             d.draw_text(
                 "GAME PAUSED",
-                SCREEN_WIDTH / 2 - game_pause_text_size / 2,
+                SCREEN_WIDTH / 2 - d.measure_text("GAME PAUSED", 40) / 2,
                 SCREEN_HEIGHT / 2 - 40,
                 40,
                 Color::GRAY,
@@ -237,8 +234,8 @@ fn draw_game(game: &mut Game, rl: &mut RaylibHandle, thread: &RaylibThread) {
     } else {
         d.draw_text(
             "PRESS [ENTER] TO PLAY AGAIN",
-            w / 2 - play_again_text_size / 2,
-            h / 2 - 50,
+            d.get_screen_width() / 2 - d.measure_text("PRESS [ENTER] TO PLAY AGAIN", 20) / 2,
+            d.get_screen_height() / 2 - 50,
             20,
             Color::GRAY,
         );
