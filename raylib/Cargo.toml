@@ -97,7 +97,7 @@ doc-scrape-examples = true
 [[example]]
 name = "roguelike"
 path = "examples/samples/roguelike.rs"
-features = ["with_serde"]
+required-features = ["with_serde"]
 doc-scrape-examples = true
 
 [[example]]
