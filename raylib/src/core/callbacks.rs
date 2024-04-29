@@ -13,7 +13,7 @@ extern "C" {
     fn sprintf(fmt: *const c_char, ...) -> c_int;
 }
 
-#[cfg(target_os = "wasm32")]
+#[cfg(target_arch = "wasm32")]
 type __va_list_tag = *mut c_void;
 #[cfg(target_os = "windows")]
 type __va_list_tag = *mut i8;
