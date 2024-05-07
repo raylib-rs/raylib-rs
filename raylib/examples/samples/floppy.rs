@@ -76,7 +76,11 @@ fn main() {
 
     let mut game = Game::default();
 
+<<<<<<< HEAD:raylib/examples/samples/floppy.rs
     init_game(&mut game, &rl);
+=======
+    init_game(&mut game);
+>>>>>>> 82a8ceb6f047ebab31acd113ef8a0fda883de3b7:samples/floppy.rs
 
     rl.set_target_fps(60);
     // Main game loop
@@ -93,7 +97,11 @@ fn main() {
 //------------------------------------------------------------------------------------
 
 // Initialize game variables
+<<<<<<< HEAD:raylib/examples/samples/floppy.rs
 fn init_game(game: &mut Game, rl: &RaylibHandle) {
+=======
+fn init_game(game: &mut Game) {
+>>>>>>> 82a8ceb6f047ebab31acd113ef8a0fda883de3b7:samples/floppy.rs
     game.floppy.radius = FLOPPY_RADIUS;
     game.floppy.position = Vector2::new(80.0, SCREEN_HEIGHT as f32 / 2.0 - game.floppy.radius);
     game.floppy.color = Color::DARKGRAY;
@@ -101,7 +109,11 @@ fn init_game(game: &mut Game, rl: &RaylibHandle) {
 
     for i in 0..MAX_TUBES {
         game.tubes_pos[i].x = (400 + 280 * i) as f32;
+<<<<<<< HEAD:raylib/examples/samples/floppy.rs
         game.tubes_pos[i].y = -rl.get_random_value::<i32>(0..120) as f32;
+=======
+        game.tubes_pos[i].y = -get_random_value::<i32>(0, 120) as f32;
+>>>>>>> 82a8ceb6f047ebab31acd113ef8a0fda883de3b7:samples/floppy.rs
     }
 
     for i in (0..MAX_TUBES * 2).step_by(2) {
@@ -169,7 +181,11 @@ fn update_game(game: &mut Game, rl: &RaylibHandle) {
         }
     } else {
         if rl.is_key_pressed(KEY_ENTER) {
+<<<<<<< HEAD:raylib/examples/samples/floppy.rs
             init_game(game, rl);
+=======
+            init_game(game);
+>>>>>>> 82a8ceb6f047ebab31acd113ef8a0fda883de3b7:samples/floppy.rs
             game.game_over = false;
         }
     }
@@ -177,6 +193,10 @@ fn update_game(game: &mut Game, rl: &RaylibHandle) {
 //
 // // Draw game (one frame)
 fn draw_game(game: &mut Game, rl: &mut RaylibHandle, thread: &RaylibThread) {
+<<<<<<< HEAD:raylib/examples/samples/floppy.rs
+=======
+    let (w, h) = (rl.get_screen_width(), rl.get_screen_height());
+>>>>>>> 82a8ceb6f047ebab31acd113ef8a0fda883de3b7:samples/floppy.rs
     let mut d = rl.begin_drawing(thread);
 
     d.clear_background(Color::RAYWHITE);
@@ -225,7 +245,11 @@ fn draw_game(game: &mut Game, rl: &mut RaylibHandle, thread: &RaylibThread) {
         if game.pause {
             d.draw_text(
                 "GAME PAUSED",
+<<<<<<< HEAD:raylib/examples/samples/floppy.rs
                 SCREEN_WIDTH / 2 - d.measure_text("GAME PAUSED", 40) / 2,
+=======
+                SCREEN_WIDTH / 2 - measure_text("GAME PAUSED", 40) / 2,
+>>>>>>> 82a8ceb6f047ebab31acd113ef8a0fda883de3b7:samples/floppy.rs
                 SCREEN_HEIGHT / 2 - 40,
                 40,
                 Color::GRAY,
@@ -234,8 +258,13 @@ fn draw_game(game: &mut Game, rl: &mut RaylibHandle, thread: &RaylibThread) {
     } else {
         d.draw_text(
             "PRESS [ENTER] TO PLAY AGAIN",
+<<<<<<< HEAD:raylib/examples/samples/floppy.rs
             d.get_screen_width() / 2 - d.measure_text("PRESS [ENTER] TO PLAY AGAIN", 20) / 2,
             d.get_screen_height() / 2 - 50,
+=======
+            w / 2 - measure_text("PRESS [ENTER] TO PLAY AGAIN", 20) / 2,
+            h / 2 - 50,
+>>>>>>> 82a8ceb6f047ebab31acd113ef8a0fda883de3b7:samples/floppy.rs
             20,
             Color::GRAY,
         );
