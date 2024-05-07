@@ -17,9 +17,9 @@ void rayLogWrapperCallback(int logType, const char *text, va_list args)
 {
 	char buffer[MAX_TRACELOG_BUFFER_SIZE] = {0};
 
-	vsnprintf(buffer, text, args);
+	int size = vsnprintf(buffer, text, args);
 
-	custom_trace_log_callback(logType, buffer, strlen(buffer));
+	custom_trace_log_callback(logType, buffer, size);
 }
 
 void setLogCallbackWrapper(void)
