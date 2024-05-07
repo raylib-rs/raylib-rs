@@ -29,7 +29,7 @@ jobs:
       - name: Setup git submodules
         run: git submodule init; git submodule update
       - name: Install alsa, udev, glfw3, and wayland
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends gcc-mingw-w64 libasound2-dev libudev-dev libglfw3-dev libwayland-dev
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends mingw-w64 libasound2-dev libudev-dev libglfw3-dev libwayland-dev
         if: runner.os == 'linux'
       - name: Install the windows rustup target
         run: rustup target add x86_64-pc-windows-gnu
