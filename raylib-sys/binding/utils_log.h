@@ -4,7 +4,7 @@ extern "C"
 #endif
 
     void setLogCallbackWrapper(void); // enable the call-back
-    void custom_trace_log_callback(int logType, const char *text, int len);
+    void custom_trace_log_callback(int logType, const char *text);
 
 #if defined(__cplusplus)
 }

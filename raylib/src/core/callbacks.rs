@@ -68,11 +68,10 @@ fn set_audio_stream_callback(f: RustAudioStreamCallback) {
 }
 
 #[no_mangle]
-#[link_name="custom_trace_log_callback"]
+#[link_name = "custom_trace_log_callback"]
 pub extern "C" fn custom_trace_log_callback(
     log_level: ::std::os::raw::c_int,
     text: *const ::std::os::raw::c_char,
-    len: ::std::os::raw::c_int,
 ) {
     if let Some(trace_log) = trace_log_callback() {
         let a = match log_level {
@@ -89,10 +88,7 @@ pub extern "C" fn custom_trace_log_callback(
         let b = if text.is_null() {
             CStr::from_bytes_until_nul("(MESSAGE WAS NULL)\0".as_bytes()).unwrap()
         } else {
-            unsafe {
-                let b = std::slice::from_raw_parts(text, len as usize);
-                CStr::from_ptr(b.as_ptr())
-            }
+            unsafe { CStr::from_ptr(text) }
         };
 
         trace_log(a, b.to_string_lossy().as_ref())
@@ -171,13 +167,9 @@ impl RaylibHandle {
         &mut self,
         cb: fn(TraceLogLevel, &str),
     ) -> Result<(), SetLogError> {
-        if let None = trace_log_callback() {
-            set_trace_log_callback(Some(cb));
-            unsafe { ffi::setLogCallbackWrapper() };
-            return Ok(());
-        } else {
-            return Err(SetLogError("trace log"));
-        };
+        set_trace_log_callback(Some(cb));
+        unsafe { ffi::setLogCallbackWrapper() };
+        return Ok(());
     }
     /// Set custom file binary data saver
     pub fn set_save_file_data_callback(
