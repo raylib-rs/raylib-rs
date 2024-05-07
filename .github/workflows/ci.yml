@@ -32,9 +32,9 @@ jobs:
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libglfw3-dev libwayland-dev
         if: runner.os == 'linux'
       - name: Install the windows rustup target
-        run: rustup target add x86_64-pc-windows-msvc
+        run: rustup target add x86_64-pc-windows-gnu
       - name: Build & run tests under Windows
-        run: cargo test --target=x86_64-pc-windows-msvc
+        run: cargo test --target=x86_64-pc-windows-gnu
   all-doc-tests:
     runs-on: ubuntu-latest
     steps:
