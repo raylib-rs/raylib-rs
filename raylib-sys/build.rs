@@ -292,7 +292,6 @@ fn link(platform: Platform, platform_os: PlatformOS) {
 }
 
 fn main() {
-    println!("cargo:rustc-env=EMCC_CFLAGS=\"-sUSE_GLFW=3 -sGL_ENABLE_GET_PROC_ADDRESS -sWASM=1 -sALLOW_MEMORY_GROWTH=1 -sWASM_MEM_MAX=512MB -sTOTAL_MEMORY=512MB -sABORTING_MALLOC=0 -sASYNCIFY -sFORCE_FILESYSTEM=1 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sEXPORTED_FUNCTIONS=['_malloc''_free''_main''_emsc_main''_emsc_set_window_size'] -sEXPORTED_RUNTIME_METHODS=ccallcwrap\"");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=./binding/binding.h");
     let target = env::var("TARGET").expect("Cargo build scripts always have TARGET");
