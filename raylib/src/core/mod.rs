@@ -20,6 +20,7 @@ pub mod text;
 pub mod texture;
 pub mod vr;
 pub mod window;
+pub mod error;
 
 use raylib_sys::TraceLogLevel;
 
