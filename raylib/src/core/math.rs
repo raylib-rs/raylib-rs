@@ -237,11 +237,21 @@ impl Vector2 {
     }
 
     /// Returns a new `Vector2` with componenets clamp to a certain interval.
-    pub fn clamp(&self, num: Range<f32>) -> Vector2 {
+    pub fn clamp_by(&self, num: Range<f32>) -> Vector2 {
         Vector2 {
             x: self.x.clamp(num.start, num.end),
             y: self.y.clamp(num.start, num.end),
         }
+    }
+
+    /// Returns a new `Vector2` with components clamped between the `min` and `max` values specified
+    /// by the given vectors
+    pub fn clamp(&self, v_min: Vector2, v_max: Vector2) -> Vector2 {
+        Vector2 {
+            x: self.x.clamp(v_min.x, v_max.x),
+            y: self.y.clamp(v_min.y, v_max.y),
+        }
+    
     }
 }
 
@@ -685,11 +695,21 @@ impl Vector3 {
     }
 
     /// Returns a new `Vector3` with componenets clamp to a certain interval.
-    pub fn clamp(&self, num: Range<f32>) -> Vector3 {
+    pub fn clamp_by(&self, num: Range<f32>) -> Vector3 {
         Vector3 {
             x: self.x.clamp(num.start, num.end),
             y: self.y.clamp(num.start, num.end),
             z: self.z.clamp(num.start, num.end),
+        }
+    }
+
+    /// Returns a new `Vector3` with components clamped between the `min` and `max` values specified
+    /// by the given vectors
+    pub fn clamp(&self, v_min: Vector3, v_max: Vector3) -> Vector3 {
+        Vector3 {
+            x: self.x.clamp(v_min.x, v_max.x),
+            y: self.y.clamp(v_min.y, v_max.y),
+            z: self.z.clamp(v_min.z, v_max.z),
         }
     }
 }
@@ -1221,12 +1241,23 @@ impl Quaternion {
     }
 
     /// Returns a new `Quaternion` with componenets clamp to a certain interval.
-    pub fn clamp(&self, num: Range<f32>) -> Quaternion {
+    pub fn clamp_by(&self, num: Range<f32>) -> Quaternion {
         Quaternion {
             x: self.x.clamp(num.start, num.end),
             y: self.y.clamp(num.start, num.end),
             z: self.z.clamp(num.start, num.end),
             w: self.w.clamp(num.start, num.end),
+        }
+    }
+
+    /// Returns a new `Quaternion` with components clamped between the `min` and `max` values specified
+    /// by the given quaternions.
+    pub fn clamp(&self, q_min: Quaternion, q_max: Quaternion) -> Quaternion {
+        Quaternion {
+            x: self.x.clamp(q_min.x, q_max.x),
+            y: self.y.clamp(q_min.y, q_max.y),
+            z: self.z.clamp(q_min.z, q_max.z),
+            w: self.w.clamp(q_min.w, q_max.w),
         }
     }
 }
