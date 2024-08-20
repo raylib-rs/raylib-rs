@@ -16,16 +16,30 @@ use crate::text::Codepoints;
 use std::convert::AsRef;
 use std::ffi::CString;
 
+use super::camera::Camera2D;
+use super::shaders::{Shader, ShaderV};
+
 /// Seems like all draw commands must be issued from the main thread
 impl RaylibHandle {
     /// Setup canvas (framebuffer) to start drawing
     #[must_use]
+    #[deprecated = "Consider using start_drawing to use a closure instead."]
     pub fn begin_drawing(&mut self, _: &RaylibThread) -> RaylibDrawHandle {
         unsafe {
             ffi::BeginDrawing();
         };
         let d = RaylibDrawHandle(self);
         d
+    }
+
+    pub fn start_drawing(&mut self, _: &RaylibThread, mut func: impl FnMut(RaylibDrawHandle)) {
+        unsafe {
+            ffi::BeginDrawing();
+        };
+        func(RaylibDrawHandle(self));
+        unsafe {
+            ffi::EndDrawing();
+        };
     }
 }
 
@@ -47,11 +61,16 @@ impl<'a> std::ops::Deref for RaylibDrawHandle<'a> {
     }
 }
 
+impl<'a> std::ops::DerefMut for RaylibDrawHandle<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0
+    }
+}
 impl<'a> RaylibDraw for RaylibDrawHandle<'a> {}
 
 // Texture2D Stuff
 
-pub struct RaylibTextureMode<'a, T>(&'a T, &'a mut ffi::RenderTexture2D);
+pub struct RaylibTextureMode<'a, T>(&'a T, Option<&'a mut ffi::RenderTexture2D>);
 impl<'a, T> Drop for RaylibTextureMode<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndTextureMode() }
@@ -70,13 +89,25 @@ where
     Self: Sized,
 {
     #[must_use]
+    #[deprecated = "Consider using start_texture_mode to use a closure instead."]
     fn begin_texture_mode<'a>(
         &'a mut self,
         _: &RaylibThread,
         framebuffer: &'a mut ffi::RenderTexture2D,
     ) -> RaylibTextureMode<Self> {
         unsafe { ffi::BeginTextureMode(*framebuffer) }
-        RaylibTextureMode(self, framebuffer)
+        RaylibTextureMode(self, Some(framebuffer))
+    }
+
+    fn start_texture_mode<'a>(
+        &'a mut self,
+        _: &RaylibThread,
+        framebuffer: &'a mut ffi::RenderTexture2D,
+        mut func: impl FnMut(RaylibTextureMode<Self>, &'a mut ffi::RenderTexture2D),
+    ) {
+        unsafe { ffi::BeginTextureMode(*framebuffer) }
+        func(RaylibTextureMode(self, None), framebuffer);
+        unsafe { ffi::EndTextureMode() }
     }
 }
 
@@ -87,7 +118,7 @@ impl<'a, T> RaylibDraw for RaylibTextureMode<'a, T> {}
 
 // VR Stuff
 
-pub struct RaylibVRMode<'a, T>(&'a T, &'a mut VrStereoConfig);
+pub struct RaylibVRMode<'a, T>(&'a T, Option<&'a mut VrStereoConfig>);
 impl<'a, T> Drop for RaylibVRMode<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndVrStereoMode() }
@@ -106,12 +137,23 @@ where
     Self: Sized,
 {
     #[must_use]
+    #[deprecated = "Consider using start_vr_stereo_mode to use a closure instead."]
     fn begin_vr_stereo_mode<'a>(
         &'a mut self,
         vr_config: &'a mut VrStereoConfig,
     ) -> RaylibVRMode<Self> {
         unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
-        RaylibVRMode(self, vr_config)
+        RaylibVRMode(self, Some(vr_config))
+    }
+
+    fn start_vr_stereo_mode<'a>(
+        &'a mut self,
+        vr_config: &'a mut VrStereoConfig,
+        mut func: impl FnMut(RaylibVRMode<Self>, &'a mut VrStereoConfig),
+    ) {
+        unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
+        func(RaylibVRMode(&self, None), vr_config);
+        unsafe { ffi::EndVrStereoMode() };
     }
 }
 
@@ -133,6 +175,11 @@ impl<'a, T> std::ops::Deref for RaylibMode2D<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibMode2D<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibMode2DExt
 where
@@ -140,11 +187,27 @@ where
 {
     #[allow(non_snake_case)]
     #[must_use]
+    #[deprecated = "Consider using start_mode2D to use a closure instead."]
     fn begin_mode2D(&mut self, camera: impl Into<ffi::Camera2D>) -> RaylibMode2D<Self> {
         unsafe {
             ffi::BeginMode2D(camera.into());
         }
         RaylibMode2D(self)
+    }
+
+    #[allow(non_snake_case)]
+    fn start_mode2D(
+        &mut self,
+        camera: Camera2D,
+        mut func: impl FnMut(RaylibMode2D<Self>, Camera2D),
+    ) {
+        unsafe {
+            ffi::BeginMode2D(camera.into());
+        }
+        func(RaylibMode2D(self), camera);
+        unsafe {
+            ffi::EndMode2D();
+        }
     }
 }
 
@@ -166,6 +229,11 @@ impl<'a, T> std::ops::Deref for RaylibMode3D<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibMode3D<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibMode3DExt
 where
@@ -173,11 +241,27 @@ where
 {
     #[allow(non_snake_case)]
     #[must_use]
+    #[deprecated = "Consider using start_mode3D to use a closure instead."]
     fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<Self> {
         unsafe {
             ffi::BeginMode3D(camera.into());
         }
         RaylibMode3D(self)
+    }
+
+    #[allow(non_snake_case)]
+    fn start_mode3D(
+        &mut self,
+        camera: Camera3D,
+        mut func: impl FnMut(RaylibMode3D<Self>, Camera3D),
+    ) {
+        unsafe {
+            ffi::BeginMode3D(camera.into());
+        }
+        func(RaylibMode3D(self), camera);
+        unsafe {
+            ffi::EndMode3D();
+        }
     }
 }
 
@@ -187,7 +271,8 @@ impl<'a, T> RaylibDraw3D for RaylibMode3D<'a, T> {}
 
 // shader Mode
 
-pub struct RaylibShaderMode<'a, T>(&'a mut T, &'a ffi::Shader);
+pub struct RaylibShaderMode<'a, T>(&'a mut T, Option<&'a mut Shader>);
+
 impl<'a, T> Drop for RaylibShaderMode<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndShaderMode() }
@@ -200,15 +285,31 @@ impl<'a, T> std::ops::Deref for RaylibShaderMode<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibShaderMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibShaderModeExt
 where
     Self: Sized,
 {
     #[must_use]
-    fn begin_shader_mode<'a>(&'a mut self, shader: &'a ffi::Shader) -> RaylibShaderMode<Self> {
-        unsafe { ffi::BeginShaderMode(*shader) }
-        RaylibShaderMode(self, shader)
+    #[deprecated = "Consider using start_shader_mode to use a closure instead."]
+    fn begin_shader_mode<'a>(&'a mut self, shader: &'a mut Shader) -> RaylibShaderMode<Self> {
+        unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
+        RaylibShaderMode(self, Some(shader))
+    }
+
+    fn start_shader_mode<'a>(
+        &'a mut self,
+        shader: &'a mut Shader,
+        mut func: impl FnMut(RaylibShaderMode<Self>, &'a mut Shader),
+    ) {
+        unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
+        func(RaylibShaderMode(self, None), shader);
+        unsafe { ffi::EndShaderMode() }
     }
 }
 
@@ -231,15 +332,31 @@ impl<'a, T> std::ops::Deref for RaylibBlendMode<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibBlendMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibBlendModeExt
 where
     Self: Sized,
 {
     #[must_use]
+    #[deprecated = "Consider using start_blend_mode to use a closure instead."]
     fn begin_blend_mode(&mut self, blend_mode: crate::consts::BlendMode) -> RaylibBlendMode<Self> {
         unsafe { ffi::BeginBlendMode((blend_mode as u32) as i32) }
         RaylibBlendMode(self)
+    }
+
+    fn start_blend_mode(
+        &mut self,
+        blend_mode: crate::consts::BlendMode,
+        mut func: impl FnMut(RaylibBlendMode<Self>),
+    ) {
+        unsafe { ffi::BeginBlendMode((blend_mode as u32) as i32) }
+        func(RaylibBlendMode(self));
+        unsafe { ffi::EndBlendMode() }
     }
 }
 
@@ -262,6 +379,11 @@ impl<'a, T> std::ops::Deref for RaylibScissorMode<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibScissorMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibScissorModeExt
 where
@@ -277,6 +399,19 @@ where
     ) -> RaylibScissorMode<Self> {
         unsafe { ffi::BeginScissorMode(x, y, width, height) }
         RaylibScissorMode(self)
+    }
+
+    fn start_scissor_mode(
+        &mut self,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        mut func: impl FnMut(RaylibScissorMode<Self>),
+    ) {
+        unsafe { ffi::BeginScissorMode(x, y, width, height) }
+        func(RaylibScissorMode(self));
+        unsafe { ffi::EndScissorMode() }
     }
 }
 
@@ -1839,6 +1974,34 @@ pub trait RaylibDraw3D {
                 size.into(),
                 tint.into(),
             );
+        }
+    }
+
+    /// Draw a billboard texture defined by source and rotation
+    fn draw_billboard_pro(
+        &mut self,
+        camera: impl Into<ffi::Camera>,
+        texture: impl Into<ffi::Texture2D>,
+        source: impl Into<ffi::Rectangle>,
+        position: impl Into<ffi::Vector3>,
+        up: impl Into<ffi::Vector3>,
+        size: impl Into<ffi::Vector2>,
+        origin: impl Into<ffi::Vector2>,
+        rotation: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawBillboardPro(
+                camera.into(),
+                texture.into(),
+                source.into(),
+                position.into(),
+                up.into(),
+                size.into(),
+                origin.into(),
+                rotation,
+                tint.into(),
+            )
         }
     }
 }
