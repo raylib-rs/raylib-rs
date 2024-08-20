@@ -16,6 +16,8 @@ use crate::text::Codepoints;
 use std::convert::AsRef;
 use std::ffi::CString;
 
+use super::shaders::{Shader, ShaderV};
+
 /// Seems like all draw commands must be issued from the main thread
 impl RaylibHandle {
     /// Setup canvas (framebuffer) to start drawing
@@ -47,6 +49,11 @@ impl<'a> std::ops::Deref for RaylibDrawHandle<'a> {
     }
 }
 
+impl<'a> std::ops::DerefMut for RaylibDrawHandle<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0
+    }
+}
 impl<'a> RaylibDraw for RaylibDrawHandle<'a> {}
 
 // Texture2D Stuff
@@ -133,6 +140,11 @@ impl<'a, T> std::ops::Deref for RaylibMode2D<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibMode2D<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibMode2DExt
 where
@@ -166,6 +178,11 @@ impl<'a, T> std::ops::Deref for RaylibMode3D<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibMode3D<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibMode3DExt
 where
@@ -187,7 +204,55 @@ impl<'a, T> RaylibDraw3D for RaylibMode3D<'a, T> {}
 
 // shader Mode
 
-pub struct RaylibShaderMode<'a, T>(&'a mut T, &'a ffi::Shader);
+pub struct RaylibShaderMode<'a, T>(&'a mut T, &'a mut Shader);
+
+impl<'a, T> RaylibShaderMode<'a, T> {
+    pub fn shader(&'a self) -> &'a Shader {
+        self.1
+    }
+    /// Sets shader uniform value for shader's shader
+    #[inline]
+    pub fn set_inner_shader_value<S: ShaderV>(&mut self, uniform_loc: i32, value: S) {
+        unsafe {
+            ffi::SetShaderValue(
+                **self.1,
+                uniform_loc,
+                value.value(),
+                (S::UNIFORM_TYPE as u32) as i32,
+            );
+        }
+    }
+
+    /// Set shader uniform value vector for shader's shader
+    #[inline]
+    pub fn set_inner_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S]) {
+        unsafe {
+            ffi::SetShaderValueV(
+                **self.1,
+                uniform_loc,
+                value.as_ptr() as *const ::std::os::raw::c_void,
+                (S::UNIFORM_TYPE as u32) as i32,
+                value.len() as i32,
+            );
+        }
+    }
+
+    /// Sets shader uniform value for shader's shader (matrix 4x4).
+    #[inline]
+    pub fn set_inner_shader_value_matrix(&mut self, uniform_loc: i32, mat: Matrix) {
+        unsafe {
+            ffi::SetShaderValueMatrix(**self.1, uniform_loc, mat.into());
+        }
+    }
+
+    /// Sets shader uniform value for shader's shader (matrix 4x4).
+    #[inline]
+    pub fn set_inner_shader_value_texture(&mut self, uniform_loc: i32, texture: &Texture2D) {
+        unsafe {
+            ffi::SetShaderValueTexture(**self.1, uniform_loc, *texture.as_ref());
+        }
+    }
+}
 impl<'a, T> Drop for RaylibShaderMode<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndShaderMode() }
@@ -200,14 +265,19 @@ impl<'a, T> std::ops::Deref for RaylibShaderMode<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibShaderMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibShaderModeExt
 where
     Self: Sized,
 {
     #[must_use]
-    fn begin_shader_mode<'a>(&'a mut self, shader: &'a ffi::Shader) -> RaylibShaderMode<Self> {
-        unsafe { ffi::BeginShaderMode(*shader) }
+    fn begin_shader_mode<'a>(&'a mut self, shader: &'a mut Shader) -> RaylibShaderMode<Self> {
+        unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
         RaylibShaderMode(self, shader)
     }
 }
@@ -229,6 +299,11 @@ impl<'a, T> std::ops::Deref for RaylibBlendMode<'a, T> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+impl<'a, T> std::ops::DerefMut for RaylibBlendMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
     }
 }
 
@@ -260,6 +335,11 @@ impl<'a, T> std::ops::Deref for RaylibScissorMode<'a, T> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+impl<'a, T> std::ops::DerefMut for RaylibScissorMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
     }
 }
 
@@ -1839,6 +1919,34 @@ pub trait RaylibDraw3D {
                 size.into(),
                 tint.into(),
             );
+        }
+    }
+
+    /// Draw a billboard texture defined by source and rotation
+    fn draw_billboard_pro(
+        &mut self,
+        camera: impl Into<ffi::Camera>,
+        texture: impl Into<ffi::Texture2D>,
+        source: impl Into<ffi::Rectangle>,
+        position: impl Into<ffi::Vector3>,
+        up: impl Into<ffi::Vector3>,
+        size: impl Into<ffi::Vector2>,
+        origin: impl Into<ffi::Vector2>,
+        rotation: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawBillboardPro(
+                camera.into(),
+                texture.into(),
+                source.into(),
+                position.into(),
+                up.into(),
+                size.into(),
+                origin.into(),
+                rotation,
+                tint.into(),
+            )
         }
     }
 }

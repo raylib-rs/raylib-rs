@@ -73,4 +73,8 @@ mod window;
 #[cfg(not(feature = "automation_event_test"))]
 mod logging;
 
+#[cfg(not(feature = "custom_frame_control"))]
+#[cfg(not(feature = "automation_event_test"))]
+mod shader;
+
 mod automation;
