@@ -20,7 +20,9 @@ pub fn compress_data(data: &[u8]) -> Result<&'static [u8], Error> {
         unsafe { ffi::CompressData(data.as_ptr() as *mut _, data.len() as i32, &mut out_length) }
     };
     if buffer.is_null() {
-        return Err(error!("could not compress data"));
+        return Err(error!(std::borrow::Cow::Borrowed(
+            "could not compress data"
+        )));
     }
     let buffer = unsafe { std::slice::from_raw_parts(buffer, out_length as usize) };
     return Ok(buffer);
@@ -43,7 +45,9 @@ pub fn decompress_data(data: &[u8]) -> Result<&'static [u8], Error> {
         unsafe { ffi::DecompressData(data.as_ptr() as *mut _, data.len() as i32, &mut out_length) }
     };
     if buffer.is_null() {
-        return Err(error!("could not compress data"));
+        return Err(error!(std::borrow::Cow::Borrowed(
+            "could not compress data"
+        )));
     }
     let buffer = unsafe { std::slice::from_raw_parts(buffer, out_length as usize) };
     return Ok(buffer);

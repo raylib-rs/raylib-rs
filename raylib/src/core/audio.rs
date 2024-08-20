@@ -85,7 +85,10 @@ impl RaylibAudio {
         let c_filename = CString::new(filename).unwrap();
         let s = unsafe { ffi::LoadSound(c_filename.as_ptr()) };
         if s.stream.buffer.is_null() {
-            return Err(error!("failed to load sound", filename));
+            return Err(error!(
+                std::borrow::Cow::Borrowed("failed to load sound"),
+                filename
+            ));
         }
 
         Ok(Sound(s, self))
@@ -95,7 +98,9 @@ impl RaylibAudio {
     pub fn new_sound_from_wave<'aud>(&'aud self, wave: &Wave) -> Result<Sound<'aud>, Error> {
         let s = unsafe { ffi::LoadSoundFromWave(wave.0) };
         if s.stream.buffer.is_null() {
-            return Err(error!("failed to load sound from wave"));
+            return Err(error!(std::borrow::Cow::Borrowed(
+                "failed to load sound from wave"
+            )));
         }
         Ok(Sound(s, self))
     }
@@ -105,7 +110,10 @@ impl RaylibAudio {
         let c_filename = CString::new(filename).unwrap();
         let w = unsafe { ffi::LoadWave(c_filename.as_ptr()) };
         if w.data.is_null() {
-            return Err(error!("Cannot load wave {}", filename));
+            return Err(error!(
+                std::borrow::Cow::Borrowed("Cannot load wave {}"),
+                filename
+            ));
         }
         Ok(Wave(w, self))
     }
@@ -121,7 +129,9 @@ impl RaylibAudio {
         let w =
             unsafe { ffi::LoadWaveFromMemory(c_filetype.as_ptr(), c_bytes, bytes.len() as i32) };
         if w.data.is_null() {
-            return Err(error!("Wave data is null. Check provided buffer data"));
+            return Err(error!(std::borrow::Cow::Borrowed(
+                "Wave data is null. Check provided buffer data"
+            )));
         };
         Ok(Wave(w, self))
     }
@@ -132,7 +142,10 @@ impl RaylibAudio {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadMusicStream(c_filename.as_ptr()) };
         if m.stream.buffer.is_null() {
-            return Err(error!("music could not be loaded from file", filename));
+            return Err(error!(
+                std::borrow::Cow::Borrowed("music could not be loaded from file"),
+                filename
+            ));
         }
         Ok(Music(m, self))
     }
@@ -149,9 +162,9 @@ impl RaylibAudio {
             ffi::LoadMusicStreamFromMemory(c_filetype.as_ptr(), c_bytes, bytes.len() as i32)
         };
         if w.stream.buffer.is_null() {
-            return Err(error!(
+            return Err(error!(std::borrow::Cow::Borrowed(
                 "Music's buffer data data is null. Check provided buffer data"
-            ));
+            )));
         };
         Ok(Music(w, self))
     }
@@ -521,6 +534,11 @@ impl<'aud> Music<'aud> {
             ffi::SetMusicPan(self.0, pan);
         }
     }
+
+    /// Checks if a music stream is ready
+    pub fn is_ready(&self) -> bool {
+        unsafe { ffi::IsMusicReady(self.0) }
+    }
 }
 
 impl<'aud> AudioStream<'aud> {
@@ -626,7 +644,9 @@ impl<'bind> Sound<'_> {
     pub fn alias<'snd>(&'snd self) -> Result<SoundAlias<'bind, 'snd>, Error> {
         let s = unsafe { ffi::LoadSoundAlias(self.0) };
         if s.stream.buffer.is_null() {
-            return Err(error!("failed to load sound from wave"));
+            return Err(error!(std::borrow::Cow::Borrowed(
+                "failed to load sound from wave"
+            )));
         }
         Ok(SoundAlias(s, PhantomData))
     }
