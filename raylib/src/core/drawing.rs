@@ -134,7 +134,6 @@ where
     ) {
         unsafe { ffi::BeginTextureMode(*framebuffer) }
         func(RaylibTextureMode(self, None), framebuffer);
-        unsafe { ffi::EndTextureMode() }
     }
 }
 
@@ -192,7 +191,6 @@ where
     ) {
         unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
         func(RaylibVRMode(&self, None), vr_config);
-        unsafe { ffi::EndVrStereoMode() };
     }
 }
 
@@ -383,7 +381,6 @@ where
     ) {
         unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
         func(RaylibShaderMode(self, None), shader);
-        unsafe { ffi::EndShaderMode() }
     }
 }
 
@@ -440,7 +437,6 @@ where
     ) {
         unsafe { ffi::BeginBlendMode((blend_mode as u32) as i32) }
         func(RaylibBlendMode(self));
-        unsafe { ffi::EndBlendMode() }
     }
 }
 
@@ -511,7 +507,6 @@ where
     ) {
         unsafe { ffi::BeginScissorMode(x, y, width, height) }
         func(RaylibScissorMode(self));
-        unsafe { ffi::EndScissorMode() }
     }
 }
 
