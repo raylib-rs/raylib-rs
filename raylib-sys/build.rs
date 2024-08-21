@@ -132,7 +132,7 @@ fn build_with_cmake(src_path: &str) {
                     feature = "noscreenshot",
                     feature = "nogif"
         ))]
-        builder.define("CUSTOMIZE_BUILD", "ON")
+        builder.define("CUSTOMIZE_BUILD", "ON");
 
         #[cfg(feature = "noscreenshot")]
         builder.define("SUPPORT_SCREEN_CAPTURE", "OFF");
