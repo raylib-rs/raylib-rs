@@ -21,15 +21,29 @@ use super::shaders::{Shader, ShaderV};
 
 /// Seems like all draw commands must be issued from the main thread
 impl RaylibHandle {
-    /// Setup canvas (framebuffer) to start drawing
-    #[must_use]
-    #[deprecated = "Consider using start_drawing to use a closure instead."]
-    pub fn begin_drawing(&mut self, _: &RaylibThread) -> RaylibDrawHandle {
-        unsafe {
-            ffi::BeginDrawing();
-        };
-        let d = RaylibDrawHandle(self);
-        d
+    cfg_if::cfg_if! {
+        if #[cfg(not(feature="use_begin_functions"))] {
+            #[deprecated = "Consider using start_drawing to use a closure instead. \nYou can enable the feature flag 'use_begin_functions' to disable this warning."]
+            #[must_use]
+            /// Setup canvas (framebuffer) to start drawing
+            pub fn begin_drawing(&mut self, _: &RaylibThread) -> RaylibDrawHandle {
+                unsafe {
+                    ffi::BeginDrawing();
+                };
+                let d = RaylibDrawHandle(self);
+                d
+            }
+        } else {
+            #[must_use]
+            /// Setup canvas (framebuffer) to start drawing
+            pub fn begin_drawing(&mut self, _: &RaylibThread) -> RaylibDrawHandle {
+                unsafe {
+                    ffi::BeginDrawing();
+                };
+                let d = RaylibDrawHandle(self);
+                d
+            }
+        }
     }
 
     pub fn start_drawing(&mut self, _: &RaylibThread, mut func: impl FnMut(RaylibDrawHandle)) {
@@ -88,17 +102,30 @@ pub trait RaylibTextureModeExt
 where
     Self: Sized,
 {
-    #[must_use]
-    #[deprecated = "Consider using start_texture_mode to use a closure instead."]
-    fn begin_texture_mode<'a>(
-        &'a mut self,
-        _: &RaylibThread,
-        framebuffer: &'a mut ffi::RenderTexture2D,
-    ) -> RaylibTextureMode<Self> {
-        unsafe { ffi::BeginTextureMode(*framebuffer) }
-        RaylibTextureMode(self, Some(framebuffer))
+    cfg_if::cfg_if! {
+        if #[cfg(not(feature="use_begin_functions"))] {
+            #[deprecated = "Consider using start_texture_mode to use a closure instead. \nYou can enable the feature flag 'use_begin_functions' to disable this warning."]
+            #[must_use]
+            fn begin_texture_mode<'a>(
+                &'a mut self,
+                _: &RaylibThread,
+                framebuffer: &'a mut ffi::RenderTexture2D,
+            ) -> RaylibTextureMode<Self> {
+                unsafe { ffi::BeginTextureMode(*framebuffer) }
+                RaylibTextureMode(self, Some(framebuffer))
+            }
+        } else {
+            #[must_use]
+            fn begin_texture_mode<'a>(
+                &'a mut self,
+                _: &RaylibThread,
+                framebuffer: &'a mut ffi::RenderTexture2D,
+            ) -> RaylibTextureMode<Self> {
+                unsafe { ffi::BeginTextureMode(*framebuffer) }
+                RaylibTextureMode(self, Some(framebuffer))
+            }
+        }
     }
-
     fn start_texture_mode<'a>(
         &'a mut self,
         _: &RaylibThread,
@@ -136,16 +163,28 @@ pub trait RaylibVRModeExt
 where
     Self: Sized,
 {
-    #[must_use]
-    #[deprecated = "Consider using start_vr_stereo_mode to use a closure instead."]
-    fn begin_vr_stereo_mode<'a>(
-        &'a mut self,
-        vr_config: &'a mut VrStereoConfig,
-    ) -> RaylibVRMode<Self> {
-        unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
-        RaylibVRMode(self, Some(vr_config))
+    cfg_if::cfg_if! {
+        if #[cfg(not(feature="use_begin_functions"))] {
+            #[deprecated = "Consider using start_vr_stereo_mode to use a closure instead. \nYou can enable the feature flag 'use_begin_functions' to disable this warning."]
+            #[must_use]
+            fn begin_vr_stereo_mode<'a>(
+                &'a mut self,
+                vr_config: &'a mut VrStereoConfig,
+            ) -> RaylibVRMode<Self> {
+                unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
+                RaylibVRMode(self, Some(vr_config))
+            }
+        } else {
+            #[must_use]
+            fn begin_vr_stereo_mode<'a>(
+                &'a mut self,
+                vr_config: &'a mut VrStereoConfig,
+            ) -> RaylibVRMode<Self> {
+                unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
+                RaylibVRMode(self, Some(vr_config))
+            }
+        }
     }
-
     fn start_vr_stereo_mode<'a>(
         &'a mut self,
         vr_config: &'a mut VrStereoConfig,
@@ -185,14 +224,27 @@ pub trait RaylibMode2DExt
 where
     Self: Sized,
 {
-    #[allow(non_snake_case)]
-    #[must_use]
-    #[deprecated = "Consider using start_mode2D to use a closure instead."]
-    fn begin_mode2D(&mut self, camera: impl Into<ffi::Camera2D>) -> RaylibMode2D<Self> {
-        unsafe {
-            ffi::BeginMode2D(camera.into());
+    cfg_if::cfg_if! {
+        if #[cfg(not(feature="use_begin_functions"))] {
+            #[deprecated = "Consider using start_mode2D to use a closure instead. \nYou can enable the feature flag 'use_begin_functions' to disable this warning."]
+            #[allow(non_snake_case)]
+            #[must_use]
+            fn begin_mode2D(&mut self, camera: impl Into<ffi::Camera2D>) -> RaylibMode2D<Self> {
+                unsafe {
+                    ffi::BeginMode2D(camera.into());
+                }
+                RaylibMode2D(self)
+            }
+        } else {
+            #[allow(non_snake_case)]
+            #[must_use]
+            fn begin_mode2D(&mut self, camera: impl Into<ffi::Camera2D>) -> RaylibMode2D<Self> {
+                unsafe {
+                    ffi::BeginMode2D(camera.into());
+                }
+                RaylibMode2D(self)
+            }
         }
-        RaylibMode2D(self)
     }
 
     #[allow(non_snake_case)]
@@ -239,16 +291,28 @@ pub trait RaylibMode3DExt
 where
     Self: Sized,
 {
-    #[allow(non_snake_case)]
-    #[must_use]
-    #[deprecated = "Consider using start_mode3D to use a closure instead."]
-    fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<Self> {
-        unsafe {
-            ffi::BeginMode3D(camera.into());
+    cfg_if::cfg_if! {
+        if #[cfg(not(feature="use_begin_functions"))] {
+            #[deprecated = "Consider using start_mode3D to use a closure instead. \nYou can enable the feature flag 'use_begin_functions' to disable this warning."]
+            #[allow(non_snake_case)]
+            #[must_use]
+            fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<Self> {
+                unsafe {
+                    ffi::BeginMode3D(camera.into());
+                }
+                RaylibMode3D(self)
+            }
+        } else {
+            #[allow(non_snake_case)]
+            #[must_use]
+            fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<Self> {
+                unsafe {
+                    ffi::BeginMode3D(camera.into());
+                }
+                RaylibMode3D(self)
+            }
         }
-        RaylibMode3D(self)
     }
-
     #[allow(non_snake_case)]
     fn start_mode3D(
         &mut self,
@@ -295,11 +359,21 @@ pub trait RaylibShaderModeExt
 where
     Self: Sized,
 {
-    #[must_use]
-    #[deprecated = "Consider using start_shader_mode to use a closure instead."]
-    fn begin_shader_mode<'a>(&'a mut self, shader: &'a mut Shader) -> RaylibShaderMode<Self> {
-        unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
-        RaylibShaderMode(self, Some(shader))
+    cfg_if::cfg_if! {
+        if #[cfg(not(feature="use_begin_functions"))] {
+            #[deprecated = "Consider using start_shader_mode to use a closure instead. \nYou can enable the feature flag 'use_begin_functions' to disable this warning."]
+            #[must_use]
+            fn begin_shader_mode<'a>(&'a mut self, shader: &'a mut Shader) -> RaylibShaderMode<Self> {
+                unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
+                RaylibShaderMode(self, Some(shader))
+            }
+        } else {
+            #[must_use]
+            fn begin_shader_mode<'a>(&'a mut self, shader: &'a mut Shader) -> RaylibShaderMode<Self> {
+                unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
+                RaylibShaderMode(self, Some(shader))
+            }
+        }
     }
 
     fn start_shader_mode<'a>(
@@ -342,11 +416,21 @@ pub trait RaylibBlendModeExt
 where
     Self: Sized,
 {
-    #[must_use]
-    #[deprecated = "Consider using start_blend_mode to use a closure instead."]
-    fn begin_blend_mode(&mut self, blend_mode: crate::consts::BlendMode) -> RaylibBlendMode<Self> {
-        unsafe { ffi::BeginBlendMode((blend_mode as u32) as i32) }
-        RaylibBlendMode(self)
+    cfg_if::cfg_if! {
+        if #[cfg(not(feature="use_begin_functions"))] {
+            #[deprecated = "Consider using start_blend_mode to use a closure instead. \nYou can enable the feature flag 'use_begin_functions' to disable this warning."]
+            #[must_use]
+            fn begin_blend_mode(&mut self, blend_mode: crate::consts::BlendMode) -> RaylibBlendMode<Self> {
+                unsafe { ffi::BeginBlendMode((blend_mode as u32) as i32) }
+                RaylibBlendMode(self)
+            }
+        } else {
+            #[must_use]
+            fn begin_blend_mode(&mut self, blend_mode: crate::consts::BlendMode) -> RaylibBlendMode<Self> {
+                unsafe { ffi::BeginBlendMode((blend_mode as u32) as i32) }
+                RaylibBlendMode(self)
+            }
+        }
     }
 
     fn start_blend_mode(
@@ -389,18 +473,34 @@ pub trait RaylibScissorModeExt
 where
     Self: Sized,
 {
-    #[must_use]
-    fn begin_scissor_mode(
-        &mut self,
-        x: i32,
-        y: i32,
-        width: i32,
-        height: i32,
-    ) -> RaylibScissorMode<Self> {
-        unsafe { ffi::BeginScissorMode(x, y, width, height) }
-        RaylibScissorMode(self)
+    cfg_if::cfg_if! {
+        if #[cfg(not(feature="use_begin_functions"))] {
+            #[deprecated = "Consider using start_scissor_mode to use a closure instead. \nYou can enable the feature flag 'use_begin_functions' to disable this warning."]
+            #[must_use]
+            fn begin_scissor_mode(
+                &mut self,
+                x: i32,
+                y: i32,
+                width: i32,
+                height: i32,
+            ) -> RaylibScissorMode<Self> {
+                unsafe { ffi::BeginScissorMode(x, y, width, height) }
+                RaylibScissorMode(self)
+            }
+        } else {
+            #[must_use]
+            fn begin_scissor_mode(
+                &mut self,
+                x: i32,
+                y: i32,
+                width: i32,
+                height: i32,
+            ) -> RaylibScissorMode<Self> {
+                unsafe { ffi::BeginScissorMode(x, y, width, height) }
+                RaylibScissorMode(self)
+            }
+        }
     }
-
     fn start_scissor_mode(
         &mut self,
         x: i32,

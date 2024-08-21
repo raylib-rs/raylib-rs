@@ -46,6 +46,7 @@ opengl_21 = ["raylib-sys/opengl_21"]
 opengl_es_20 = ["raylib-sys/opengl_es_20"]
 noscreenshot = ["raylib-sys/noscreenshot"]
 nogif = ["raylib-sys/nogif"]
+use_begin_functions = []
 
 [[example]]
 name = "specs"
