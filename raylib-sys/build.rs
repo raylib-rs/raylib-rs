@@ -128,6 +128,12 @@ fn build_with_cmake(src_path: &str) {
 
     // Allows disabling the default maping of screenshot and gif recording in raylib
     {
+        #[cfg(any(
+                    feature = "noscreenshot",
+                    feature = "nogif"
+        )))]
+        builder.define("CUSTOMIZE_BUILD", "ON")
+
         #[cfg(feature = "noscreenshot")]
         builder.define("SUPPORT_SCREEN_CAPTURE", "OFF");
         #[cfg(feature = "nogif")]
