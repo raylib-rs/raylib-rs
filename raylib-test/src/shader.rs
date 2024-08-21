@@ -32,5 +32,8 @@ mod shader_test {
 
         s.set_inner_shader_value(dividerLoc, dividerValue);
         s.set_inner_shader_value_texture(texBlueLoc, &texBlue);
+
+        s.clear_background(Color::WHITE);
+        s.draw_texture(&texRed, 0, 0, Color::WHITE);
     }
 }
