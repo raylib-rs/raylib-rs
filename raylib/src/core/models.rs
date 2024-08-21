@@ -62,7 +62,7 @@ impl RaylibHandle {
         if m.meshes.is_null() && m.materials.is_null() && m.bones.is_null() && m.bindPose.is_null()
         {
             return Err(error!(
-                std::borrow::Cow::Borrowed("could not load model"),
+                "could not load model",
                 filename
             ));
         }
@@ -79,9 +79,9 @@ impl RaylibHandle {
         let m = unsafe { ffi::LoadModelFromMesh(mesh.0) };
 
         if m.meshes.is_null() || m.materials.is_null() {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Could not load model from mesh"
-            )));
+            ));
         }
 
         Ok(Model(m))
@@ -97,7 +97,7 @@ impl RaylibHandle {
         let m_ptr = unsafe { ffi::LoadModelAnimations(c_filename.as_ptr(), &mut m_size) };
         if m_size <= 0 {
             return Err(error!(
-                std::borrow::Cow::Borrowed("No model animations loaded"),
+                "No model animations loaded",
                 filename
             ));
         }
@@ -236,13 +236,13 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     /// Set material for a mesh
     fn set_model_mesh_material(&mut self, mesh_id: i32, material_id: i32) -> Result<(), Error> {
         if mesh_id >= self.as_ref().meshCount {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "mesh_id greater than mesh count"
-            )));
+            ));
         } else if material_id >= self.as_ref().materialCount {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "material_id greater than material count"
-            )));
+            ));
         } else {
             unsafe { ffi::SetModelMeshMaterial(self.as_mut(), mesh_id, material_id) };
             return Ok(());
@@ -474,7 +474,7 @@ impl Material {
         let m_ptr = unsafe { ffi::LoadMaterials(c_filename.as_ptr(), &mut m_size) };
         if m_size <= 0 {
             return Err(error!(
-                std::borrow::Cow::Borrowed("No materials loaded"),
+                "No materials loaded",
                 filename
             ));
         }

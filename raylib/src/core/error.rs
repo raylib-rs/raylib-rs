@@ -30,6 +30,12 @@ macro_rules! error {
     ($message:expr $(,)?) => {{
         $crate::core::error::Error::new($message, ::core::option::Option::None)
     }};
+    ($message:literal, $path:expr $(,)?) => {{
+        $crate::core::error::Error::new(
+            std::borrow::Cow::Borrowed($message),
+            ::core::option::Option::Some(::std::path::PathBuf::from($path)),
+        )
+    }};
     ($message:expr, $path:expr $(,)?) => {{
         $crate::core::error::Error::new(
             $message,

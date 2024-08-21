@@ -738,19 +738,19 @@ impl Image {
     /// Export image to memory buffer.
     pub fn export_image_to_memory(&self, file_type: &str) -> Result<&[u8], Error> {
         if self.width == 0 {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Invalid image; width == 0"
-            )));
+            ));
         }
         if self.height == 0 {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Invalid image; height == 0"
-            )));
+            ));
         }
         if self.data == null_mut() {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Invalid image; data == null"
-            )));
+            ));
         }
 
         let c_filetype = CString::new(file_type).unwrap();
@@ -759,7 +759,7 @@ impl Image {
 
         // The actual function returns null if the code for converting to a file type never goes off.
         if data == null_mut() {
-            return Err(error!(std::borrow::Cow::Borrowed("Unsupported format.")));
+            return Err(error!("Unsupported format."));
         }
 
         return Ok(unsafe { std::slice::from_raw_parts(data as *const u8, *data_size as usize) });
@@ -769,27 +769,27 @@ impl Image {
     /// NOTE: The convolution kernel matrix is expected to be square
     pub fn kernel_convolution(&mut self, kernel: &[f32]) -> Result<(), Error> {
         if self.width == 0 {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Invalid image; width == 0"
-            )));
+            ));
         }
         if self.height == 0 {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Invalid image; height == 0"
-            )));
+            ));
         }
         if self.data == null_mut() {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Invalid image; data == null"
-            )));
+            ));
         }
 
         let kernel_width = (kernel.len() as f32).sqrt() as i32;
 
         if (kernel_width * kernel_width) as usize != kernel.len() {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Convolution kernel must be square to be applied"
-            )));
+            ));
         }
 
         unsafe { ImageKernelConvolution(&mut self.0, kernel.as_ptr(), kernel.len() as i32) }
@@ -919,7 +919,7 @@ impl Image {
         let i = unsafe { ffi::LoadImage(c_filename.as_ptr()) };
         if i.data.is_null() {
             return Err(error!(
-                std::borrow::Cow::Borrowed("Image data is null. Either the file doesnt exist or the image type is unsupported.")
+                "Image data is null. Either the file doesnt exist or the image type is unsupported."
             ));
         }
         Ok(Image(i))
@@ -938,9 +938,9 @@ impl Image {
             )
         };
         if i.data.is_null() {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Image data is null. Check provided buffer data"
-            )));
+            ));
         };
         Ok(Image(i))
     }
@@ -983,7 +983,7 @@ impl Image {
             unsafe { ffi::LoadImageRaw(c_filename.as_ptr(), width, height, format, header_size) };
         if i.data.is_null() {
             return Err(error!(
-                std::borrow::Cow::Borrowed("Image data is null. Either the file doesnt exist or the image type is unsupported.")
+                "Image data is null. Either the file doesnt exist or the image type is unsupported."
             ));
         }
         Ok(Image(i))
@@ -1116,9 +1116,9 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     fn load_image(&self) -> Result<Image, Error> {
         let i = unsafe { ffi::LoadImageFromTexture(*self.as_ref()) };
         if i.data.is_null() {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Texture cannot be rendered to an image"
-            )));
+            ));
         }
         Ok(Image(i))
     }
@@ -1165,7 +1165,7 @@ impl RaylibHandle {
         let t = unsafe { ffi::LoadTexture(c_filename.as_ptr()) };
         if t.id == 0 {
             return Err(error!(
-                std::borrow::Cow::Borrowed("failed to load the texture."),
+                "failed to load the texture.",
                 filename
             ));
         }
@@ -1181,9 +1181,9 @@ impl RaylibHandle {
     ) -> Result<Texture2D, Error> {
         let t = unsafe { ffi::LoadTextureCubemap(image.0, layout as i32) };
         if t.id == 0 {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "failed to load image as a texture cubemap."
-            )));
+            ));
         }
         Ok(Texture2D(t))
     }
@@ -1197,9 +1197,9 @@ impl RaylibHandle {
     ) -> Result<Texture2D, Error> {
         let t = unsafe { ffi::LoadTextureFromImage(image.0) };
         if t.id == 0 {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "failed to load image as a texture."
-            )));
+            ));
         }
         Ok(Texture2D(t))
     }
@@ -1213,9 +1213,9 @@ impl RaylibHandle {
     ) -> Result<RenderTexture2D, Error> {
         let t = unsafe { ffi::LoadRenderTexture(width as i32, height as i32) };
         if t.id == 0 {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "failed to create render texture."
-            )));
+            ));
         }
         Ok(RenderTexture2D(t))
     }

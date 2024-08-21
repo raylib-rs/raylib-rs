@@ -124,9 +124,7 @@ impl RaylibHandle {
         let f = unsafe { ffi::LoadFont(c_filename.as_ptr()) };
         if f.glyphs.is_null() || f.texture.id == 0 {
             return Err(error!(
-                std::borrow::Cow::Borrowed(
-                    "Error loading font. Check if the file exists and if it's the right type"
-                ),
+                "Error loading font. Check if the file exists and if it's the right type",
                 filename,
             ));
         }
@@ -160,9 +158,7 @@ impl RaylibHandle {
         };
         if f.glyphs.is_null() || f.texture.id == 0 {
             return Err(error!(
-                std::borrow::Cow::Borrowed(
-                    "Error loading font. Check if the file exists and if it's the right type"
-                ),
+                "Error loading font. Check if the file exists and if it's the right type",
                 filename,
             ));
         }
@@ -180,9 +176,7 @@ impl RaylibHandle {
     ) -> Result<Font, Error> {
         let f = unsafe { ffi::LoadFontFromImage(image.0, key.into(), first_char) };
         if f.glyphs.is_null() {
-            return Err(error!(std::borrow::Cow::Borrowed(
-                "Error loading font from image."
-            )));
+            return Err(error!("Error loading font from image."));
         }
         Ok(Font(f))
     }
@@ -223,9 +217,9 @@ impl RaylibHandle {
             }
         };
         if f.glyphs.is_null() || f.texture.id == 0 {
-            return Err(error!(std::borrow::Cow::Borrowed(
+            return Err(error!(
                 "Error loading font from memory. Check if the file's type is correct"
-            )));
+            ));
         }
         Ok(Font(f))
     }
@@ -366,9 +360,7 @@ impl Font {
             f
         };
         if f.0.glyphs.is_null() || f.0.texture.id == 0 {
-            return Err(error!(std::borrow::Cow::Borrowed(
-                "Error loading font from image."
-            )));
+            return Err(error!("Error loading font from image."));
         }
         Ok(f)
     }
