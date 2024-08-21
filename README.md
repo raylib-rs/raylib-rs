@@ -1,12 +1,3 @@
-<p align="center">
-    
-![rust](https://img.shields.io/badge/rust-1.77+-orange.svg?style=flat-square&logo=rust)
-[![crates.io](https://img.shields.io/crates/v/raylib.svg?style=flat-square)](https://crates.io/crates/raylib)
-[![docs](https://docs.rs/raylib/badge.svg)](https://docs.rs/raylib)
-[![discord](https://img.shields.io/discord/426912293134270465)](https://discord.gg/VkzNHUE)
-
-</p>
-
 <table border="0">
 <tr>
 <td>
@@ -18,7 +9,7 @@
 
 # raylib-rs
 
-raylib-rs is a Rust binding for [raylib](http://www.raylib.com/) 5.0. It currently targets the _stable_ Rust toolchain, version 1.78 or higher.
+raylib-rs is a Rust binding for [raylib](http://www.raylib.com/) 5.1. It currently targets Rust toolchain version 1.78 or higher.
 
 Please checkout the showcase directory to find usage examples!
 
@@ -27,6 +18,8 @@ Though this binding tries to stay close to the simple C API, it makes some chang
 </td>
 </tr>
 </table>
+
+Most development happens over at: https://github.com/raylib-rs/raylib-rs
 
 
 - Resources are automatically cleaned up when they go out of scope (or when `std::mem::drop` is called). This is essentially RAII. This means that "Unload" functions are not exposed (and not necessary unless you obtain a `Weak` resource using make_weak()).
