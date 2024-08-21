@@ -131,7 +131,7 @@ fn build_with_cmake(src_path: &str) {
         #[cfg(any(
                     feature = "noscreenshot",
                     feature = "nogif"
-        )))]
+        ))]
         builder.define("CUSTOMIZE_BUILD", "ON")
 
         #[cfg(feature = "noscreenshot")]
