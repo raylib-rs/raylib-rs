@@ -44,6 +44,17 @@ impl RaylibHandle {
 
 pub struct RaylibDrawHandle<'a>(&'a mut RaylibHandle);
 
+impl<'a> RaylibDrawHandle<'a> {
+    #[deprecated = "Calling begin_drawing within itself will result in a runtime error."]
+    pub fn begin_drawing(&mut self, _: &RaylibThread) -> RaylibDrawHandle {
+        panic!("Nested begin_drawing call")
+    }
+    #[deprecated = "Calling start_drawing within itself will result in a runtime error."]
+    pub fn start_drawing(&mut self, _: &RaylibThread, mut _func: impl FnMut(RaylibDrawHandle)) {
+        panic!("Nested start_drawing call")
+    }
+}
+
 impl<'a> Drop for RaylibDrawHandle<'a> {
     fn drop(&mut self) {
         unsafe {
@@ -61,7 +72,7 @@ impl<'a> std::ops::Deref for RaylibDrawHandle<'a> {
 }
 
 impl<'a> std::ops::DerefMut for RaylibDrawHandle<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
+    fn deref_mut(&mut self) -> &mut RaylibHandle {
         self.0
     }
 }
@@ -69,7 +80,8 @@ impl<'a> RaylibDraw for RaylibDrawHandle<'a> {}
 
 // Texture2D Stuff
 
-pub struct RaylibTextureMode<'a, T>(&'a T, Option<&'a mut ffi::RenderTexture2D>);
+pub struct RaylibTextureMode<'a, T>(&'a mut T, Option<&'a mut ffi::RenderTexture2D>);
+
 impl<'a, T> Drop for RaylibTextureMode<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndTextureMode() }
@@ -82,7 +94,11 @@ impl<'a, T> std::ops::Deref for RaylibTextureMode<'a, T> {
         &self.0
     }
 }
-
+impl<'a, T> std::ops::DerefMut for RaylibTextureMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 // framebuffer: &'a mut ffi::RenderTexture2D,
 
 pub trait RaylibTextureModeExt
