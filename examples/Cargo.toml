@@ -21,3 +21,7 @@ path = "core/core_2d_camera.rs"
 [[bin]]
 name = "core_2d_camera_mouse_zoom"
 path = "core/core_2d_camera_mouse_zoom.rs"
+
+[[bin]]
+name = "text_rectangle_bounds"
+path = "text/text_rectangle_bounds.rs"
