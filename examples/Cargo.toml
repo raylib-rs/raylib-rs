@@ -17,3 +17,7 @@ path = "core/core_basic_screen_manager.rs"
 [[bin]]
 name = "core_2d_camera"
 path = "core/core_2d_camera.rs"
+
+[[bin]]
+name = "core_2d_camera_mouse_zoom"
+path = "core/core_2d_camera_mouse_zoom.rs"
