@@ -13,3 +13,7 @@ path = "core/core_basic_window.rs"
 [[bin]]
 name = "core_basic_screen_manager"
 path = "core/core_basic_screen_manager.rs"
+
+[[bin]]
+name = "core_2d_camera"
+path = "core/core_2d_camera.rs"
