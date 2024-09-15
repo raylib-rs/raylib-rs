@@ -1,0 +1,11 @@
+[package]
+name = "raylib-examples"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+raylib = { version = "5.5.0", path = "../raylib" }
+
+[[bin]]
+name = "core_basic_window"
+path = "core/core_basic_window.rs"
