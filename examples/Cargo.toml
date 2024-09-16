@@ -1,0 +1,27 @@
+[package]
+name = "raylib-examples"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+raylib = { version = "5.5.0", path = "../raylib" }
+
+[[bin]]
+name = "core_basic_window"
+path = "core/core_basic_window.rs"
+
+[[bin]]
+name = "core_basic_screen_manager"
+path = "core/core_basic_screen_manager.rs"
+
+[[bin]]
+name = "core_2d_camera"
+path = "core/core_2d_camera.rs"
+
+[[bin]]
+name = "core_2d_camera_mouse_zoom"
+path = "core/core_2d_camera_mouse_zoom.rs"
+
+[[bin]]
+name = "text_rectangle_bounds"
+path = "text/text_rectangle_bounds.rs"
