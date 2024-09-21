@@ -250,6 +250,18 @@ impl From<(f32, f32)> for Vector2 {
     }
 }
 
+impl From<[f32; 2]> for Vector2 {
+    fn from(value: [f32; 2]) -> Self {
+        Vector2 { x: value[0], y: value[1] }
+    }
+}
+
+impl Into<[f32; 2]> for Vector2 {
+    fn into(self) -> [f32; 2] {
+        [self.x, self.y]
+    }
+}
+
 impl Add for Vector2 {
     type Output = Vector2;
     fn add(self, v: Vector2) -> Self {
