@@ -38,8 +38,6 @@ pub fn compress_data(data: &[u8]) -> Result<&'static [u8], Error> {
 /// assert_eq!(data, expected);
 /// ```
 pub fn decompress_data(data: &[u8]) -> Result<&'static [u8], Error> {
-    println!("{:?}", data.len());
-
     let mut out_length: i32 = 0;
     // CompressData doesn't actually modify the data, but the header is wrong
     let buffer = {

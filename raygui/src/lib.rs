@@ -1,9 +1,9 @@
-use crate::core::color::Color;
-use crate::core::drawing::RaylibDraw;
-use crate::core::math::{Rectangle, Vector2};
-use crate::core::text::WeakFont;
-use crate::core::RaylibHandle;
-use crate::ffi;
+use raygui_sys as ffi;
+use raylib::core::drawing::RaylibDraw;
+use raylib::core::RaylibHandle;
+
+use raylib::ffi::{Color, Font, Rectangle, Vector2};
+use raylib::text::WeakFont;
 
 use std::ffi::CStr;
 
@@ -33,73 +33,73 @@ impl IntoCStr for Option<&CStr> {
 }
 
 /// Global gui modification functions
-impl RaylibHandle {
+pub trait Raygui: Into<RaylibHandle> {
     /// Enable gui controls (global state)
     #[inline]
-    pub fn gui_enable(&mut self) {
+    fn gui_enable(&mut self) {
         unsafe { ffi::GuiEnable() }
     }
     /// Disable gui controls (global state)
     #[inline]
-    pub fn gui_disable(&mut self) {
+    fn gui_disable(&mut self) {
         unsafe { ffi::GuiDisable() }
     }
     /// Lock gui controls (global state)
     #[inline]
-    pub fn gui_lock(&mut self) {
+    fn gui_lock(&mut self) {
         unsafe { ffi::GuiLock() }
     }
     /// Unlock gui controls (global state)
     #[inline]
-    pub fn gui_unlock(&mut self) {
+    fn gui_unlock(&mut self) {
         unsafe { ffi::GuiUnlock() }
     }
     // Set gui controls alpha (global state), alpha goes from 0.0f to 1.0f
     #[inline]
-    pub fn gui_fade(&mut self, color: Color, alpha: f32) -> Color {
-        unsafe { ffi::Fade(color.into(), alpha).into() }
+    fn gui_fade(&mut self, color: Color, alpha: f32) -> Color {
+        unsafe { raylib::ffi::Fade(color.into(), alpha).into() }
     }
     /// Set gui state (global state)
     #[inline]
-    pub fn gui_set_state(&mut self, state: crate::consts::GuiState) {
+    fn gui_set_state(&mut self, state: ffi::GuiState) {
         unsafe { ffi::GuiSetState(state as i32) }
     }
     /// Get gui state (global state)
     #[inline]
-    pub fn gui_get_state(&mut self) -> crate::consts::GuiState {
+    fn gui_get_state(&mut self) -> ffi::GuiState {
         unsafe { std::mem::transmute(ffi::GuiGetState()) }
     }
     /// Set gui custom font (global state)
     #[inline]
-    pub fn gui_set_font(&mut self, font: impl AsRef<ffi::Font>) {
+    fn gui_set_font(&mut self, font: impl AsRef<Font>) {
         unsafe { ffi::GuiSetFont(*font.as_ref()) }
     }
     /// Get gui custom font (global state)
     #[inline]
-    pub fn gui_get_font(&mut self) -> WeakFont {
-        unsafe { WeakFont(ffi::GuiGetFont()) }
+    fn gui_get_font(&mut self) -> WeakFont {
+        unsafe { WeakFont::from_raw(ffi::GuiGetFont()) }
     }
     /// Set one style property
     /// SHOULD use one of the Gui*Property enums
     #[inline]
-    pub fn gui_set_style(&mut self, control: crate::consts::GuiControl, property: i32, value: i32) {
+    fn gui_set_style(&mut self, control: ffi::GuiControl, property: i32, value: i32) {
         unsafe { ffi::GuiSetStyle(control as i32, property as i32, value) }
     }
 
     /// Get one style property
     /// SHOULD use one of the Gui*Property enums
     #[inline]
-    pub fn gui_get_style(&mut self, control: crate::consts::GuiControl, property: i32) -> i32 {
+    fn gui_get_style(&mut self, control: ffi::GuiControl, property: i32) -> i32 {
         unsafe { ffi::GuiGetStyle(control as i32, property as i32) }
     }
     /// Load style file (.rgs)
     #[inline]
-    pub fn gui_load_style(&mut self, filename: impl IntoCStr) {
+    fn gui_load_style(&mut self, filename: impl IntoCStr) {
         unsafe { ffi::GuiLoadStyle(filename.as_cstr_ptr()) }
     }
     /// Load style default over global style
     #[inline]
-    pub fn gui_load_style_default(&mut self) {
+    fn gui_load_style_default(&mut self) {
         unsafe { ffi::GuiLoadStyleDefault() }
     }
 }
@@ -130,39 +130,39 @@ pub trait RaylibDrawGui {
     // Set gui controls alpha (global state), alpha goes from 0.0f to 1.0f
     #[inline]
     fn gui_fade(&mut self, color: Color, alpha: f32) -> Color {
-        unsafe { ffi::Fade(color.into(), alpha).into() }
+        unsafe { raylib::ffi::Fade(color.into(), alpha).into() }
     }
     /// Set gui state (global state)
     #[inline]
-    fn gui_set_state(&mut self, state: crate::consts::GuiState) {
+    fn gui_set_state(&mut self, state: ffi::GuiState) {
         unsafe { ffi::GuiSetState(state as i32) }
     }
     /// Get gui state (global state)
     #[inline]
-    fn gui_get_state(&mut self) -> crate::consts::GuiState {
+    fn gui_get_state(&mut self) -> ffi::GuiState {
         unsafe { std::mem::transmute(ffi::GuiGetState()) }
     }
     /// Set gui custom font (global state)
     #[inline]
-    fn gui_set_font(&mut self, font: impl AsRef<ffi::Font>) {
+    fn gui_set_font(&mut self, font: impl AsRef<raylib::ffi::Font>) {
         unsafe { ffi::GuiSetFont(*font.as_ref()) }
     }
     /// Get gui custom font (global state)
     #[inline]
     fn gui_get_font(&mut self) -> WeakFont {
-        unsafe { WeakFont(ffi::GuiGetFont()) }
+        unsafe { WeakFont::from_raw(ffi::GuiGetFont()) }
     }
     /// Set one style property
     /// SHOULD use one of the Gui*Property enums
     #[inline]
-    fn gui_set_style(&mut self, control: crate::consts::GuiControl, property: i32, value: i32) {
+    fn gui_set_style(&mut self, control: ffi::GuiControl, property: i32, value: i32) {
         unsafe { ffi::GuiSetStyle(control as i32, property as i32, value) }
     }
 
     /// Get one style property
     /// SHOULD use one of the Gui*Property enums
     #[inline]
-    fn gui_get_style(&self, control: crate::consts::GuiControl, property: i32) -> i32 {
+    fn gui_get_style(&self, control: ffi::GuiControl, property: i32) -> i32 {
         unsafe { ffi::GuiGetStyle(control as i32, property as i32) }
     }
     /// Load style file (.rgs)
@@ -177,33 +177,33 @@ pub trait RaylibDrawGui {
     }
     /// Window Box control, shows a window that can be closed
     #[inline]
-    fn gui_window_box(&mut self, bounds: impl Into<ffi::Rectangle>, title: impl IntoCStr) -> bool {
+    fn gui_window_box(&mut self, bounds: impl Into<Rectangle>, title: impl IntoCStr) -> bool {
         unsafe { ffi::GuiWindowBox(bounds.into(), title.as_cstr_ptr()) > 0 }
     }
     /// Group Box control with text name
     #[inline]
-    fn gui_group_box(&mut self, bounds: impl Into<ffi::Rectangle>, text: impl IntoCStr) -> bool {
+    fn gui_group_box(&mut self, bounds: impl Into<Rectangle>, text: impl IntoCStr) -> bool {
         unsafe { ffi::GuiGroupBox(bounds.into(), text.as_cstr_ptr()) > 0 }
     }
     /// Line separator control, could contain text
     #[inline]
-    fn gui_line(&mut self, bounds: impl Into<ffi::Rectangle>, text: impl IntoCStr) -> bool {
+    fn gui_line(&mut self, bounds: impl Into<Rectangle>, text: impl IntoCStr) -> bool {
         unsafe { ffi::GuiLine(bounds.into(), text.as_cstr_ptr()) > 0 }
     }
     /// Panel control, useful to group controls
     #[inline]
-    fn gui_panel(&mut self, bounds: impl Into<ffi::Rectangle>, text: impl IntoCStr) -> bool {
+    fn gui_panel(&mut self, bounds: impl Into<Rectangle>, text: impl IntoCStr) -> bool {
         unsafe { ffi::GuiPanel(bounds.into(), text.as_cstr_ptr()) > 0 }
     }
     /// Scroll Panel control
     #[inline]
     fn gui_scroll_panel(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
-        content: impl Into<ffi::Rectangle>,
-        scroll: impl Into<ffi::Vector2>,
-        view: impl Into<ffi::Rectangle>,
+        content: impl Into<Rectangle>,
+        scroll: impl Into<Vector2>,
+        view: impl Into<Rectangle>,
     ) -> (bool, Rectangle, Vector2) {
         let mut scroll = scroll.into();
         let mut view = view.into();
@@ -220,24 +220,24 @@ pub trait RaylibDrawGui {
     }
     /// Label control, shows text
     #[inline]
-    fn gui_label(&mut self, bounds: impl Into<ffi::Rectangle>, text: impl IntoCStr) -> bool {
+    fn gui_label(&mut self, bounds: impl Into<Rectangle>, text: impl IntoCStr) -> bool {
         unsafe { ffi::GuiLabel(bounds.into(), text.as_cstr_ptr()) > 0 }
     }
     /// Button control, returns true when clicked
     #[inline]
-    fn gui_button(&mut self, bounds: impl Into<ffi::Rectangle>, text: impl IntoCStr) -> bool {
+    fn gui_button(&mut self, bounds: impl Into<Rectangle>, text: impl IntoCStr) -> bool {
         unsafe { ffi::GuiButton(bounds.into(), text.as_cstr_ptr()) > 0 }
     }
     /// Label button control, show true when clicked
     #[inline]
-    fn gui_label_button(&mut self, bounds: impl Into<ffi::Rectangle>, text: impl IntoCStr) -> bool {
+    fn gui_label_button(&mut self, bounds: impl Into<Rectangle>, text: impl IntoCStr) -> bool {
         unsafe { ffi::GuiLabelButton(bounds.into(), text.as_cstr_ptr()) > 0 }
     }
     /// Toggle Button control, returns true when active
     #[inline]
     fn gui_toggle(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         active: &mut bool,
     ) -> bool {
@@ -247,7 +247,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_toggle_group(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         active: &mut i32,
     ) -> i32 {
@@ -257,7 +257,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_check_box(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         checked: &mut bool,
     ) -> bool {
@@ -267,7 +267,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_combo_box(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         active: &mut i32,
     ) -> i32 {
@@ -277,7 +277,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_dropdown_box(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         active: &mut i32,
         edit_mode: bool,
@@ -288,7 +288,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_spinner(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         value: &mut i32,
         min_value: i32,
@@ -311,7 +311,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_value_box(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         value: &mut i32,
         min_value: i32,
@@ -334,7 +334,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_text_box(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         buffer: &mut [u8],
         edit_mode: bool,
     ) -> bool {
@@ -354,7 +354,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_slider(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text_left: impl IntoCStr,
         text_right: impl IntoCStr,
         value: &mut f32,
@@ -376,7 +376,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_slider_bar(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text_left: impl IntoCStr,
         text_right: impl IntoCStr,
         value: &mut f32,
@@ -398,7 +398,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_progress_bar(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text_left: impl IntoCStr,
         text_right: impl IntoCStr,
         value: &mut f32,
@@ -418,24 +418,24 @@ pub trait RaylibDrawGui {
     }
     /// Status Bar control, shows info text
     #[inline]
-    fn gui_status_bar(&mut self, bounds: impl Into<ffi::Rectangle>, text: impl IntoCStr) -> bool {
+    fn gui_status_bar(&mut self, bounds: impl Into<Rectangle>, text: impl IntoCStr) -> bool {
         unsafe { ffi::GuiStatusBar(bounds.into(), text.as_cstr_ptr()) > 0 }
     }
     /// Dummy control for placeholders
     #[inline]
-    fn gui_dummy_rec(&mut self, bounds: impl Into<ffi::Rectangle>, text: impl IntoCStr) -> bool {
+    fn gui_dummy_rec(&mut self, bounds: impl Into<Rectangle>, text: impl IntoCStr) -> bool {
         unsafe { ffi::GuiStatusBar(bounds.into(), text.as_cstr_ptr()) > 0 }
     }
     /// Grid control
     #[inline]
     fn gui_grid(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         spacing: f32,
         subdivs: i32,
     ) -> (bool, Vector2) {
-        let mut mouseCell = ffi::Vector2 { x: 0.0, y: 0.0 };
+        let mut mouseCell = Vector2 { x: 0.0, y: 0.0 };
         (
             unsafe {
                 ffi::GuiGrid(
@@ -453,7 +453,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_list_view(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         scroll_index: &mut i32,
         active: &mut i32,
@@ -464,7 +464,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_list_view_ex(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: &[&CStr],
         focus: &mut i32,
         scroll_index: &mut i32,
@@ -489,7 +489,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_message_box(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         message: impl IntoCStr,
         buttons: impl IntoCStr,
@@ -507,7 +507,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_text_input_box(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         title: impl IntoCStr,
         message: impl IntoCStr,
         buttons: impl IntoCStr,
@@ -536,9 +536,9 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_color_picker(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
-        color: impl Into<ffi::Color>,
+        color: impl Into<Color>,
     ) -> Color {
         let mut out = color.into();
         let result = unsafe { ffi::GuiColorPicker(bounds.into(), text.as_cstr_ptr(), &mut out) };
@@ -548,11 +548,7 @@ pub trait RaylibDrawGui {
     // NOTE: Useful to add icons by name id (enum) instead of
     // a number that can change between ricon versions
     #[inline]
-    fn gui_icon_text(
-        &mut self,
-        icon_id: crate::consts::GuiIconName,
-        text: impl IntoCStr,
-    ) -> String {
+    fn gui_icon_text(&mut self, icon_id: ffi::GuiIconName, text: impl IntoCStr) -> String {
         let buffer = unsafe { ffi::GuiIconText(icon_id as i32, text.as_cstr_ptr()) };
         if buffer.is_null() {
             let ptr = text.as_cstr_ptr();
@@ -573,7 +569,7 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_color_bar_alpha(
         &mut self,
-        bounds: impl Into<ffi::Rectangle>,
+        bounds: impl Into<Rectangle>,
         text: impl IntoCStr,
         alpha: &mut f32,
     ) -> bool {

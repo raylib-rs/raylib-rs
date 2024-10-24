@@ -1,0 +1,12 @@
+[package]
+name = "raygui"
+version = "4.0.1"
+edition = "2021"
+
+[dependencies]
+raylib = "5.0.2"
+raygui-sys = {path = "../raygui-sys", version = "4.0.1" }
+
+[[example]]
+name = "rgui"
+path = "examples/rgui.rs"

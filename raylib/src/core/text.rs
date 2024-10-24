@@ -294,6 +294,7 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
         }
     }
 
+
     /// Check if a font is valid
     fn is_font_valid(&self) -> bool {
         unsafe { ffi::IsFontValid(*self.as_ref()) }
