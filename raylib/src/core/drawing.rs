@@ -548,7 +548,8 @@ pub trait RaylibDraw {
         }
     }
 
-    /// Draw lines sequence    #[inline]
+    /// Draw lines sequence   
+    #[inline]
     fn draw_line_strip(&mut self, points: &[Vector2], color: impl Into<ffi::Color>) {
         unsafe {
             ffi::DrawLineStrip(
