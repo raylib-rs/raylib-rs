@@ -128,10 +128,7 @@ fn build_with_cmake(src_path: &str) {
 
     // Allows disabling the default maping of screenshot and gif recording in raylib
     {
-        #[cfg(any(
-                    feature = "noscreenshot",
-                    feature = "nogif"
-        ))]
+        #[cfg(any(feature = "noscreenshot", feature = "nogif"))]
         builder.define("CUSTOMIZE_BUILD", "ON");
 
         #[cfg(feature = "noscreenshot")]
@@ -236,30 +233,6 @@ fn gen_bindings() {
         .expect("Couldn't write bindings!");
 }
 
-fn gen_rgui() {
-    // Compile the code and link with cc crate
-    #[cfg(target_os = "windows")]
-    {
-        cc::Build::new()
-            .files(vec!["binding/rgui_wrapper.cpp", "binding/utils_log.cpp"])
-            .include("binding")
-            .warnings(false)
-            // .flag("-std=c99")
-            .extra_warnings(false)
-            .compile("rgui");
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        cc::Build::new()
-            .files(vec!["binding/rgui_wrapper.c", "binding/utils_log.c"])
-            .include("binding")
-            .warnings(false)
-            // .flag("-std=c99")
-            .extra_warnings(false)
-            .compile("rgui");
-    }
-}
-
 #[cfg(feature = "nobuild")]
 fn link(_platform: Platform, _platform_os: PlatformOS) {}
 
@@ -340,8 +313,6 @@ fn main() {
     gen_bindings();
 
     link(platform, platform_os);
-
-    gen_rgui();
 }
 
 // cp_raylib copy raylib to an out dir

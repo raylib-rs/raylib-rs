@@ -1,0 +1,11 @@
+[package]
+name = "raygui-sys"
+version = "4.0.1"
+edition = "2021"
+
+[build-dependencies]
+bindgen = "0.70.1"
+cc = "1.1.31"
+
+[dependencies]
+raylib-sys = "5.0.2"

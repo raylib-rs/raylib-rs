@@ -38,7 +38,6 @@ Most development happens over at: https://github.com/raylib-rs/raylib-rs
 | ------ | ------------------ | ------------------ | ------------------ | --------------     | ------- |
 | core   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x:     |
 | rgui   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | ❔                 | :x:     |
-| physac | :construction:     | :construction:     | :construction:     | ❔                 | :x:     |
 | rlgl   | :heavy_check_mark: | :x:                | :x:                | ❔                 | :x:     |
 
 ## Build Dependencies
@@ -161,7 +160,6 @@ The raylib-test crate tests the bindings by opening a window, and checking the r
 - More tests.
 - More platform testing.
 - Even more testing.
-- Physac port?
 
 # Contribution & Support
 
