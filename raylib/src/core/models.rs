@@ -215,11 +215,6 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
         unsafe { ffi::IsModelAnimationValid(*self.as_ref(), anim.0) }
     }
 
-    #[deprecated = "Replaced with RaylibModel::is_model_valid"]
-    fn is_ready(&self) -> bool {
-        self.is_model_valid()
-    }
-
     /// Check if a model is ready
     fn is_model_valid(&self) -> bool {
         unsafe { ffi::IsModelValid(*self.as_ref()) }
@@ -519,11 +514,6 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
         unsafe {
             ffi::SetMaterialTexture(self.as_mut(), (map_type as u32) as i32, *texture.as_ref())
         }
-    }
-
-    #[deprecated = "Replaced with RaylibMaterial::is_material_valid"]
-    fn is_ready(&mut self) -> bool {
-        self.is_material_valid()
     }
 
     fn is_material_valid(&mut self) -> bool {

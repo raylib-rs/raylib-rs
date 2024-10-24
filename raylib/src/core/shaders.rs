@@ -187,11 +187,6 @@ impl Shader {
         m
     }
 
-    #[deprecated = "Replaced with Shader::is_shader_valid"]
-    pub fn is_ready(&self) -> bool {
-        self.is_shader_valid()
-    }
-
     /// Check if shader is valid
     #[inline]
     pub fn is_shader_valid(&self) -> bool {

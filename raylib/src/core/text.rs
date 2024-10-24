@@ -294,22 +294,10 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
         }
     }
 
-    #[deprecated = "Replaced with RaylibFont::is_font_valid"]
-    fn is_ready(&self) -> bool {
-        self.is_font_valid()
-    }
 
     /// Check if a font is valid
     fn is_font_valid(&self) -> bool {
         unsafe { ffi::IsFontValid(*self.as_ref()) }
-    }
-
-    #[deprecated = "Renamed to RaylibFont::export_font_as_code"]
-    fn export_as_code<A>(&self, filename: A) -> bool
-    where
-        A: Into<OsString>,
-    {
-        self.export_font_as_code(filename)
     }
 
     /// Export font as code file, returns true on success

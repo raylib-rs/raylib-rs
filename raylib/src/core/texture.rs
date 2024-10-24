@@ -116,11 +116,6 @@ impl RenderTexture2D {
         m
     }
 
-    #[deprecated = "Replaced with RenderTexture2D::is_render_texture_ready"]
-    pub fn is_ready(&self) -> bool {
-        self.is_render_texture_valid()
-    }
-
     pub fn is_render_texture_valid(&self) -> bool {
         unsafe { ffi::IsRenderTextureValid(self.0) }
     }
