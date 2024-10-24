@@ -200,8 +200,13 @@ impl<'aud> Wave<'aud> {
         inner
     }
 
+    #[deprecated = "Replaced with Wave::is_wave_valid"]
     pub fn is_wave_ready(&self) -> bool {
-        unsafe { ffi::IsWaveReady(self.0) }
+        self.is_wave_valid()
+    }
+
+    pub fn is_wave_valid(&self) -> bool {
+        unsafe { ffi::IsWaveValid(self.0) }
     }
 
     /// Export wave file. Extension must be .wav or .raw
@@ -269,8 +274,13 @@ impl<'aud> AsMut<ffi::AudioStream> for Sound<'aud> {
 }
 
 impl<'aud> Sound<'aud> {
+    #[deprecated = "Replaced with Sound::is_sound_valid"]
     pub fn is_sound_ready(&self) -> bool {
-        unsafe { ffi::IsSoundReady(self.0) }
+        self.is_sound_valid()
+    }
+
+    pub fn is_sound_valid(&self) -> bool {
+        unsafe { ffi::IsSoundValid(self.0) }
     }
 
     pub fn frame_count(&self) -> u32 {
@@ -356,8 +366,13 @@ impl<'aud> Sound<'aud> {
 }
 
 impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
+    #[deprecated = "Replaced with SoundAlias::is_sound_valid"]
     pub fn is_sound_ready(&self) -> bool {
-        unsafe { ffi::IsSoundReady(self.0) }
+        self.is_sound_valid()
+    }
+
+    pub fn is_sound_valid(&self) -> bool {
+        unsafe { ffi::IsSoundValid(self.0) }
     }
 
     pub fn frame_count(&self) -> u32 {
@@ -522,15 +537,24 @@ impl<'aud> Music<'aud> {
         }
     }
 
-    /// Checks if a music stream is ready
+    #[deprecated = "Replaced with Music::is_music_valid"]
     pub fn is_ready(&self) -> bool {
-        unsafe { ffi::IsMusicReady(self.0) }
+        self.is_music_valid()
+    }
+
+    pub fn is_music_valid(&self) -> bool {
+        unsafe { ffi::IsMusicValid(self.0) }
     }
 }
 
 impl<'aud> AudioStream<'aud> {
-    pub fn is_audio_stream_ready(&self) -> bool {
-        unsafe { ffi::IsAudioStreamReady(self.0) }
+    #[deprecated = "Replaced with AudioStream::is_audio_stream_valid"]
+    pub fn is_sound_stream_ready(&self) -> bool {
+        self.is_audio_stream_valid()
+    }
+
+    pub fn is_audio_stream_valid(&self) -> bool {
+        unsafe { ffi::IsAudioStreamValid(self.0) }
     }
     pub fn sample_rate(&self) -> u32 {
         self.0.sampleRate
