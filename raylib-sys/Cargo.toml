@@ -1,7 +1,7 @@
 [package]
 name = "raylib-sys"
-version = "5.0.1"
-authors = ["DeltaPHC <phclem@protonmail.com>"]
+version = "5.5.0"
+authors = ["raylib-rs team <https://github.com/raylib-rs/raylib-rs>"]
 license = "Zlib"
 description = "Raw FFI bindings for Raylib"
 documentation = "https://docs.rs/raylib-sys"
@@ -11,17 +11,22 @@ categories = ["external-ffi-bindings"]
 edition = "2018"
 exclude = ["raylib/examples/*", "raylib/projects/*", "raylib/templates/*"]
 
+[dependencies]
+imgui = { version = "0.12.0", optional = true, features = [] }
+imgui-sys = { version = "0.12.0", optional = true }
+
 [build-dependencies]
-fs_extra = "1.2"
-cmake = "0.1.49"
+cmake = "0.1.51"
 cc = "1.0"
-bindgen = "0.69.0"
+bindgen = "0.70"
 
 [features]
-default = []
-# Build Raylib headless for docs. Up to you to link
-#nobuild = []
-
+# Build Raylib headless for docs/esoteric platforms. Up to you to link.
+nobuild = []
+# Generate bindings automatically.
+# You can turn this off if you wanna go into the source and put in your own bindings.rs, which is
+# useful since bindgen doesn't work on esoteric platforms.
+bindgen = []
 # Build for wayland on linux. Should fix #119
 wayland = []
 
@@ -30,6 +35,15 @@ opengl_33 = []
 opengl_21 = []
 # opengl_11 = [] I couldn't get this one working, the others were fine in my limited testing (unsure about wayland compatibility)
 opengl_es_20 = []
+opengl_es_30 = []
+sdl = []
+
+# Allow disabling screenshots and gifs on f12
+noscreenshot = []
+nogif = []
 
 # config.h's SUPPORT_CUSTOM_FRAME_CONTROL
 custom_frame_control = []
+
+# ImGui support
+imgui = ["dep:imgui", "dep:imgui-sys"]

@@ -45,5 +45,7 @@ pub use crate::core::texture::*;
 pub use crate::core::vr::*;
 pub use crate::core::window::*;
 pub use crate::core::*;
+#[cfg(feature = "imgui")]
+pub use crate::imgui::*;
 pub use crate::rgui::*;
 pub use crate::*;

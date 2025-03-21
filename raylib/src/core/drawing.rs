@@ -1,5 +1,7 @@
 //! Contains code related to drawing. Types that can be set as a surface to draw will implement the [`RaylibDraw`] trait
 
+use raylib_sys::Rectangle;
+
 use crate::core::camera::Camera3D;
 use crate::core::math::Ray;
 use crate::core::math::{Vector2, Vector3};
@@ -14,20 +16,47 @@ use crate::text::Codepoints;
 use std::convert::AsRef;
 use std::ffi::CString;
 
+use super::camera::Camera2D;
+use super::shaders::{Shader, ShaderV};
+
 /// Seems like all draw commands must be issued from the main thread
 impl RaylibHandle {
-    /// Setup canvas (framebuffer) to start drawing
     #[must_use]
+    /// Setup canvas (framebuffer) to start drawing.
+    /// Prefer using the closure version, [RaylibHandle::draw]. This version returns a handle that calls [raylib_sys::EndDrawing] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     pub fn begin_drawing(&mut self, _: &RaylibThread) -> RaylibDrawHandle {
         unsafe {
             ffi::BeginDrawing();
         };
+
         let d = RaylibDrawHandle(self);
         d
+    }
+    pub fn draw(&mut self, _: &RaylibThread, mut func: impl FnMut(RaylibDrawHandle)) {
+        unsafe {
+            ffi::BeginDrawing();
+        };
+        func(RaylibDrawHandle(self));
+        unsafe {
+            ffi::EndDrawing();
+        };
     }
 }
 
 pub struct RaylibDrawHandle<'a>(&'a mut RaylibHandle);
+
+impl<'a> RaylibDrawHandle<'a> {
+    #[deprecated = "Calling begin_drawing within RaylibDrawHandle will result in a runtime error."]
+    #[doc(hidden)]
+    pub fn begin_drawing(&mut self, _: &RaylibThread) -> RaylibDrawHandle {
+        panic!("Nested begin_drawing call")
+    }
+    #[deprecated = "Calling draw within RaylibDrawHandle will result in a runtime error."]
+    #[doc(hidden)]
+    pub fn draw(&mut self, _: &RaylibThread, mut _func: impl FnMut(RaylibDrawHandle)) {
+        panic!("Nested draw call")
+    }
+}
 
 impl<'a> Drop for RaylibDrawHandle<'a> {
     fn drop(&mut self) {
@@ -45,11 +74,17 @@ impl<'a> std::ops::Deref for RaylibDrawHandle<'a> {
     }
 }
 
+impl<'a> std::ops::DerefMut for RaylibDrawHandle<'a> {
+    fn deref_mut(&mut self) -> &mut RaylibHandle {
+        self.0
+    }
+}
 impl<'a> RaylibDraw for RaylibDrawHandle<'a> {}
 
 // Texture2D Stuff
 
-pub struct RaylibTextureMode<'a, T>(&'a T, &'a mut ffi::RenderTexture2D);
+pub struct RaylibTextureMode<'a, T>(&'a mut T, &'a mut ffi::RenderTexture2D);
+
 impl<'a, T> Drop for RaylibTextureMode<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndTextureMode() }
@@ -62,11 +97,19 @@ impl<'a, T> std::ops::Deref for RaylibTextureMode<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibTextureMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
+// framebuffer: &'a mut ffi::RenderTexture2D,
 
 pub trait RaylibTextureModeExt
 where
     Self: Sized,
 {
+    /// Begin drawing to render texture.
+    /// Prefer using the closure version, [RaylibTextureModeExt::draw_texture_mode] . This version returns a handle that calls [raylib_sys::EndTextureMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
     fn begin_texture_mode<'a>(
         &'a mut self,
@@ -76,11 +119,21 @@ where
         unsafe { ffi::BeginTextureMode(*framebuffer) }
         RaylibTextureMode(self, framebuffer)
     }
+
+    fn draw_texture_mode<'a>(
+        &'a mut self,
+        _: &RaylibThread,
+        framebuffer: &'a mut ffi::RenderTexture2D,
+        mut func: impl FnMut(RaylibTextureMode<Self>),
+    ) {
+        unsafe { ffi::BeginTextureMode(*framebuffer) }
+        func(RaylibTextureMode(self, framebuffer));
+    }
 }
 
 // Only the DrawHandle and the RaylibHandle can start a texture
 impl<'a> RaylibTextureModeExt for RaylibDrawHandle<'a> {}
-impl RaylibTextureModeExt for &mut RaylibHandle {}
+impl RaylibTextureModeExt for RaylibHandle {}
 impl<'a, T> RaylibDraw for RaylibTextureMode<'a, T> {}
 
 // VR Stuff
@@ -103,13 +156,25 @@ pub trait RaylibVRModeExt
 where
     Self: Sized,
 {
+    /// Begin stereo rendering (requires VR simulator).
+    /// Prefer using the closure version, [RaylibVRModeExt::draw_vr_stereo_mode] . This version returns a handle that calls [raylib_sys::EndVrStereoMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
     fn begin_vr_stereo_mode<'a>(
         &'a mut self,
+        _: &RaylibThread,
         vr_config: &'a mut VrStereoConfig,
     ) -> RaylibVRMode<Self> {
         unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
         RaylibVRMode(self, vr_config)
+    }
+
+    fn draw_vr_stereo_mode<'a>(
+        &'a mut self,
+        vr_config: &'a mut VrStereoConfig,
+        mut func: impl FnMut(RaylibVRMode<Self>),
+    ) {
+        unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
+        func(RaylibVRMode(&self, vr_config));
     }
 }
 
@@ -131,11 +196,18 @@ impl<'a, T> std::ops::Deref for RaylibMode2D<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibMode2D<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibMode2DExt
 where
     Self: Sized,
 {
+    /// Begin 2D mode with custom camera (2D).
+    /// Prefer using the closure version, [RaylibMode2DExt::draw_mode2D]. This version returns a handle that calls [raylib_sys::EndMode2D] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[allow(non_snake_case)]
     #[must_use]
     fn begin_mode2D(&mut self, camera: impl Into<ffi::Camera2D>) -> RaylibMode2D<Self> {
@@ -143,6 +215,21 @@ where
             ffi::BeginMode2D(camera.into());
         }
         RaylibMode2D(self)
+    }
+
+    #[allow(non_snake_case)]
+    fn draw_mode2D(
+        &mut self,
+        camera: Camera2D,
+        mut func: impl FnMut(RaylibMode2D<Self>, Camera2D),
+    ) {
+        unsafe {
+            ffi::BeginMode2D(camera.into());
+        }
+        func(RaylibMode2D(self), camera);
+        unsafe {
+            ffi::EndMode2D();
+        }
     }
 }
 
@@ -164,11 +251,18 @@ impl<'a, T> std::ops::Deref for RaylibMode3D<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibMode3D<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibMode3DExt
 where
     Self: Sized,
 {
+    /// Begin 3D mode with custom camera (3D).
+    /// Prefer using the closure version, [RaylibMode3DExt::draw_mode3D]. This version returns a handle that calls [raylib_sys::EndMode3D] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[allow(non_snake_case)]
     #[must_use]
     fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<Self> {
@@ -176,6 +270,21 @@ where
             ffi::BeginMode3D(camera.into());
         }
         RaylibMode3D(self)
+    }
+
+    #[allow(non_snake_case)]
+    fn draw_mode3D(
+        &mut self,
+        camera: Camera3D,
+        mut func: impl FnMut(RaylibMode3D<Self>, Camera3D),
+    ) {
+        unsafe {
+            ffi::BeginMode3D(camera.into());
+        }
+        func(RaylibMode3D(self), camera);
+        unsafe {
+            ffi::EndMode3D();
+        }
     }
 }
 
@@ -185,7 +294,8 @@ impl<'a, T> RaylibDraw3D for RaylibMode3D<'a, T> {}
 
 // shader Mode
 
-pub struct RaylibShaderMode<'a, T>(&'a mut T, &'a ffi::Shader);
+pub struct RaylibShaderMode<'a, T>(&'a mut T, &'a mut Shader);
+
 impl<'a, T> Drop for RaylibShaderMode<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndShaderMode() }
@@ -198,15 +308,31 @@ impl<'a, T> std::ops::Deref for RaylibShaderMode<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibShaderMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibShaderModeExt
 where
     Self: Sized,
 {
+    /// Begin custom shader drawing.
+    /// Prefer using the closure version, [RaylibShaderModeExt::draw_shader_mode]. This version returns a handle that calls [raylib_sys::EndShaderMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
-    fn begin_shader_mode<'a>(&'a mut self, shader: &'a ffi::Shader) -> RaylibShaderMode<Self> {
-        unsafe { ffi::BeginShaderMode(*shader) }
+    fn begin_shader_mode<'a>(&'a mut self, shader: &'a mut Shader) -> RaylibShaderMode<Self> {
+        unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
         RaylibShaderMode(self, shader)
+    }
+
+    fn draw_shader_mode<'a>(
+        &'a mut self,
+        shader: &'a mut Shader,
+        mut func: impl FnMut(RaylibShaderMode<Self>),
+    ) {
+        unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
+        func(RaylibShaderMode(self, shader));
     }
 }
 
@@ -229,15 +355,31 @@ impl<'a, T> std::ops::Deref for RaylibBlendMode<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibBlendMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibBlendModeExt
 where
     Self: Sized,
 {
+    /// Begin blending mode (alpha, additive, multiplied, subtract, custom).
+    /// Prefer using the closure version, [RaylibBlendModeExt::draw_blend_mode]. This version returns a handle that calls [raylib_sys::EndBlendMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
     fn begin_blend_mode(&mut self, blend_mode: crate::consts::BlendMode) -> RaylibBlendMode<Self> {
         unsafe { ffi::BeginBlendMode((blend_mode as u32) as i32) }
         RaylibBlendMode(self)
+    }
+
+    fn draw_blend_mode(
+        &mut self,
+        blend_mode: crate::consts::BlendMode,
+        mut func: impl FnMut(RaylibBlendMode<Self>),
+    ) {
+        unsafe { ffi::BeginBlendMode((blend_mode as u32) as i32) }
+        func(RaylibBlendMode(self));
     }
 }
 
@@ -260,11 +402,18 @@ impl<'a, T> std::ops::Deref for RaylibScissorMode<'a, T> {
         &self.0
     }
 }
+impl<'a, T> std::ops::DerefMut for RaylibScissorMode<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0
+    }
+}
 
 pub trait RaylibScissorModeExt
 where
     Self: Sized,
 {
+    /// Begin scissor mode (define screen area for following drawing).
+    /// Prefer using the closure version, [RaylibScissorModeExt::draw_scissor_mode]. This version returns a handle that calls [raylib_sys::EndScissorMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
     fn begin_scissor_mode(
         &mut self,
@@ -275,6 +424,18 @@ where
     ) -> RaylibScissorMode<Self> {
         unsafe { ffi::BeginScissorMode(x, y, width, height) }
         RaylibScissorMode(self)
+    }
+
+    fn draw_scissor_mode(
+        &mut self,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        mut func: impl FnMut(RaylibScissorMode<Self>),
+    ) {
+        unsafe { ffi::BeginScissorMode(x, y, width, height) }
+        func(RaylibScissorMode(self));
     }
 }
 
@@ -291,6 +452,16 @@ pub trait RaylibDraw {
         unsafe {
             ffi::ClearBackground(color.into());
         }
+    }
+
+    /// Get texture that is used for shapes drawing
+    fn get_shapes_texture(&self) -> Texture2D {
+        Texture2D(unsafe { ffi::GetShapesTexture() })
+    }
+
+    /// Get texture source rectangle that is used for shapes drawing
+    fn get_shapes_texture_rectangle(&self) -> Rectangle {
+        unsafe { ffi::GetShapesTextureRectangle() }
     }
 
     /// Define default texture used to draw shapes
@@ -489,6 +660,19 @@ pub trait RaylibDraw {
     ) {
         unsafe {
             ffi::DrawCircleLines(center_x, center_y, radius, color.into());
+        }
+    }
+
+    /// Draws circle outline. (Vector Version)
+    #[inline]
+    fn draw_circle_lines_v(
+        &mut self,
+        center: impl Into<ffi::Vector2>,
+        radius: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawCircleLinesV(center.into(), radius, color.into());
         }
     }
 
@@ -708,7 +892,7 @@ pub trait RaylibDraw {
             ffi::DrawRectangleLinesEx(rec.into(), line_thick, color.into());
         }
     }
-    /// Draws rectangle outline with extended parameters.
+    /// Draws rectangle with rounded edges.
     #[inline]
     fn draw_rectangle_rounded(
         &mut self,
@@ -722,9 +906,22 @@ pub trait RaylibDraw {
         }
     }
 
-    /// Draws rectangle outline with extended parameters.
+    /// Draws rectangle outline with rounded edges included.
     #[inline]
     fn draw_rectangle_rounded_lines(
+        &mut self,
+        rec: impl Into<ffi::Rectangle>,
+        roundness: f32,
+        segments: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawRectangleRoundedLines(rec.into(), roundness, segments, color.into());
+        }
+    }
+
+    /// Draw rectangle with rounded edges outline
+    fn draw_rectangle_rounded_lines_ex(
         &mut self,
         rec: impl Into<ffi::Rectangle>,
         roundness: f32,
@@ -733,16 +930,15 @@ pub trait RaylibDraw {
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::DrawRectangleRoundedLines(
+            ffi::DrawRectangleRoundedLinesEx(
                 rec.into(),
                 roundness,
                 segments,
                 line_thickness,
                 color.into(),
-            );
-        }
+            )
+        };
     }
-
     /// Draws a triangle.
     #[inline]
     fn draw_triangle(
@@ -1433,21 +1629,44 @@ pub trait RaylibDraw3D {
         }
     }
 
+    /// Draws a cube in wireframe. (Vector Version)
+    #[inline]
+    fn draw_cube_wires_v(
+        &mut self,
+        position: impl Into<ffi::Vector3>,
+        size: impl Into<ffi::Vector3>,
+        color: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawCubeWiresV(position.into(), size.into(), color.into());
+        }
+    }
+
     /// Draw a 3d mesh with material and transform
     #[inline]
-    fn draw_mesh(&mut self, mesh: Mesh, material: WeakMaterial, transform: Matrix) {
-        unsafe { ffi::DrawMesh(mesh.0, material.0, transform.into()) }
+    fn draw_mesh(
+        &mut self,
+        mesh: impl AsRef<ffi::Mesh>,
+        material: WeakMaterial,
+        transform: Matrix,
+    ) {
+        unsafe { ffi::DrawMesh(*mesh.as_ref(), material.0, transform.into()) }
     }
 
     /// Draw multiple mesh instances with material and different transforms
     #[inline]
-    fn draw_mesh_instanced(&mut self, mesh: Mesh, material: WeakMaterial, transforms: &[Matrix]) {
+    fn draw_mesh_instanced(
+        &mut self,
+        mesh: impl AsRef<ffi::Mesh>,
+        material: WeakMaterial,
+        transforms: &[Matrix],
+    ) {
         let tr = transforms
             .iter()
             .map(|f| f.into())
             .collect::<Vec<ffi::Matrix>>()
             .as_ptr();
-        unsafe { ffi::DrawMeshInstanced(mesh.0, material.0, tr, transforms.len() as i32) }
+        unsafe { ffi::DrawMeshInstanced(*mesh.as_ref(), material.0, tr, transforms.len() as i32) }
     }
 
     /// Draws a sphere.
@@ -1516,6 +1735,29 @@ pub trait RaylibDraw3D {
         }
     }
 
+    /// Draws a cylinder with extended parameters.
+    #[inline]
+    fn draw_cylinder_ex(
+        &mut self,
+        start_position: impl Into<ffi::Vector3>,
+        end_position: impl Into<ffi::Vector3>,
+        radius_start: f32,
+        radius_end: f32,
+        slices: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawCylinderEx(
+                start_position.into(),
+                end_position.into(),
+                radius_start,
+                radius_end,
+                slices,
+                color.into(),
+            );
+        }
+    }
+
     /// Draws a cylinder in wireframe.
     #[inline]
     fn draw_cylinder_wires(
@@ -1536,6 +1778,73 @@ pub trait RaylibDraw3D {
                 slices,
                 color.into(),
             );
+        }
+    }
+
+    /// Draws a cylinder in wireframe with extended parameters.
+    #[inline]
+    fn draw_cylinder_wires_ex(
+        &mut self,
+        start_position: impl Into<ffi::Vector3>,
+        end_position: impl Into<ffi::Vector3>,
+        radius_start: f32,
+        radius_end: f32,
+        slices: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawCylinderWiresEx(
+                start_position.into(),
+                end_position.into(),
+                radius_start,
+                radius_end,
+                slices,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draw capsule with the center of its sphere caps at startPos and endPos
+    fn draw_capsule(
+        &mut self,
+        start_pos: impl Into<ffi::Vector3>,
+        end_pos: impl Into<ffi::Vector3>,
+        radius: f32,
+        slices: i32,
+        rings: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawCapsule(
+                start_pos.into(),
+                end_pos.into(),
+                radius,
+                slices,
+                rings,
+                color.into(),
+            )
+        }
+    }
+
+    ///Draw capsule wireframe with the center of its sphere caps at startPos and endPos
+    fn draw_capsule_wires(
+        &mut self,
+        start_pos: impl Into<ffi::Vector3>,
+        end_pos: impl Into<ffi::Vector3>,
+        radius: f32,
+        slices: i32,
+        rings: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawCapsuleWires(
+                start_pos.into(),
+                end_pos.into(),
+                radius,
+                slices,
+                rings,
+                color.into(),
+            )
         }
     }
 
@@ -1687,6 +1996,69 @@ pub trait RaylibDraw3D {
                 source_rec.into(),
                 center.into(),
                 size.into(),
+                tint.into(),
+            );
+        }
+    }
+
+    /// Draw a billboard texture defined by source and rotation
+    fn draw_billboard_pro(
+        &mut self,
+        camera: impl Into<ffi::Camera>,
+        texture: impl Into<ffi::Texture2D>,
+        source: impl Into<ffi::Rectangle>,
+        position: impl Into<ffi::Vector3>,
+        up: impl Into<ffi::Vector3>,
+        size: impl Into<ffi::Vector2>,
+        origin: impl Into<ffi::Vector2>,
+        rotation: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawBillboardPro(
+                camera.into(),
+                texture.into(),
+                source.into(),
+                position.into(),
+                up.into(),
+                size.into(),
+                origin.into(),
+                rotation,
+                tint.into(),
+            )
+        }
+    }
+
+    /// Draw a model as points
+    fn draw_model_points(
+        &mut self,
+        model: impl Into<ffi::Model>,
+        position: impl Into<ffi::Vector3>,
+        scale: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawModelPoints(model.into(), position.into(), scale, tint.into());
+        }
+    }
+
+    /// Draw a model as points with extended parameters
+    fn draw_model_points_ex(
+        &mut self,
+        model: impl Into<ffi::Model>,
+        position: impl Into<ffi::Vector3>,
+        rotation_axis: impl Into<ffi::Vector3>,
+        angle: f32,
+        scale: impl Into<ffi::Vector3>,
+        tint: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawModelPointsEx(
+                model.into(),
+                position.into(),
+                rotation_axis.into(),
+                angle,
+                scale.into(),
                 tint.into(),
             );
         }

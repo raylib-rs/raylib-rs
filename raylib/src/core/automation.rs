@@ -1,21 +1,15 @@
 use std::{
-    ffi::{CString, OsString},
+    ffi::CString,
     path::{Path, PathBuf},
     ptr::null,
 };
 
 use crate::{ffi, RaylibHandle};
 
-fn unload_automation_event_list(mut s: ffi::AutomationEventList) {
-    unsafe {
-        (ffi::UnloadAutomationEventList)(&mut s);
-    }
-}
-
 make_thin_wrapper!(
     AutomationEventList,
     ffi::AutomationEventList,
-    unload_automation_event_list,
+    ffi::UnloadAutomationEventList,
     false
 );
 

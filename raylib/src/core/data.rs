@@ -1,23 +1,29 @@
 //! Data manipulation functions. Compress and Decompress with DEFLATE
-use std::{ffi::CString, path::Path};
+use std::{
+    ffi::{c_char, CString},
+    path::Path,
+};
 
-use crate::ffi;
+use crate::{
+    error::{error, Error},
+    ffi,
+};
 
 /// Compress data (DEFLATE algorythm)
 /// ```rust
 /// use raylib::prelude::*;
-/// let data = compress_data(b"11111");
+/// let data = compress_data(b"11111").unwrap();
 /// let expected: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
-/// assert_eq!(data, Ok(expected));
+/// assert_eq!(data, expected);
 /// ```
-pub fn compress_data(data: &[u8]) -> Result<&'static [u8], String> {
+pub fn compress_data(data: &[u8]) -> Result<&'static [u8], Error> {
     let mut out_length: i32 = 0;
     // CompressData doesn't actually modify the data, but the header is wrong
     let buffer = {
         unsafe { ffi::CompressData(data.as_ptr() as *mut _, data.len() as i32, &mut out_length) }
     };
     if buffer.is_null() {
-        return Err("could not compress data".to_string());
+        return Err(error!("could not compress data"));
     }
     let buffer = unsafe { std::slice::from_raw_parts(buffer, out_length as usize) };
     return Ok(buffer);
@@ -28,10 +34,10 @@ pub fn compress_data(data: &[u8]) -> Result<&'static [u8], String> {
 /// use raylib::prelude::*;
 /// let input: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
 /// let expected: &[u8] = b"11111";
-/// let data = decompress_data(input);
-/// assert_eq!(data, Ok(expected));
+/// let data = decompress_data(input).unwrap();
+/// assert_eq!(data, expected);
 /// ```
-pub fn decompress_data(data: &[u8]) -> Result<&'static [u8], String> {
+pub fn decompress_data(data: &[u8]) -> Result<&'static [u8], Error> {
     println!("{:?}", data.len());
 
     let mut out_length: i32 = 0;
@@ -40,7 +46,7 @@ pub fn decompress_data(data: &[u8]) -> Result<&'static [u8], String> {
         unsafe { ffi::DecompressData(data.as_ptr() as *mut _, data.len() as i32, &mut out_length) }
     };
     if buffer.is_null() {
-        return Err("could not compress data".to_string());
+        return Err(error!("could not compress data"));
     }
     let buffer = unsafe { std::slice::from_raw_parts(buffer, out_length as usize) };
     return Ok(buffer);
@@ -65,7 +71,7 @@ pub fn export_data_as_code(data: &[u8], file_name: impl AsRef<Path>) -> bool {
 }
 
 /// Encode data to Base64 string
-pub fn encode_data_base64(data: &[u8]) -> Vec<i8> {
+pub fn encode_data_base64(data: &[u8]) -> Vec<c_char> {
     let mut output_size = 0;
     let bytes =
         unsafe { ffi::EncodeDataBase64(data.as_ptr(), data.len() as i32, &mut output_size) };
@@ -74,7 +80,7 @@ pub fn encode_data_base64(data: &[u8]) -> Vec<i8> {
     if s.contains(&0) {
         // Work around a bug in Rust's from_raw_parts function
         let mut keep = true;
-        let b: Vec<i8> = s
+        let b: Vec<c_char> = s
             .iter()
             .filter(|f| {
                 if **f == 0 {

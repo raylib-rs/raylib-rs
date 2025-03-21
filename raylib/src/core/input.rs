@@ -6,6 +6,7 @@ use crate::core::math::Vector2;
 use crate::core::RaylibHandle;
 use crate::ffi;
 
+use std::ffi::c_char;
 use std::ffi::CStr;
 
 impl RaylibHandle {
@@ -13,6 +14,12 @@ impl RaylibHandle {
     #[inline]
     pub fn is_key_pressed(&self, key: crate::consts::KeyboardKey) -> bool {
         unsafe { ffi::IsKeyPressed((key as u32) as i32) }
+    }
+
+    /// Check if a key has been pressed again
+    #[inline]
+    pub fn is_key_pressed_repeat(&self, key: crate::consts::KeyboardKey) -> bool {
+        unsafe { ffi::IsKeyPressedRepeat((key as u32) as i32) }
     }
 
     /// Detect if a key is being pressed.
@@ -272,8 +279,19 @@ impl RaylibHandle {
     }
 
     /// Set internal gamepad mappings (SDL_GameControllerDB)
-    pub fn set_gamepad_mappings(&self, bind: &[i8]) -> i32 {
+    pub fn set_gamepad_mappings(&self, bind: &[c_char]) -> i32 {
         unsafe { ffi::SetGamepadMappings(bind.as_ptr()) }
+    }
+
+    /// Set gamepad vibration for both motors
+    pub fn set_gamepad_vibration(
+        &mut self,
+        gamepad: i32,
+        left_motor: f32,
+        right_motor: f32,
+        duration: f32,
+    ) {
+        unsafe { ffi::SetGamepadVibration(gamepad, left_motor, right_motor, duration) }
     }
 
     /// Checks if a gesture have been detected.

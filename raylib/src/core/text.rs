@@ -5,10 +5,11 @@ use raylib_sys::LoadUTF8;
 use crate::core::math::Vector2;
 use crate::core::texture::{Image, Texture2D};
 use crate::core::{RaylibHandle, RaylibThread};
+use crate::error::{error, Error};
 use crate::ffi;
 use crate::math::Rectangle;
 
-use std::convert::{AsMut, AsRef};
+use std::convert::{AsMut, AsRef, TryInto};
 use std::ffi::{CString, OsString};
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
@@ -118,13 +119,13 @@ impl RaylibHandle {
 
     /// Loads font from file into GPU memory (VRAM).
     #[inline]
-    pub fn load_font(&mut self, _: &RaylibThread, filename: &str) -> Result<Font, String> {
+    pub fn load_font(&mut self, _: &RaylibThread, filename: &str) -> Result<Font, Error> {
         let c_filename = CString::new(filename).unwrap();
         let f = unsafe { ffi::LoadFont(c_filename.as_ptr()) };
         if f.glyphs.is_null() || f.texture.id == 0 {
-            return Err(format!(
-                "Error loading font {}. Does it exist? Is it the right type?",
-                filename
+            return Err(error!(
+                "Error loading font. Check if the file exists and if it's the right type",
+                filename,
             ));
         }
         Ok(Font(f))
@@ -139,7 +140,7 @@ impl RaylibHandle {
         filename: &str,
         font_size: i32,
         chars: Option<&str>,
-    ) -> Result<Font, String> {
+    ) -> Result<Font, Error> {
         let c_filename = CString::new(filename).unwrap();
         let f = unsafe {
             match chars {
@@ -156,9 +157,9 @@ impl RaylibHandle {
             }
         };
         if f.glyphs.is_null() || f.texture.id == 0 {
-            return Err(format!(
-                "Error loading font {}. Does it exist? Is it the right type?",
-                filename
+            return Err(error!(
+                "Error loading font. Check if the file exists and if it's the right type",
+                filename,
             ));
         }
         Ok(Font(f))
@@ -172,10 +173,10 @@ impl RaylibHandle {
         image: &Image,
         key: impl Into<ffi::Color>,
         first_char: i32,
-    ) -> Result<Font, String> {
+    ) -> Result<Font, Error> {
         let f = unsafe { ffi::LoadFontFromImage(image.0, key.into(), first_char) };
         if f.glyphs.is_null() {
-            return Err(format!("Error loading font from image."));
+            return Err(error!("Error loading font from image."));
         }
         Ok(Font(f))
     }
@@ -190,7 +191,7 @@ impl RaylibHandle {
         file_data: &[u8],
         font_size: i32,
         chars: Option<&str>,
-    ) -> Result<Font, String> {
+    ) -> Result<Font, Error> {
         let c_file_type = CString::new(file_type).unwrap();
         let f = unsafe {
             match chars {
@@ -216,8 +217,8 @@ impl RaylibHandle {
             }
         };
         if f.glyphs.is_null() || f.texture.id == 0 {
-            return Err(format!(
-                "Error loading font from memory. Is it the right type?"
+            return Err(error!(
+                "Error loading font from memory. Check if the file's type is correct"
             ));
         }
         Ok(Font(f))
@@ -292,13 +293,14 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
             )
         }
     }
-    /// Check if a font is ready
-    fn is_ready(&self) -> bool {
-        unsafe { ffi::IsFontReady(*self.as_ref()) }
+
+    /// Check if a font is valid
+    fn is_font_valid(&self) -> bool {
+        unsafe { ffi::IsFontValid(*self.as_ref()) }
     }
 
     /// Export font as code file, returns true on success
-    fn export_as_code<A>(&self, filename: A) -> bool
+    fn export_font_as_code<A>(&self, filename: A) -> bool
     where
         A: Into<OsString>,
     {
@@ -340,7 +342,7 @@ impl Font {
         base_size: i32,
         padding: i32,
         pack_method: i32,
-    ) -> Result<Font, String> {
+    ) -> Result<Font, Error> {
         let f = unsafe {
             let mut f = std::mem::zeroed::<Font>();
             f.baseSize = base_size;
@@ -359,7 +361,7 @@ impl Font {
             f
         };
         if f.0.glyphs.is_null() || f.0.texture.id == 0 {
-            return Err(format!("Error loading font from image."));
+            return Err(error!("Error loading font from image."));
         }
         Ok(f)
     }
@@ -369,7 +371,7 @@ impl Font {
         unsafe {
             self.glyphCount = chars.len() as i32;
             let data_size = self.glyphCount as usize * std::mem::size_of::<ffi::GlyphInfo>();
-            let ci_arr_ptr = libc::malloc(data_size); // raylib frees this data in UnloadFont
+            let ci_arr_ptr = ffi::MemAlloc(data_size.try_into().unwrap()); // raylib frees this data in UnloadFont
             std::ptr::copy(
                 chars.as_ptr(),
                 ci_arr_ptr as *mut ffi::GlyphInfo,
@@ -413,7 +415,7 @@ pub fn gen_image_font_atlas(
         #[allow(clippy::uninit_vec)]
         recs.set_len(chars.len());
         std::ptr::copy(ptr, recs.as_mut_ptr(), chars.len());
-        ffi::MemFree(ptr as *mut libc::c_void);
+        ffi::MemFree(ptr as *mut ::std::os::raw::c_void);
         return (img, recs);
     }
 }

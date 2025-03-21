@@ -69,7 +69,6 @@ pub mod ffi {
 }
 
 pub use crate::core::collision::*;
-pub use crate::core::file::*;
 pub use crate::core::logging::*;
 pub use crate::core::misc::open_url;
 pub use crate::core::*;
@@ -79,3 +78,6 @@ pub use crate::core::*;
 pub use nalgebra as na;
 #[cfg(feature = "with_serde")]
 pub use serde;
+
+#[cfg(feature = "imgui")]
+pub mod imgui;

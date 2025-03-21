@@ -1,4 +1,6 @@
 //! Code for the safe manipulation of shaders
+use thiserror::Error;
+
 use crate::consts::ShaderUniformDataType;
 use crate::core::math::Matrix;
 use crate::core::math::{Vector2, Vector3, Vector4};
@@ -23,12 +25,13 @@ impl RaylibHandle {
         _: &RaylibThread,
         vs_filename: Option<&str>,
         fs_filename: Option<&str>,
-    ) -> Result<Shader, String> {
+    ) -> Shader {
         let c_vs_filename = vs_filename.map(|f| CString::new(f).unwrap());
         let c_fs_filename = fs_filename.map(|f| CString::new(f).unwrap());
 
         // Trust me, I have tried ALL the RUST option ergonamics. This is the only way
         // to get this to work without raylib breaking for whatever reason
+        // UPDATE FOR 2024 FROM ANOTHER PERSON: Yes this is still true, doing although "for some reason" is likely due to the pointer getting freed too early if you don't do it this way.
         let shader = match (c_vs_filename, c_fs_filename) {
             (Some(vs), Some(fs)) => unsafe { Shader(ffi::LoadShader(vs.as_ptr(), fs.as_ptr())) },
             (None, Some(fs)) => unsafe { Shader(ffi::LoadShader(std::ptr::null(), fs.as_ptr())) },
@@ -36,7 +39,7 @@ impl RaylibHandle {
             (None, None) => unsafe { Shader(ffi::LoadShader(std::ptr::null(), std::ptr::null())) },
         };
 
-        return Ok(shader);
+        return shader;
     }
 
     /// Loads shader from code strings and binds default locations.
@@ -184,6 +187,12 @@ impl Shader {
         m
     }
 
+    /// Check if shader is valid
+    #[inline]
+    pub fn is_shader_valid(&self) -> bool {
+        unsafe { ffi::IsShaderValid(self.0) }
+    }
+
     /// Sets shader uniform value
     #[inline]
     pub fn set_shader_value<S: ShaderV>(&mut self, uniform_loc: i32, value: S) {
@@ -197,7 +206,7 @@ impl Shader {
         }
     }
 
-    /// et shader uniform value vector
+    /// Set shader uniform value vector
     #[inline]
     pub fn set_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S]) {
         unsafe {
@@ -250,12 +259,14 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     #[inline]
     fn get_shader_location(&self, uniform_name: &str) -> i32 {
         let c_uniform_name = CString::new(uniform_name).unwrap();
-        println!(
-            "Getting shader location {:?} {}",
-            c_uniform_name,
-            uniform_name.len()
-        );
         unsafe { ffi::GetShaderLocation(*self.as_ref(), c_uniform_name.as_ptr()) }
+    }
+
+    /// Gets shader attribute location by name.
+    #[inline]
+    fn get_shader_location_attribute(&self, attribute_name: &str) -> i32 {
+        let c_attribute_name = CString::new(attribute_name).unwrap();
+        unsafe { ffi::GetShaderLocationAttrib(*self.as_ref(), c_attribute_name.as_ptr()) }
     }
 
     /// Sets shader uniform value
