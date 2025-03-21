@@ -149,5 +149,5 @@ pub mod callback_tests {
         }
     }
 
-    pub fn set_file_text_loader(_: &RaylibThread) {}
+    // pub fn set_file_text_loader(_: &RaylibThread) {}
 }
