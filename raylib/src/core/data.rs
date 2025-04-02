@@ -1,6 +1,7 @@
 //! Data manipulation functions. Compress and Decompress with DEFLATE
 use std::{
     ffi::{c_char, CString},
+    ops::{Deref, DerefMut},
     path::Path,
 };
 
@@ -9,24 +10,91 @@ use crate::{
     ffi,
 };
 
+/// A wrapper acting as owned buffer for Raylib-allocated memory.
+/// Automatically releases the memory with [`ffi::MemFree()`] when dropped.
+///
+/// Dereference or call `.as_ref()`/`.as_mut()` to access the memory as a `&[u8]` or `&mut [u8]` respectively.
+///
+/// # Example
+/// ```
+/// use raylib::prelude::*;
+/// let buf: DataBuf = compress_data(b"11111").unwrap();
+/// // Use this how you used to use the return of `compress_data()`.
+/// // It will live until `buf` goes out of scope or gets dropped.
+/// let data: &[u8] = buf.as_ref();
+/// let expected: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
+/// assert_eq!(data, expected);
+/// ```
+#[derive(Debug)]
+pub struct DataBuf {
+    buf: *mut u8,
+    len: usize,
+}
+impl Drop for DataBuf {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::MemFree(self.buf.cast());
+        }
+    }
+}
+impl Deref for DataBuf {
+    type Target = [u8];
+    fn deref(&self) -> &Self::Target {
+        // TODO: Consider frontloading `from_raw_parts` checks into `DataBuf::new()` and using `&*std::ptr::slice_from_raw_parts(self.buf, self.len)` here instead
+        unsafe {
+            std::slice::from_raw_parts(self.buf, self.len)
+        }
+    }
+}
+impl DerefMut for DataBuf {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        // TODO: Consider frontloading `from_raw_parts_mut` checks into `DataBuf::new()` and using `&mut *std::ptr::slice_from_raw_parts_mut(self.buf, self.len)` here instead
+        unsafe {
+            std::slice::from_raw_parts_mut(self.buf, self.len)
+        }
+    }
+}
+impl AsRef<[u8]> for DataBuf {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.deref()
+    }
+}
+impl AsMut<[u8]> for DataBuf {
+    #[inline]
+    fn as_mut(&mut self) -> &mut [u8] {
+        self.deref_mut()
+    }
+}
+impl DataBuf {
+    pub(crate) fn new(buf: *mut u8, byte_count: i32) -> Option<DataBuf> {
+        if buf.is_null() {
+            None
+        } else {
+            assert!(byte_count >= 1, "non-null data should be at least 1 byte");
+            Some(DataBuf { buf, len: byte_count as usize })
+        }
+    }
+}
+
 /// Compress data (DEFLATE algorythm)
 /// ```rust
 /// use raylib::prelude::*;
 /// let data = compress_data(b"11111").unwrap();
 /// let expected: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
-/// assert_eq!(data, expected);
+/// assert_eq!(data.as_ref(), expected);
 /// ```
-pub fn compress_data(data: &[u8]) -> Result<&'static [u8], Error> {
+pub fn compress_data(data: &[u8]) -> Result<DataBuf, Error> {
     let mut out_length: i32 = 0;
     // CompressData doesn't actually modify the data, but the header is wrong
     let buffer = {
         unsafe { ffi::CompressData(data.as_ptr() as *mut _, data.len() as i32, &mut out_length) }
     };
-    if buffer.is_null() {
-        return Err(error!("could not compress data"));
+    if let Some(buffer) = DataBuf::new(buffer, out_length) {
+        Ok(buffer)
+    } else {
+        Err(error!("could not compress data"))
     }
-    let buffer = unsafe { std::slice::from_raw_parts(buffer, out_length as usize) };
-    return Ok(buffer);
 }
 
 /// Decompress data (DEFLATE algorythm)
@@ -35,9 +103,10 @@ pub fn compress_data(data: &[u8]) -> Result<&'static [u8], Error> {
 /// let input: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
 /// let expected: &[u8] = b"11111";
 /// let data = decompress_data(input).unwrap();
-/// assert_eq!(data, expected);
+/// assert_eq!(data.as_ref(), expected);
 /// ```
-pub fn decompress_data(data: &[u8]) -> Result<&'static [u8], Error> {
+pub fn decompress_data(data: &[u8]) -> Result<DataBuf, Error> {
+    #[cfg(debug_assertions)]
     println!("{:?}", data.len());
 
     let mut out_length: i32 = 0;
@@ -45,11 +114,11 @@ pub fn decompress_data(data: &[u8]) -> Result<&'static [u8], Error> {
     let buffer = {
         unsafe { ffi::DecompressData(data.as_ptr() as *mut _, data.len() as i32, &mut out_length) }
     };
-    if buffer.is_null() {
-        return Err(error!("could not compress data"));
+    if let Some(buffer) = DataBuf::new(buffer, out_length) {
+        Ok(buffer)
+    } else {
+        Err(error!("could not compress data"))
     }
-    let buffer = unsafe { std::slice::from_raw_parts(buffer, out_length as usize) };
-    return Ok(buffer);
 }
 
 #[cfg(unix)]
