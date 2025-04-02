@@ -176,7 +176,7 @@ where
         mut func: impl FnMut(RaylibVRMode<Self>),
     ) {
         unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
-        func(RaylibVRMode(self, vr_config));
+        func(RaylibVRMode(&self, vr_config));
         // Uncomment the following if RaylibVRMode has been changed to no longer call EndTextureMode() in its drop implementation:
         // unsafe { ffi::EndVrStereoMode(); }
     }
