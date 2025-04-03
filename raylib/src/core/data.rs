@@ -1,9 +1,6 @@
 //! Data manipulation functions. Compress and Decompress with DEFLATE
 use std::{
-    ffi::{c_char, CString},
-    ops::{Deref, DerefMut},
-    path::Path,
-    ptr::NonNull,
+    alloc::Layout, ffi::{c_char, CString}, ops::{Deref, DerefMut}, path::Path, ptr::NonNull
 };
 
 use crate::{
@@ -26,53 +23,102 @@ use crate::{
 /// let expected: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
 /// assert_eq!(data, expected);
 /// ```
-#[derive(Debug)]
-pub struct DataBuf {
-    buf: NonNull<u8>,
+pub struct DataBuf<T: Copy> {
+    buf: NonNull<T>,
     len: usize,
 }
-impl Drop for DataBuf {
+impl<T: Copy + std::fmt::Debug> std::fmt::Debug for DataBuf<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DataBuf")
+            .field("buf", &self.buf)
+            .field("len", &self.len)
+            .finish()
+    }
+}
+impl<T: Copy> Drop for DataBuf<T> {
     fn drop(&mut self) {
         unsafe {
             ffi::MemFree(self.buf.as_ptr().cast());
         }
     }
 }
-impl Deref for DataBuf {
-    type Target = [u8];
+impl<T: Copy> Deref for DataBuf<T> {
+    type Target = [T];
     fn deref(&self) -> &Self::Target {
-        // TODO: Consider frontloading `from_raw_parts` checks into `DataBuf::new()` and using `&*std::ptr::slice_from_raw_parts(self.buf, self.len)` here instead
-        unsafe {
-            std::slice::from_raw_parts(self.buf.as_ptr(), self.len)
-        }
+        // This is safe because DataBuf contents are checked everywhere `buf` can be set.
+        unsafe { &*std::ptr::slice_from_raw_parts(self.buf.as_ptr(), self.len) }
     }
 }
-impl DerefMut for DataBuf {
+impl<T: Copy> DerefMut for DataBuf<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // TODO: Consider frontloading `from_raw_parts_mut` checks into `DataBuf::new()` and using `&mut *std::ptr::slice_from_raw_parts_mut(self.buf, self.len)` here instead
-        unsafe {
-            std::slice::from_raw_parts_mut(self.buf.as_ptr(), self.len)
-        }
+        // This is safe because DataBuf contents are checked everywhere `buf` can be set.
+        unsafe { &mut *std::ptr::slice_from_raw_parts_mut(self.buf.as_ptr(), self.len) }
     }
 }
-impl AsRef<[u8]> for DataBuf {
+impl<T: Copy> AsRef<[T]> for DataBuf<T> {
     #[inline]
-    fn as_ref(&self) -> &[u8] {
+    fn as_ref(&self) -> &[T] {
         self.deref()
     }
 }
-impl AsMut<[u8]> for DataBuf {
+impl<T: Copy> AsMut<[T]> for DataBuf<T> {
     #[inline]
-    fn as_mut(&mut self) -> &mut [u8] {
+    fn as_mut(&mut self) -> &mut [T] {
         self.deref_mut()
     }
 }
-impl DataBuf {
-    pub(crate) fn new(buf: *mut u8, byte_count: i32) -> Option<DataBuf> {
+impl<T: Copy> DataBuf<T> {
+    /// Wrap an already allocated pointer in a `DataBuf`
+    pub(crate) fn new(buf: *mut T, count: i32) -> Option<Self> {
         NonNull::new(buf).map(|buf| {
-            assert!(byte_count >= 1, "non-null data should be at least 1 byte");
-            DataBuf { buf, len: byte_count as usize }
+            // Ensure DataBuf can always be dereferenced as a slice.
+            assert!(count >= 1, "non-null data should be at least 1 byte");
+            assert!(buf.is_aligned(), "DataBuf should be aligned");
+            assert!(std::mem::size_of::<T>()
+                .checked_mul(count as usize)
+                .is_some_and(|total_size| total_size <= (isize::MAX as usize)),
+                "total size of DataBuf should not exceed `isize::MAX`");
+
+            Self { buf, len: count as usize }
         })
+    }
+
+    /// Allocate new memory managed by Raylib
+    pub fn alloc(count: i32) -> Result<Self, Error> {
+        if count >= 1 {
+            let count = count as usize;
+            match Layout::array::<T>(count) {
+                Err(_e) => Err(error!("memory request does not produce a valid layout")), // I would like to display `e` if possible
+                Ok(layout) => {
+                    let size = layout.size();
+                    if size <= u32::MAX as usize {
+                        if let Some(buf) = NonNull::new(unsafe { ffi::MemAlloc(size as u32) }.cast()) {
+                            Ok(Self { buf, len: count })
+                        } else { Err(error!("memory request exceeds capacity")) }
+                    } else { Err(error!("memory request exceeds unsigned integer maximum")) }
+                }
+            }
+        } else { Err(error!("cannot allocate less than 1 element")) }
+    }
+
+    /// Reallocate memory managed by Raylib
+    pub fn realloc(&mut self, new_count: i32) -> Result<(), Error> {
+        if new_count >= 1 {
+            let new_count = new_count as usize;
+            match Layout::array::<T>(new_count) {
+                Err(_e) => Err(error!("memory request does not produce a valid layout")), // I would like to display `e` if possible
+                Ok(layout) => {
+                    let size = layout.size();
+                    if size <= u32::MAX as usize {
+                        if let Some(buf) = NonNull::new(unsafe { ffi::MemRealloc(self.buf.as_ptr().cast(), size as u32) }.cast()) {
+                            self.buf = buf;
+                            self.len = new_count;
+                            Ok(())
+                        } else { Err(error!("memory request exceeds capacity")) }
+                    } else { Err(error!("memory request exceeds unsigned integer maximum")) }
+                }
+            }
+        } else { Err(error!("cannot allocate less than 1 element")) }
     }
 }
 
@@ -83,7 +129,7 @@ impl DataBuf {
 /// let expected: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
 /// assert_eq!(data.as_ref(), expected);
 /// ```
-pub fn compress_data(data: &[u8]) -> Result<DataBuf, Error> {
+pub fn compress_data(data: &[u8]) -> Result<DataBuf<u8>, Error> {
     let mut out_length: i32 = 0;
     // CompressData doesn't actually modify the data, but the header is wrong
     let buffer = {
@@ -101,7 +147,7 @@ pub fn compress_data(data: &[u8]) -> Result<DataBuf, Error> {
 /// let data = decompress_data(input).unwrap();
 /// assert_eq!(data.as_ref(), expected);
 /// ```
-pub fn decompress_data(data: &[u8]) -> Result<DataBuf, Error> {
+pub fn decompress_data(data: &[u8]) -> Result<DataBuf<u8>, Error> {
     #[cfg(debug_assertions)]
     println!("{:?}", data.len());
 
