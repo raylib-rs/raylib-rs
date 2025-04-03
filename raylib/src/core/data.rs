@@ -3,6 +3,7 @@ use std::{
     ffi::{c_char, CString},
     ops::{Deref, DerefMut},
     path::Path,
+    ptr::NonNull,
 };
 
 use crate::{
@@ -27,13 +28,13 @@ use crate::{
 /// ```
 #[derive(Debug)]
 pub struct DataBuf {
-    buf: *mut u8,
+    buf: NonNull<u8>,
     len: usize,
 }
 impl Drop for DataBuf {
     fn drop(&mut self) {
         unsafe {
-            ffi::MemFree(self.buf.cast());
+            ffi::MemFree(self.buf.as_ptr().cast());
         }
     }
 }
@@ -42,7 +43,7 @@ impl Deref for DataBuf {
     fn deref(&self) -> &Self::Target {
         // TODO: Consider frontloading `from_raw_parts` checks into `DataBuf::new()` and using `&*std::ptr::slice_from_raw_parts(self.buf, self.len)` here instead
         unsafe {
-            std::slice::from_raw_parts(self.buf, self.len)
+            std::slice::from_raw_parts(self.buf.as_ptr(), self.len)
         }
     }
 }
@@ -50,7 +51,7 @@ impl DerefMut for DataBuf {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // TODO: Consider frontloading `from_raw_parts_mut` checks into `DataBuf::new()` and using `&mut *std::ptr::slice_from_raw_parts_mut(self.buf, self.len)` here instead
         unsafe {
-            std::slice::from_raw_parts_mut(self.buf, self.len)
+            std::slice::from_raw_parts_mut(self.buf.as_ptr(), self.len)
         }
     }
 }
@@ -68,12 +69,10 @@ impl AsMut<[u8]> for DataBuf {
 }
 impl DataBuf {
     pub(crate) fn new(buf: *mut u8, byte_count: i32) -> Option<DataBuf> {
-        if buf.is_null() {
-            None
-        } else {
+        NonNull::new(buf).map(|buf| {
             assert!(byte_count >= 1, "non-null data should be at least 1 byte");
-            Some(DataBuf { buf, len: byte_count as usize })
-        }
+            DataBuf { buf, len: byte_count as usize }
+        })
     }
 }
 
@@ -90,11 +89,8 @@ pub fn compress_data(data: &[u8]) -> Result<DataBuf, Error> {
     let buffer = {
         unsafe { ffi::CompressData(data.as_ptr() as *mut _, data.len() as i32, &mut out_length) }
     };
-    if let Some(buffer) = DataBuf::new(buffer, out_length) {
-        Ok(buffer)
-    } else {
-        Err(error!("could not compress data"))
-    }
+    DataBuf::new(buffer, out_length)
+        .ok_or_else(|| error!("could not compress data"))
 }
 
 /// Decompress data (DEFLATE algorythm)
@@ -114,11 +110,8 @@ pub fn decompress_data(data: &[u8]) -> Result<DataBuf, Error> {
     let buffer = {
         unsafe { ffi::DecompressData(data.as_ptr() as *mut _, data.len() as i32, &mut out_length) }
     };
-    if let Some(buffer) = DataBuf::new(buffer, out_length) {
-        Ok(buffer)
-    } else {
-        Err(error!("could not compress data"))
-    }
+    DataBuf::new(buffer, out_length)
+        .ok_or_else(|| error!("could not compress data"))
 }
 
 #[cfg(unix)]
