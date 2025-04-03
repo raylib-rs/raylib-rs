@@ -8,7 +8,7 @@ use crate::{
     ffi,
 };
 
-/// A wrapper acting as owned buffer for Raylib-allocated memory.
+/// A wrapper acting as an owned buffer for Raylib-allocated memory.
 /// Automatically releases the memory with [`ffi::MemFree()`] when dropped.
 ///
 /// Dereference or call `.as_ref()`/`.as_mut()` to access the memory as a `&[T]` or `&mut [T]` respectively.
@@ -63,6 +63,15 @@ impl<T: Copy> AsMut<[T]> for DataBuf<T> {
 impl<T: Copy> DataBuf<T> {
     /// Wrap an already allocated pointer in a `DataBuf`.
     ///
+    /// **Note:** This method is only intended for use with pointers given by Raylib
+    /// with the expectation that they will be manually deallocated with [`ffi::MemFree`].
+    /// DO NOT use this function to wrap arbitrary pointers or pointers that Raylib will
+    /// deallocate itself.
+    ///
+    /// If the pointer is expected to be conditionally deallocated by Raylib,
+    /// (i.e. conditionally passing the buffer to a Raylib function that will certainly deallocatate it)
+    /// use [`DataBuf::leak`] to unwrap the memory so that `drop` does not automatically free it.
+    ///
     /// # Returns
     ///
     /// This method returns [`None`] if `buf` is null.
@@ -85,6 +94,14 @@ impl<T: Copy> DataBuf<T> {
 
             Self { buf, len: count as usize }
         })
+    }
+
+    /// Extract the pointer without freeing it, for the purpose of passing it to a function that will deallocate it manually.
+    pub(crate) fn leak(self) -> (NonNull<T>, usize) {
+        let buf = self.buf;
+        let len = self.len;
+        std::mem::forget(self);
+        (buf, len)
     }
 
     /// Allocate new memory managed by Raylib
