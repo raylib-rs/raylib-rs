@@ -16,7 +16,7 @@ use crate::{
 /// # Example
 /// ```
 /// use raylib::prelude::*;
-/// let buf: DataBuf = compress_data(b"11111").unwrap();
+/// let buf: DataBuf<u8> = compress_data(b"11111").unwrap();
 /// // Use this how you used to use the return of `compress_data()`.
 /// // It will live until `buf` goes out of scope or gets dropped.
 /// let data: &[u8] = buf.as_ref();
