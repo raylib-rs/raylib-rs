@@ -23,17 +23,10 @@ use crate::{
 /// let expected: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
 /// assert_eq!(data, expected);
 /// ```
+#[derive(Debug)]
 pub struct DataBuf<T: Copy> {
     buf: NonNull<T>,
     len: usize,
-}
-impl<T: Copy + std::fmt::Debug> std::fmt::Debug for DataBuf<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DataBuf")
-            .field("buf", &self.buf)
-            .field("len", &self.len)
-            .finish()
-    }
 }
 impl<T: Copy> Drop for DataBuf<T> {
     fn drop(&mut self) {
