@@ -72,7 +72,7 @@ impl<T: Copy> DataBuf<T> {
     /// This method may panic if any of the following are true while `buf` is non-null:
     /// - `count` is less than 1
     /// - `buf` is unaligned
-    /// - `count` exceeds [`isize::MAX`]
+    /// - total bytes exceed [`isize::MAX`]
     pub(crate) fn new(buf: *mut T, count: i32) -> Option<Self> {
         NonNull::new(buf).map(|buf| {
             // Ensure DataBuf can always be dereferenced as a slice.
@@ -122,8 +122,9 @@ impl<T: Copy> DataBuf<T> {
     ///
     /// - "cannot allocate less than 1 element": `count` is less than 1.
     /// - "memory request exceeds unsigned integer maximum": The size of `[T; count]` is greater than [`u32::MAX`].
-    /// - "memory request exceeds capacity": [`ffi::MemRealloc`] returned null.
-    //    TODO: I think this might risk a double-free depending on `RL_REALLOC`'s definition...
+    /// - "memory request exceeds capacity": [`ffi::MemRealloc`] returned null. \
+    ///   **Warning:** This represents a risk of double-free if `RL_REALLOC` deallocates regardless of reallocation success,
+    ///   because `self` will retain the old pointer and `DataBuf`'s drop implementation will still free it.
     ///
     /// # Panics
     ///
