@@ -11,7 +11,7 @@ use crate::{
 /// A wrapper acting as owned buffer for Raylib-allocated memory.
 /// Automatically releases the memory with [`ffi::MemFree()`] when dropped.
 ///
-/// Dereference or call `.as_ref()`/`.as_mut()` to access the memory as a `&[u8]` or `&mut [u8]` respectively.
+/// Dereference or call `.as_ref()`/`.as_mut()` to access the memory as a `&[T]` or `&mut [T]` respectively.
 ///
 /// # Example
 /// ```
@@ -68,7 +68,18 @@ impl<T: Copy> AsMut<[T]> for DataBuf<T> {
     }
 }
 impl<T: Copy> DataBuf<T> {
-    /// Wrap an already allocated pointer in a `DataBuf`
+    /// Wrap an already allocated pointer in a `DataBuf`.
+    ///
+    /// # Returns
+    ///
+    /// This method returns [`None`] if `buf` is null.
+    ///
+    /// # Panics
+    ///
+    /// This method may panic if any of the following are true while `buf` is non-null:
+    /// - `count` is less than 1
+    /// - `buf` is unaligned
+    /// - `count` exceeds [`isize::MAX`]
     pub(crate) fn new(buf: *mut T, count: i32) -> Option<Self> {
         NonNull::new(buf).map(|buf| {
             // Ensure DataBuf can always be dereferenced as a slice.
@@ -84,6 +95,16 @@ impl<T: Copy> DataBuf<T> {
     }
 
     /// Allocate new memory managed by Raylib
+    ///
+    /// # Errors
+    ///
+    /// - "cannot allocate less than 1 element": `count` is less than 1.
+    /// - "memory request exceeds unsigned integer maximum": The size of `[T; count]` is greater than [`u32::MAX`].
+    /// - "memory request exceeds capacity": [`ffi::MemAlloc`] returned null.
+    ///
+    /// # Panics
+    ///
+    /// This method may panic if the pointer returned by [`ffi::MemAlloc`] is unaligned.
     pub fn alloc(count: i32) -> Result<Self, Error> {
         if count >= 1 {
             let count = count as usize;
@@ -102,7 +123,18 @@ impl<T: Copy> DataBuf<T> {
         } else { Err(error!("cannot allocate less than 1 element")) }
     }
 
-    /// Reallocate memory managed by Raylib
+    /// Reallocate memory already managed by Raylib
+    ///
+    /// # Errors
+    ///
+    /// - "cannot allocate less than 1 element": `count` is less than 1.
+    /// - "memory request exceeds unsigned integer maximum": The size of `[T; count]` is greater than [`u32::MAX`].
+    /// - "memory request exceeds capacity": [`ffi::MemRealloc`] returned null.
+    //    TODO: I think this might risk a double-free depending on `RL_REALLOC`'s definition...
+    ///
+    /// # Panics
+    ///
+    /// This method may panic if the pointer returned by [`ffi::MemRealloc`] is unaligned.
     pub fn realloc(&mut self, new_count: i32) -> Result<(), Error> {
         if new_count >= 1 {
             let new_count = new_count as usize;
