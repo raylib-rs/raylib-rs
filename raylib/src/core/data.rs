@@ -93,6 +93,7 @@ impl<T: Copy> DataBuf<T> {
                     let size = layout.size();
                     if size <= u32::MAX as usize {
                         if let Some(buf) = NonNull::new(unsafe { ffi::MemAlloc(size as u32) }.cast()) {
+                            assert!(buf.is_aligned(), "allocated buffer should always be aligned");
                             Ok(Self { buf, len: count })
                         } else { Err(error!("memory request exceeds capacity")) }
                     } else { Err(error!("memory request exceeds unsigned integer maximum")) }
@@ -111,6 +112,7 @@ impl<T: Copy> DataBuf<T> {
                     let size = layout.size();
                     if size <= u32::MAX as usize {
                         if let Some(buf) = NonNull::new(unsafe { ffi::MemRealloc(self.buf.as_ptr().cast(), size as u32) }.cast()) {
+                            assert!(buf.is_aligned(), "allocated buffer should always be aligned");
                             self.buf = buf;
                             self.len = new_count;
                             Ok(())
