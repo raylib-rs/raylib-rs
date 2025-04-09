@@ -32,14 +32,15 @@ impl RaylibHandle {
         // Trust me, I have tried ALL the RUST option ergonamics. This is the only way
         // to get this to work without raylib breaking for whatever reason
         // UPDATE FOR 2024 FROM ANOTHER PERSON: Yes this is still true, doing although "for some reason" is likely due to the pointer getting freed too early if you don't do it this way.
-        let shader = match (c_vs_filename, c_fs_filename) {
-            (Some(vs), Some(fs)) => unsafe { Shader(ffi::LoadShader(vs.as_ptr(), fs.as_ptr())) },
-            (None, Some(fs)) => unsafe { Shader(ffi::LoadShader(std::ptr::null(), fs.as_ptr())) },
-            (Some(vs), None) => unsafe { Shader(ffi::LoadShader(vs.as_ptr(), std::ptr::null())) },
-            (None, None) => unsafe { Shader(ffi::LoadShader(std::ptr::null(), std::ptr::null())) },
-        };
 
-        return shader;
+        // UPDATE FOR 2025 FROM ANOTHER OTHER PERSON: The reason this wasn't working before is because the pointer returned by `as_ptr()` lives as long as `self`. Because the Rust Option
+        // ergonomics take ownership of `self`, it only lives as long as the closure. However, `as_ptr()` only needs a reference, so putting `as_ref()` in front of the ergonomic allows
+        // `self` to keep its outer lifetime instead of taking ownership and dropping it. I don't know why the compiler didn't warn about that, it normally detects when that happens...
+
+        let vs = c_vs_filename.as_ref().map_or_else(std::ptr::null, |s| s.as_ptr());
+        let fs = c_fs_filename.as_ref().map_or_else(std::ptr::null, |s| s.as_ptr());
+
+        Shader(unsafe { ffi::LoadShader(vs, fs) })
     }
 
     /// Loads shader from code strings and binds default locations.
@@ -51,32 +52,11 @@ impl RaylibHandle {
     ) -> Shader {
         let c_vs_code = vs_code.map(|f| CString::new(f).unwrap());
         let c_fs_code = fs_code.map(|f| CString::new(f).unwrap());
-        return match (c_vs_code, c_fs_code) {
-            (Some(vs), Some(fs)) => unsafe {
-                Shader(ffi::LoadShaderFromMemory(
-                    vs.as_ptr() as *mut c_char,
-                    fs.as_ptr() as *mut c_char,
-                ))
-            },
-            (None, Some(fs)) => unsafe {
-                Shader(ffi::LoadShaderFromMemory(
-                    std::ptr::null_mut(),
-                    fs.as_ptr() as *mut c_char,
-                ))
-            },
-            (Some(vs), None) => unsafe {
-                Shader(ffi::LoadShaderFromMemory(
-                    vs.as_ptr() as *mut c_char,
-                    std::ptr::null_mut(),
-                ))
-            },
-            (None, None) => unsafe {
-                Shader(ffi::LoadShaderFromMemory(
-                    std::ptr::null_mut(),
-                    std::ptr::null_mut(),
-                ))
-            },
-        };
+
+        let vs = c_vs_code.as_ref().map_or_else(std::ptr::null, |s| s.as_ptr());
+        let fs = c_fs_code.as_ref().map_or_else(std::ptr::null, |s| s.as_ptr());
+
+        Shader(unsafe { ffi::LoadShaderFromMemory(vs, fs) })
     }
 
     /// Get default shader. Modifying it modifies everthing that uses that shader
