@@ -231,18 +231,16 @@ where
         RaylibMode2D(self)
     }
 
-    // Camera2D already implements Copy. It does not need to be moved into draw_mode2D just to move it again into func.
-    // If taking ownership of the Camera2D is in anticipation of making Camera2D non-copy, please consider that it would prevent cameras from being stored immutably, as they would have to be moved out of their variable and back into it every frame.
     #[allow(non_snake_case)]
     fn draw_mode2D<'a>(
         &'a mut self,
         camera: Camera2D,
-        func: impl FnOnce(RaylibMode2D<'a, Self>),
+        func: impl FnOnce(RaylibMode2D<'a, Self>, Camera2D),
     ) {
         unsafe {
             ffi::BeginMode2D(camera.into());
         }
-        func(RaylibMode2D(self));
+        func(RaylibMode2D(self), camera);
         // Uncomment the following if RaylibMode2D has been changed to no longer call EndMode2D() in its drop implementation:
         // unsafe {
         //     ffi::EndMode2D();
@@ -293,12 +291,12 @@ where
     fn draw_mode3D<'a>(
         &'a mut self,
         camera: Camera3D,
-        func: impl FnOnce(RaylibMode3D<'a, Self>),
+        func: impl FnOnce(RaylibMode3D<'a, Self>, Camera3D),
     ) {
         unsafe {
             ffi::BeginMode3D(camera.into());
         }
-        func(RaylibMode3D(self));
+        func(RaylibMode3D(self), camera);
         // Uncomment the following if RaylibMode3D has been changed to no longer call EndMode3D() in its drop implementation:
         // unsafe {
         //     ffi::EndMode3D();
