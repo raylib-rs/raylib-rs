@@ -1743,15 +1743,11 @@ pub trait RaylibDraw3D {
         material: WeakMaterial,
         transforms: &[Matrix],
     ) {
-        let tr: Vec<ffi::Matrix> = transforms.iter().map(|f| f.into()).collect();
-        unsafe {
-            ffi::DrawMeshInstanced(
-                *mesh.as_ref(),
-                material.0,
-                tr.as_ptr(),
-                transforms.len() as i32,
-            )
-        }
+        let tr = transforms
+            .iter()
+            .map(|f| f.into())
+            .collect::<Vec<ffi::Matrix>>();
+        unsafe { ffi::DrawMeshInstanced(*mesh.as_ref(), material.0, tr.as_ptr(), transforms.len() as i32) }
     }
 
     /// Draws a sphere.
