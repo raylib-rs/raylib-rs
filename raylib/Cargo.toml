@@ -13,8 +13,7 @@ edition = "2018"
 autoexamples = false
 
 [dependencies]
-raylib-sys = { package = "sola-raylib-sys", version = "6.0.0", path = "../raylib-sys" }
-cfg-if = "1.0.0"
+raylib-sys = { version = "5.5.1", path = "../raylib-sys" }
 serde = { version = "1.0.125", features = ["derive"], optional = true }
 serde_json = { version = "1.0.64", optional = true }
 
