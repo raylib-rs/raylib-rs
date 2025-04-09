@@ -220,7 +220,7 @@ pub trait RaylibMode2DExt
 where
     Self: Sized,
 {
-    /// Begin 2D mode with custom camera (2D).
+    /// Begin 2D mode with custom  (2D).
     /// Prefer using the closure version, [RaylibMode2DExt::draw_mode2D]. This version returns a handle that calls [raylib_sys::EndMode2D] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[allow(non_snake_case)]
     #[must_use]
@@ -234,13 +234,13 @@ where
     #[allow(non_snake_case)]
     fn draw_mode2D<'a>(
         &'a mut self,
-        camera: Camera2D,
-        func: impl FnOnce(RaylibMode2D<'a, Self>, Camera2D),
+        camera: &Camera2D,
+        func: impl FnOnce(RaylibMode2D<'a, Self>),
     ) {
         unsafe {
             ffi::BeginMode2D(camera.into());
         }
-        func(RaylibMode2D(self), camera);
+        func(RaylibMode2D(self));
         // Uncomment the following if RaylibMode2D has been changed to no longer call EndMode2D() in its drop implementation:
         // unsafe {
         //     ffi::EndMode2D();
@@ -290,13 +290,13 @@ where
     #[allow(non_snake_case)]
     fn draw_mode3D<'a>(
         &'a mut self,
-        camera: Camera3D,
-        func: impl FnOnce(RaylibMode3D<'a, Self>, Camera3D),
+        camera: &Camera3D,
+        func: impl FnOnce(RaylibMode3D<'a, Self>),
     ) {
         unsafe {
             ffi::BeginMode3D(camera.into());
         }
-        func(RaylibMode3D(self), camera);
+        func(RaylibMode3D(self));
         // Uncomment the following if RaylibMode3D has been changed to no longer call EndMode3D() in its drop implementation:
         // unsafe {
         //     ffi::EndMode3D();
