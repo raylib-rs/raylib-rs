@@ -29,14 +29,6 @@ impl RaylibHandle {
         let c_vs_filename = vs_filename.map(|f| CString::new(f).unwrap());
         let c_fs_filename = fs_filename.map(|f| CString::new(f).unwrap());
 
-        // Trust me, I have tried ALL the RUST option ergonamics. This is the only way
-        // to get this to work without raylib breaking for whatever reason
-        // UPDATE FOR 2024 FROM ANOTHER PERSON: Yes this is still true, doing although "for some reason" is likely due to the pointer getting freed too early if you don't do it this way.
-
-        // UPDATE FOR 2025 FROM ANOTHER OTHER PERSON: The reason this wasn't working before is because the pointer returned by `as_ptr()` lives as long as `self`. Because the Rust Option
-        // ergonomics take ownership of `self`, it only lives as long as the closure. However, `as_ptr()` only needs a reference, so putting `as_ref()` in front of the ergonomic allows
-        // `self` to keep its outer lifetime instead of taking ownership and dropping it. I don't know why the compiler didn't warn about that, it normally detects when that happens...
-
         let vs = c_vs_filename.as_ref().map_or_else(std::ptr::null, |s| s.as_ptr());
         let fs = c_fs_filename.as_ref().map_or_else(std::ptr::null, |s| s.as_ptr());
 
