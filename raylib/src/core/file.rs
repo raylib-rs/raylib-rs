@@ -2,44 +2,81 @@
 use crate::ffi;
 
 use crate::core::RaylibHandle;
-use std::ffi::{CStr, CString, OsString};
+use std::ffi::{c_char, CStr, CString, OsString};
 
-/// Iterator should not outlive list
-/// ```compile_fail
-/// let mut it;
-/// {
-///     let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-///         capacity: 1,
-///         count: 1,
-///         paths: std::ptr::null_mut(),
-///     }));
-///     it = list.iter();
-/// }
-/// let _f = it.next(); // error: `list` is no longer in scope
-/// ```
 pub struct FilePathIter<'a> {
-    iter: std::slice::Iter<'a, Option<&'a std::ffi::c_char>>,
+    iter: std::slice::Iter<'a, Option<&'a c_char>>,
 }
 impl<'a> FilePathIter<'a> {
-    fn new(list: *mut *mut std::ffi::c_char, count: u32) -> Self {
+    /// # Safety
+    /// The memory pointed to by `list` must not be mutated for `'a`.
+    /// Every `*mut c_char` in `list` must outlive `'a`.
+    ///
+    /// ## Examples
+    ///
+    /// The following is invalid, because `list` is dropped while `it` is still borrowing it.
+    /// ```compile_fail
+    /// # use raylib::{ffi, file::*};
+    /// # use std::{mem::ManuallyDrop, ffi::CStr};
+    /// let mut it;
+    /// {
+    ///     let mut paths = [
+    ///         CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
+    ///     ];
+    ///     let mut list = ManuallyDrop::new(unsafe {
+    ///         FilePathList::from_raw(ffi::FilePathList {
+    ///             capacity: 1,
+    ///             count: 1,
+    ///             paths: paths.as_mut_ptr(),
+    ///         })
+    ///     });
+    ///     it = list.iter(); // expect error[E0597]
+    ///     let s = it.next();
+    ///     assert_eq!(s, Some("apple"));
+    /// }
+    /// let s = it.next();
+    /// assert_eq!(s, Some("apple"));
+    /// ```
+    ///
+    /// The following is invalid, because `list` is mutated while `it` is still borrowing it.
+    /// ```compile_fail
+    /// # use raylib::{ffi, file::*};
+    /// # use std::{mem::ManuallyDrop, ffi::CStr};
+    /// let mut paths = [
+    ///     CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
+    /// ];
+    /// let mut list = ManuallyDrop::new(unsafe {
+    ///     FilePathList::from_raw(ffi::FilePathList {
+    ///         capacity: 1,
+    ///         count: 1,
+    ///         paths: paths.as_mut_ptr(),
+    ///     })
+    /// });
+    /// let mut it = list.iter();
+    /// let s = it.next();
+    /// assert_eq!(s, Some("apple"));
+    /// unsafe { *(*list.paths) = b'@' as std::ffi::c_char; } // expect error[E0502]
+    /// assert_eq!(s, Some("apple")); // use `s` again after mutation to ensure `'a` is still alive
+    /// ```
+    unsafe fn new(list: *mut *mut c_char, count: u32) -> Self {
         // No new items are being created that get dropped here, these are just changes in perspective of how to borrow-check the pointers.
-        assert!(!list.is_null(), "file path pointer cannot be null");
-        assert!(list.is_aligned(), "file path pointer must be aligned");
-        let list = list.cast::<Option<&'a std::ffi::c_char>>();
+        assert!(!list.is_null(), "file path array cannot be null");
+        assert!(list.is_aligned(), "file path array must be aligned");
+        let list = list.cast::<Option<&'a c_char>>();
         let iter = unsafe { std::slice::from_raw_parts(list, count as usize) }.iter();
         Self { iter }
     }
-    fn convert_item(f: &Option<&'a std::ffi::c_char>) -> &'a str {
-        // CStr isn't being "constructed", it's essentially an adapter on &[c_char]
-        let s = f.map(std::slice::from_ref).unwrap();
-        unsafe { CStr::from_ptr(s.as_ptr()) }.to_str().unwrap()
-    }
+}
+fn opt_cstr_to_str<'a>(f: &Option<&'a c_char>) -> &'a str {
+    // CStr isn't being "constructed", it's essentially an adapter on &[c_char]
+    let s = f.map(std::slice::from_ref).expect("file path string cannot be null");
+    unsafe { CStr::from_ptr(s.as_ptr()) }.to_str().unwrap()
 }
 impl<'a> Iterator for FilePathIter<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(Self::convert_item)
+        self.iter.next().map(opt_cstr_to_str)
     }
 
     #[inline]
@@ -49,7 +86,7 @@ impl<'a> Iterator for FilePathIter<'a> {
 }
 impl<'a> DoubleEndedIterator for FilePathIter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(Self::convert_item)
+        self.iter.next_back().map(opt_cstr_to_str)
     }
 }
 impl<'a> ExactSizeIterator for FilePathIter<'a> {
@@ -84,8 +121,8 @@ impl FilePathList {
             .collect()
     }
     /// An iterator over the paths held in this list.
-    pub fn iter(&self) -> FilePathIter<'_> {
-        FilePathIter::new(self.0.paths, self.count())
+    pub fn iter<'a>(&'a self) -> FilePathIter<'a> {
+        unsafe { FilePathIter::new(self.0.paths, self.count()) }
     }
 }
 
@@ -107,8 +144,8 @@ impl DroppedFilePathList {
             .collect()
     }
     /// An iterator over the paths held in this list.
-    pub fn iter(&self) -> FilePathIter<'_> {
-        FilePathIter::new(self.0.paths, self.count())
+    pub fn iter<'a>(&'a self) -> FilePathIter<'a> {
+        unsafe { FilePathIter::new(self.0.paths, self.count()) }
     }
 }
 
@@ -202,12 +239,12 @@ impl RaylibHandle {
 }
 
 #[cfg(test)]
-mod file_path_iter_tests {
+mod tests {
     use std::mem::ManuallyDrop;
     use super::*;
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "file path array cannot be null")]
     fn test_null_list() {
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
             capacity: 0,
@@ -219,7 +256,7 @@ mod file_path_iter_tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "file path string cannot be null")]
     fn test_null_item() {
         let mut paths = [std::ptr::null_mut()];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
@@ -233,7 +270,7 @@ mod file_path_iter_tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "file path string cannot be null")]
     fn test_null_item_double_ended() {
         let mut paths = [std::ptr::null_mut()];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
