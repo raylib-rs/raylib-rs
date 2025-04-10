@@ -19,6 +19,7 @@ impl<'a> FilePathIter<'a> {
     /// # use raylib::{ffi, file::*};
     /// # use std::{mem::ManuallyDrop, ffi::CStr};
     /// let mut it;
+    /// let s;
     /// {
     ///     let mut paths = [
     ///         CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
@@ -31,11 +32,11 @@ impl<'a> FilePathIter<'a> {
     ///         })
     ///     });
     ///     it = list.iter(); // expect error[E0597]
-    ///     let s = it.next();
+    ///     //   ^^^^ borrowed value does not live long enough
+    ///     s = it.next();
     ///     assert_eq!(s, Some("apple"));
-    /// }
-    /// let s = it.next();
-    /// assert_eq!(s, Some("apple"));
+    /// } // `list` dropped here while still borrowed
+    /// assert_eq!(s, Some("apple")); // borrow later used here
     /// ```
     ///
     /// The following is invalid, because `list` is mutated while `it` is still borrowing it.
@@ -53,10 +54,12 @@ impl<'a> FilePathIter<'a> {
     ///     })
     /// });
     /// let mut it = list.iter();
+    /// //           ---- immutable borrow occurs here
     /// let s = it.next();
     /// assert_eq!(s, Some("apple"));
     /// unsafe { *(*list.paths) = b'@' as std::ffi::c_char; } // expect error[E0502]
-    /// assert_eq!(s, Some("apple")); // use `s` again after mutation to ensure `'a` is still alive
+    /// //          ^^^^ mutable borrow occurs here
+    /// assert_eq!(s, Some("apple")); // immutable borrow later used here
     /// ```
     unsafe fn new(list: *mut *mut c_char, count: u32) -> Self {
         // No new items are being created that get dropped here, these are just changes in perspective of how to borrow-check the pointers.
