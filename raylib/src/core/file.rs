@@ -4,6 +4,7 @@ use crate::ffi;
 use crate::core::RaylibHandle;
 use std::ffi::{c_char, CStr, CString, OsString};
 
+#[derive(Debug, Clone)]
 pub struct FilePathIter<'a> {
     iter: std::slice::Iter<'a, Option<&'a c_char>>,
 }
@@ -86,10 +87,27 @@ impl<'a> Iterator for FilePathIter<'a> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
     }
+
+    #[inline]
+    fn count(self) -> usize {
+        self.len()
+    }
+
+    fn last(self) -> Option<Self::Item> {
+        self.iter.last().map(Self::func)
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.iter.nth(n).map(Self::func)
+    }
 }
 impl<'a> DoubleEndedIterator for FilePathIter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.next_back().map(Self::func)
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        self.iter.nth_back(n).map(Self::func)
     }
 }
 impl<'a> ExactSizeIterator for FilePathIter<'a> {

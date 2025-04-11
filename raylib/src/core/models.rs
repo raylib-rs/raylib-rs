@@ -532,6 +532,7 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct FramePoseIter<'a> {
     iter: std::slice::Iter<'a, Option<&'a [crate::math::Transform]>>,
     bone_count: usize,
@@ -553,19 +554,48 @@ impl<'a> Iterator for FramePoseIter<'a> {
     type Item = &'a [crate::math::Transform];
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|tf| Self::func(tf, self.bone_count))
+        let bone_count = self.bone_count;
+        self.iter.next().map(move |tf| Self::func(tf, bone_count))
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+
+    #[inline]
+    fn count(self) -> usize {
+        self.len()
+    }
+
+    fn last(self) -> Option<Self::Item> {
+        let bone_count = self.bone_count;
+        self.iter.last().map(move |tf| Self::func(tf, bone_count))
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let bone_count = self.bone_count;
+        self.iter.nth(n).map(move |tf| Self::func(tf, bone_count))
     }
 }
 impl<'a> DoubleEndedIterator for FramePoseIter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(|tf| Self::func(tf, self.bone_count))
+        let bone_count = self.bone_count;
+        self.iter.next_back().map(move |tf| Self::func(tf, bone_count))
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        let bone_count = self.bone_count;
+        self.iter.nth_back(n).map(move |tf| Self::func(tf, bone_count))
     }
 }
 impl<'a> ExactSizeIterator for FramePoseIter<'a> {
+    #[inline]
     fn len(&self) -> usize {
         self.iter.len()
     }
 }
+#[derive(Debug)]
 pub struct FramePoseIterMut<'a> {
     iter: std::slice::IterMut<'a, Option<&'a mut [crate::math::Transform]>>,
     bone_count: usize,
@@ -587,15 +617,43 @@ impl<'a> Iterator for FramePoseIterMut<'a> {
     type Item = &'a mut [crate::math::Transform];
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|tf| Self::func(tf, self.bone_count))
+        let bone_count = self.bone_count;
+        self.iter.next().map(move |tf| Self::func(tf, bone_count))
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+
+    #[inline]
+    fn count(self) -> usize {
+        self.len()
+    }
+
+    fn last(self) -> Option<Self::Item> {
+        let bone_count = self.bone_count;
+        self.iter.last().map(move |tf| Self::func(tf, bone_count))
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let bone_count = self.bone_count;
+        self.iter.nth(n).map(move |tf| Self::func(tf, bone_count))
     }
 }
 impl<'a> DoubleEndedIterator for FramePoseIterMut<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(|tf| Self::func(tf, self.bone_count))
+        let bone_count = self.bone_count;
+        self.iter.next_back().map(move |tf| Self::func(tf, bone_count))
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        let bone_count = self.bone_count;
+        self.iter.nth_back(n).map(move |tf| Self::func(tf, bone_count))
     }
 }
 impl<'a> ExactSizeIterator for FramePoseIterMut<'a> {
+    #[inline]
     fn len(&self) -> usize {
         self.iter.len()
     }
