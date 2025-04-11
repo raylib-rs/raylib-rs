@@ -1,9 +1,11 @@
 //! Contains code related to audio. [`RaylibAudio`] plays sounds and music.
 
 use crate::{ffi, error::{AudioInitError, LoadSoundError}};
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 use std::path::Path;
+
+use super::error::ExportWaveError;
 
 make_thin_wrapper_lifetime!(Wave, ffi::Wave, RaylibAudio, ffi::UnloadWave);
 
@@ -50,6 +52,9 @@ impl RaylibAudio {
                 return Err(AudioInitError::DoubleInit);
             }
             ffi::InitAudioDevice();
+            if !ffi::IsAudioDeviceReady() {
+                return Err(AudioInitError::InitFailed);
+            }
         }
         Ok(RaylibAudio(PhantomData))
     }
@@ -206,9 +211,24 @@ impl<'aud> Wave<'aud> {
 
     /// Export wave file. Extension must be .wav or .raw
     #[inline]
-    pub fn export(&self, filename: impl AsRef<Path>) -> bool {
+    pub fn export(&self, filename: impl AsRef<Path>) -> Result<(), ExportWaveError> {
         let c_filename = CString::new(filename.as_ref().to_string_lossy().as_bytes()).unwrap();
-        unsafe { ffi::ExportWave(self.0, c_filename.as_ptr()) }
+        let success = unsafe { ffi::ExportWave(self.0, c_filename.as_ptr()) };
+        if success {
+            Ok(())
+        } else {
+            // const WAV: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".wav\0") };
+            const QOA: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".qoa\0") };
+            // const RAW: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".raw\0") };
+            let is_qoa = unsafe { ffi::IsFileExtension(c_filename.as_ptr(), QOA.as_ptr()) };
+            if is_qoa {
+                let samples = self.0.sampleSize as i32;
+                if samples != 16 {
+                    return Err(ExportWaveError::QoaBadSamples(self.0.sampleSize as i32));
+                }
+            }
+            Err(ExportWaveError::ExportFailed)
+        }
     }
 
     /// Export wave sample data to code (.h)

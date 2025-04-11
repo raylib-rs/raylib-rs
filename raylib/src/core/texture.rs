@@ -758,7 +758,7 @@ impl Image {
             return Err(InvalidImageError::UnsupportedFormat);
         }
 
-        return Ok(unsafe { std::slice::from_raw_parts(data as *const u8, *data_size as usize) });
+        Ok(unsafe { std::slice::from_raw_parts(data as *const u8, *data_size as usize) })
     }
 
     /// Apply custom square convolution kernel to image
@@ -928,11 +928,15 @@ impl Image {
     /// supported depend on the build flags used for the raylib (C) library.
     pub fn load_image_from_mem(filetype: &str, bytes: &[u8]) -> Result<Image, InvalidImageError> {
         let c_filetype = CString::new(filetype).unwrap();
+        let data_size = bytes.len().try_into().unwrap();
+        if data_size == 0 {
+            return Err(InvalidImageError::InvalidFile)
+        }
         let i = unsafe {
             ffi::LoadImageFromMemory(
                 c_filetype.as_ptr(),
                 bytes.as_ptr(),
-                bytes.len().try_into().unwrap(),
+                data_size,
             )
         };
         if i.data.is_null() {
@@ -1183,6 +1187,9 @@ impl RaylibHandle {
         _: &RaylibThread,
         image: &Image,
     ) -> Result<Texture2D, LoadTextureError> {
+        if image.width == 0 || image.height == 0 {
+            return Err(LoadTextureError::InvalidData);
+        }
         let t = unsafe { ffi::LoadTextureFromImage(image.0) };
         if t.id == 0 {
             return Err(LoadTextureError::TextureFromImageFailed);
@@ -1206,14 +1213,14 @@ impl RaylibHandle {
 }
 
 impl RaylibHandle {
-    /// Weak Textures will leak memeory if they are not unlaoded
+    /// Weak Textures will leak memeory if they are not unloaded
     /// Unload textures from GPU memory (VRAM)
     pub unsafe fn unload_texture(&mut self, _: &RaylibThread, texture: WeakTexture2D) {
         {
             ffi::UnloadTexture(*texture.as_ref())
         }
     }
-    /// Weak RenderTextures will leak memeory if they are not unlaoded
+    /// Weak RenderTextures will leak memeory if they are not unloaded
     /// Unload RenderTextures from GPU memory (VRAM)
     pub unsafe fn unload_render_texture(&mut self, _: &RaylibThread, texture: WeakRenderTexture2D) {
         {

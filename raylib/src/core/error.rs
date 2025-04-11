@@ -6,6 +6,16 @@ use thiserror::Error;
 pub enum AudioInitError {
     #[error("RaylibAudio cannot be instantiated more then once at a time")]
     DoubleInit,
+    #[error("failed to initialize audio device")]
+    InitFailed,
+}
+
+#[derive(Error, Debug)]
+pub enum ExportWaveError {
+    #[error("wave data must be 16 bit per sample for QOA format export (actual: {0})")]
+    QoaBadSamples(i32),
+    #[error("failed to export wave data")]
+    ExportFailed,
 }
 
 #[derive(Error, Debug)]
@@ -90,9 +100,11 @@ pub enum InvalidImageError {
     NullData,
     #[error("image data is null, either the file doesnt exist or the image type is unsupported")]
     NullDataFromFile,
+    #[error("invalid file data")]
+    InvalidFile,
     #[error("image data is null, check provided buffer data")]
     NullDataFromMemory,
-    #[error("texture could not be rendered to an image")]
+    #[error("failed to retrieve pixel data")]
     NullDataFromTexture,
     #[error("unsupported format")]
     UnsupportedFormat,
@@ -120,32 +132,36 @@ pub enum LoadTextureError {
     TextureFromImageFailed,
     #[error("failed to create render texture")]
     CreateRenderTextureFailed,
+    #[error("data is not valid to load texture")]
+    InvalidData,
 }
 
 #[derive(Error, Debug)]
 pub enum RaylibError {
     #[error("audio initialization error")]
-    AudioInitError(#[from] AudioInitError),
+    AudioInit(#[from] AudioInitError),
+    #[error("wave export error")]
+    ExportWave(#[from] ExportWaveError),
     #[error("sound loading error")]
-    LoadSoundError(#[from] LoadSoundError),
+    LoadSound(#[from] LoadSoundError),
     #[error("allocation error")]
-    AllocationError(#[from] AllocationError),
+    Allocation(#[from] AllocationError),
     #[error("compression error")]
-    CompressionError(#[from] CompressionError),
+    Compression(#[from] CompressionError),
     #[error("model loading error")]
-    LoadModelError(#[from] LoadModelError),
+    LoadModel(#[from] LoadModelError),
     #[error("model animation loading error")]
-    LoadModelAnimError(#[from] LoadModelAnimError),
+    LoadModelAnim(#[from] LoadModelAnimError),
     #[error("material update error")]
-    SetMaterialError(#[from] SetMaterialError),
+    SetMaterial(#[from] SetMaterialError),
     #[error("material loading error")]
-    LoadMaterialError(#[from] LoadMaterialError),
+    LoadMaterial(#[from] LoadMaterialError),
     #[error("font loading error")]
-    LoadFontError(#[from] LoadFontError),
+    LoadFont(#[from] LoadFontError),
     #[error("image error")]
-    InvalidImageError(#[from] InvalidImageError),
+    InvalidImage(#[from] InvalidImageError),
     #[error("texture update error")]
-    UpdateTextureError(#[from] UpdateTextureError),
+    UpdateTexture(#[from] UpdateTextureError),
     #[error("texture loading error")]
-    LoadTextureError(#[from] LoadTextureError),
+    LoadTexture(#[from] LoadTextureError),
 }
