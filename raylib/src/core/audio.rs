@@ -347,6 +347,7 @@ impl<'aud> Sound<'aud> {
         unsafe { ffi::SetSoundPitch(self.0, pitch) }
     }
 
+    /// Set pan for a sound (0.5 is center)
     #[inline]
     pub fn set_pan(&self, pan: f32) {
         unsafe { ffi::SetSoundPan(self.0, pan) }
@@ -520,7 +521,7 @@ impl<'aud> Music<'aud> {
 }
 
 impl<'aud> AudioStream<'aud> {
-    // Checks if an audio stream is valid (buffers initialized)
+    /// Checks if an audio stream is valid (buffers initialized)
     #[inline]
     pub fn is_audio_stream_valid(&self) -> bool {
         unsafe { ffi::IsAudioStreamValid(self.0) }

@@ -587,7 +587,7 @@ impl RaylibHandle {
         unsafe { ffi::IsWindowFullscreen() }
     }
 
-    // Check if window is currently focused (only PLATFORM_DESKTOP)
+    /// Check if window is currently focused (only PLATFORM_DESKTOP)
     #[inline]
     pub fn is_window_focused(&self) -> bool {
         unsafe { ffi::IsWindowFocused() }
