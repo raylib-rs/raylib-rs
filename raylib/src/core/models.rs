@@ -3,10 +3,65 @@
 use crate::core::math::{BoundingBox, Vector3};
 use crate::core::texture::Image;
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::error::{error, Error};
 use crate::{consts, ffi};
 use std::ffi::CString;
 use std::os::raw::c_void;
+
+#[derive(Debug)]
+pub enum RaylibLoadModelError<'a> {
+    LoadFromFileFailed(&'a str),
+    LoadFromMeshFailed,
+}
+impl std::fmt::Display for RaylibLoadModelError<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::LoadFromFileFailed(path) => write!(f, "could not load model\npath: {path:?}"),
+            Self::LoadFromMeshFailed => f.write_str("could not load model from mesh"),
+        }
+    }
+}
+impl std::error::Error for RaylibLoadModelError<'_> {}
+
+#[derive(Debug)]
+pub enum RaylibLoadModelAnimError<'a> {
+    NoAnimationsLoaded(&'a str),
+}
+impl std::fmt::Display for RaylibLoadModelAnimError<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NoAnimationsLoaded(path) => write!(f, "no model animations loaded\npath: {path:?}"),
+        }
+    }
+}
+impl std::error::Error for RaylibLoadModelAnimError<'_> {}
+
+#[derive(Debug)]
+pub enum RaylibSetMaterialError {
+    MeshIdOutOfBounds,
+    MaterialIdOutOfBounds,
+}
+impl std::fmt::Display for RaylibSetMaterialError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MeshIdOutOfBounds => f.write_str("mesh_id greater than mesh count"),
+            Self::MaterialIdOutOfBounds => f.write_str("material_id greater than material count"),
+        }
+    }
+}
+impl std::error::Error for RaylibSetMaterialError {}
+
+#[derive(Debug)]
+pub enum RaylibLoadMaterialError<'a> {
+    NoneLoaded(&'a str),
+}
+impl std::fmt::Display for RaylibLoadMaterialError<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NoneLoaded(path) => write!(f, "no materials loaded\npath: {path:?}"),
+        }
+    }
+}
+impl std::error::Error for RaylibLoadMaterialError<'_> {}
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(Model, ffi::Model, ffi::UnloadModel);
@@ -55,12 +110,12 @@ impl Clone for WeakModelAnimation {
 impl RaylibHandle {
     /// Loads model from files (mesh and material).
     // #[inline]
-    pub fn load_model(&mut self, _: &RaylibThread, filename: &str) -> Result<Model, Error> {
+    pub fn load_model<'path>(&mut self, _: &RaylibThread, filename: &'path str) -> Result<Model, RaylibLoadModelError<'path>> {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadModel(c_filename.as_ptr()) };
         if m.meshes.is_null() && m.materials.is_null() && m.bones.is_null() && m.bindPose.is_null()
         {
-            return Err(error!("could not load model", filename));
+            return Err(RaylibLoadModelError::LoadFromFileFailed(filename));
         }
         // TODO check if null pointer checks are necessary.
         Ok(Model(m))
@@ -71,26 +126,26 @@ impl RaylibHandle {
         &mut self,
         _: &RaylibThread,
         mesh: WeakMesh,
-    ) -> Result<Model, Error> {
+    ) -> Result<Model, RaylibLoadModelError<'static>> {
         let m = unsafe { ffi::LoadModelFromMesh(mesh.0) };
 
         if m.meshes.is_null() || m.materials.is_null() {
-            return Err(error!("Could not load model from mesh"));
+            return Err(RaylibLoadModelError::LoadFromMeshFailed);
         }
 
         Ok(Model(m))
     }
 
-    pub fn load_model_animations(
+    pub fn load_model_animations<'path>(
         &mut self,
         _: &RaylibThread,
-        filename: &str,
-    ) -> Result<Vec<ModelAnimation>, Error> {
+        filename: &'path str,
+    ) -> Result<Vec<ModelAnimation>, RaylibLoadModelAnimError<'path>> {
         let c_filename = CString::new(filename).unwrap();
         let mut m_size = 0;
         let m_ptr = unsafe { ffi::LoadModelAnimations(c_filename.as_ptr(), &mut m_size) };
         if m_size <= 0 {
-            return Err(error!("No model animations loaded", filename));
+            return Err(RaylibLoadModelAnimError::NoAnimationsLoaded(filename));
         }
         let mut m_vec = Vec::with_capacity(m_size as usize);
         for i in 0..m_size {
@@ -237,15 +292,16 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
 
     /// Set material for a mesh
-    fn set_model_mesh_material(&mut self, mesh_id: i32, material_id: i32) -> Result<(), Error> {
+    fn set_model_mesh_material(&mut self, mesh_id: i32, material_id: i32) -> Result<(), RaylibSetMaterialError> {
+        // should this be an assertion?
         if mesh_id >= self.as_ref().meshCount {
-            return Err(error!("mesh_id greater than mesh count"));
+            Err(RaylibSetMaterialError::MeshIdOutOfBounds)
         } else if material_id >= self.as_ref().materialCount {
-            return Err(error!("material_id greater than material count"));
+            Err(RaylibSetMaterialError::MaterialIdOutOfBounds)
         } else {
             unsafe { ffi::SetModelMeshMaterial(self.as_mut(), mesh_id, material_id) };
-            return Ok(());
-        };
+            Ok(())
+        }
     }
 }
 
@@ -467,12 +523,12 @@ impl Material {
         m
     }
 
-    pub fn load_materials(filename: &str) -> Result<Vec<Material>, Error> {
+    pub fn load_materials(filename: &str) -> Result<Vec<Material>, RaylibLoadMaterialError<'_>> {
         let c_filename = CString::new(filename).unwrap();
         let mut m_size = 0;
         let m_ptr = unsafe { ffi::LoadMaterials(c_filename.as_ptr(), &mut m_size) };
         if m_size <= 0 {
-            return Err(error!("No materials loaded", filename));
+            return Err(RaylibLoadMaterialError::NoneLoaded(filename));
         }
         let mut m_vec = Vec::with_capacity(m_size as usize);
         for i in 0..m_size {

@@ -57,11 +57,11 @@ pub enum RaylibLoadSoundError<'a> {
 impl std::fmt::Display for RaylibLoadSoundError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::LoadFailed(path) => write!(f, "failed to load sound\npath: {path}"),
+            Self::LoadFailed(path) => write!(f, "failed to load sound\npath: {path:?}"),
             Self::LoadFromWaveFailed => f.write_str("failed to load sound from wave"),
-            Self::LoadWaveFromFileFailed(path) => write!(f, "cannot load wave\npath: {path}"),
+            Self::LoadWaveFromFileFailed(path) => write!(f, "cannot load wave\npath: {path:?}"),
             Self::Null => f.write_str("wave data is null, check provided buffer data"),
-            Self::LoadMusicFromFileFailed(path) => write!(f, "music could not be loaded from file\npath: {path}"),
+            Self::LoadMusicFromFileFailed(path) => write!(f, "music could not be loaded from file\npath: {path:?}"),
             Self::MusicNull => f.write_str("music's buffer data data is null, check provided buffer data"),
         }
     }
