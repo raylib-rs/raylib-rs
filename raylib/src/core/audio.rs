@@ -201,22 +201,22 @@ impl<'aud> Drop for RaylibAudio {
 impl<'aud> Wave<'aud> {
     /// Total number of frames (considering channels)
     #[inline]
-    pub fn frame_count(&self) -> u32 {
+    pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
     /// Frequency (samples per second)
     #[inline]
-    pub fn sample_rate(&self) -> u32 {
+    pub const fn sample_rate(&self) -> u32 {
         self.0.sampleRate
     }
     /// Bit depth (bits per sample): 8, 16, 32 (24 not supported)
     #[inline]
-    pub fn sample_size(&self) -> u32 {
+    pub const fn sample_size(&self) -> u32 {
         self.0.sampleSize
     }
     /// Number of channels (1-mono, 2-stereo, ...)
     #[inline]
-    pub fn channels(&self) -> u32 {
+    pub const fn channels(&self) -> u32 {
         self.0.channels
     }
     pub unsafe fn inner(self) -> ffi::Wave {
@@ -296,7 +296,7 @@ impl<'aud> Sound<'aud> {
 
     /// Total number of frames (considering channels)
     #[inline]
-    pub fn frame_count(&self) -> u32 {
+    pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
     pub unsafe fn inner(self) -> ffi::Sound {
@@ -375,7 +375,7 @@ impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
 
     /// Total number of frames (considering channels)
     #[inline]
-    pub fn frame_count(&self) -> u32 {
+    pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
     pub unsafe fn inner(self) -> ffi::Sound {
@@ -527,17 +527,17 @@ impl<'aud> AudioStream<'aud> {
     }
     /// Frequency (samples per second)
     #[inline]
-    pub fn sample_rate(&self) -> u32 {
+    pub const fn sample_rate(&self) -> u32 {
         self.0.sampleRate
     }
     /// Bit depth (bits per sample): 8, 16, 32 (24 not supported)
     #[inline]
-    pub fn sample_size(&self) -> u32 {
+    pub const fn sample_size(&self) -> u32 {
         self.0.sampleSize
     }
     /// Number of channels (1-mono, 2-stereo, ...)
     #[inline]
-    pub fn channels(&self) -> u32 {
+    pub const fn channels(&self) -> u32 {
         self.0.channels
     }
 
