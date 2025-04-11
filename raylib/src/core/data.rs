@@ -3,39 +3,7 @@ use std::{
     alloc::Layout, ffi::{c_char, CString}, ops::{Deref, DerefMut}, path::Path, ptr::NonNull
 };
 
-use crate::ffi;
-
-#[derive(Debug)]
-pub enum RaylibAllocationError {
-    InvalidLayout,
-    ExceedsCapacity,
-    ExceedsUIntMax,
-    SubMinSize,
-}
-impl std::fmt::Display for RaylibAllocationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidLayout => f.write_str("memory request does not produce a valid layout"),
-            Self::ExceedsCapacity => f.write_str("memory request exceeds capacity"),
-            Self::ExceedsUIntMax => f.write_str("memory request exceeds unsigned integer maximum"),
-            Self::SubMinSize => f.write_str("cannot allocate less than 1 element"),
-        }
-    }
-}
-impl std::error::Error for RaylibAllocationError {}
-
-#[derive(Debug)]
-pub enum RaylibCompressionError {
-    CompressionFailed,
-}
-impl std::fmt::Display for RaylibCompressionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::CompressionFailed => f.write_str("could not compress data"),
-        }
-    }
-}
-impl std::error::Error for RaylibCompressionError {}
+use crate::{ffi, error::{RaylibAllocationError, RaylibCompressionError}};
 
 /// A wrapper acting as an owned buffer for Raylib-allocated memory.
 /// Automatically releases the memory with [`ffi::MemFree()`] when dropped.

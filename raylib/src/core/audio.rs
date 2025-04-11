@@ -1,6 +1,6 @@
 //! Contains code related to audio. [`RaylibAudio`] plays sounds and music.
 
-use crate::ffi;
+use crate::{ffi, error::{RaylibAudioInitError, RaylibLoadSoundError}};
 use std::ffi::CString;
 use std::marker::PhantomData;
 use std::path::Path;
@@ -36,38 +36,6 @@ impl AudioSample for u8 {}
 impl AudioSample for i16 {}
 impl AudioSample for f32 {}
 
-#[derive(Debug)]
-pub struct RaylibAudioInitError(());
-impl std::fmt::Display for RaylibAudioInitError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("RaylibAudio cannot be instantiated more then once at a time.")
-    }
-}
-impl std::error::Error for RaylibAudioInitError {}
-
-#[derive(Debug)]
-pub enum RaylibLoadSoundError<'a> {
-    LoadFailed(&'a str),
-    LoadFromWaveFailed,
-    LoadWaveFromFileFailed(&'a str),
-    Null,
-    LoadMusicFromFileFailed(&'a str),
-    MusicNull,
-}
-impl std::fmt::Display for RaylibLoadSoundError<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::LoadFailed(path) => write!(f, "failed to load sound\npath: {path:?}"),
-            Self::LoadFromWaveFailed => f.write_str("failed to load sound from wave"),
-            Self::LoadWaveFromFileFailed(path) => write!(f, "cannot load wave\npath: {path:?}"),
-            Self::Null => f.write_str("wave data is null, check provided buffer data"),
-            Self::LoadMusicFromFileFailed(path) => write!(f, "music could not be loaded from file\npath: {path:?}"),
-            Self::MusicNull => f.write_str("music's buffer data data is null, check provided buffer data"),
-        }
-    }
-}
-impl std::error::Error for RaylibLoadSoundError<'_> {}
-
 /// This token is used to indicate audio is initialized. It's also used to create [`Wave`], [`Sound`], [`Music`], [`AudioStream`], and [`SoundAlias`].
 /// All of those have a lifetime that is bound to RaylibAudio. The compiler will disallow you from using them without ensuring that the [`RaylibAudio`] is present while doing so.
 #[derive(Debug, Clone)]
@@ -79,7 +47,7 @@ impl RaylibAudio {
     pub fn init_audio_device() -> Result<RaylibAudio, RaylibAudioInitError> {
         unsafe {
             if ffi::IsAudioDeviceReady() {
-                return Err(RaylibAudioInitError(()));
+                return Err(RaylibAudioInitError::DoubleInit);
             }
             ffi::InitAudioDevice();
         }
@@ -118,7 +86,7 @@ impl RaylibAudio {
         let c_filename = CString::new(filename).unwrap();
         let s = unsafe { ffi::LoadSound(c_filename.as_ptr()) };
         if s.stream.buffer.is_null() {
-            return Err(RaylibLoadSoundError::LoadFailed(filename));
+            return Err(RaylibLoadSoundError::LoadFailed { filename });
         }
 
         Ok(Sound(s, self))
@@ -139,7 +107,7 @@ impl RaylibAudio {
         let c_filename = CString::new(filename).unwrap();
         let w = unsafe { ffi::LoadWave(c_filename.as_ptr()) };
         if w.data.is_null() {
-            return Err(RaylibLoadSoundError::LoadWaveFromFileFailed(filename));
+            return Err(RaylibLoadSoundError::LoadWaveFromFileFailed { filename });
         }
         Ok(Wave(w, self))
     }
@@ -167,7 +135,7 @@ impl RaylibAudio {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadMusicStream(c_filename.as_ptr()) };
         if m.stream.buffer.is_null() {
-            return Err(RaylibLoadSoundError::LoadMusicFromFileFailed(filename));
+            return Err(RaylibLoadSoundError::LoadMusicFromFileFailed { filename });
         }
         Ok(Music(m, self))
     }

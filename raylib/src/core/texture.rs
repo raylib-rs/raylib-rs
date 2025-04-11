@@ -12,69 +12,6 @@ use std::ptr::{null, null_mut};
 
 use super::math::Vector2;
 
-#[derive(Debug)]
-pub enum InvalidImageError {
-    ZeroWidth,
-    ZeroHeight,
-    NullData,
-    NullDataFromFile,
-    NullDataFromMemory,
-    NullDataFromTexture,
-    UnsupportedFormat,
-    NonSquareKernel,
-}
-impl std::fmt::Display for InvalidImageError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ZeroWidth => f.write_str("invalid image: width is 0"),
-            Self::ZeroHeight => f.write_str("invalid image: height is 0"),
-            Self::NullData => f.write_str("invalid image: data is null"),
-            Self::NullDataFromFile => f.write_str("image data is null, either the file doesnt exist or the image type is unsupported"),
-            Self::NullDataFromMemory => f.write_str("image data is null, check provided buffer data"),
-            Self::NullDataFromTexture => f.write_str("texture could not be rendered to an image"),
-            Self::UnsupportedFormat => f.write_str("unsupported format"),
-            Self::NonSquareKernel => f.write_str("convolution kernel must be square to be applied"),
-        }
-    }
-}
-impl std::error::Error for InvalidImageError {}
-
-#[derive(Debug)]
-pub enum RaylibUpdateTextureError {
-    WrongDataSize { expect: usize, actual: usize },
-    OutOfBounds,
-    NegativeSize,
-}
-impl std::fmt::Display for RaylibUpdateTextureError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::WrongDataSize { expect, actual } => write!(f, "data is wrong size\nexpected {expect} bytes, got {actual}"),
-            Self::OutOfBounds => f.write_str("destination rectangle cannot exceed texture bounds"),
-            Self::NegativeSize => f.write_str("destination rectangle cannot have negative extents"),
-        }
-    }
-}
-impl std::error::Error for RaylibUpdateTextureError {}
-
-#[derive(Debug)]
-pub enum RaylibLoadTextureError<'a> {
-    TextureFromFileFailed(&'a str),
-    CubemapFromImageFailed,
-    TextureFromImageFailed,
-    CreateRenderTextureFailed,
-}
-impl std::fmt::Display for RaylibLoadTextureError<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::TextureFromFileFailed(path) => write!(f, "failed to load the texture\npath: {path:?}"),
-            Self::CubemapFromImageFailed => f.write_str("failed to load image as a texture cubemap"),
-            Self::TextureFromImageFailed => f.write_str("failed to load image as a texture"),
-            Self::CreateRenderTextureFailed => f.write_str("failed to create render texture"),
-        }
-    }
-}
-impl std::error::Error for RaylibLoadTextureError<'_> {}
-
 make_rslice!(ImagePalette, Color, ffi::UnloadImagePalette);
 make_rslice!(ImageColors, Color, ffi::UnloadImageColors);
 

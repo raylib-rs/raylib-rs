@@ -7,28 +7,12 @@ use crate::core::texture::{Image, Texture2D};
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi;
 use crate::math::Rectangle;
+use crate::error::RaylibLoadFontError;
 
 use std::convert::{AsMut, AsRef, TryInto};
 use std::ffi::{CString, OsString};
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
-
-#[derive(Debug)]
-pub enum RaylibLoadFontError<'a> {
-    LoadFromFileFailed(&'a str),
-    LoadFromImageFailed,
-    LoadFromMemoryFailed,
-}
-impl std::fmt::Display for RaylibLoadFontError<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::LoadFromFileFailed(path) => write!(f, "error loading font; check if the file exists and if it's the right type\npath: {path:?}"),
-            Self::LoadFromImageFailed => f.write_str("error loading font from image"),
-            Self::LoadFromMemoryFailed => f.write_str("error loading font from memory; check if the file's type is correct")
-        }
-    }
-}
-impl std::error::Error for RaylibLoadFontError<'_> {}
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(Font, ffi::Font, ffi::UnloadFont);
@@ -139,7 +123,7 @@ impl RaylibHandle {
         let c_filename = CString::new(filename).unwrap();
         let f = unsafe { ffi::LoadFont(c_filename.as_ptr()) };
         if f.glyphs.is_null() || f.texture.id == 0 {
-            return Err(RaylibLoadFontError::LoadFromFileFailed(filename));
+            return Err(RaylibLoadFontError::LoadFromFileFailed { filename });
         }
         Ok(Font(f))
     }
@@ -170,7 +154,7 @@ impl RaylibHandle {
             }
         };
         if f.glyphs.is_null() || f.texture.id == 0 {
-            return Err(RaylibLoadFontError::LoadFromFileFailed(filename));
+            return Err(RaylibLoadFontError::LoadFromFileFailed { filename });
         }
         Ok(Font(f))
     }
