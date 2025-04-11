@@ -3,7 +3,7 @@
 use crate::core::math::{BoundingBox, Vector3};
 use crate::core::texture::Image;
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::{consts, ffi, error::{RaylibLoadMaterialError, RaylibLoadModelAnimError, RaylibLoadModelError, RaylibSetMaterialError}};
+use crate::{consts, ffi, error::{LoadMaterialError, LoadModelAnimError, LoadModelError, SetMaterialError}};
 use std::ffi::CString;
 use std::os::raw::c_void;
 
@@ -54,12 +54,12 @@ impl Clone for WeakModelAnimation {
 impl RaylibHandle {
     /// Loads model from files (mesh and material).
     // #[inline]
-    pub fn load_model<'path>(&mut self, _: &RaylibThread, filename: &'path str) -> Result<Model, RaylibLoadModelError<'path>> {
+    pub fn load_model(&mut self, _: &RaylibThread, filename: &str) -> Result<Model, LoadModelError> {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadModel(c_filename.as_ptr()) };
         if m.meshes.is_null() && m.materials.is_null() && m.bones.is_null() && m.bindPose.is_null()
         {
-            return Err(RaylibLoadModelError::LoadFromFileFailed { filename });
+            return Err(LoadModelError::LoadFromFileFailed { path: filename.into() });
         }
         // TODO check if null pointer checks are necessary.
         Ok(Model(m))
@@ -70,26 +70,26 @@ impl RaylibHandle {
         &mut self,
         _: &RaylibThread,
         mesh: WeakMesh,
-    ) -> Result<Model, RaylibLoadModelError<'static>> {
+    ) -> Result<Model, LoadModelError> {
         let m = unsafe { ffi::LoadModelFromMesh(mesh.0) };
 
         if m.meshes.is_null() || m.materials.is_null() {
-            return Err(RaylibLoadModelError::LoadFromMeshFailed);
+            return Err(LoadModelError::LoadFromMeshFailed);
         }
 
         Ok(Model(m))
     }
 
-    pub fn load_model_animations<'path>(
+    pub fn load_model_animations(
         &mut self,
         _: &RaylibThread,
-        filename: &'path str,
-    ) -> Result<Vec<ModelAnimation>, RaylibLoadModelAnimError<'path>> {
+        filename: &str,
+    ) -> Result<Vec<ModelAnimation>, LoadModelAnimError> {
         let c_filename = CString::new(filename).unwrap();
         let mut m_size = 0;
         let m_ptr = unsafe { ffi::LoadModelAnimations(c_filename.as_ptr(), &mut m_size) };
         if m_size <= 0 {
-            return Err(RaylibLoadModelAnimError::NoAnimationsLoaded { filename });
+            return Err(LoadModelAnimError::NoAnimationsLoaded { path: filename.into() });
         }
         let mut m_vec = Vec::with_capacity(m_size as usize);
         for i in 0..m_size {
@@ -236,12 +236,12 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
 
     /// Set material for a mesh
-    fn set_model_mesh_material(&mut self, mesh_id: i32, material_id: i32) -> Result<(), RaylibSetMaterialError> {
+    fn set_model_mesh_material(&mut self, mesh_id: i32, material_id: i32) -> Result<(), SetMaterialError> {
         // should this be an assertion?
         if mesh_id >= self.as_ref().meshCount {
-            Err(RaylibSetMaterialError::MeshIdOutOfBounds)
+            Err(SetMaterialError::MeshIdOutOfBounds)
         } else if material_id >= self.as_ref().materialCount {
-            Err(RaylibSetMaterialError::MaterialIdOutOfBounds)
+            Err(SetMaterialError::MaterialIdOutOfBounds)
         } else {
             unsafe { ffi::SetModelMeshMaterial(self.as_mut(), mesh_id, material_id) };
             Ok(())
@@ -467,12 +467,12 @@ impl Material {
         m
     }
 
-    pub fn load_materials(filename: &str) -> Result<Vec<Material>, RaylibLoadMaterialError<'_>> {
+    pub fn load_materials(filename: &str) -> Result<Vec<Material>, LoadMaterialError> {
         let c_filename = CString::new(filename).unwrap();
         let mut m_size = 0;
         let m_ptr = unsafe { ffi::LoadMaterials(c_filename.as_ptr(), &mut m_size) };
         if m_size <= 0 {
-            return Err(RaylibLoadMaterialError::NoneLoaded { filename });
+            return Err(LoadMaterialError::NoneLoaded { path: filename.into() });
         }
         let mut m_vec = Vec::with_capacity(m_size as usize);
         for i in 0..m_size {

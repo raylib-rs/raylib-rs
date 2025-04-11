@@ -10,7 +10,7 @@ use std::mem::ManuallyDrop;
 use std::os::raw::c_void;
 use std::ptr::{null, null_mut};
 
-use super::{error::{InvalidImageError, RaylibLoadTextureError, RaylibUpdateTextureError}, math::Vector2};
+use super::{error::{InvalidImageError, LoadTextureError, UpdateTextureError}, math::Vector2};
 
 make_rslice!(ImagePalette, Color, ffi::UnloadImagePalette);
 make_rslice!(ImageColors, Color, ffi::UnloadImageColors);
@@ -1048,7 +1048,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
 
     /// Updates GPU texture with new data.
     #[inline]
-    fn update_texture(&mut self, pixels: &[u8]) -> Result<(), RaylibUpdateTextureError> {
+    fn update_texture(&mut self, pixels: &[u8]) -> Result<(), UpdateTextureError> {
         let expected_len = unsafe {
             get_pixel_data_size(
                 self.as_ref().width,
@@ -1057,7 +1057,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
             ) as usize
         };
         if pixels.len() != expected_len {
-            return Err(RaylibUpdateTextureError::WrongDataSize { expect: expected_len, actual: pixels.len() });
+            return Err(UpdateTextureError::WrongDataSize { expect: expected_len, actual: pixels.len() });
         }
         unsafe {
             ffi::UpdateTexture(
@@ -1074,14 +1074,14 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
         &mut self,
         rec: impl Into<ffi::Rectangle>,
         pixels: &[u8],
-    ) -> Result<(), RaylibUpdateTextureError> {
+    ) -> Result<(), UpdateTextureError> {
         let rec = rec.into();
 
         if (rec.x < 0.0) || (rec.y < 0.0) || ((rec.x as i32 + rec.width as i32) > (self.as_ref().width)) || ((rec.y as i32 + rec.height as i32) > (self.as_ref().height)) {
-            return Err(RaylibUpdateTextureError::OutOfBounds);
+            return Err(UpdateTextureError::OutOfBounds);
         }
         if (rec.width < 0.0) || (rec.height < 0.0) {
-            return Err(RaylibUpdateTextureError::NegativeSize);
+            return Err(UpdateTextureError::NegativeSize);
         }
 
         let expected_len = unsafe {
@@ -1092,7 +1092,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
             ) as usize
         };
         if pixels.len() != expected_len {
-            return Err(RaylibUpdateTextureError::WrongDataSize { expect: expected_len, actual: pixels.len() });
+            return Err(UpdateTextureError::WrongDataSize { expect: expected_len, actual: pixels.len() });
         }
         unsafe {
             ffi::UpdateTextureRec(
@@ -1153,11 +1153,11 @@ pub fn get_pixel_data_size(width: i32, height: i32, format: ffi::PixelFormat) ->
 
 impl RaylibHandle {
     /// Loads texture from file into GPU memory (VRAM).
-    pub fn load_texture<'path>(&mut self, _: &RaylibThread, filename: &'path str) -> Result<Texture2D, RaylibLoadTextureError<'path>> {
+    pub fn load_texture(&mut self, _: &RaylibThread, filename: &str) -> Result<Texture2D, LoadTextureError> {
         let c_filename = CString::new(filename).unwrap();
         let t = unsafe { ffi::LoadTexture(c_filename.as_ptr()) };
         if t.id == 0 {
-            return Err(RaylibLoadTextureError::TextureFromFileFailed { filename });
+            return Err(LoadTextureError::TextureFromFileFailed { path: filename.into() });
         }
         Ok(Texture2D(t))
     }
@@ -1168,10 +1168,10 @@ impl RaylibHandle {
         _: &RaylibThread,
         image: &Image,
         layout: crate::consts::CubemapLayout,
-    ) -> Result<Texture2D, RaylibLoadTextureError<'static>> {
+    ) -> Result<Texture2D, LoadTextureError> {
         let t = unsafe { ffi::LoadTextureCubemap(image.0, layout as i32) };
         if t.id == 0 {
-            return Err(RaylibLoadTextureError::CubemapFromImageFailed);
+            return Err(LoadTextureError::CubemapFromImageFailed);
         }
         Ok(Texture2D(t))
     }
@@ -1182,10 +1182,10 @@ impl RaylibHandle {
         &mut self,
         _: &RaylibThread,
         image: &Image,
-    ) -> Result<Texture2D, RaylibLoadTextureError<'static>> {
+    ) -> Result<Texture2D, LoadTextureError> {
         let t = unsafe { ffi::LoadTextureFromImage(image.0) };
         if t.id == 0 {
-            return Err(RaylibLoadTextureError::TextureFromImageFailed);
+            return Err(LoadTextureError::TextureFromImageFailed);
         }
         Ok(Texture2D(t))
     }
@@ -1196,10 +1196,10 @@ impl RaylibHandle {
         _: &RaylibThread,
         width: u32,
         height: u32,
-    ) -> Result<RenderTexture2D, RaylibLoadTextureError<'static>> {
+    ) -> Result<RenderTexture2D, LoadTextureError> {
         let t = unsafe { ffi::LoadRenderTexture(width as i32, height as i32) };
         if t.id == 0 {
-            return Err(RaylibLoadTextureError::CreateRenderTextureFailed);
+            return Err(LoadTextureError::CreateRenderTextureFailed);
         }
         Ok(RenderTexture2D(t))
     }

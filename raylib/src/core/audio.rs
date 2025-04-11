@@ -1,6 +1,6 @@
 //! Contains code related to audio. [`RaylibAudio`] plays sounds and music.
 
-use crate::{ffi, error::{RaylibAudioInitError, RaylibLoadSoundError}};
+use crate::{ffi, error::{AudioInitError, LoadSoundError}};
 use std::ffi::CString;
 use std::marker::PhantomData;
 use std::path::Path;
@@ -44,10 +44,10 @@ pub struct RaylibAudio(PhantomData<()>);
 impl RaylibAudio {
     /// Initializes audio device and context.
     #[inline]
-    pub fn init_audio_device() -> Result<RaylibAudio, RaylibAudioInitError> {
+    pub fn init_audio_device() -> Result<RaylibAudio, AudioInitError> {
         unsafe {
             if ffi::IsAudioDeviceReady() {
-                return Err(RaylibAudioInitError::DoubleInit);
+                return Err(AudioInitError::DoubleInit);
             }
             ffi::InitAudioDevice();
         }
@@ -82,11 +82,11 @@ impl RaylibAudio {
 
     /// Loads a new sound from file.
     #[inline]
-    pub fn new_sound<'aud, 'path>(&'aud self, filename: &'path str) -> Result<Sound<'aud>, RaylibLoadSoundError<'path>> {
+    pub fn new_sound<'aud>(&'aud self, filename: &str) -> Result<Sound<'aud>, LoadSoundError> {
         let c_filename = CString::new(filename).unwrap();
         let s = unsafe { ffi::LoadSound(c_filename.as_ptr()) };
         if s.stream.buffer.is_null() {
-            return Err(RaylibLoadSoundError::LoadFailed { filename });
+            return Err(LoadSoundError::LoadFailed { path: filename.into() });
         }
 
         Ok(Sound(s, self))
@@ -94,20 +94,20 @@ impl RaylibAudio {
 
     /// Loads sound from wave data.
     #[inline]
-    pub fn new_sound_from_wave<'aud>(&'aud self, wave: &Wave) -> Result<Sound<'aud>, RaylibLoadSoundError<'static>> {
+    pub fn new_sound_from_wave<'aud>(&'aud self, wave: &Wave) -> Result<Sound<'aud>, LoadSoundError> {
         let s = unsafe { ffi::LoadSoundFromWave(wave.0) };
         if s.stream.buffer.is_null() {
-            return Err(RaylibLoadSoundError::LoadFromWaveFailed);
+            return Err(LoadSoundError::LoadFromWaveFailed);
         }
         Ok(Sound(s, self))
     }
     /// Loads wave data from file into RAM.
     #[inline]
-    pub fn new_wave<'aud, 'path>(&'aud self, filename: &'path str) -> Result<Wave<'aud>, RaylibLoadSoundError<'path>> {
+    pub fn new_wave<'aud>(&'aud self, filename: &str) -> Result<Wave<'aud>, LoadSoundError> {
         let c_filename = CString::new(filename).unwrap();
         let w = unsafe { ffi::LoadWave(c_filename.as_ptr()) };
         if w.data.is_null() {
-            return Err(RaylibLoadSoundError::LoadWaveFromFileFailed { filename });
+            return Err(LoadSoundError::LoadWaveFromFileFailed { path: filename.into() });
         }
         Ok(Wave(w, self))
     }
@@ -118,24 +118,24 @@ impl RaylibAudio {
         &'aud self,
         filetype: &str,
         bytes: &[u8],
-    ) -> Result<Wave<'aud>, RaylibLoadSoundError<'static>> {
+    ) -> Result<Wave<'aud>, LoadSoundError> {
         let c_filetype = CString::new(filetype).unwrap();
         let w = unsafe {
             ffi::LoadWaveFromMemory(c_filetype.as_ptr(), bytes.as_ptr(), bytes.len() as i32)
         };
         if w.data.is_null() {
-            return Err(RaylibLoadSoundError::Null);
+            return Err(LoadSoundError::Null);
         };
         Ok(Wave(w, self))
     }
 
     /// Loads music stream from file.
     #[inline]
-    pub fn new_music<'aud, 'path>(&'aud self, filename: &'path str) -> Result<Music<'aud>, RaylibLoadSoundError<'path>> {
+    pub fn new_music<'aud>(&'aud self, filename: &str) -> Result<Music<'aud>, LoadSoundError> {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadMusicStream(c_filename.as_ptr()) };
         if m.stream.buffer.is_null() {
-            return Err(RaylibLoadSoundError::LoadMusicFromFileFailed { filename });
+            return Err(LoadSoundError::LoadMusicFromFileFailed { path: filename.into() });
         }
         Ok(Music(m, self))
     }
@@ -146,13 +146,13 @@ impl RaylibAudio {
         &'aud self,
         filetype: &str,
         bytes: &Vec<u8>,
-    ) -> Result<Music<'aud>, RaylibLoadSoundError<'static>> {
+    ) -> Result<Music<'aud>, LoadSoundError> {
         let c_filetype = CString::new(filetype).unwrap();
         let w = unsafe {
             ffi::LoadMusicStreamFromMemory(c_filetype.as_ptr(), bytes.as_ptr(), bytes.len() as i32)
         };
         if w.stream.buffer.is_null() {
-            return Err(RaylibLoadSoundError::MusicNull);
+            return Err(LoadSoundError::MusicNull);
         };
         Ok(Music(w, self))
     }
@@ -580,10 +580,10 @@ impl<'aud> AudioStream<'aud> {
 }
 
 impl<'bind> Sound<'_> {
-    pub fn alias<'snd>(&'snd self) -> Result<SoundAlias<'bind, 'snd>, RaylibLoadSoundError<'static>> {
+    pub fn alias<'snd>(&'snd self) -> Result<SoundAlias<'bind, 'snd>, LoadSoundError> {
         let s = unsafe { ffi::LoadSoundAlias(self.0) };
         if s.stream.buffer.is_null() {
-            return Err(RaylibLoadSoundError::LoadFromWaveFailed);
+            return Err(LoadSoundError::LoadFromWaveFailed);
         }
         Ok(SoundAlias(s, PhantomData))
     }

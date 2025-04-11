@@ -3,29 +3,29 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum RaylibAudioInitError {
+pub enum AudioInitError {
     #[error("RaylibAudio cannot be instantiated more then once at a time")]
     DoubleInit,
 }
 
 #[derive(Error, Debug)]
-pub enum RaylibLoadSoundError<'a> {
-    #[error("failed to load sound\npath: {filename:?}")]
-    LoadFailed { filename: &'a str },
+pub enum LoadSoundError {
+    #[error("failed to load sound\npath: {path:?}")]
+    LoadFailed { path: String },
     #[error("failed to load sound from wave")]
     LoadFromWaveFailed,
-    #[error("cannot load wave\npath: {filename:?}")]
-    LoadWaveFromFileFailed { filename: &'a str },
+    #[error("cannot load wave\npath: {path:?}")]
+    LoadWaveFromFileFailed { path: String },
     #[error("wave data is null, check provided buffer data")]
     Null,
-    #[error("music could not be loaded from file\npath: {filename:?}")]
-    LoadMusicFromFileFailed { filename: &'a str },
+    #[error("music could not be loaded from file\npath: {path:?}")]
+    LoadMusicFromFileFailed { path: String },
     #[error("music's buffer data data is null, check provided buffer data")]
     MusicNull,
 }
 
 #[derive(Error, Debug)]
-pub enum RaylibAllocationError {
+pub enum AllocationError {
     #[error("memory request does not produce a valid layout")]
     InvalidLayout,
     #[error("memory request exceeds capacity")]
@@ -37,27 +37,27 @@ pub enum RaylibAllocationError {
 }
 
 #[derive(Error, Debug)]
-pub enum RaylibCompressionError {
+pub enum CompressionError {
     #[error("could not compress data")]
     CompressionFailed,
 }
 
 #[derive(Error, Debug)]
-pub enum RaylibLoadModelError<'a> {
-    #[error("could not load model\npath: {filename:?}")]
-    LoadFromFileFailed { filename: &'a str },
+pub enum LoadModelError {
+    #[error("could not load model\npath: {path:?}")]
+    LoadFromFileFailed { path: String },
     #[error("could not load model from mesh")]
     LoadFromMeshFailed,
 }
 
 #[derive(Error, Debug)]
-pub enum RaylibLoadModelAnimError<'a> {
-    #[error("no model animations loaded\npath: {filename:?}")]
-    NoAnimationsLoaded { filename: &'a str },
+pub enum LoadModelAnimError {
+    #[error("no model animations loaded\npath: {path:?}")]
+    NoAnimationsLoaded { path: String },
 }
 
 #[derive(Error, Debug)]
-pub enum RaylibSetMaterialError {
+pub enum SetMaterialError {
     #[error("mesh_id greater than mesh count")]
     MeshIdOutOfBounds,
     #[error("material_id greater than material count")]
@@ -65,15 +65,15 @@ pub enum RaylibSetMaterialError {
 }
 
 #[derive(Error, Debug)]
-pub enum RaylibLoadMaterialError<'a> {
-    #[error("no materials loaded\npath: {filename:?}")]
-    NoneLoaded { filename: &'a str },
+pub enum LoadMaterialError {
+    #[error("no materials loaded\npath: {path:?}")]
+    NoneLoaded { path: String },
 }
 
 #[derive(Error, Debug)]
-pub enum RaylibLoadFontError<'a> {
-    #[error("error loading font; check if the file exists and if it's the right type\npath: {filename:?}")]
-    LoadFromFileFailed { filename: &'a str },
+pub enum LoadFontError {
+    #[error("error loading font; check if the file exists and if it's the right type\npath: {path:?}")]
+    LoadFromFileFailed { path: String },
     #[error("error loading font from image")]
     LoadFromImageFailed,
     #[error("error loading font from memory; check if the file's type is correct")]
@@ -101,8 +101,8 @@ pub enum InvalidImageError {
 }
 
 #[derive(Error, Debug)]
-pub enum RaylibUpdateTextureError {
-    #[error("data is wrong size\nexpected {expect} bytes, got {actual}")]
+pub enum UpdateTextureError {
+    #[error("data is wrong size (expected {expect} bytes, got {actual})")]
     WrongDataSize { expect: usize, actual: usize },
     #[error("destination rectangle cannot exceed texture bounds")]
     OutOfBounds,
@@ -111,13 +111,41 @@ pub enum RaylibUpdateTextureError {
 }
 
 #[derive(Error, Debug)]
-pub enum RaylibLoadTextureError<'a> {
-    #[error("failed to load the texture\npath: {filename:?}")]
-    TextureFromFileFailed { filename: &'a str },
+pub enum LoadTextureError {
+    #[error("failed to load the texture\npath: {path:?}")]
+    TextureFromFileFailed { path: String },
     #[error("failed to load image as a texture cubemap")]
     CubemapFromImageFailed,
     #[error("failed to load image as a texture")]
     TextureFromImageFailed,
     #[error("failed to create render texture")]
     CreateRenderTextureFailed,
+}
+
+#[derive(Error, Debug)]
+pub enum RaylibError {
+    #[error("audio initialization error")]
+    AudioInitError(#[from] AudioInitError),
+    #[error("sound loading error")]
+    LoadSoundError(#[from] LoadSoundError),
+    #[error("allocation error")]
+    AllocationError(#[from] AllocationError),
+    #[error("compression error")]
+    CompressionError(#[from] CompressionError),
+    #[error("model loading error")]
+    LoadModelError(#[from] LoadModelError),
+    #[error("model animation loading error")]
+    LoadModelAnimError(#[from] LoadModelAnimError),
+    #[error("material update error")]
+    SetMaterialError(#[from] SetMaterialError),
+    #[error("material loading error")]
+    LoadMaterialError(#[from] LoadMaterialError),
+    #[error("font loading error")]
+    LoadFontError(#[from] LoadFontError),
+    #[error("image error")]
+    InvalidImageError(#[from] InvalidImageError),
+    #[error("texture update error")]
+    UpdateTextureError(#[from] UpdateTextureError),
+    #[error("texture loading error")]
+    LoadTextureError(#[from] LoadTextureError),
 }
