@@ -597,8 +597,8 @@ impl<'aud> AudioStream<'aud> {
     }
 }
 
-impl<'bind> Sound<'_> {
-    pub fn alias<'snd>(&'snd self) -> Result<SoundAlias<'bind, 'snd>, Error> {
+impl<'bind> Sound<'bind> {
+    pub fn alias<'snd>(&'snd self) -> Result<SoundAlias<'snd, 'bind>, Error> {
         let s = unsafe { ffi::LoadSoundAlias(self.0) };
         if s.stream.buffer.is_null() {
             return Err(error!("failed to load sound from wave"));
