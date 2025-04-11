@@ -6,11 +6,31 @@ use std::ffi::CString;
 use std::marker::PhantomData;
 use std::path::Path;
 
-make_thin_wrapper_lifetime!(Wave, ffi::Wave, RaylibAudio, ffi::UnloadWave);
-
-make_thin_wrapper_lifetime!(Sound, ffi::Sound, RaylibAudio, (ffi::UnloadSound), true);
-make_thin_wrapper_lifetime!(Music, ffi::Music, RaylibAudio, ffi::UnloadMusicStream);
 make_thin_wrapper_lifetime!(
+    /// Wave, audio wave data
+    Wave,
+    ffi::Wave,
+    RaylibAudio,
+    ffi::UnloadWave
+);
+
+make_thin_wrapper_lifetime!(
+    /// Sound
+    Sound,
+    ffi::Sound,
+    RaylibAudio,
+    (ffi::UnloadSound),
+    true
+);
+make_thin_wrapper_lifetime!(
+    /// Music, audio stream, anything longer than ~10 seconds should be streamed
+    Music,
+    ffi::Music,
+    RaylibAudio,
+    ffi::UnloadMusicStream
+);
+make_thin_wrapper_lifetime!(
+    /// AudioStream, custom audio stream
     AudioStream,
     ffi::AudioStream,
     RaylibAudio,
