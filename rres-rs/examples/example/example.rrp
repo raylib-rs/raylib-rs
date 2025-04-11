@@ -1,0 +1,11 @@
+#
+# rrp v1.0 - rres project text file generated using rrespacker
+#
+# File info expected structure:
+# f <fileFullPath@mappingFileName>,<external-link>,<force-raw>,<custom-id>,<compressor>,<cipher>
+#
+# Number of files:     3
+#
+f /.glfw_dropped_files/fudesumi.png@fudesumi.png,0,0,0x00000000,0,0
+f /.glfw_dropped_files/pixantiqua.ttf@pixantiqua.ttf,0,0,0x00000000,0,0
+f /.glfw_dropped_files/sound.wav@sound.wav,0,0,0x00000000,0,0

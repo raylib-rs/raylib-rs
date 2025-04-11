@@ -6,8 +6,7 @@ use std::ffi::CString;
 use std::marker::PhantomData;
 use std::path::Path;
 
-make_thin_wrapper_lifetime!(Wave, ffi::Wave, RaylibAudio, ffi::UnloadWave);
-
+make_thin_wrapper_lifetime!(Wave, ffi::Wave, RaylibAudio, (ffi::UnloadWave), true);
 make_thin_wrapper_lifetime!(Sound, ffi::Sound, RaylibAudio, (ffi::UnloadSound), true);
 make_thin_wrapper_lifetime!(Music, ffi::Music, RaylibAudio, ffi::UnloadMusicStream);
 make_thin_wrapper_lifetime!(

@@ -1,0 +1,16 @@
+[package]
+name = "rres-sys"
+version = "1.2.0"
+edition = "2021"
+
+[dependencies]
+raylib-sys = { version = "5.5.0", path = "../raylib-sys" }
+
+[build-dependencies]
+bindgen = "0.70.1"
+cc = "1.1.31"
+
+[features]
+lz4 = []
+aes = []
+xchacha20 = []

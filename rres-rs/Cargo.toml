@@ -1,0 +1,33 @@
+[package]
+name = "rres-rs"
+version = "1.2.0"
+edition = "2021"
+
+[dependencies]
+libc = "0.2.161"
+raylib = { version = "5.5.0", path = "../raylib", optional = true }
+rres-sys = {version = "1.2.0", path = "../rres-sys"}
+
+[features]
+raylib = ["dep:raylib"]
+default = ["raylib"]
+
+[[example]]
+name = "load-image"
+path = "examples/load-image.rs"
+required-features = ["raylib"]
+
+[[example]]
+name = "data-loading"
+path = "examples/data-loading.rs"
+required-features = ["raylib"]
+
+[[example]]
+name = "create-file"
+path = "examples/create-file.rs"
+required-features = ["raylib"]
+
+[[example]]
+name = "chunk-info"
+path = "examples/chunk-info.rs"
+required-features = ["raylib"]
