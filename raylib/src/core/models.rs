@@ -9,20 +9,46 @@ use std::ffi::CString;
 use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
-make_thin_wrapper!(Model, ffi::Model, ffi::UnloadModel);
-make_thin_wrapper!(WeakModel, ffi::Model, no_drop);
-make_thin_wrapper!(Mesh, ffi::Mesh, |mesh: ffi::Mesh| ffi::UnloadMesh(mesh));
-make_thin_wrapper!(WeakMesh, ffi::Mesh, no_drop);
-make_thin_wrapper!(Material, ffi::Material, ffi::UnloadMaterial);
-make_thin_wrapper!(WeakMaterial, ffi::Material, no_drop);
-make_thin_wrapper!(BoneInfo, ffi::BoneInfo, no_drop);
 make_thin_wrapper!(
+    /// Model, meshes, materials and animation data
+    Model,
+    ffi::Model,
+    ffi::UnloadModel
+);
+make_thin_wrapper!(WeakModel, ffi::Model, no_drop);
+make_thin_wrapper!(
+    /// Mesh, vertex data and vao/vbo
+    Mesh,
+    ffi::Mesh,
+    |mesh: ffi::Mesh| ffi::UnloadMesh(mesh)
+);
+make_thin_wrapper!(WeakMesh, ffi::Mesh, no_drop);
+make_thin_wrapper!(
+    /// Material, includes shader and maps
+    Material,
+    ffi::Material,
+    ffi::UnloadMaterial
+);
+make_thin_wrapper!(WeakMaterial, ffi::Material, no_drop);
+make_thin_wrapper!(
+    /// Bone, skeletal animation bone
+    BoneInfo,
+    ffi::BoneInfo,
+    no_drop
+);
+make_thin_wrapper!(
+    /// ModelAnimation
     ModelAnimation,
     ffi::ModelAnimation,
     ffi::UnloadModelAnimation
 );
 make_thin_wrapper!(WeakModelAnimation, ffi::ModelAnimation, no_drop);
-make_thin_wrapper!(MaterialMap, ffi::MaterialMap, no_drop);
+make_thin_wrapper!(
+    /// MaterialMap
+    MaterialMap,
+    ffi::MaterialMap,
+    no_drop
+);
 
 // Weak things can be clone
 impl Clone for WeakModel {

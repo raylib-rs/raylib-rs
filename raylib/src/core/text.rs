@@ -15,9 +15,19 @@ use std::mem::ManuallyDrop;
 use std::ops::Deref;
 
 fn no_drop<T>(_thing: T) {}
-make_thin_wrapper!(Font, ffi::Font, ffi::UnloadFont);
+make_thin_wrapper!(
+    /// Font, font texture and GlyphInfo array data
+    Font,
+    ffi::Font,
+    ffi::UnloadFont
+);
 make_thin_wrapper!(WeakFont, ffi::Font, no_drop);
-make_thin_wrapper!(GlyphInfo, ffi::GlyphInfo, no_drop);
+make_thin_wrapper!(
+    /// GlyphInfo, font characters glyphs info
+    GlyphInfo,
+    ffi::GlyphInfo,
+    no_drop
+);
 
 #[repr(transparent)]
 #[derive(Debug)]
