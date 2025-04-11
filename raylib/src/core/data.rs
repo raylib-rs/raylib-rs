@@ -3,10 +3,39 @@ use std::{
     alloc::Layout, ffi::{c_char, CString}, ops::{Deref, DerefMut}, path::Path, ptr::NonNull
 };
 
-use crate::{
-    error::{error, Error},
-    ffi,
-};
+use crate::ffi;
+
+#[derive(Debug)]
+pub enum RaylibAllocationError {
+    InvalidLayout,
+    ExceedsCapacity,
+    ExceedsUIntMax,
+    SubMinSize,
+}
+impl std::fmt::Display for RaylibAllocationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidLayout => f.write_str("memory request does not produce a valid layout"),
+            Self::ExceedsCapacity => f.write_str("memory request exceeds capacity"),
+            Self::ExceedsUIntMax => f.write_str("memory request exceeds unsigned integer maximum"),
+            Self::SubMinSize => f.write_str("cannot allocate less than 1 element"),
+        }
+    }
+}
+impl std::error::Error for RaylibAllocationError {}
+
+#[derive(Debug)]
+pub enum RaylibCompressionError {
+    CompressionFailed,
+}
+impl std::fmt::Display for RaylibCompressionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CompressionFailed => f.write_str("could not compress data"),
+        }
+    }
+}
+impl std::error::Error for RaylibCompressionError {}
 
 /// A wrapper acting as an owned buffer for Raylib-allocated memory.
 /// Automatically releases the memory with [`ffi::MemFree()`] when dropped.
@@ -115,22 +144,22 @@ impl<T: Copy> DataBuf<T> {
     /// # Panics
     ///
     /// This method may panic if the pointer returned by [`ffi::MemAlloc`] is unaligned.
-    pub fn alloc(count: i32) -> Result<Self, Error> {
+    pub fn alloc(count: i32) -> Result<Self, RaylibAllocationError> {
         if count >= 1 {
             let count = count as usize;
             match Layout::array::<T>(count) {
-                Err(_e) => Err(error!("memory request does not produce a valid layout")), // I would like to display `e` if possible
+                Err(_e) => Err(RaylibAllocationError::InvalidLayout), // I would like to display `e` if possible
                 Ok(layout) => {
                     let size = layout.size();
                     if size <= u32::MAX as usize {
                         if let Some(buf) = NonNull::new(unsafe { ffi::MemAlloc(size as u32) }.cast()) {
                             assert!(buf.is_aligned(), "allocated buffer should always be aligned");
                             Ok(Self { buf, len: count })
-                        } else { Err(error!("memory request exceeds capacity")) }
-                    } else { Err(error!("memory request exceeds unsigned integer maximum")) }
+                        } else { Err(RaylibAllocationError::ExceedsCapacity) }
+                    } else { Err(RaylibAllocationError::ExceedsUIntMax) }
                 }
             }
-        } else { Err(error!("cannot allocate less than 1 element")) }
+        } else { Err(RaylibAllocationError::SubMinSize) }
     }
 
     /// Reallocate memory already managed by Raylib
@@ -146,11 +175,11 @@ impl<T: Copy> DataBuf<T> {
     /// # Panics
     ///
     /// This method may panic if the pointer returned by [`ffi::MemRealloc`] is unaligned.
-    pub fn realloc(&mut self, new_count: i32) -> Result<(), Error> {
+    pub fn realloc(&mut self, new_count: i32) -> Result<(), RaylibAllocationError> {
         if new_count >= 1 {
             let new_count = new_count as usize;
             match Layout::array::<T>(new_count) {
-                Err(_e) => Err(error!("memory request does not produce a valid layout")), // I would like to display `e` if possible
+                Err(_e) => Err(RaylibAllocationError::InvalidLayout), // I would like to display `e` if possible
                 Ok(layout) => {
                     let size = layout.size();
                     if size <= u32::MAX as usize {
@@ -159,11 +188,11 @@ impl<T: Copy> DataBuf<T> {
                             self.buf = buf;
                             self.len = new_count;
                             Ok(())
-                        } else { Err(error!("memory request exceeds capacity")) }
-                    } else { Err(error!("memory request exceeds unsigned integer maximum")) }
+                        } else { Err(RaylibAllocationError::ExceedsCapacity) }
+                    } else { Err(RaylibAllocationError::ExceedsUIntMax) }
                 }
             }
-        } else { Err(error!("cannot allocate less than 1 element")) }
+        } else { Err(RaylibAllocationError::SubMinSize) }
     }
 }
 
@@ -174,14 +203,14 @@ impl<T: Copy> DataBuf<T> {
 /// let expected: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
 /// assert_eq!(data.as_ref(), expected);
 /// ```
-pub fn compress_data(data: &[u8]) -> Result<DataBuf<u8>, Error> {
+pub fn compress_data(data: &[u8]) -> Result<DataBuf<u8>, RaylibCompressionError> {
     let mut out_length: i32 = 0;
     // CompressData doesn't actually modify the data, but the header is wrong
     let buffer = {
         unsafe { ffi::CompressData(data.as_ptr() as *mut _, data.len() as i32, &mut out_length) }
     };
     DataBuf::new(buffer, out_length)
-        .ok_or_else(|| error!("could not compress data"))
+        .ok_or_else(|| RaylibCompressionError::CompressionFailed)
 }
 
 /// Decompress data (DEFLATE algorythm)
@@ -192,7 +221,7 @@ pub fn compress_data(data: &[u8]) -> Result<DataBuf<u8>, Error> {
 /// let data = decompress_data(input).unwrap();
 /// assert_eq!(data.as_ref(), expected);
 /// ```
-pub fn decompress_data(data: &[u8]) -> Result<DataBuf<u8>, Error> {
+pub fn decompress_data(data: &[u8]) -> Result<DataBuf<u8>, RaylibCompressionError> {
     #[cfg(debug_assertions)]
     println!("{:?}", data.len());
 
@@ -202,7 +231,7 @@ pub fn decompress_data(data: &[u8]) -> Result<DataBuf<u8>, Error> {
         unsafe { ffi::DecompressData(data.as_ptr() as *mut _, data.len() as i32, &mut out_length) }
     };
     DataBuf::new(buffer, out_length)
-        .ok_or_else(|| error!("could not compress data"))
+        .ok_or_else(|| RaylibCompressionError::CompressionFailed)
 }
 
 #[cfg(unix)]
