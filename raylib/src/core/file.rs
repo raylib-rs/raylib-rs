@@ -69,17 +69,17 @@ impl<'a> FilePathIter<'a> {
         let iter = unsafe { std::slice::from_raw_parts(list, count as usize) }.iter();
         Self { iter }
     }
-}
-fn opt_cstr_to_str<'a>(f: &Option<&'a c_char>) -> &'a str {
-    // CStr isn't being "constructed", it's essentially an adapter on &[c_char]
-    let s = f.map(std::slice::from_ref).expect("file path string cannot be null");
-    unsafe { CStr::from_ptr(s.as_ptr()) }.to_str().unwrap()
+    fn func(f: &Option<&'a c_char>) -> &'a str {
+        // CStr isn't being "constructed", it's essentially an adapter on &[c_char]
+        let s = std::slice::from_ref(f.expect("file path string cannot be null"));
+        unsafe { CStr::from_ptr(s.as_ptr()) }.to_str().unwrap()
+    }
 }
 impl<'a> Iterator for FilePathIter<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(opt_cstr_to_str)
+        self.iter.next().map(Self::func)
     }
 
     #[inline]
@@ -89,7 +89,7 @@ impl<'a> Iterator for FilePathIter<'a> {
 }
 impl<'a> DoubleEndedIterator for FilePathIter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(opt_cstr_to_str)
+        self.iter.next_back().map(Self::func)
     }
 }
 impl<'a> ExactSizeIterator for FilePathIter<'a> {
