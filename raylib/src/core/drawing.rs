@@ -1609,7 +1609,7 @@ pub trait RaylibDraw3D {
     /// Draws a line in 3D world space.
     #[allow(non_snake_case)]
     #[inline]
-    fn draw_line_3D(
+    fn draw_line3D(
         &mut self,
         start_pos: impl Into<ffi::Vector3>,
         end_pos: impl Into<ffi::Vector3>,
@@ -1623,7 +1623,7 @@ pub trait RaylibDraw3D {
     /// Draws a circle in 3D world space.
     #[allow(non_snake_case)]
     #[inline]
-    fn draw_circle_3D(
+    fn draw_circle3D(
         &mut self,
         center: impl Into<ffi::Vector3>,
         radius: f32,
