@@ -10,7 +10,7 @@ use std::mem::ManuallyDrop;
 use std::os::raw::c_void;
 use std::ptr::{null, null_mut};
 
-use super::math::Vector2;
+use super::{error::{InvalidImageError, RaylibLoadTextureError, RaylibUpdateTextureError}, math::Vector2};
 
 make_rslice!(ImagePalette, Color, ffi::UnloadImagePalette);
 make_rslice!(ImageColors, Color, ffi::UnloadImageColors);
@@ -1157,7 +1157,7 @@ impl RaylibHandle {
         let c_filename = CString::new(filename).unwrap();
         let t = unsafe { ffi::LoadTexture(c_filename.as_ptr()) };
         if t.id == 0 {
-            return Err(RaylibLoadTextureError::TextureFromFileFailed(filename));
+            return Err(RaylibLoadTextureError::TextureFromFileFailed { filename });
         }
         Ok(Texture2D(t))
     }
