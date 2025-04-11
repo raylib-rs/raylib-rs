@@ -230,6 +230,7 @@ pub trait RaylibPalette {
     /** Magenta                    */ const MAGENTA:    Color = Color::new(255,   0, 255, 255);
     /** My own White (raylib logo) */ const RAYWHITE:   Color = Color::new(245, 245, 245, 255);
 }
+impl RaylibPalette for Color {}
 
 /// CSS Color constants
 pub trait CSSPalette {
@@ -383,6 +384,7 @@ pub trait CSSPalette {
     /** #ffff00ff */ const YELLOW:               Color = Color::new(0xff, 0xff, 0x00, 0xff);
     /** #9acd32ff */ const YELLOWGREEN:          Color = Color::new(0x9a, 0xcd, 0x32, 0xff);
 }
+impl CSSPalette for Color {}
 
 /// Color constants
 impl Color {
