@@ -13,9 +13,19 @@ use std::ffi::{CString, OsString};
 use std::mem::ManuallyDrop;
 
 fn no_drop<T>(_thing: T) {}
-make_thin_wrapper!(Font, ffi::Font, ffi::UnloadFont);
+make_thin_wrapper!(
+    /// Font, font texture and GlyphInfo array data
+    Font,
+    ffi::Font,
+    ffi::UnloadFont
+);
 make_thin_wrapper!(WeakFont, ffi::Font, no_drop);
-make_thin_wrapper!(GlyphInfo, ffi::GlyphInfo, no_drop);
+make_thin_wrapper!(
+    /// GlyphInfo, font characters glyphs info
+    GlyphInfo,
+    ffi::GlyphInfo,
+    no_drop
+);
 
 #[repr(transparent)]
 #[derive(Debug)]
@@ -85,6 +95,7 @@ impl Drop for Codepoints {
 }
 
 impl RaylibHandle {
+    /// Load all codepoints from a UTF-8 text string, codepoints count returned by parameter
     pub(crate) fn load_codepoints(&mut self, text: &str) -> Codepoints {
         let ptr = CString::new(text).unwrap();
         let mut len = 0;
@@ -97,11 +108,14 @@ impl RaylibHandle {
         }
     }
 
+    /// Get total number of codepoints in a UTF-8 encoded string
     pub fn get_codepoint_count(text: &str) -> i32 {
         let ptr = CString::new(text).unwrap();
         unsafe { ffi::GetCodepointCount(ptr.as_ptr()) }
     }
 
+    /// Unload font from GPU memory (VRAM)
+    #[inline]
     pub fn unload_font(&mut self, font: WeakFont) {
         unsafe { ffi::UnloadFont(font.0) };
     }
@@ -265,12 +279,18 @@ impl RaylibFont for WeakFont {}
 impl RaylibFont for Font {}
 
 pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
+    /// Base size (default chars height)
+    #[inline]
     fn base_size(&self) -> i32 {
         self.as_ref().baseSize
     }
+    /// Texture atlas containing the glyphs
+    #[inline]
     fn texture(&self) -> &Texture2D {
         unsafe { std::mem::transmute(&self.as_ref().texture) }
     }
+    /// Glyphs info data
+    #[inline]
     fn chars(&self) -> &[GlyphInfo] {
         unsafe {
             std::slice::from_raw_parts(
@@ -279,6 +299,8 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
             )
         }
     }
+    /// Glyphs info data
+    #[inline]
     fn chars_mut(&mut self) -> &mut [GlyphInfo] {
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -289,6 +311,7 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     }
 
     /// Check if a font is valid
+    #[inline]
     fn is_font_valid(&self) -> bool {
         unsafe { ffi::IsFontValid(*self.as_ref()) }
     }
@@ -303,16 +326,19 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     }
 
     /// Get glyph font info data for a codepoint (unicode character), fallback to '?' if not found
+    #[inline]
     fn get_glyph_info(&self, codepoint: char) -> GlyphInfo {
         unsafe { GlyphInfo(ffi::GetGlyphInfo(*self.as_ref(), codepoint as i32)) }
     }
 
     /// Gets index position for a unicode character on `font`.
+    #[inline]
     fn get_glyph_index(&self, codepoint: char) -> i32 {
         unsafe { ffi::GetGlyphIndex(*self.as_ref(), codepoint as i32) }
     }
 
     /// Get glyph rectangle in font atlas for a codepoint (unicode character), fallback to '?' if not found
+    #[inline]
     fn get_glyph_atlas_rec(&self, codepoint: char) -> Rectangle {
         unsafe { ffi::GetGlyphAtlasRec(*self.as_ref(), codepoint as i32).into() }
     }
@@ -443,6 +469,8 @@ impl RaylibHandle {
         unsafe { ffi::MeasureText(c_text.as_ptr(), font_size) }
     }
 
+    /// Set vertical line spacing when drawing with line-breaks
+    #[inline]
     pub fn set_text_line_spacing(&self, spacing: i32) {
         unsafe { ffi::SetTextLineSpacing(spacing) }
     }

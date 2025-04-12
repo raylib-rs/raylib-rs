@@ -126,8 +126,14 @@ make_thin_wrapper!(
 
 impl FilePathList {
     /// Length of the file path list
+    #[inline]
     pub const fn count(&self) -> u32 {
         self.0.count
+    }
+    /// The amount of files that can be held in this list.
+    #[inline]
+    pub const fn capacity(&self) -> u32 {
+        self.0.capacity
     }
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
@@ -145,8 +151,14 @@ impl FilePathList {
 
 impl DroppedFilePathList {
     /// Length of the file path list
+    #[inline]
     pub const fn count(&self) -> u32 {
         self.0.count
+    }
+    /// The amount of files that can be held in this list.
+    #[inline]
+    pub const fn capacity(&self) -> u32 {
+        self.0.capacity
     }
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
@@ -203,8 +215,10 @@ impl RaylibHandle {
     }
 
     /// Check if a given path is a file or a directory
+    ///
     /// # Errors
     /// This function will return an error if the supplied bytes contain an internal 0 byte. The NulError returned will contain the bytes as well as the position of the nul byte.
+    #[must_use]
     pub fn is_path_file<A>(&self, filename: A) -> bool
     where
         A: Into<OsString>,
@@ -246,6 +260,7 @@ impl RaylibHandle {
     }
 
     /// Check if a file has been dropped into window
+    #[inline]
     pub fn load_dropped_files(&self) -> DroppedFilePathList {
         unsafe { DroppedFilePathList(ffi::LoadDroppedFiles()) }
     }

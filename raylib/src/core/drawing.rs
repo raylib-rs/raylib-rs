@@ -32,6 +32,7 @@ impl RaylibHandle {
         let d = RaylibDrawHandle(self);
         d
     }
+    /// Setup canvas (framebuffer) to start drawing.
     // Every FnMut is a FnOnce, but not every FnOnce is a FnMut. The closure may possibly execute multiple times throughout the program, but not multiple times in a single call to this method.
     // Taking a FnOnce instead of a FnMut when the function only needs to be called once in this method makes the method slightly more versatile/less needlessly restrictive for no actual cost.
     pub fn draw<'a>(&'a mut self, _: &RaylibThread, func: impl FnOnce(RaylibDrawHandle<'a>)) {
@@ -129,6 +130,7 @@ where
         RaylibTextureMode(self, PhantomData)
     }
 
+    /// Begin drawing to render texture.
     fn draw_texture_mode<'a, 'b>(
         &'a mut self,
         _: &RaylibThread,
@@ -180,6 +182,7 @@ where
         RaylibVRMode(self, PhantomData, PhantomData)
     }
 
+    /// Begin stereo rendering (requires VR simulator).
     fn draw_vr_stereo_mode<'a, 'b>(
         &'a mut self,
         vr_config: &'b mut VrStereoConfig,
@@ -231,6 +234,7 @@ where
         RaylibMode2D(self)
     }
 
+    /// Begin 2D mode with custom camera (2D).
     #[allow(non_snake_case)]
     fn draw_mode2D<'a>(
         &'a mut self,
@@ -287,6 +291,7 @@ where
         RaylibMode3D(self)
     }
 
+    /// Begin 3D mode with custom camera (3D).
     #[allow(non_snake_case)]
     fn draw_mode3D<'a>(
         &'a mut self,
@@ -342,6 +347,7 @@ where
         RaylibShaderMode(self, PhantomData)
     }
 
+    /// Begin custom shader drawing.
     fn draw_shader_mode<'a, 'b>(
         &'a mut self,
         shader: &'b mut Shader,
@@ -391,6 +397,7 @@ where
         RaylibBlendMode(self)
     }
 
+    /// Begin blending mode (alpha, additive, multiplied, subtract, custom).
     fn draw_blend_mode<'a>(
         &'a mut self,
         blend_mode: crate::consts::BlendMode,
@@ -446,6 +453,7 @@ where
         RaylibScissorMode(self)
     }
 
+    /// Begin scissor mode (define screen area for following drawing).
     fn draw_scissor_mode<'a>(
         &'a mut self,
         x: i32,
@@ -477,16 +485,19 @@ pub trait RaylibDraw {
     }
 
     /// Get texture that is used for shapes drawing
+    #[inline]
     fn get_shapes_texture(&self) -> Texture2D {
         Texture2D(unsafe { ffi::GetShapesTexture() })
     }
 
     /// Get texture source rectangle that is used for shapes drawing
+    #[inline]
     fn get_shapes_texture_rectangle(&self) -> Rectangle {
         unsafe { ffi::GetShapesTextureRectangle() }
     }
 
     /// Define default texture used to draw shapes
+    #[inline]
     fn set_shapes_texture(
         &mut self,
         texture: impl AsRef<ffi::Texture2D>,
@@ -595,7 +606,8 @@ pub trait RaylibDraw {
         }
     }
 
-    /// Draw lines sequence    #[inline]
+    /// Draw lines sequence
+    #[inline]
     fn draw_line_strip(&mut self, points: &[Vector2], color: impl Into<ffi::Color>) {
         unsafe {
             ffi::DrawLineStrip(
@@ -1008,6 +1020,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw rectangle with rounded edges outline
+    #[inline]
     fn draw_rectangle_rounded_lines_ex(
         &mut self,
         rec: impl Into<ffi::Rectangle>,
@@ -1198,7 +1211,7 @@ pub trait RaylibDraw {
         }
     }
 
-    ///Draws a texture (or part of it) that stretches or shrinks nicely
+    /// Draws a texture (or part of it) that stretches or shrinks nicely
     #[inline]
     fn draw_texture_n_patch(
         &mut self,
@@ -1299,8 +1312,8 @@ pub trait RaylibDraw {
         }
     }
 
-    // Argument list mirrors raylib's `DrawTextPro` C API; refactoring would diverge from upstream.
-    #[allow(clippy::too_many_arguments)]
+    /// Draw text using Font and pro parameters (rotation)
+    #[inline]
     fn draw_text_pro(
         &mut self,
         font: impl AsRef<ffi::Font>,
@@ -1349,16 +1362,19 @@ pub trait RaylibDraw {
     }
 
     /// Enable waiting for events when the handle is dropped, no automatic event polling
+    #[inline]
     fn enable_event_waiting(&self) {
         unsafe { ffi::EnableEventWaiting() }
     }
 
     /// Disable waiting for events when the handle is dropped, no automatic event polling
+    #[inline]
     fn disable_event_waiting(&self) {
         unsafe { ffi::DisableEventWaiting() }
     }
 
     /// Draw a polygon outline of n sides with extended parameters
+    #[inline]
     fn draw_poly_lines_ex(
         &mut self,
         center: Vector2,
@@ -1380,6 +1396,7 @@ pub trait RaylibDraw {
         }
     }
     /// Draw spline: Linear, minimum 2 points
+    #[inline]
     fn draw_spline_linear(&mut self, points: &[Vector2], thick: f32, color: impl Into<ffi::Color>) {
         unsafe {
             ffi::DrawSplineLinear(
@@ -1391,6 +1408,7 @@ pub trait RaylibDraw {
         }
     }
     /// Draw spline: B-Spline, minimum 4 points
+    #[inline]
     fn draw_spline_basis(&mut self, points: &[Vector2], thick: f32, color: impl Into<ffi::Color>) {
         unsafe {
             ffi::DrawSplineBasis(
@@ -1402,6 +1420,7 @@ pub trait RaylibDraw {
         }
     }
     /// Draw spline: Catmull-Rom, minimum 4 points
+    #[inline]
     fn draw_spline_catmull_rom(
         &mut self,
         points: &[Vector2],
@@ -1419,6 +1438,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline: Quadratic Bezier, minimum 3 points (1 control point): [p1, c2, p3, c4...]
+    #[inline]
     fn draw_spline_bezier_quadratic(
         &mut self,
         points: &[Vector2],
@@ -1436,6 +1456,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline: Cubic Bezier, minimum 4 points (2 control points): [p1, c2, c3, p4, c5, c6...]
+    #[inline]
     fn draw_spline_bezier_cubic(
         &mut self,
         points: &[Vector2],
@@ -1453,6 +1474,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline segment: Linear, 2 points
+    #[inline]
     fn draw_spline_segment_linear(
         &mut self,
         p1: Vector2,
@@ -1464,6 +1486,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline segment: B-Spline, 4 points
+    #[inline]
     fn draw_spline_segment_basis(
         &mut self,
         p1: Vector2,
@@ -1486,6 +1509,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline segment: Catmull-Rom, 4 points
+    #[inline]
     fn draw_spline_segment_catmull_rom(
         &mut self,
         p1: Vector2,
@@ -1508,6 +1532,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline segment: Quadratic Bezier, 2 points, 1 control point
+    #[inline]
     fn draw_spline_segment_bezier_quadratic(
         &mut self,
         p1: Vector2,
@@ -1528,6 +1553,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline segment: Cubic Bezier, 2 points, 2 control points
+    #[inline]
     fn draw_spline_segment_bezier_cubic(
         &mut self,
         p1: Vector2,
@@ -1550,11 +1576,13 @@ pub trait RaylibDraw {
     }
 
     /// Get (evaluate) spline point: Linear
+    #[inline]
     fn get_spline_point_linear(&mut self, start_pos: Vector2, end_pos: Vector2, t: f32) -> Vector2 {
         unsafe { ffi::GetSplinePointLinear(start_pos.into(), end_pos.into(), t).into() }
     }
 
     /// Get (evaluate) spline point: B-Spline
+    #[inline]
     fn get_spline_point_basis(
         &mut self,
         p1: Vector2,
@@ -1567,6 +1595,7 @@ pub trait RaylibDraw {
     }
 
     /// Get (evaluate) spline point: Catmull-Rom
+    #[inline]
     fn get_spline_point_catmull_rom(
         &mut self,
         p1: Vector2,
@@ -1581,6 +1610,7 @@ pub trait RaylibDraw {
     }
 
     /// Get (evaluate) spline point: Quadratic Bezier
+    #[inline]
     fn get_spline_point_bezier_quad(
         &mut self,
         p1: Vector2,
@@ -1591,6 +1621,8 @@ pub trait RaylibDraw {
         unsafe { ffi::GetSplinePointBezierQuad(p1.into(), c2.into(), p3.into(), t).into() }
     }
 
+    /// Get (evaluate) spline point: Cubic Bezier
+    #[inline]
     fn get_spline_point_bezier_cubic(
         &mut self,
         p1: Vector2,
@@ -1615,7 +1647,7 @@ pub trait RaylibDraw3D {
         }
     }
 
-    ///// Draw a color-filled triangle (vertex in counter-clockwise order!)
+    /// Draw a color-filled triangle (vertex in counter-clockwise order!)
     #[allow(non_snake_case)]
     #[inline]
     fn draw_triangle3D(
@@ -1630,7 +1662,7 @@ pub trait RaylibDraw3D {
         }
     }
 
-    /// // Draw a triangle strip defined by points
+    /// Draw a triangle strip defined by points
     #[allow(non_snake_case)]
     #[inline]
     fn draw_triangle_strip3D(&mut self, points: &[Vector3], color: impl Into<ffi::Color>) {
@@ -1640,9 +1672,9 @@ pub trait RaylibDraw3D {
     }
 
     /// Draws a line in 3D world space.
-    #[inline]
     #[allow(non_snake_case)]
-    fn draw_line_3D(
+    #[inline]
+    fn draw_line3D(
         &mut self,
         start_pos: impl Into<ffi::Vector3>,
         end_pos: impl Into<ffi::Vector3>,
@@ -1654,9 +1686,9 @@ pub trait RaylibDraw3D {
     }
 
     /// Draws a circle in 3D world space.
-    #[inline]
     #[allow(non_snake_case)]
-    fn draw_circle_3D(
+    #[inline]
+    fn draw_circle3D(
         &mut self,
         center: impl Into<ffi::Vector3>,
         radius: f32,
@@ -1893,6 +1925,7 @@ pub trait RaylibDraw3D {
     }
 
     /// Draw capsule with the center of its sphere caps at startPos and endPos
+    #[inline]
     fn draw_capsule(
         &mut self,
         start_pos: impl Into<ffi::Vector3>,
@@ -1915,6 +1948,7 @@ pub trait RaylibDraw3D {
     }
 
     ///Draw capsule wireframe with the center of its sphere caps at startPos and endPos
+    #[inline]
     fn draw_capsule_wires(
         &mut self,
         start_pos: impl Into<ffi::Vector3>,
@@ -2090,8 +2124,7 @@ pub trait RaylibDraw3D {
     }
 
     /// Draw a billboard texture defined by source and rotation
-    // Argument list mirrors raylib's `DrawBillboardPro` C API; refactoring would diverge from upstream.
-    #[allow(clippy::too_many_arguments)]
+    #[inline]
     fn draw_billboard_pro(
         &mut self,
         camera: impl Into<ffi::Camera>,
@@ -2116,6 +2149,43 @@ pub trait RaylibDraw3D {
                 rotation,
                 tint.into(),
             )
+        }
+    }
+
+    /// Draw a model as points
+    #[inline]
+    fn draw_model_points(
+        &mut self,
+        model: impl Into<ffi::Model>,
+        position: impl Into<ffi::Vector3>,
+        scale: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawModelPoints(model.into(), position.into(), scale, tint.into());
+        }
+    }
+
+    /// Draw a model as points with extended parameters
+    #[inline]
+    fn draw_model_points_ex(
+        &mut self,
+        model: impl Into<ffi::Model>,
+        position: impl Into<ffi::Vector3>,
+        rotation_axis: impl Into<ffi::Vector3>,
+        angle: f32,
+        scale: impl Into<ffi::Vector3>,
+        tint: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawModelPointsEx(
+                model.into(),
+                position.into(),
+                rotation_axis.into(),
+                angle,
+                scale.into(),
+                tint.into(),
+            );
         }
     }
 }

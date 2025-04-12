@@ -6,11 +6,31 @@ use std::ffi::CString;
 use std::marker::PhantomData;
 use std::path::Path;
 
-make_thin_wrapper_lifetime!(Wave, ffi::Wave, RaylibAudio, ffi::UnloadWave);
-
-make_thin_wrapper_lifetime!(Sound, ffi::Sound, RaylibAudio, (ffi::UnloadSound), true);
-make_thin_wrapper_lifetime!(Music, ffi::Music, RaylibAudio, ffi::UnloadMusicStream);
 make_thin_wrapper_lifetime!(
+    /// Wave, audio wave data
+    Wave,
+    ffi::Wave,
+    RaylibAudio,
+    ffi::UnloadWave
+);
+
+make_thin_wrapper_lifetime!(
+    /// Sound
+    Sound,
+    ffi::Sound,
+    RaylibAudio,
+    (ffi::UnloadSound),
+    true
+);
+make_thin_wrapper_lifetime!(
+    /// Music, audio stream, anything longer than ~10 seconds should be streamed
+    Music,
+    ffi::Music,
+    RaylibAudio,
+    ffi::UnloadMusicStream
+);
+make_thin_wrapper_lifetime!(
+    /// AudioStream, custom audio stream
     AudioStream,
     ffi::AudioStream,
     RaylibAudio,
@@ -94,38 +114,6 @@ impl RaylibAudio {
         unsafe {
             ffi::SetAudioStreamBufferSizeDefault(size);
         }
-    }
-
-    /// Attach a raw processor callback to the entire audio pipeline. The
-    /// callback receives the final mixed output (interleaved f32 stereo,
-    /// `frames * 2` samples).
-    ///
-    /// # Safety
-    ///
-    /// See [`AudioStream::attach_audio_stream_processor`] for the audio-
-    /// thread safety requirements. The function pointer must outlive any
-    /// `RaylibAudio` that has it attached.
-    #[inline]
-    pub unsafe fn attach_audio_mixed_processor(
-        &self,
-        processor: unsafe extern "C" fn(*mut std::ffi::c_void, u32),
-    ) {
-        ffi::AttachAudioMixedProcessor(Some(processor));
-    }
-
-    /// Detach a previously-attached mixed processor. `processor` must be
-    /// the same function pointer you passed to
-    /// [`attach_audio_mixed_processor`].
-    ///
-    /// # Safety
-    ///
-    /// See [`attach_audio_mixed_processor`].
-    #[inline]
-    pub unsafe fn detach_audio_mixed_processor(
-        &self,
-        processor: unsafe extern "C" fn(*mut std::ffi::c_void, u32),
-    ) {
-        ffi::DetachAudioMixedProcessor(Some(processor));
     }
 
     /// Loads a new sound from file.
@@ -231,16 +219,24 @@ impl Drop for RaylibAudio {
 }
 
 impl<'aud> Wave<'aud> {
-    pub fn frame_count(&self) -> u32 {
+    /// Total number of frames (considering channels)
+    #[inline]
+    pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
-    pub fn sample_rate(&self) -> u32 {
+    /// Frequency (samples per second)
+    #[inline]
+    pub const fn sample_rate(&self) -> u32 {
         self.0.sampleRate
     }
-    pub fn sample_size(&self) -> u32 {
+    /// Bit depth (bits per sample): 8, 16, 32 (24 not supported)
+    #[inline]
+    pub const fn sample_size(&self) -> u32 {
         self.0.sampleSize
     }
-    pub fn channels(&self) -> u32 {
+    /// Number of channels (1-mono, 2-stereo, ...)
+    #[inline]
+    pub const fn channels(&self) -> u32 {
         self.0.channels
     }
     /// Extract the raw FFI [`ffi::Wave`] value, bypassing the automatic `Drop` that would
@@ -257,6 +253,7 @@ impl<'aud> Wave<'aud> {
         inner
     }
 
+    /// Checks if wave data is valid (data loaded and parameters)
     #[inline]
     pub fn is_wave_valid(&self) -> bool {
         unsafe { ffi::IsWaveValid(self.0) }
@@ -269,11 +266,10 @@ impl<'aud> Wave<'aud> {
         unsafe { ffi::ExportWave(self.0, c_filename.as_ptr()) }
     }
 
-    /// Export wave sample data to a C header (.h) file, returns true on
-    /// success. Raylib 6.0.
+    /*/// Export wave sample data to code (.h)
     #[inline]
-    pub fn export_as_code(&self, filename: impl AsRef<Path>) -> bool {
-        let c_filename = CString::new(filename.as_ref().to_string_lossy().as_bytes()).unwrap();
+    pub fn export_wave_as_code(&self, filename: &str) -> bool {
+        let c_filename = CString::new(filename).unwrap();
         unsafe { ffi::ExportWaveAsCode(self.0, c_filename.as_ptr()) }
     }
 
@@ -320,11 +316,15 @@ impl<'aud> AsMut<ffi::AudioStream> for Sound<'aud> {
 }
 
 impl<'aud> Sound<'aud> {
+    /// Checks if a sound is valid (data loaded and buffers initialized)
+    #[inline]
     pub fn is_sound_valid(&self) -> bool {
         unsafe { ffi::IsSoundValid(self.0) }
     }
 
-    pub fn frame_count(&self) -> u32 {
+    /// Total number of frames (considering channels)
+    #[inline]
+    pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
     /// Extract the raw FFI [`ffi::Sound`] value, bypassing the automatic `Drop` that would
@@ -383,6 +383,7 @@ impl<'aud> Sound<'aud> {
         unsafe { ffi::SetSoundPitch(self.0, pitch) }
     }
 
+    /// Set pan for a sound (0.5 is center)
     #[inline]
     pub fn set_pan(&self, pan: f32) {
         unsafe { ffi::SetSoundPan(self.0, pan) }
@@ -403,11 +404,15 @@ impl<'aud> Sound<'aud> {
 }
 
 impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
+    /// Checks if a sound is valid (data loaded and buffers initialized)
+    #[inline]
     pub fn is_sound_valid(&self) -> bool {
         unsafe { ffi::IsSoundValid(self.0) }
     }
 
-    pub fn frame_count(&self) -> u32 {
+    /// Total number of frames (considering channels)
+    #[inline]
+    pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
     /// Extract the raw FFI [`ffi::Sound`] value, bypassing the automatic `Drop` that would
@@ -467,6 +472,7 @@ impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
         unsafe { ffi::SetSoundPitch(self.0, pitch) }
     }
 
+    /// Set pan for a sound (0.5 is center)
     #[inline]
     pub fn set_pan(&self, pan: f32) {
         unsafe { ffi::SetSoundPan(self.0, pan) }
@@ -540,16 +546,19 @@ impl<'aud> Music<'aud> {
         unsafe { ffi::GetMusicTimePlayed(self.0) }
     }
 
+    /// Seek music to a position (in seconds)
     #[inline]
     pub fn seek_stream(&self, position: f32) {
         unsafe { ffi::SeekMusicStream(self.0, position) }
     }
 
+    /// Set pan for a music (0.5 is center)
     #[inline]
     pub fn set_pan(&self, pan: f32) {
         unsafe { ffi::SetMusicPan(self.0, pan) }
     }
 
+    /// Checks if a music stream is valid (context and buffers initialized)
     #[inline]
     pub fn is_music_valid(&self) -> bool {
         unsafe { ffi::IsMusicValid(self.0) }
@@ -557,16 +566,24 @@ impl<'aud> Music<'aud> {
 }
 
 impl<'aud> AudioStream<'aud> {
+    /// Checks if an audio stream is valid (buffers initialized)
+    #[inline]
     pub fn is_audio_stream_valid(&self) -> bool {
         unsafe { ffi::IsAudioStreamValid(self.0) }
     }
-    pub fn sample_rate(&self) -> u32 {
+    /// Frequency (samples per second)
+    #[inline]
+    pub const fn sample_rate(&self) -> u32 {
         self.0.sampleRate
     }
-    pub fn sample_size(&self) -> u32 {
+    /// Bit depth (bits per sample): 8, 16, 32 (24 not supported)
+    #[inline]
+    pub const fn sample_size(&self) -> u32 {
         self.0.sampleSize
     }
-    pub fn channels(&self) -> u32 {
+    /// Number of channels (1-mono, 2-stereo, ...)
+    #[inline]
+    pub const fn channels(&self) -> u32 {
         self.0.channels
     }
 
@@ -657,6 +674,8 @@ impl<'aud> AudioStream<'aud> {
         unsafe { ffi::IsAudioStreamProcessed(self.0) }
     }
 
+    /// Set pan for audio stream (0.5 is centered)
+    #[inline]
     pub fn set_pan(&self, pan: f32) {
         unsafe {
             ffi::SetAudioStreamPan(self.0, pan);
@@ -702,8 +721,10 @@ impl<'aud> AudioStream<'aud> {
     }
 }
 
-impl<'bind> Sound<'bind> {
-    pub fn alias<'snd>(&'snd self) -> Result<SoundAlias<'snd, 'bind>, Error> {
+impl<'bind> Sound<'_> {
+    /// Clone sound from existing sound data, clone does not own wave data
+    // NOTE: Wave data must be unallocated manually and will be shared across all clones
+    pub fn alias<'snd>(&'snd self) -> Result<SoundAlias<'bind, 'snd>, Error> {
         let s = unsafe { ffi::LoadSoundAlias(self.0) };
         if s.stream.buffer.is_null() {
             return Err(error!("failed to load sound from wave"));
