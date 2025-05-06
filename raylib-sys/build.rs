@@ -280,6 +280,14 @@ fn gen_bindings() {
         .clang_arg(plat)
         .parse_callbacks(Box::new(ignored_macros));
 
+    #[cfg(feature = "imgui")]
+    {
+        builder = builder
+            .clang_arg("-I./binding/imgui/decoy")
+            .clang_arg("-I./raylib/src")
+            .header("binding/rlImGui/rlImGui.h");
+    }
+
     if platform == Platform::Desktop && os == PlatformOS::Windows {
         // odd workaround for booleans being broken
         builder = builder.clang_arg("-D__STDC__");
@@ -322,6 +330,19 @@ fn gen_rgui() {
             .extra_warnings(false)
             .compile("rgui");
     }
+}
+
+fn gen_imgui() {
+    println!("cargo:rustc-link-lib=dylib=stdc++");
+
+    cc::Build::new()
+        .define("NO_FONT_AWESOME", "1")
+        .files(vec!["binding/rlImGui/rlImGui.cpp"])
+        .include("binding/imgui")
+        .include("raylib/src")
+        .warnings(false)
+        .extra_warnings(false)
+        .compile("rlImGui");
 }
 
 #[cfg(feature = "nobuild")]
@@ -375,6 +396,7 @@ fn link(platform: Platform, platform_os: PlatformOS) {
     println!("cargo:rustc-link-lib=static=raylib");
 }
 
+#[cfg(not(feature = "nobuild"))]
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=./binding/binding.h");
@@ -408,6 +430,39 @@ fn main() {
     link(platform, platform_os);
 
     gen_rgui();
+
+    #[cfg(feature = "imgui")]
+    gen_imgui();
+}
+
+#[cfg(feature = "nobuild")]
+fn main() {
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=./binding/binding.h");
+    let target = env::var("TARGET").expect("Cargo build scripts always have TARGET");
+
+    if target.contains("wasm32-unknown-emscripten") {
+        if let Err(e) = env::var("EMCC_CFLAGS") {
+            if e == std::env::VarError::NotPresent {
+                panic!("\nYou must have to set EMCC_CFLAGS yourself to compile for WASM.\n{}{}\"\n",{
+                    #[cfg(target_family = "windows")]
+                    {"set EMCC_CFLAGS="}
+                    #[cfg(not(target_family = "windows"))]
+                    {"export EMCC_CFLAGS="}
+                },"\"-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1\"");
+            } else {
+                panic!("\nError regarding EMCC_CFLAGS: {:?}\n", e);
+            }
+        }
+    }
+
+    #[cfg(feature = "bindgen")]
+    gen_bindings();
+
+    gen_rgui();
+
+    #[cfg(feature = "imgui")]
+    gen_imgui();
 }
 
 #[must_use]

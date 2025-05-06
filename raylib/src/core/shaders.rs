@@ -29,17 +29,10 @@ impl RaylibHandle {
         let c_vs_filename = vs_filename.map(|f| CString::new(f).unwrap());
         let c_fs_filename = fs_filename.map(|f| CString::new(f).unwrap());
 
-        // Trust me, I have tried ALL the RUST option ergonamics. This is the only way
-        // to get this to work without raylib breaking for whatever reason
-        // UPDATE FOR 2024 FROM ANOTHER PERSON: Yes this is still true, doing although "for some reason" is likely due to the pointer getting freed too early if you don't do it this way.
-        let shader = match (c_vs_filename, c_fs_filename) {
-            (Some(vs), Some(fs)) => unsafe { Shader(ffi::LoadShader(vs.as_ptr(), fs.as_ptr())) },
-            (None, Some(fs)) => unsafe { Shader(ffi::LoadShader(std::ptr::null(), fs.as_ptr())) },
-            (Some(vs), None) => unsafe { Shader(ffi::LoadShader(vs.as_ptr(), std::ptr::null())) },
-            (None, None) => unsafe { Shader(ffi::LoadShader(std::ptr::null(), std::ptr::null())) },
-        };
+        let vs = c_vs_filename.as_ref().map_or_else(std::ptr::null, |s| s.as_ptr());
+        let fs = c_fs_filename.as_ref().map_or_else(std::ptr::null, |s| s.as_ptr());
 
-        return shader;
+        Shader(unsafe { ffi::LoadShader(vs, fs) })
     }
 
     /// Loads shader from code strings and binds default locations.
@@ -51,32 +44,11 @@ impl RaylibHandle {
     ) -> Shader {
         let c_vs_code = vs_code.map(|f| CString::new(f).unwrap());
         let c_fs_code = fs_code.map(|f| CString::new(f).unwrap());
-        return match (c_vs_code, c_fs_code) {
-            (Some(vs), Some(fs)) => unsafe {
-                Shader(ffi::LoadShaderFromMemory(
-                    vs.as_ptr() as *mut c_char,
-                    fs.as_ptr() as *mut c_char,
-                ))
-            },
-            (None, Some(fs)) => unsafe {
-                Shader(ffi::LoadShaderFromMemory(
-                    std::ptr::null_mut(),
-                    fs.as_ptr() as *mut c_char,
-                ))
-            },
-            (Some(vs), None) => unsafe {
-                Shader(ffi::LoadShaderFromMemory(
-                    vs.as_ptr() as *mut c_char,
-                    std::ptr::null_mut(),
-                ))
-            },
-            (None, None) => unsafe {
-                Shader(ffi::LoadShaderFromMemory(
-                    std::ptr::null_mut(),
-                    std::ptr::null_mut(),
-                ))
-            },
-        };
+
+        let vs = c_vs_code.as_ref().map_or_else(std::ptr::null, |s| s.as_ptr());
+        let fs = c_fs_code.as_ref().map_or_else(std::ptr::null, |s| s.as_ptr());
+
+        Shader(unsafe { ffi::LoadShaderFromMemory(vs, fs) })
     }
 
     /// Get default shader. Modifying it modifies everthing that uses that shader
@@ -98,6 +70,7 @@ pub trait ShaderV {
 
 impl ShaderV for f32 {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_FLOAT;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self as *const f32 as *const c_void
     }
@@ -105,6 +78,7 @@ impl ShaderV for f32 {
 
 impl ShaderV for Vector2 {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC2;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self as *const Vector2 as *const c_void
     }
@@ -112,6 +86,7 @@ impl ShaderV for Vector2 {
 
 impl ShaderV for Vector3 {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC3;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self as *const Vector3 as *const c_void
     }
@@ -119,6 +94,7 @@ impl ShaderV for Vector3 {
 
 impl ShaderV for Vector4 {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC4;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self as *const Vector4 as *const c_void
     }
@@ -126,6 +102,7 @@ impl ShaderV for Vector4 {
 
 impl ShaderV for i32 {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_INT;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self as *const i32 as *const c_void
     }
@@ -133,6 +110,7 @@ impl ShaderV for i32 {
 
 impl ShaderV for [i32; 2] {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC2;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self.as_ptr() as *const c_void
     }
@@ -140,6 +118,7 @@ impl ShaderV for [i32; 2] {
 
 impl ShaderV for [i32; 3] {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC3;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self.as_ptr() as *const c_void
     }
@@ -147,6 +126,7 @@ impl ShaderV for [i32; 3] {
 
 impl ShaderV for [i32; 4] {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC4;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self.as_ptr() as *const c_void
     }
@@ -154,6 +134,7 @@ impl ShaderV for [i32; 4] {
 
 impl ShaderV for [f32; 2] {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC2;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self.as_ptr() as *const c_void
     }
@@ -161,6 +142,7 @@ impl ShaderV for [f32; 2] {
 
 impl ShaderV for [f32; 3] {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC3;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self.as_ptr() as *const c_void
     }
@@ -168,6 +150,7 @@ impl ShaderV for [f32; 3] {
 
 impl ShaderV for [f32; 4] {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC4;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self.as_ptr() as *const c_void
     }
@@ -175,6 +158,7 @@ impl ShaderV for [f32; 4] {
 
 impl ShaderV for &[i32] {
     const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_SAMPLER2D;
+    #[inline]
     unsafe fn value(&self) -> *const c_void {
         self.as_ptr() as *const c_void
     }
@@ -245,11 +229,13 @@ impl RaylibShader for WeakShader {}
 impl RaylibShader for Shader {}
 
 pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
+    /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]
     fn locs(&self) -> &[i32] {
         unsafe { std::slice::from_raw_parts(self.as_ref().locs, 32) }
     }
 
+    /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]
     fn locs_mut(&mut self) -> &mut [i32] {
         unsafe { std::slice::from_raw_parts_mut(self.as_mut().locs, 32) }
@@ -282,7 +268,7 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
         }
     }
 
-    /// et shader uniform value vector
+    /// Set shader uniform value vector
     #[inline]
     fn set_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S]) {
         unsafe {

@@ -13,7 +13,7 @@ use crate::ffi;
 use crate::math::Matrix;
 use crate::models::{Mesh, WeakMaterial};
 use crate::text::Codepoints;
-use std::convert::AsRef;
+use std::{convert::AsRef, marker::PhantomData};
 use std::ffi::CString;
 
 use super::camera::Camera2D;
@@ -23,35 +23,42 @@ use super::shaders::{Shader, ShaderV};
 impl RaylibHandle {
     #[must_use]
     /// Setup canvas (framebuffer) to start drawing.
-    /// Prefer using the closure version, [RaylibHandle::begin_drawing]. This version returns a handle that calls [raylib_sys::EndDrawing] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
-    pub fn begin_drawing(&mut self, _: &RaylibThread) -> RaylibDrawHandle {
+    /// Prefer using the closure version, [RaylibHandle::draw]. This version returns a handle that calls [raylib_sys::EndDrawing] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    pub fn begin_drawing<'a>(&'a mut self, _: &RaylibThread) -> RaylibDrawHandle<'a> {
         unsafe {
             ffi::BeginDrawing();
         };
+
         let d = RaylibDrawHandle(self);
         d
     }
-    pub fn start_drawing(&mut self, _: &RaylibThread, mut func: impl FnMut(RaylibDrawHandle)) {
+    /// Setup canvas (framebuffer) to start drawing.
+    // Every FnMut is a FnOnce, but not every FnOnce is a FnMut. The closure may possibly execute multiple times throughout the program, but not multiple times in a single call to this method.
+    // Taking a FnOnce instead of a FnMut when the function only needs to be called once in this method makes the method slightly more versatile/less needlessly restrictive for no actual cost.
+    pub fn draw<'a>(&'a mut self, _: &RaylibThread, func: impl FnOnce(RaylibDrawHandle<'a>)) {
         unsafe {
             ffi::BeginDrawing();
         };
         func(RaylibDrawHandle(self));
-        unsafe {
-            ffi::EndDrawing();
-        };
+        // Uncomment the following if RaylibDrawHandle has been changed to no longer call EndDrawing() in its drop implementation:
+        // unsafe {
+        //     ffi::EndDrawing();
+        // }
     }
 }
 
 pub struct RaylibDrawHandle<'a>(&'a mut RaylibHandle);
 
 impl<'a> RaylibDrawHandle<'a> {
-    #[deprecated = "Calling begin_drawing within itself will result in a runtime error."]
+    #[deprecated = "Calling begin_drawing within RaylibDrawHandle will result in a runtime error."]
+    #[doc(hidden)]
     pub fn begin_drawing(&mut self, _: &RaylibThread) -> RaylibDrawHandle {
         panic!("Nested begin_drawing call")
     }
-    #[deprecated = "Calling start_drawing within itself will result in a runtime error."]
-    pub fn start_drawing(&mut self, _: &RaylibThread, mut _func: impl FnMut(RaylibDrawHandle)) {
-        panic!("Nested start_drawing call")
+    #[deprecated = "Calling draw within RaylibDrawHandle will result in a runtime error."]
+    #[doc(hidden)]
+    pub fn draw(&mut self, _: &RaylibThread, mut _func: impl FnMut(RaylibDrawHandle)) {
+        panic!("Nested draw call")
     }
 }
 
@@ -80,21 +87,27 @@ impl<'a> RaylibDraw for RaylibDrawHandle<'a> {}
 
 // Texture2D Stuff
 
-pub struct RaylibTextureMode<'a, T>(&'a mut T, Option<&'a mut ffi::RenderTexture2D>);
+// The texture does not need to be held exclusively for the duration of the *previous* draw mode, nor does the *previous* draw mode need to outlive the texture reference.
+// The texture exclusivity and previous draw mode only need to outlive the *current* draw mode. So they can (and should) have separate lifetimes.
+//
+// Additionally: the texture is not actually *used* by this wrapper after construction, only the previous draw mode.
+// Some space can be saved by using a phantom instead of copying the actual reference.
+// The PhantomData will ensure that the borrow checker still analyzes as though the mutable texture reference was held, without physically storing it in the runtime memory.
+pub struct RaylibTextureMode<'a, 'b, T: 'a>(&'a mut T, PhantomData<&'b mut ffi::RenderTexture2D>);
 
-impl<'a, T> Drop for RaylibTextureMode<'a, T> {
+impl<'a, 'b, T: 'a> Drop for RaylibTextureMode<'a, 'b, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndTextureMode() }
     }
 }
-impl<'a, T> std::ops::Deref for RaylibTextureMode<'a, T> {
+impl<'a, 'b, T: 'a> std::ops::Deref for RaylibTextureMode<'a, 'b, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<'a, T> std::ops::DerefMut for RaylibTextureMode<'a, T> {
+impl<'a, 'b, T: 'a> std::ops::DerefMut for RaylibTextureMode<'a, 'b, T> {
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }
@@ -106,42 +119,46 @@ where
     Self: Sized,
 {
     /// Begin drawing to render texture.
-    /// Prefer using the closure version, [RaylibTextureModeExt::start_texture_mode] . This version returns a handle that calls [raylib_sys::EndTextureMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    /// Prefer using the closure version, [RaylibTextureModeExt::draw_texture_mode] . This version returns a handle that calls [raylib_sys::EndTextureMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
-    fn begin_texture_mode<'a>(
+    fn begin_texture_mode<'a, 'b>(
         &'a mut self,
         _: &RaylibThread,
-        framebuffer: &'a mut ffi::RenderTexture2D,
-    ) -> RaylibTextureMode<Self> {
+        framebuffer: &'b mut ffi::RenderTexture2D,
+    ) -> RaylibTextureMode<'a, 'b, Self> {
         unsafe { ffi::BeginTextureMode(*framebuffer) }
-        RaylibTextureMode(self, Some(framebuffer))
+        RaylibTextureMode(self, PhantomData)
     }
 
-    fn start_texture_mode<'a>(
+    /// Begin drawing to render texture.
+    fn draw_texture_mode<'a, 'b>(
         &'a mut self,
         _: &RaylibThread,
-        framebuffer: &'a mut ffi::RenderTexture2D,
-        mut func: impl FnMut(RaylibTextureMode<Self>, &'a mut ffi::RenderTexture2D),
+        framebuffer: &'b mut ffi::RenderTexture2D,
+        func: impl FnOnce(RaylibTextureMode<'a, 'b, Self>),
     ) {
         unsafe { ffi::BeginTextureMode(*framebuffer) }
-        func(RaylibTextureMode(self, None), framebuffer);
+        func(RaylibTextureMode(self, PhantomData));
+        // Uncomment the following if RaylibTextureMode has been changed to no longer call EndTextureMode() in its drop implementation:
+        // unsafe { ffi::EndTextureMode(); }
     }
 }
 
 // Only the DrawHandle and the RaylibHandle can start a texture
 impl<'a> RaylibTextureModeExt for RaylibDrawHandle<'a> {}
 impl RaylibTextureModeExt for RaylibHandle {}
-impl<'a, T> RaylibDraw for RaylibTextureMode<'a, T> {}
+impl<'a, 'b, T: 'a> RaylibDraw for RaylibTextureMode<'a, 'b, T> {}
 
 // VR Stuff
 
-pub struct RaylibVRMode<'a, T>(&'a T, Option<&'a mut VrStereoConfig>);
-impl<'a, T> Drop for RaylibVRMode<'a, T> {
+// Lifetime 'a is duplicatively stored in a PhantomData so that the borrow checker knows T is being held *exclusively* for the lifetime of the mode, without giving the false impression that it can actually be mutated by the library.
+pub struct RaylibVRMode<'a, 'b, T: 'a>(&'a T, PhantomData<&'a mut T>, PhantomData<&'b mut VrStereoConfig>);
+impl<'a, 'b, T: 'a> Drop for RaylibVRMode<'a, 'b, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndVrStereoMode() }
     }
 }
-impl<'a, T> std::ops::Deref for RaylibVRMode<'a, T> {
+impl<'a, 'b, T: 'a> std::ops::Deref for RaylibVRMode<'a, 'b, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -154,46 +171,49 @@ where
     Self: Sized,
 {
     /// Begin stereo rendering (requires VR simulator).
-    /// Prefer using the closure version, [RaylibVRModeExt::start_vr_stereo_mode] . This version returns a handle that calls [raylib_sys::EndVrStereoMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    /// Prefer using the closure version, [RaylibVRModeExt::draw_vr_stereo_mode] . This version returns a handle that calls [raylib_sys::EndVrStereoMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
-    fn begin_vr_stereo_mode<'a>(
+    fn begin_vr_stereo_mode<'a, 'b>(
         &'a mut self,
         _: &RaylibThread,
-        vr_config: &'a mut VrStereoConfig,
-    ) -> RaylibVRMode<Self> {
+        vr_config: &'b mut VrStereoConfig,
+    ) -> RaylibVRMode<'a, 'b, Self> {
         unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
-        RaylibVRMode(self, Some(vr_config))
+        RaylibVRMode(self, PhantomData, PhantomData)
     }
 
-    fn start_vr_stereo_mode<'a>(
+    /// Begin stereo rendering (requires VR simulator).
+    fn draw_vr_stereo_mode<'a, 'b>(
         &'a mut self,
-        vr_config: &'a mut VrStereoConfig,
-        mut func: impl FnMut(RaylibVRMode<Self>, &'a mut VrStereoConfig),
+        vr_config: &'b mut VrStereoConfig,
+        func: impl FnOnce(RaylibVRMode<'a, 'b, Self>),
     ) {
         unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
-        func(RaylibVRMode(&self, None), vr_config);
+        func(RaylibVRMode(self, PhantomData, PhantomData));
+        // Uncomment the following if RaylibVRMode has been changed to no longer call EndTextureMode() in its drop implementation:
+        // unsafe { ffi::EndVrStereoMode(); }
     }
 }
 
 impl<D: RaylibDraw> RaylibVRModeExt for D {}
-impl<'a, T> RaylibDraw for RaylibVRMode<'a, T> {}
+impl<'a, 'b, T: 'a> RaylibDraw for RaylibVRMode<'a, 'b, T> {}
 
 // 2D Mode
 
-pub struct RaylibMode2D<'a, T>(&'a mut T);
-impl<'a, T> Drop for RaylibMode2D<'a, T> {
+pub struct RaylibMode2D<'a, T: 'a>(&'a mut T);
+impl<'a, T: 'a> Drop for RaylibMode2D<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndMode2D() }
     }
 }
-impl<'a, T> std::ops::Deref for RaylibMode2D<'a, T> {
+impl<'a, T: 'a> std::ops::Deref for RaylibMode2D<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<'a, T> std::ops::DerefMut for RaylibMode2D<'a, T> {
+impl<'a, T: 'a> std::ops::DerefMut for RaylibMode2D<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }
@@ -204,51 +224,53 @@ where
     Self: Sized,
 {
     /// Begin 2D mode with custom camera (2D).
-    /// Prefer using the closure version, [RaylibMode2DExt::begin_mode2D]. This version returns a handle that calls [raylib_sys::EndMode2D] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    /// Prefer using the closure version, [RaylibMode2DExt::draw_mode2D]. This version returns a handle that calls [raylib_sys::EndMode2D] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[allow(non_snake_case)]
     #[must_use]
-    fn begin_mode2D(&mut self, camera: impl Into<ffi::Camera2D>) -> RaylibMode2D<Self> {
+    fn begin_mode2D(&mut self, camera: impl Into<ffi::Camera2D>) -> RaylibMode2D<'_, Self> {
         unsafe {
             ffi::BeginMode2D(camera.into());
         }
         RaylibMode2D(self)
     }
 
+    /// Begin 2D mode with custom camera (2D).
     #[allow(non_snake_case)]
-    fn start_mode2D(
-        &mut self,
+    fn draw_mode2D<'a>(
+        &'a mut self,
         camera: Camera2D,
-        mut func: impl FnMut(RaylibMode2D<Self>, Camera2D),
+        func: impl FnOnce(RaylibMode2D<'a, Self>),
     ) {
         unsafe {
             ffi::BeginMode2D(camera.into());
         }
-        func(RaylibMode2D(self), camera);
-        unsafe {
-            ffi::EndMode2D();
-        }
+        func(RaylibMode2D(self));
+        // Uncomment the following if RaylibMode2D has been changed to no longer call EndMode2D() in its drop implementation:
+        // unsafe {
+        //     ffi::EndMode2D();
+        // }
     }
 }
 
 impl<D: RaylibDraw> RaylibMode2DExt for D {}
-impl<'a, T> RaylibDraw for RaylibMode2D<'a, T> {}
+impl<'a, T: 'a> RaylibDraw for RaylibMode2D<'a, T> {}
 
 // 3D Mode
 
-pub struct RaylibMode3D<'a, T>(&'a mut T);
-impl<'a, T> Drop for RaylibMode3D<'a, T> {
+pub struct RaylibMode3D<'a, T: 'a>(&'a mut T);
+impl<'a, T: 'a> Drop for RaylibMode3D<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndMode3D() }
     }
 }
-impl<'a, T> std::ops::Deref for RaylibMode3D<'a, T> {
+impl<'a, T: 'a> std::ops::Deref for RaylibMode3D<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<'a, T> std::ops::DerefMut for RaylibMode3D<'a, T> {
+impl<'a, T: 'a> std::ops::DerefMut for RaylibMode3D<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }
@@ -259,53 +281,55 @@ where
     Self: Sized,
 {
     /// Begin 3D mode with custom camera (3D).
-    /// Prefer using the closure version, [RaylibMode3DExt::begin_mode3D]. This version returns a handle that calls [raylib_sys::EndMode3D] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    /// Prefer using the closure version, [RaylibMode3DExt::draw_mode3D]. This version returns a handle that calls [raylib_sys::EndMode3D] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[allow(non_snake_case)]
     #[must_use]
-    fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<Self> {
+    fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<'_, Self> {
         unsafe {
             ffi::BeginMode3D(camera.into());
         }
         RaylibMode3D(self)
     }
 
+    /// Begin 3D mode with custom camera (3D).
     #[allow(non_snake_case)]
-    fn start_mode3D(
-        &mut self,
+    fn draw_mode3D<'a>(
+        &'a mut self,
         camera: Camera3D,
-        mut func: impl FnMut(RaylibMode3D<Self>, Camera3D),
+        func: impl FnOnce(RaylibMode3D<'a, Self>),
     ) {
         unsafe {
             ffi::BeginMode3D(camera.into());
         }
-        func(RaylibMode3D(self), camera);
-        unsafe {
-            ffi::EndMode3D();
-        }
+        func(RaylibMode3D(self));
+        // Uncomment the following if RaylibMode3D has been changed to no longer call EndMode3D() in its drop implementation:
+        // unsafe {
+        //     ffi::EndMode3D();
+        // }
     }
 }
 
 impl<D: RaylibDraw> RaylibMode3DExt for D {}
-impl<'a, T> RaylibDraw for RaylibMode3D<'a, T> {}
-impl<'a, T> RaylibDraw3D for RaylibMode3D<'a, T> {}
+impl<'a, T: 'a> RaylibDraw for RaylibMode3D<'a, T> {}
+impl<'a, T: 'a> RaylibDraw3D for RaylibMode3D<'a, T> {}
 
 // shader Mode
 
-pub struct RaylibShaderMode<'a, T>(&'a mut T, Option<&'a mut Shader>);
+pub struct RaylibShaderMode<'a, 'b, T: 'a>(&'a mut T, PhantomData<&'b mut Shader>);
 
-impl<'a, T> Drop for RaylibShaderMode<'a, T> {
+impl<'a, 'b, T: 'a> Drop for RaylibShaderMode<'a, 'b, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndShaderMode() }
     }
 }
-impl<'a, T> std::ops::Deref for RaylibShaderMode<'a, T> {
+impl<'a, 'b, T: 'a> std::ops::Deref for RaylibShaderMode<'a, 'b, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<'a, T> std::ops::DerefMut for RaylibShaderMode<'a, T> {
+impl<'a, 'b, T: 'a> std::ops::DerefMut for RaylibShaderMode<'a, 'b, T> {
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }
@@ -316,43 +340,46 @@ where
     Self: Sized,
 {
     /// Begin custom shader drawing.
-    /// Prefer using the closure version, [RaylibShaderModeExt::begin_shader_mode]. This version returns a handle that calls [raylib_sys::EndShaderMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    /// Prefer using the closure version, [RaylibShaderModeExt::draw_shader_mode]. This version returns a handle that calls [raylib_sys::EndShaderMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
-    fn begin_shader_mode<'a>(&'a mut self, shader: &'a mut Shader) -> RaylibShaderMode<Self> {
+    fn begin_shader_mode<'a, 'b>(&'a mut self, shader: &'b mut Shader) -> RaylibShaderMode<'a, 'b, Self> {
         unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
-        RaylibShaderMode(self, Some(shader))
+        RaylibShaderMode(self, PhantomData)
     }
 
-    fn start_shader_mode<'a>(
+    /// Begin custom shader drawing.
+    fn draw_shader_mode<'a, 'b>(
         &'a mut self,
-        shader: &'a mut Shader,
-        mut func: impl FnMut(RaylibShaderMode<Self>, &'a mut Shader),
+        shader: &'b mut Shader,
+        func: impl FnOnce(RaylibShaderMode<'a, 'b, Self>),
     ) {
         unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
-        func(RaylibShaderMode(self, None), shader);
+        func(RaylibShaderMode(self, PhantomData));
+        // Uncomment the following if RaylibShaderMode has been changed to no longer call EndShaderMode() in its drop implementation:
+        // unsafe { ffi::EndShaderMode(); }
     }
 }
 
 impl<D: RaylibDraw> RaylibShaderModeExt for D {}
-impl<'a, T> RaylibDraw for RaylibShaderMode<'a, T> {}
-impl<'a, T> RaylibDraw3D for RaylibShaderMode<'a, T> {}
+impl<'a, 'b, T: 'a> RaylibDraw for RaylibShaderMode<'a, 'b, T> {}
+impl<'a, 'b, T: 'a> RaylibDraw3D for RaylibShaderMode<'a, 'b, T> {}
 
 // Blend Mode
 
-pub struct RaylibBlendMode<'a, T>(&'a mut T);
-impl<'a, T> Drop for RaylibBlendMode<'a, T> {
+pub struct RaylibBlendMode<'a, T: 'a>(&'a mut T);
+impl<'a, T: 'a> Drop for RaylibBlendMode<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndBlendMode() }
     }
 }
-impl<'a, T> std::ops::Deref for RaylibBlendMode<'a, T> {
+impl<'a, T: 'a> std::ops::Deref for RaylibBlendMode<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<'a, T> std::ops::DerefMut for RaylibBlendMode<'a, T> {
+impl<'a, T: 'a> std::ops::DerefMut for RaylibBlendMode<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }
@@ -363,43 +390,46 @@ where
     Self: Sized,
 {
     /// Begin blending mode (alpha, additive, multiplied, subtract, custom).
-    /// Prefer using the closure version, [RaylibBlendModeExt::begin_blend_mode]. This version returns a handle that calls [raylib_sys::EndBlendMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    /// Prefer using the closure version, [RaylibBlendModeExt::draw_blend_mode]. This version returns a handle that calls [raylib_sys::EndBlendMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
-    fn begin_blend_mode(&mut self, blend_mode: crate::consts::BlendMode) -> RaylibBlendMode<Self> {
+    fn begin_blend_mode(&mut self, blend_mode: crate::consts::BlendMode) -> RaylibBlendMode<'_, Self> {
         unsafe { ffi::BeginBlendMode((blend_mode as u32) as i32) }
         RaylibBlendMode(self)
     }
 
-    fn start_blend_mode(
-        &mut self,
+    /// Begin blending mode (alpha, additive, multiplied, subtract, custom).
+    fn draw_blend_mode<'a>(
+        &'a mut self,
         blend_mode: crate::consts::BlendMode,
-        mut func: impl FnMut(RaylibBlendMode<Self>),
+        func: impl FnOnce(RaylibBlendMode<'a, Self>),
     ) {
         unsafe { ffi::BeginBlendMode((blend_mode as u32) as i32) }
         func(RaylibBlendMode(self));
+        // Uncomment the following if RaylibBlendMode has been changed to no longer call EndBlendMode() in its drop implementation:
+        // unsafe { ffi::EndBlendMode(); }
     }
 }
 
 impl<D: RaylibDraw> RaylibBlendModeExt for D {}
-impl<'a, T> RaylibDraw for RaylibBlendMode<'a, T> {}
-impl<'a, T> RaylibDraw3D for RaylibBlendMode<'a, T> {}
+impl<'a, T: 'a> RaylibDraw for RaylibBlendMode<'a, T> {}
+impl<'a, T: 'a> RaylibDraw3D for RaylibBlendMode<'a, T> {}
 
 // Scissor Mode stuff
 
-pub struct RaylibScissorMode<'a, T>(&'a mut T);
-impl<'a, T> Drop for RaylibScissorMode<'a, T> {
+pub struct RaylibScissorMode<'a, T: 'a>(&'a mut T);
+impl<'a, T: 'a> Drop for RaylibScissorMode<'a, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndScissorMode() }
     }
 }
-impl<'a, T> std::ops::Deref for RaylibScissorMode<'a, T> {
+impl<'a, T: 'a> std::ops::Deref for RaylibScissorMode<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<'a, T> std::ops::DerefMut for RaylibScissorMode<'a, T> {
+impl<'a, T: 'a> std::ops::DerefMut for RaylibScissorMode<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }
@@ -410,7 +440,7 @@ where
     Self: Sized,
 {
     /// Begin scissor mode (define screen area for following drawing).
-    /// Prefer using the closure version, [RaylibScissorModeExt::begin_scissor_mode]. This version returns a handle that calls [raylib_sys::EndScissorMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    /// Prefer using the closure version, [RaylibScissorModeExt::draw_scissor_mode]. This version returns a handle that calls [raylib_sys::EndScissorMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
     fn begin_scissor_mode(
         &mut self,
@@ -418,27 +448,30 @@ where
         y: i32,
         width: i32,
         height: i32,
-    ) -> RaylibScissorMode<Self> {
+    ) -> RaylibScissorMode<'_, Self> {
         unsafe { ffi::BeginScissorMode(x, y, width, height) }
         RaylibScissorMode(self)
     }
 
-    fn start_scissor_mode(
-        &mut self,
+    /// Begin scissor mode (define screen area for following drawing).
+    fn draw_scissor_mode<'a>(
+        &'a mut self,
         x: i32,
         y: i32,
         width: i32,
         height: i32,
-        mut func: impl FnMut(RaylibScissorMode<Self>),
+        func: impl FnOnce(RaylibScissorMode<'a, Self>),
     ) {
         unsafe { ffi::BeginScissorMode(x, y, width, height) }
         func(RaylibScissorMode(self));
+        // Uncomment the following if RaylibScissorMode has been changed to no longer call EndScissorMode() in its drop implementation:
+        // unsafe { ffi::EndScissorMode(); }
     }
 }
 
 impl<D: RaylibDraw> RaylibScissorModeExt for D {}
-impl<'a, T> RaylibDraw for RaylibScissorMode<'a, T> {}
-impl<'a, T: RaylibDraw3D> RaylibDraw3D for RaylibScissorMode<'a, T> {}
+impl<'a, T: 'a> RaylibDraw for RaylibScissorMode<'a, T> {}
+impl<'a, T: 'a + RaylibDraw3D> RaylibDraw3D for RaylibScissorMode<'a, T> {}
 
 // Actual drawing functions
 
@@ -452,16 +485,19 @@ pub trait RaylibDraw {
     }
 
     /// Get texture that is used for shapes drawing
+    #[inline]
     fn get_shapes_texture(&self) -> Texture2D {
         Texture2D(unsafe { ffi::GetShapesTexture() })
     }
 
     /// Get texture source rectangle that is used for shapes drawing
+    #[inline]
     fn get_shapes_texture_rectangle(&self) -> Rectangle {
         unsafe { ffi::GetShapesTextureRectangle() }
     }
 
     /// Define default texture used to draw shapes
+    #[inline]
     fn set_shapes_texture(
         &mut self,
         texture: impl AsRef<ffi::Texture2D>,
@@ -548,7 +584,8 @@ pub trait RaylibDraw {
         }
     }
 
-    /// Draw lines sequence    #[inline]
+    /// Draw lines sequence
+    #[inline]
     fn draw_line_strip(&mut self, points: &[Vector2], color: impl Into<ffi::Color>) {
         unsafe {
             ffi::DrawLineStrip(
@@ -918,6 +955,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw rectangle with rounded edges outline
+    #[inline]
     fn draw_rectangle_rounded_lines_ex(
         &mut self,
         rec: impl Into<ffi::Rectangle>,
@@ -1108,7 +1146,7 @@ pub trait RaylibDraw {
         }
     }
 
-    ///Draws a texture (or part of it) that stretches or shrinks nicely
+    /// Draws a texture (or part of it) that stretches or shrinks nicely
     #[inline]
     fn draw_texture_n_patch(
         &mut self,
@@ -1209,6 +1247,8 @@ pub trait RaylibDraw {
         }
     }
 
+    /// Draw text using Font and pro parameters (rotation)
+    #[inline]
     fn draw_text_pro(
         &mut self,
         font: impl AsRef<ffi::Font>,
@@ -1257,16 +1297,19 @@ pub trait RaylibDraw {
     }
 
     /// Enable waiting for events when the handle is dropped, no automatic event polling
+    #[inline]
     fn enable_event_waiting(&self) {
         unsafe { ffi::EnableEventWaiting() }
     }
 
     /// Disable waiting for events when the handle is dropped, no automatic event polling
+    #[inline]
     fn disable_event_waiting(&self) {
         unsafe { ffi::DisableEventWaiting() }
     }
 
     /// Draw a polygon outline of n sides with extended parameters
+    #[inline]
     fn draw_poly_lines_ex(
         &mut self,
         center: Vector2,
@@ -1288,6 +1331,7 @@ pub trait RaylibDraw {
         }
     }
     /// Draw spline: Linear, minimum 2 points
+    #[inline]
     fn draw_spline_linear(&mut self, points: &[Vector2], thick: f32, color: impl Into<ffi::Color>) {
         unsafe {
             ffi::DrawSplineLinear(
@@ -1299,6 +1343,7 @@ pub trait RaylibDraw {
         }
     }
     /// Draw spline: B-Spline, minimum 4 points
+    #[inline]
     fn draw_spline_basis(&mut self, points: &[Vector2], thick: f32, color: impl Into<ffi::Color>) {
         unsafe {
             ffi::DrawSplineBasis(
@@ -1310,6 +1355,7 @@ pub trait RaylibDraw {
         }
     }
     /// Draw spline: Catmull-Rom, minimum 4 points
+    #[inline]
     fn draw_spline_catmull_rom(
         &mut self,
         points: &[Vector2],
@@ -1327,6 +1373,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline: Quadratic Bezier, minimum 3 points (1 control point): [p1, c2, p3, c4...]
+    #[inline]
     fn draw_spline_bezier_quadratic(
         &mut self,
         points: &[Vector2],
@@ -1344,6 +1391,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline: Cubic Bezier, minimum 4 points (2 control points): [p1, c2, c3, p4, c5, c6...]
+    #[inline]
     fn draw_spline_bezier_cubic(
         &mut self,
         points: &[Vector2],
@@ -1361,6 +1409,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline segment: Linear, 2 points
+    #[inline]
     fn draw_spline_segment_linear(
         &mut self,
         p1: Vector2,
@@ -1372,6 +1421,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline segment: B-Spline, 4 points
+    #[inline]
     fn draw_spline_segment_basis(
         &mut self,
         p1: Vector2,
@@ -1394,6 +1444,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline segment: Catmull-Rom, 4 points
+    #[inline]
     fn draw_spline_segment_catmull_rom(
         &mut self,
         p1: Vector2,
@@ -1416,6 +1467,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline segment: Quadratic Bezier, 2 points, 1 control point
+    #[inline]
     fn draw_spline_segment_bezier_quadratic(
         &mut self,
         p1: Vector2,
@@ -1436,6 +1488,7 @@ pub trait RaylibDraw {
     }
 
     /// Draw spline segment: Cubic Bezier, 2 points, 2 control points
+    #[inline]
     fn draw_spline_segment_bezier_cubic(
         &mut self,
         p1: Vector2,
@@ -1458,11 +1511,13 @@ pub trait RaylibDraw {
     }
 
     /// Get (evaluate) spline point: Linear
+    #[inline]
     fn get_spline_point_linear(&mut self, start_pos: Vector2, end_pos: Vector2, t: f32) -> Vector2 {
         unsafe { ffi::GetSplinePointLinear(start_pos.into(), end_pos.into(), t).into() }
     }
 
     /// Get (evaluate) spline point: B-Spline
+    #[inline]
     fn get_spline_point_basis(
         &mut self,
         p1: Vector2,
@@ -1475,6 +1530,7 @@ pub trait RaylibDraw {
     }
 
     /// Get (evaluate) spline point: Catmull-Rom
+    #[inline]
     fn get_spline_point_catmull_rom(
         &mut self,
         p1: Vector2,
@@ -1489,6 +1545,7 @@ pub trait RaylibDraw {
     }
 
     /// Get (evaluate) spline point: Quadratic Bezier
+    #[inline]
     fn get_spline_point_bezier_quad(
         &mut self,
         p1: Vector2,
@@ -1499,6 +1556,8 @@ pub trait RaylibDraw {
         unsafe { ffi::GetSplinePointBezierQuad(p1.into(), c2.into(), p3.into(), t).into() }
     }
 
+    /// Get (evaluate) spline point: Cubic Bezier
+    #[inline]
     fn get_spline_point_bezier_cubic(
         &mut self,
         p1: Vector2,
@@ -1523,7 +1582,7 @@ pub trait RaylibDraw3D {
         }
     }
 
-    ///// Draw a color-filled triangle (vertex in counter-clockwise order!)
+    /// Draw a color-filled triangle (vertex in counter-clockwise order!)
     #[allow(non_snake_case)]
     #[inline]
     fn draw_triangle3D(
@@ -1538,7 +1597,7 @@ pub trait RaylibDraw3D {
         }
     }
 
-    /// // Draw a triangle strip defined by points
+    /// Draw a triangle strip defined by points
     #[allow(non_snake_case)]
     #[inline]
     fn draw_triangle_strip3D(&mut self, points: &[Vector3], color: impl Into<ffi::Color>) {
@@ -1548,9 +1607,9 @@ pub trait RaylibDraw3D {
     }
 
     /// Draws a line in 3D world space.
-    #[inline]
     #[allow(non_snake_case)]
-    fn draw_line_3D(
+    #[inline]
+    fn draw_line3D(
         &mut self,
         start_pos: impl Into<ffi::Vector3>,
         end_pos: impl Into<ffi::Vector3>,
@@ -1562,9 +1621,9 @@ pub trait RaylibDraw3D {
     }
 
     /// Draws a circle in 3D world space.
-    #[inline]
     #[allow(non_snake_case)]
-    fn draw_circle_3D(
+    #[inline]
+    fn draw_circle3D(
         &mut self,
         center: impl Into<ffi::Vector3>,
         radius: f32,
@@ -1661,9 +1720,8 @@ pub trait RaylibDraw3D {
         let tr = transforms
             .iter()
             .map(|f| f.into())
-            .collect::<Vec<ffi::Matrix>>()
-            .as_ptr();
-        unsafe { ffi::DrawMeshInstanced(*mesh.as_ref(), material.0, tr, transforms.len() as i32) }
+            .collect::<Vec<ffi::Matrix>>();
+        unsafe { ffi::DrawMeshInstanced(*mesh.as_ref(), material.0, tr.as_ptr(), transforms.len() as i32) }
     }
 
     /// Draws a sphere.
@@ -1802,6 +1860,7 @@ pub trait RaylibDraw3D {
     }
 
     /// Draw capsule with the center of its sphere caps at startPos and endPos
+    #[inline]
     fn draw_capsule(
         &mut self,
         start_pos: impl Into<ffi::Vector3>,
@@ -1824,6 +1883,7 @@ pub trait RaylibDraw3D {
     }
 
     ///Draw capsule wireframe with the center of its sphere caps at startPos and endPos
+    #[inline]
     fn draw_capsule_wires(
         &mut self,
         start_pos: impl Into<ffi::Vector3>,
@@ -1999,6 +2059,7 @@ pub trait RaylibDraw3D {
     }
 
     /// Draw a billboard texture defined by source and rotation
+    #[inline]
     fn draw_billboard_pro(
         &mut self,
         camera: impl Into<ffi::Camera>,
@@ -2027,6 +2088,7 @@ pub trait RaylibDraw3D {
     }
 
     /// Draw a model as points
+    #[inline]
     fn draw_model_points(
         &mut self,
         model: impl Into<ffi::Model>,
@@ -2040,6 +2102,7 @@ pub trait RaylibDraw3D {
     }
 
     /// Draw a model as points with extended parameters
+    #[inline]
     fn draw_model_points_ex(
         &mut self,
         model: impl Into<ffi::Model>,

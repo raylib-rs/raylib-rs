@@ -38,7 +38,6 @@ Most development happens over at: https://github.com/raylib-rs/raylib-rs
 | ------ | ------------------ | ------------------ | ------------------ | --------------     | ------- |
 | core   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x:     |
 | rgui   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | ❔                 | :x:     |
-| physac | :construction:     | :construction:     | :construction:     | ❔                 | :x:     |
 | rlgl   | :heavy_check_mark: | :x:                | :x:                | ❔                 | :x:     |
 
 ## Build Dependencies
@@ -72,6 +71,18 @@ fn main() {
     }
 }
 ```
+
+### NixOS
+
+To use raylib-rs on NixOS there's a provided nix-shell file `shell.nix` at the root of the repo that should get you up and running, which can be used like so:
+
+`nix-shell ./shell.nix`
+
+You'll also need to enable the Wayland feature on the raylib crate: 
+
+`cargo add raylib -F wayland`
+
+Contributions are welcome to improve or fix the shell.nix!
 
 # Tech Notes
 

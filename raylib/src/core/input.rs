@@ -248,8 +248,8 @@ impl RaylibHandle {
 
     /// Get mouse wheel movement for both X and Y
     #[inline]
-    pub fn get_mouse_wheel_move_v(&self) -> raylib_sys::Vector2 {
-        unsafe { ffi::GetMouseWheelMoveV() }
+    pub fn get_mouse_wheel_move_v(&self) -> Vector2 {
+        unsafe { ffi::GetMouseWheelMoveV().into() }
     }
 
     /// Returns touch position X for touch point 0 (relative to screen size).
@@ -279,11 +279,13 @@ impl RaylibHandle {
     }
 
     /// Set internal gamepad mappings (SDL_GameControllerDB)
+    #[inline]
     pub fn set_gamepad_mappings(&self, bind: &[c_char]) -> i32 {
         unsafe { ffi::SetGamepadMappings(bind.as_ptr()) }
     }
 
     /// Set gamepad vibration for both motors
+    #[inline]
     pub fn set_gamepad_vibration(
         &mut self,
         gamepad: i32,
@@ -318,7 +320,7 @@ impl RaylibHandle {
         unsafe { ffi::GetTouchPointCount() as u32 }
     }
 
-    /// Gets gesture hold time in milliseconds.
+    /// Gets gesture hold time in seconds.
     #[inline]
     pub fn get_gesture_hold_duration(&self) -> f32 {
         unsafe { ffi::GetGestureHoldDuration() }

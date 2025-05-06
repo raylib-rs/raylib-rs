@@ -1,7 +1,7 @@
 [package]
 name = "raylib"
-version = "5.5.0"
-authors = ["DeltaPHC <phclem@protonmail.com>"]
+version = "5.5.1"
+authors = ["raylib-rs team <https://github.com/raylib-rs/raylib-rs>"]
 license = "Zlib"
 readme = "../README.md"
 description = "Safe Rust bindings for Raylib."
@@ -13,16 +13,18 @@ edition = "2018"
 autoexamples = false
 
 [dependencies]
-raylib-sys = { version = "5.5.0", path = "../raylib-sys" }
-cfg-if = "1.0.0"
+raylib-sys = { version = "5.5.1", path = "../raylib-sys" }
 serde = { version = "1.0.125", features = ["derive"], optional = true }
 serde_json = { version = "1.0.64", optional = true }
+imgui = { version = "0.12.0", optional = true, features = [] }
+imgui-sys = { version = "0.12.0", optional = true }
 
 mint = { version = "0.5.9", optional = true }
 
-specs = { version = "0.16.1", default = false, optional = true }
-specs-derive = { version = "0.4.1", optional = true }
 thiserror = "1.0.61"
+
+paste = "1.0"
+seq-macro = "0.3.5"
 
 [dev-dependencies]
 structopt = "0.3"
@@ -41,93 +43,7 @@ opengl_es_30 = ["raylib-sys/opengl_es_30"]
 sdl = ["raylib-sys/sdl"]
 noscreenshot = ["raylib-sys/noscreenshot"]
 nogif = ["raylib-sys/nogif"]
-
-[[example]]
-name = "specs"
-path = "examples/samples/specs.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "rgui"
-path = "examples/samples/rgui.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "arkanoid"
-path = "examples/samples/arkanoid.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "logo"
-path = "examples/samples/logo.rs"
-doc-scrape-examples = true
-
-
-[[example]]
-name = "camera2D"
-path = "examples/samples/camera2D.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "raymarch"
-path = "examples/samples/raymarch.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "font"
-path = "examples/samples/font.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "drop"
-path = "examples/samples/drop.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "texture"
-path = "examples/samples/texture.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "yaw_pitch_roll"
-path = "examples/samples/yaw_pitch_roll.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "roguelike"
-path = "examples/samples/roguelike.rs"
-required-features = ["with_serde"]
-doc-scrape-examples = true
-
-[[example]]
-name = "input"
-path = "examples/samples/input.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "3d_camera_first_person"
-path = "examples/samples/3d_camera_first_person.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "model_shader"
-path = "examples/samples/model_shader.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "extensions"
-path = "examples/samples/extensions.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "asteroids"
-path = "examples/samples/asteroids.rs"
-doc-scrape-examples = true
-
-[[example]]
-name = "floppy"
-path = "examples/samples/floppy.rs"
-doc-scrape-examples = true
-
-[package.metadata.docs.rs]
-cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
+imgui = ["raylib-sys/imgui", "dep:imgui", "dep:imgui-sys"]
+nobuild = ["raylib-sys/nobuild"]
+bindgen = ["raylib-sys/bindgen"]
+default = ["bindgen"]
