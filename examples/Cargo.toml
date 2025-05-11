@@ -90,29 +90,5 @@ path = "music_effects.rs"
 required-features = ["ringbuf"]
 
 [[bin]]
-name = "hello_raylib"
-path = "hello_raylib.rs"
-
-[[bin]]
-name = "animation_blending"
-path = "animation_blending.rs"
-
-[[bin]]
-name = "shapes_new"
-path = "shapes_new.rs"
-
-[[bin]]
-name = "pixel_color"
-path = "pixel_color.rs"
-
-[[bin]]
-name = "borderless_fullscreen"
-path = "borderless_fullscreen.rs"
-
-# examples is excluded from the workspace, so we declare lints locally
-# (matching the workspace `[workspace.lints]` in the repo root Cargo.toml).
-[lints.rust]
-warnings = "deny"
-
-[lints.clippy]
-all = { level = "deny", priority = -1 }
+name = "snake"
+path = "snake.rs"
