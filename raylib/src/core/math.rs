@@ -567,8 +567,7 @@ impl Vector3 {
     }
 
     /// Calculate angle between two vectors
-    pub fn angle_to(&self, v2: Vector3) -> f32
-    {
+    pub fn angle_to(&self, v2: Vector3) -> f32 {
         let cross = Vector3 { x: self.y*v2.z - self.z*v2.y, y: self.z*v2.x - self.x*v2.z, z: self.x*v2.y - self.y*v2.x };
         let len = (cross.x*cross.x + cross.y*cross.y + cross.z*cross.z).sqrt();
         let dot = self.x*v2.x + self.y*v2.y + self.z*v2.z;

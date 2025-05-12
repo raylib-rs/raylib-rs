@@ -15,10 +15,11 @@ const CAMERA_ROTATION_SPEED : f32 = 0.03;
 const CAMERA_PAN_SPEED      : f32 = 0.2;
 
 // Camera mouse movement sensitivity
-const CAMERA_MOUSE_MOVE_SENSITIVITY  : f32 = 0.003;     // TODO: it should be independant of framerate
+const CAMERA_MOUSE_MOVE_SENSITIVITY  : f32 = 0.003;
 const CAMERA_MOUSE_SCROLL_SENSITIVITY: f32 = 1.5;
 
-const CAMERA_ORBITAL_SPEED: f32 =                   0.5;       // Radians per second
+// Radians per second
+const CAMERA_ORBITAL_SPEED: f32 = 0.5;       
 
 
 const CAMERA_FIRST_PERSON_STEP_TRIGONOMETRIC_DIVIDER: f32 =   8.0;
@@ -131,31 +132,27 @@ impl Camera3D {
         c.projection = CameraProjection::CAMERA_ORTHOGRAPHIC;
         c
     }
-    // Returns the cameras forward vector (normalized)
-    pub fn get_forward(&self) -> Vector3 
-    {
+    /// Returns the cameras forward vector (normalized)
+    pub fn get_forward(&self) -> Vector3 {
         (self.target - self.position).normalized()
     }
 
-    // Returns the cameras up vector (normalized)
-    // Note: The up vector might not be perpendicular to the forward vector
-    pub fn get_up(&self) -> Vector3
-    {
+    /// Returns the cameras up vector (normalized)
+    /// Note: The up vector might not be perpendicular to the forward vector
+    pub fn get_up(&self) -> Vector3 {
         self.up.normalized()
     }
 
-    // Returns the cameras right vector (normalized)
-    pub fn get_right(&self) -> Vector3
-    {
+    /// Returns the cameras right vector (normalized)
+    pub fn get_right(&self) -> Vector3 {
         let forward = self.get_forward();
         let up = self.get_up();
 
         forward.cross(up)
     }
 
-    // Moves the camera in its forward direction
-    pub fn move_forward(&mut self, distance: f32, move_in_world_plane: bool)
-    {
+    /// Moves the camera in its forward direction
+    pub fn move_forward(&mut self, distance: f32, move_in_world_plane: bool) {
         let mut forward = self.get_forward();
 
         if move_in_world_plane
@@ -173,9 +170,8 @@ impl Camera3D {
         self.target = self.target + forward;
     }
 
-    // Moves the camera in its up direction
-    pub fn move_up(&mut self, distance: f32)
-    {
+    /// Moves the camera in its up direction
+    pub fn move_up(&mut self, distance: f32) {
         let mut up = self.get_up();
 
         // Scale by distance
@@ -186,9 +182,8 @@ impl Camera3D {
         self.target = self.target + up;
     }
 
-    // Moves the camera target in its current right direction
-    pub fn move_right(&mut self, distance: f32, move_in_world_plane: bool)
-    {
+    /// Moves the camera target in its current right direction
+    pub fn move_right(&mut self, distance: f32, move_in_world_plane: bool) {
         let mut right = self.get_right();
 
         if move_in_world_plane
@@ -206,9 +201,8 @@ impl Camera3D {
         self.target = self.target + right;
     }
 
-    // Moves the camera position closer/farther to/from the camera target
-    pub fn move_to_target(&mut self, delta: f32)
-    {
+    /// Moves the camera position closer/farther to/from the camera target
+    pub fn move_to_target(&mut self, delta: f32){
         let mut distance = self.position.distance_to(self.target);
 
         // Apply delta
@@ -222,12 +216,11 @@ impl Camera3D {
         self.position = self.target + forward.scale_by(distance);
     }
 
-    // Rotates the camera around its up vector
-    // Yaw is "looking left and right"
-    // If rotateAroundTarget is false, the camera rotates around its position
-    // Note: angle must be provided in radians
-    pub fn set_yaw(&mut self, angle: f32, rotate_around_target: bool)
-    {
+    /// Rotates the camera around its up vector
+    /// Yaw is "looking left and right"
+    /// If rotateAroundTarget is false, the camera rotates around its position
+    /// Note: angle must be provided in radians
+    pub fn set_yaw(&mut self, angle: f32, rotate_around_target: bool) {
         // Rotation axis
         let up = self.get_up();
 
@@ -249,13 +242,12 @@ impl Camera3D {
         }
     }
 
-    // Rotates the camera around its right vector, pitch is "looking up and down"
-    //  - lockView prevents camera overrotation (aka "somersaults")
-    //  - rotateAroundTarget defines if rotation is around target or around its position
-    //  - rotateUp rotates the up direction as well (typically only usefull in CAMERA_FREE)
-    // NOTE: angle must be provided in radians
-    pub fn set_pitch(&mut self, mut angle: f32, lock_view: bool, rotate_around_target: bool, rotate_up: bool)
-    {
+    /// Rotates the camera around its right vector, pitch is "looking up and down"
+    ///  - lockView prevents camera overrotation (aka "somersaults")
+    ///  - rotateAroundTarget defines if rotation is around target or around its position
+    ///  - rotateUp rotates the up direction as well (typically only usefull in CAMERA_FREE)
+    /// NOTE: angle must be provided in radians
+    pub fn set_pitch(&mut self, mut angle: f32, lock_view: bool, rotate_around_target: bool, rotate_up: bool) {
         // Up direction
         let up = self.get_up();
 
@@ -302,11 +294,10 @@ impl Camera3D {
         }
     }
 
-    // Rotates the camera around its forward vector
-    // Roll is "turning your head sideways to the left or right"
-    // Note: angle must be provided in radians
-    pub fn set_roll(&mut self, angle: f32)
-    {
+    /// Rotates the camera around its forward vector
+    /// Roll is "turning your head sideways to the left or right"
+    /// Note: angle must be provided in radians
+    pub fn set_roll(&mut self, angle: f32) {
         // Rotation axis
         let forward = self.get_forward();
 
@@ -314,15 +305,13 @@ impl Camera3D {
         self.up = self.up.rotate_by(Quaternion::from_axis_angle(forward, angle));
     }
 
-    // Returns the camera view matrix
-    pub fn get_view_matrix(&self) -> Matrix
-    {
+    /// Returns the camera view matrix
+    pub fn get_view_matrix(&self) -> Matrix {
         Matrix::look_at(self.position, self.target, self.up)
     }
 
-    // Returns the camera projection matrix
-    pub fn get_projection_matrix(&self, aspect: f32) -> Matrix
-    {
+    /// Returns the camera projection matrix
+    pub fn get_projection_matrix(&self, aspect: f32) -> Matrix {
         if self.projection == CameraProjection::CAMERA_PERSPECTIVE
         {
             return Matrix::perspective(self.fovy * DEG2RAD as f32, aspect, CAMERA_CULL_DISTANCE_NEAR as f32, CAMERA_CULL_DISTANCE_FAR as f32);
@@ -338,10 +327,9 @@ impl Camera3D {
         return Matrix::identity();
     }
 
-    // Update camera position for selected mode
-    // Camera mode: CAMERA_FREE, CAMERA_FIRST_PERSON, CAMERA_THIRD_PERSON, CAMERA_ORBITAL or CUSTOM
-    pub fn update_camera(&mut self, rl: &mut RaylibHandle, mode: CameraMode)
-    {
+    /// Update camera position for selected mode
+    /// Camera mode: CAMERA_FREE, CAMERA_FIRST_PERSON, CAMERA_THIRD_PERSON, CAMERA_ORBITAL or CUSTOM
+    pub fn update_camera(&mut self, rl: &mut RaylibHandle, mode: CameraMode) {
         let mouse_position_delta = rl.get_mouse_delta();
         
         let move_in_world_plane = (mode == CameraMode::CAMERA_FIRST_PERSON) || (mode == CameraMode::CAMERA_THIRD_PERSON);
@@ -420,9 +408,8 @@ impl Camera3D {
         }
     }
 
-    // Update camera movement, movement/rotation values should be provided by user
-    pub fn update_camera_pro(&mut self, movement: Vector3, rotation: Vector3, zoom: f32)
-    {
+    /// Update camera movement, movement/rotation values should be provided by user
+    pub fn update_camera_pro(&mut self, movement: Vector3, rotation: Vector3, zoom: f32) {
         // Required values
         // movement.x - Move forward/backward
         // movement.y - Move right/left
