@@ -8,25 +8,25 @@ use crate::ffi;
 pub use ffi::CameraProjection;
 
 const CAMERA_CULL_DISTANCE_NEAR: f64 = RL_CULL_DISTANCE_NEAR;
-const CAMERA_CULL_DISTANCE_FAR: f64 = RL_CULL_DISTANCE_FAR;
+const CAMERA_CULL_DISTANCE_FAR : f64 = RL_CULL_DISTANCE_FAR;
 
-const CAMERA_MOVE_SPEED      : f32 =                          0.09;
-const CAMERA_ROTATION_SPEED  : f32 =                          0.03;
-const CAMERA_PAN_SPEED       : f32 =                          0.2;
+const CAMERA_MOVE_SPEED     : f32 = 0.09;
+const CAMERA_ROTATION_SPEED : f32 = 0.03;
+const CAMERA_PAN_SPEED      : f32 = 0.2;
 
 // Camera mouse movement sensitivity
-const CAMERA_MOUSE_MOVE_SENSITIVITY      : f32 =             0.003;     // TODO: it should be independant of framerate
-const CAMERA_MOUSE_SCROLL_SENSITIVITY    : f32 =             1.5;
+const CAMERA_MOUSE_MOVE_SENSITIVITY  : f32 = 0.003;     // TODO: it should be independant of framerate
+const CAMERA_MOUSE_SCROLL_SENSITIVITY: f32 = 1.5;
 
-const CAMERA_ORBITAL_SPEED         : f32 =                   0.5;       // Radians per second
+const CAMERA_ORBITAL_SPEED: f32 =                   0.5;       // Radians per second
 
 
-const CAMERA_FIRST_PERSON_STEP_TRIGONOMETRIC_DIVIDER : f32 = 8.0;
-const CAMERA_FIRST_PERSON_STEP_DIVIDER             : f32 =   30.0;
-const CAMERA_FIRST_PERSON_WAVING_DIVIDER          : f32 =    200.0;
+const CAMERA_FIRST_PERSON_STEP_TRIGONOMETRIC_DIVIDER: f32 =   8.0;
+const CAMERA_FIRST_PERSON_STEP_DIVIDER              : f32 =  30.0;
+const CAMERA_FIRST_PERSON_WAVING_DIVIDER            : f32 = 200.0;
 
 // PLAYER (used by camera)
-const PLAYER_MOVEMENT_SENSITIVITY                 : f32 =    20.0;
+const PLAYER_MOVEMENT_SENSITIVITY: f32 = 20.0;
 
 
 /// Camera, defines position/orientation in 3d space
