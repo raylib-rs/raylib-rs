@@ -81,7 +81,7 @@ platform [here](https://github.com/raysan5/raylib/wiki)
 
 ```toml
 [dependencies]
-raylib = { version = "5.6" }
+raylib = { version = "5.6.0" }
 ```
 
 Then in your code, use it as `sola_raylib`:
