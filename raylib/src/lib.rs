@@ -72,5 +72,5 @@ pub use crate::core::misc::open_url;
 pub use crate::core::*;
 
 // Re-exports
-#[cfg(feature = "with_serde")]
+#[cfg(feature = "serde")]
 pub use serde;
