@@ -326,7 +326,7 @@ fn gen_rgui() {
     #[cfg(target_os = "windows")]
     {
         cc::Build::new()
-            .files(vec!["binding/rgui_wrapper.cpp", "binding/utils_log.cpp"])
+            .files(vec!["binding/rgui_wrapper.cpp"])
             .include("binding")
             .include("raylib/src")
             .warnings(false)
@@ -337,9 +337,46 @@ fn gen_rgui() {
     #[cfg(not(target_os = "windows"))]
     {
         cc::Build::new()
-            .files(vec!["binding/rgui_wrapper.c", "binding/utils_log.c"])
+            .files(vec!["binding/rgui_wrapper.c"])
             .include("binding")
             .include("raylib/src")
+            .warnings(false)
+            // .flag("-std=c99")
+            .extra_warnings(false)
+            .compile("rgui");
+    }
+}
+
+fn gen_imgui() {
+    println!("cargo:rustc-link-lib=dylib=stdc++");
+
+    cc::Build::new()
+        .define("NO_FONT_AWESOME", "1")
+        .files(vec!["binding/rlImGui/rlImGui.cpp"])
+        .include("binding/imgui")
+        .include("raylib/src")
+        .warnings(false)
+        .extra_warnings(false)
+        .compile("rlImGui");
+}
+
+fn gen_utils() {
+    // Compile the code and link with cc crate
+    #[cfg(target_os = "windows")]
+    {
+        cc::Build::new()
+            .files(vec!["binding/utils_log.cpp"])
+            .include("binding")
+            .warnings(false)
+            // .flag("-std=c99")
+            .extra_warnings(false)
+            .compile("rgui");
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        cc::Build::new()
+            .files(vec!["binding/utils_log.c"])
+            .include("binding")
             .warnings(false)
             // .flag("-std=c99")
             .extra_warnings(false)
@@ -432,6 +469,11 @@ fn main() {
 
     #[cfg(feature = "raygui")]
     gen_rgui();
+
+    #[cfg(feature = "imgui")]
+    gen_imgui();
+
+    gen_utils();
 }
 
 #[must_use]
