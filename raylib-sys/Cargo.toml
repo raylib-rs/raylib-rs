@@ -1,6 +1,6 @@
 [package]
 name = "raylib-sys"
-version = "5.5.2"
+version = "5.6"
 authors = ["raylib-rs team <https://github.com/raylib-rs/raylib-rs>"]
 license = "Zlib"
 description = "Raw FFI bindings for raylib. sola-raylib-sys N.x tracks raylib N.x (e.g. 5.x → raylib 5.5; 6.x → raylib 6.0)."
@@ -13,7 +13,7 @@ exclude = ["raylib/examples/*", "raylib/projects/*", "raylib/templates/*"]
 
 [build-dependencies]
 cmake = "0.1.51"
-cc = { version = "1.0", features = ["parallel"]}
+cc = { version = "1.0", features = ["parallel"] }
 bindgen = "0.70"
 
 [features]
@@ -81,7 +81,7 @@ imgui = ["dep:imgui", "dep:imgui-sys"]
 nobuild = []
 
 # OpenGL stuff, intended for fixing #122
-opengl_11 = [] # buggy? might not work with wayland
+opengl_11 = []    # buggy? might not work with wayland
 opengl_21 = []
 opengl_33 = []
 opengl_43 = []
@@ -105,7 +105,7 @@ GLFW_BUILD_X11 = []
 INCLUDE_EVERYTHING = []
 
 USE_AUDIO = []
-SUPPORT_MODULE_RSHAPES  = []
+SUPPORT_MODULE_RSHAPES = []
 SUPPORT_MODULE_RTEXTURES = []
 SUPPORT_MODULE_RTEXT = []
 SUPPORT_MODULE_RMODELS = []

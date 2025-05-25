@@ -30,14 +30,17 @@ The latest released version on crates.io is 6.0.0 (binds raylib 6.0).
 
 Pull from GitHub if you want the latest `main`:
 
-```
-raylib = { package = "sola-raylib", git = "https://github.com/brettchalupa/sola-raylib.git" }
-```
+- Resources are automatically cleaned up when they go out of scope (or when `std::mem::drop` is called). This is essentially RAII. This means that "Unload" functions are not exposed (and not necessary unless you obtain a `Weak` resource using make_weak()).
+- Most of the Raylib API is exposed through `RaylibHandle`, which is for enforcing that Raylib is only initialized once, and for making sure the window is closed properly. RaylibHandle has no size and goes away at compile time. Because of mutability rules, Raylib-rs is thread safe!
+- A `RaylibHandle` and `RaylibThread` are obtained through `raylib::init_window(...)` or through the newer `init()` function which will allow you to `build` up some window options before initialization (replaces `set_config_flags`). RaylibThread should not be sent to any other threads, or used in a any syncronization primitives (Mutex, Arc) etc.
+- Manually closing the window is unnecessary, because `CloseWindow` is automatically called when `RaylibHandle` goes out of scope.
+- `Model::set_material`, `Material::set_shader`, and `MaterialMap::set_texture` methods were added since one cannot set the fields directly. Also enforces correct ownership semantics.
+- `Font::from_data`, `Font::set_chars`, and `Font::set_texture` methods were added to create a `Font` from loaded `CharInfo` data.
+- `SubText` and `FormatText` are omitted, and are instead covered by Rust's string slicing and Rust's `format!` macro, respectively.
 
-## Features / Bugs
+Versions normally match Raylib's own, with the minor number incremented for any patches (i.e. 5.5.1 for Raylib v5.5). On occassion, if enough breaking changes are made in between Raylib releases, we'll release a 5.6, which is 5.5 but with breaking changes.
 
-Though this binding tries to stay close to the simple C API, it makes some
-changes to be more idiomatic for Rust.
+# Installation
 
 - Resources are automatically cleaned up when they go out of scope (or when
   `std::mem::drop` is called). This is essentially RAII. This means that
@@ -62,11 +65,11 @@ changes to be more idiomatic for Rust.
 - `SubText` and `FormatText` are omitted, and are instead covered by Rust's
   string slicing and Rust's `format!` macro, respectively.
 
-| API    | Windows            | Linux              | macOS              | Web                | Android | 
-| ------ | ------------------ | ------------------ | ------------------ | --------------     | ------- |
-| core   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x:     |
-| rgui   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | ❔                 | :x:     |
-| rlgl   | :heavy_check_mark: | :x:                | :x:                | ❔                 | :x:     |
+| API  | Windows            | Linux              | macOS              | Web                | Android |
+| ---- | ------------------ | ------------------ | ------------------ | ------------------ | ------- |
+| core | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x:     |
+| rgui | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | ❔                 | :x:     |
+| rlgl | :heavy_check_mark: | :x:                | :x:                | ❔                 | :x:     |
 
 ## Build Dependencies
 
@@ -78,7 +81,7 @@ platform [here](https://github.com/raysan5/raylib/wiki)
 
 ```toml
 [dependencies]
-sola-raylib = "6.0"
+raylib = { version = "5.6" }
 ```
 
 Then in your code, use it as `sola_raylib`:
@@ -129,26 +132,7 @@ for a writeup that should still largely apply.
 
 ## Tech Notes
 
-- Structs holding resources have RAII/move semantics, including: `Image`,
-  `Texture2D`, `RenderTexture2D`, `Font`, `Mesh`, `Shader`, `Material`, and
-  `Model`.
-- `Wave`, `Sound`, `Music`, and `AudioStream` have lifetimes bound to
-  `AudioHandle`.
-- Functions dealing with string data take in `&str` and/or return an owned
-  `String`, for the sake of safety. The exception to this is the gui draw
-  functions which take &CStr to avoid per frame allocations. The `rstr!` macro
-  helps make this easy.
-- In C, `LoadFontData` returns a pointer to a heap-allocated array of `CharInfo`
-  structs. In this Rust binding, said array is copied into an owned
-  `Vec<CharInfo>`, the original data is freed, and the owned Vec is returned.
-- In C, `LoadDroppedFiles` returns a pointer to an array of strings owned by
-  raylib. Again, for safety and also ease of use, this binding copies said array
-  into a `Vec<String>` which is returned to the caller.
-- Linking is automatic, though I've only tested on Windows 10, Ubuntu, and
-  MacOS 15. Other platforms may have other considerations.
-- OpenGL 3.3, 2.1, and ES 2.0 may be forced via adding `["opengl_33"]`,
-  `["opengl_21"]` or `["opengl_es_20]` to the `features` array in your
-  Cargo.toml dependency definition.
+You'll also need to enable the Wayland feature on the raylib crate:
 
 ## Experimental raylib 6.0 platform flags
 
@@ -167,55 +151,13 @@ raylib's C side supports at HEAD. Expect rough edges.
   with `sudo dnf install SDL2-devel` on Fedora, `sudo apt install libsdl2-dev`
   on Debian/Ubuntu, `brew install sdl2` on macOS. Typical usage:
 
-  ```
-  # Linux or macOS, with SDL installed:
-  cargo add sola-raylib --features sdl,software_render
-  ```
-
-  Or to try it from this repo: `just example-sw hello_raylib`.
-
-  Windows would need the `rcore_desktop_win32` native backend (not yet wired in
-  sola-raylib).
-- `platform_memory`: compiles the `PLATFORM=Memory` headless framebuffer
-  backend. The backend builds and links; the APIs for reading the framebuffer
-  back out (from `rlsw.h`, e.g. `swGetColorBuffer`) are **not yet wrapped in the
-  safe crate**, so there's no usable headless-capture path today.
-- `platform_web_rgfw`: swaps the Emscripten/GLFW web backend for RGFW
-  (`PLATFORM=WebRGFW`) when cross-compiling to `wasm32-unknown-emscripten`. Only
-  meaningful with an emscripten build loop.
-
-If you're evaluating one of these for production, test on your target platform
-first and expect to track upstream raylib for fixes.
-
-## Drop ordering
-
-Resources like `Texture2D`, `RenderTexture2D`, `Font`, `Model`, `Mesh`, and
-`Shader` hold GPU handles and free them in their `Drop` impl. `RaylibHandle`'s
-`Drop` calls `CloseWindow()`, which tears down the GL context. **GPU resources
-must drop before the `RaylibHandle`** — otherwise their unload calls run against
-a dead context and segfault.
-
-Rust drops local variables in reverse declaration order, and struct fields in
-**declaration order**. So if you hold both resources and `RaylibHandle` in the
-same struct, declare `rl` last:
-
-```rust
-struct Engine {
-    // resources (dropped first, while the GL context is still alive)
-    texture: Texture2D,
-    rt: RenderTexture2D,
-    // handle (dropped last -> CloseWindow runs after resources are unloaded)
-    thread: RaylibThread,
-    rl: RaylibHandle,
-}
-```
-
-The same rule applies when `rl` and resources are locals in the same function:
-declare `rl` first so it drops last.
-
-Audio resources (`Wave`, `Sound`, `Music`, `AudioStream`) are lifetime-bound to
-`RaylibAudio`, so the borrow checker enforces their ordering for you — no
-discipline required.
+- Structs holding resources have RAII/move semantics, including: `Image`, `Texture2D`, `RenderTexture2D`, `Font`, `Mesh`, `Shader`, `Material`, and `Model`.
+- `Wave`, `Sound`, `Music`, and `AudioStream` have lifetimes bound to `AudioHandle`.
+- Functions dealing with string data take in `&str` and/or return an owned `String`, for the sake of safety. The exception to this is the gui draw functions which take &CStr to avoid per frame allocations. The `rstr!` macro helps make this easy.
+- In C, `LoadFontData` returns a pointer to a heap-allocated array of `CharInfo` structs. In this Rust binding, said array is copied into an owned `Vec<CharInfo>`, the original data is freed, and the owned Vec is returned.
+- In C, `LoadDroppedFiles` returns a pointer to an array of strings owned by raylib. Again, for safety and also ease of use, this binding copies said array into a `Vec<String>` which is returned to the caller.
+- I've tried to make linking automatic, though I've only tested on Windows 10, Ubuntu, and MacOS 15. Other platforms may have other considerations.
+- OpenGL 3.3, 2.1, and ES 2.0 may be forced via adding `["opengl_33"]`, `["opengl_21"]` or `["opengl_es_20]` to the `features` array in your Cargo.toml dependency definition.
 
 ## Building from source
 
@@ -224,9 +166,10 @@ discipline required.
 
 ### If building for Wayland on Linux
 
-1. Install these packages:\
+3. Install these packages:  
    `libglfw3-dev wayland-devel libxkbcommon-devel wayland-protocols wayland-protocols-devel libecm-dev`
-2. Enable wayland by adding `features=["wayland"]` to your dependency definition
+
+###### Note that this may not be a comprehensive list, please add details for your distribution or expand on these packages if you believe this to be incomplete.
 
 **Note that the packages may not be a comprehensive list, please add details for
 your distribution or expand on these packages if you believe this to be
