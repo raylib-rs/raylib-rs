@@ -22,9 +22,11 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Range, Sub, 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+pub use glam;
 pub type Vector2 = glam::Vec2;
 pub type Vector3 = glam::Vec3;
 pub type Vector4 = glam::Vec4;
+// note(jest): Transform and Matrix do not use glam because of incompat struct alignment so they are manually implemented below
 
 macro_rules! optional_serde_struct {
     ($def:item) => {
