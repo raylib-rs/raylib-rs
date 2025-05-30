@@ -3,7 +3,7 @@ use crate::consts::Gesture;
 use crate::core::math::Vector2;
 use crate::core::RaylibHandle;
 use crate::{ffi, trace_log};
-use raylib_sys::{GamepadButton, TraceLogLevel};
+use raylib_sys::TraceLogLevel;
 
 use std::ffi::c_char;
 use std::ffi::CStr;

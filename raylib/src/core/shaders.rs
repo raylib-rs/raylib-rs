@@ -1,5 +1,4 @@
 //! Code for the safe manipulation of shaders
-use thiserror::Error;
 
 use crate::consts::ShaderUniformDataType;
 use crate::core::math::Matrix;
@@ -7,7 +6,7 @@ use crate::core::math::{Vector2, Vector3, Vector4};
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::{ffi, MintMatrix};
 use std::ffi::CString;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(Shader, ffi::Shader, ffi::UnloadShader);

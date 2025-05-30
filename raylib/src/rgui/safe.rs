@@ -480,7 +480,7 @@ pub trait RaylibDrawGui {
         subdivs: i32,
     ) -> (bool, Vector2) {
         let c_text = CString::new(text).unwrap();
-        let mut mouseCell = MintVec2 { x: 0.0, y: 0.0 };
+        let mut mouse_cell = MintVec2 { x: 0.0, y: 0.0 };
         (
             unsafe {
                 ffi::GuiGrid(
@@ -488,10 +488,10 @@ pub trait RaylibDrawGui {
                     c_text.as_ptr(),
                     spacing,
                     subdivs,
-                    &mut mouseCell,
+                    &mut mouse_cell,
                 ) > 0
             },
-            mouseCell.into(),
+            mouse_cell.into(),
         )
     }
     /// List View control, returns selected list item index
@@ -599,7 +599,7 @@ pub trait RaylibDrawGui {
         let mut out = color.into();
         let c_text = CString::new(text).unwrap();
 
-        let result = unsafe { ffi::GuiColorPicker(bounds.into(), c_text.as_ptr(), &mut out) };
+        let _result = unsafe { ffi::GuiColorPicker(bounds.into(), c_text.as_ptr(), &mut out) };
         return out.into();
     }
     // Get text with icon id prepended

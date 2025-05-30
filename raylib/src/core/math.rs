@@ -16,8 +16,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 
 use crate::misc::AsF32;
 use crate::{ffi, MintVec3};
-use std::f32::consts::PI;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Range, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Range, Sub, SubAssign};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

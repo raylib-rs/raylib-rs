@@ -254,7 +254,7 @@ where
         unsafe {
             let stream_processor_callback: &mut Self = user_data.cast::<Self>().as_mut().unwrap();
             let f32_ptr = data_ptr as *mut f32;
-            let data = unsafe {
+            let data = {
                 std::slice::from_raw_parts_mut(
                     f32_ptr,
                     frame_count as usize * stream_processor_callback.nb_channels as usize,
