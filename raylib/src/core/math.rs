@@ -37,12 +37,14 @@ macro_rules! optional_serde_struct {
 
 /// A convenience function for linearly interpolating an `f32`.
 #[inline]
+#[must_use]
 pub const fn lerp(v0: f32, v1: f32, amount: f32) -> f32 {
     v0 + amount * (v1 - v0)
 }
 
 /// A convenience function for making a new `Quaternion`.
 #[inline]
+#[must_use]
 pub fn rquat<T1: AsF32, T2: AsF32, T3: AsF32, T4: AsF32>(x: T1, y: T2, z: T3, w: T4) -> Quaternion {
     Quaternion::new(x.as_f32(), y.as_f32(), z.as_f32(), w.as_f32())
 }
@@ -58,12 +60,15 @@ optional_serde_struct!(
 
 impl Quaternion {
     /// Returns a new `Quaternion` with specified components.
+    #[inline]
+    #[must_use]
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Quaternion {
         Quaternion { x, y, z, w }
     }
 
     /// Returns the identity quaternion.
     #[inline]
+    #[must_use]
     pub const fn identity() -> Quaternion {
         Quaternion {
             x: 0.0,
@@ -74,6 +79,8 @@ impl Quaternion {
     }
 
     /// Returns quaternion based on the rotation from one vector to another.
+    #[inline]
+    #[must_use]
     pub fn from_vec3_pair(from: Vector3, to: Vector3) -> Quaternion {
         let cross = from.cross(to);
         Quaternion {
@@ -86,6 +93,8 @@ impl Quaternion {
     }
 
     /// Returns a quaternion for a given rotation matrix.
+    #[inline]
+    #[must_use]
     pub fn from_matrix(mat: Matrix) -> Quaternion {
         let trace = mat.trace();
 
@@ -137,7 +146,8 @@ impl Quaternion {
             }
         }
     }
-
+    #[inline]
+    #[must_use]
     /// Returns a rotation matrix for the current quaternion.
     pub fn to_matrix(&self) -> Matrix {
         let x = self.x;
@@ -183,7 +193,8 @@ impl Quaternion {
             m15: 1.0,
         }
     }
-
+    #[inline]
+    #[must_use]
     /// Returns a quaternion equivalent to Euler angles.
     pub fn from_euler(pitch: f32, yaw: f32, roll: f32) -> Quaternion {
         let x0 = (pitch * 0.5).cos();
@@ -200,7 +211,8 @@ impl Quaternion {
             w: (x0 * y0 * z0) + (x1 * y1 * z1),
         }
     }
-
+    #[inline]
+    #[must_use]
     /// Returns a vector containing Euler angles in radians (roll, pitch, yaw), based on the current quaternion.
     pub fn to_euler(&self) -> Vector3 {
         // roll (x-axis rotation)
@@ -222,7 +234,8 @@ impl Quaternion {
             z: z0.atan2(z1),
         }
     }
-
+    #[inline]
+    #[must_use]
     /// Returns rotation quaternion for an `axis` and `angle` (in radians).
     pub fn from_axis_angle(axis: Vector3, angle: f32) -> Quaternion {
         let mut result = Quaternion::identity();
@@ -244,7 +257,8 @@ impl Quaternion {
         result.w = cosres;
         result.normalized()
     }
-
+    #[inline]
+    #[must_use]
     /// Returns a 2-tuple containing the axis (`Vector3`) and angle (`f32` in radians) for the current quaternion.
     pub fn to_axis_angle(&self) -> (Vector3, f32) {
         let mut q = *self;
@@ -271,10 +285,12 @@ impl Quaternion {
 
     /// Computes the length of the current quaternion.
     #[inline]
+    #[must_use]
     pub fn length(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w).sqrt()
     }
-
+    #[inline]
+    #[must_use]
     /// Returns a normalized version of the current quaternion.
     pub fn normalized(&self) -> Quaternion {
         let mut length = self.length();
@@ -290,7 +306,8 @@ impl Quaternion {
             w: self.w * ilength,
         }
     }
-
+    #[inline]
+    #[must_use]
     /// Returns an inverted version of the current quaternion.
     pub fn inverted(&self) -> Quaternion {
         let mut result = *self;
@@ -306,9 +323,10 @@ impl Quaternion {
         }
         result
     }
-
-    /// Calculates linear interpolation between current and `q` quaternions.
     #[inline]
+    #[must_use]
+    /// Calculates linear interpolation between current and `q` quaternions.
+    /// Returns an inverted version of the current quaternion.
     pub const fn lerp(&self, q: Quaternion, amount: f32) -> Quaternion {
         Quaternion {
             x: self.x + amount * (q.x - self.x),
@@ -320,11 +338,13 @@ impl Quaternion {
 
     /// Calculates slerp-optimized interpolation between current and `q` quaternions.
     #[inline]
+    #[must_use]
     pub fn nlerp(&self, q: Quaternion, amount: f32) -> Quaternion {
         self.lerp(q, amount).normalized()
     }
 
     /// Calculates spherical linear interpolation between current and `q` quaternions.
+    #[must_use]
     pub fn slerp(&self, q: Quaternion, amount: f32) -> Quaternion {
         let cos_half_theta = self.x * q.x + self.y * q.y + self.z * q.z + self.w * q.w;
 
@@ -358,6 +378,7 @@ impl Quaternion {
     }
 
     /// Returns a transformed version of the current quaternion given a transformation matrix.
+    #[must_use]
     pub const fn transform(&self, mat: Matrix) -> Quaternion {
         Quaternion {
             x: mat.m0 * self.x + mat.m4 * self.y + mat.m8 * self.z + mat.m12 * self.w,
@@ -369,6 +390,7 @@ impl Quaternion {
 
     /// Returns a new `Quaternion` with componenets clamp to a certain interval.
     #[inline]
+    #[must_use]
     pub const fn clamp(&self, num: Range<f32>) -> Quaternion {
         Quaternion {
             x: self.x.clamp(num.start, num.end),
@@ -470,6 +492,7 @@ impl From<&Matrix> for ffi::Matrix {
 impl Matrix {
     /// Returns the identity matrix.
     #[inline]
+    #[must_use]
     pub const fn identity() -> Matrix {
         Matrix {
             m0: 1.0,
@@ -493,6 +516,7 @@ impl Matrix {
 
     /// Returns the zero matriz.
     #[inline]
+    #[must_use]
     pub const fn zero() -> Matrix {
         Matrix {
             m0: 0.0,
@@ -516,6 +540,7 @@ impl Matrix {
 
     /// Returns a translation matrix.
     #[inline]
+    #[must_use]
     pub const fn translate(x: f32, y: f32, z: f32) -> Matrix {
         Matrix {
             m0: 1.0,
@@ -538,6 +563,7 @@ impl Matrix {
     }
 
     /// Returns a rotation matrix.
+    #[must_use]
     pub fn rotate(axis: Vector3, angle: f32) -> Matrix {
         let mut x = axis.x;
         let mut y = axis.y;
@@ -578,6 +604,7 @@ impl Matrix {
         }
     }
 
+    #[must_use]
     /// Returns a translation matrix around the X axis.
     pub fn rotate_x(angle: f32) -> Matrix {
         let mut result = Matrix::identity();
@@ -592,6 +619,7 @@ impl Matrix {
         result
     }
 
+    #[must_use]
     /// Returns a translation matrix around the Y axis.
     pub fn rotate_y(angle: f32) -> Matrix {
         let mut result = Matrix::identity();
@@ -606,6 +634,7 @@ impl Matrix {
         result
     }
 
+    #[must_use]
     /// Returns a translation matrix around the Z axis.
     pub fn rotate_z(angle: f32) -> Matrix {
         let mut result = Matrix::identity();
@@ -620,6 +649,7 @@ impl Matrix {
         result
     }
 
+    #[must_use]
     /// Returns xyz-rotation matrix (angles in radians)
     pub fn rotate_xyz(ang: Vector3) -> Self {
         let mut result = Self::identity();
@@ -646,6 +676,7 @@ impl Matrix {
         result
     }
 
+    #[must_use]
     /// Returns a scaling matrix.
     #[inline]
     pub const fn scale(x: f32, y: f32, z: f32) -> Matrix {
@@ -669,6 +700,7 @@ impl Matrix {
         }
     }
 
+    #[must_use]
     /// Returns perspective projection matrix based on frustum parameters.
     pub fn frustum(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Matrix {
         let rl = right - left;
@@ -698,6 +730,7 @@ impl Matrix {
         }
     }
 
+    #[must_use]
     /// Returns perspective projection matrix.
     pub fn perspective(fovy: f32, aspect: f32, near: f32, far: f32) -> Matrix {
         let top = near * (fovy * 0.5).tan();
@@ -705,6 +738,7 @@ impl Matrix {
         Matrix::frustum(-right, right, -top, top, near, far)
     }
 
+    #[must_use]
     /// Returns orthographic projection matrix.
     pub fn ortho(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Matrix {
         let rl = right - left;
@@ -731,6 +765,7 @@ impl Matrix {
         }
     }
 
+    #[must_use]
     /// Returns camera look-at matrix (view matrix).
     pub fn look_at(eye: Vector3, target: Vector3, up: Vector3) -> Matrix {
         let z = (eye - target).normalize();
@@ -758,6 +793,7 @@ impl Matrix {
         .inverted()
     }
 
+    #[must_use]
     /// Calculates the determinant of the current matrix.
     pub const fn determinant(&self) -> f32 {
         let a00 = self.m0;
@@ -800,15 +836,16 @@ impl Matrix {
             - a10 * a01 * a22 * a33
             + a00 * a11 * a22 * a33
     }
-
-    /// Calculates the trace of the matrix (sum of the values along the diagonal).
+    #[must_use]
     #[inline]
+    /// Calculates the trace of the matrix (sum of the values along the diagonal).
     pub const fn trace(&self) -> f32 {
         self.m0 + self.m5 + self.m10 + self.m15
     }
 
-    /// Returns a new `Matrix` transposed from the current one.
+    #[must_use]
     #[inline]
+    /// Returns a new `Matrix` transposed from the current one.
     pub const fn transposed(&self) -> Matrix {
         Matrix {
             m0: self.m0,
@@ -829,7 +866,7 @@ impl Matrix {
             m15: self.m15,
         }
     }
-
+    #[must_use]
     /// Returns a new `Matrix` inverted from the current one.
     pub const fn inverted(&self) -> Matrix {
         let a00 = self.m0;
@@ -887,6 +924,7 @@ impl Matrix {
 
     /// Returns a new `Matrix` normalized from the current one.
     #[inline]
+    #[must_use]
     pub const fn normalized(&self) -> Matrix {
         let det = self.determinant();
         Matrix {
@@ -911,6 +949,7 @@ impl Matrix {
 
     /// Returns a 16-length `f32` array containing the current matrix data.
     #[inline]
+    #[must_use]
     pub const fn to_array(&self) -> [f32; 16] {
         [
             self.m0, self.m1, self.m2, self.m3, self.m4, self.m5, self.m6, self.m7, self.m8,
@@ -1038,6 +1077,8 @@ impl From<&Ray> for ffi::Ray {
 }
 
 impl Ray {
+    #[must_use]
+    #[inline]
     pub const fn new(position: Vector3, direction: Vector3) -> Self {
         Self {
             position,
@@ -1059,6 +1100,8 @@ optional_serde_struct! {
 }
 
 impl BoundingBox {
+    #[must_use]
+    #[inline]
     pub fn new(min: Vector3, max: Vector3) -> BoundingBox {
         BoundingBox { min, max }
     }
@@ -1085,12 +1128,14 @@ impl From<&BoundingBox> for ffi::BoundingBox {
 impl BoundingBox {
     /// Detects collision between two boxes.
     #[inline]
+    #[must_use]
     pub fn check_collision_boxes(&self, box2: BoundingBox) -> bool {
         unsafe { ffi::CheckCollisionBoxes(self.into(), box2.into()) }
     }
 
     /// Detects collision between box and sphere.
     #[inline]
+    #[must_use]
     pub fn check_collision_box_sphere(
         &self,
         center_sphere: impl Into<MintVec3>,
@@ -1101,6 +1146,7 @@ impl BoundingBox {
 
     /// Detects collision between ray and box.
     #[inline]
+    #[must_use]
     pub fn get_ray_collision_box(&self, ray: Ray) -> RayCollision {
         unsafe { ffi::GetRayCollisionBox(ray.into(), self.into()).into() }
     }

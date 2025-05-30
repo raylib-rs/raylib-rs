@@ -93,7 +93,8 @@ pub struct RaylibBuilder {
     #[cfg(feature = "imgui")]
     imgui_theme: crate::imgui::ImGuiTheme,
 }
-
+#[inline]
+#[must_use]
 /// Creates a `RaylibBuilder` for choosing window options before initialization.
 pub fn init() -> RaylibBuilder {
     RaylibBuilder {

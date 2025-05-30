@@ -18,6 +18,7 @@ use super::shaders::Shader;
 
 /// Seems like all draw commands must be issued from the main thread
 impl RaylibHandle {
+    #[inline]
     #[must_use]
     /// Setup canvas (framebuffer) to start drawing.
     /// Prefer using the closure version, [RaylibHandle::draw]. This version returns a handle that calls [raylib_sys::EndDrawing] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
@@ -117,6 +118,7 @@ where
 {
     /// Begin drawing to render texture.
     /// Prefer using the closure version, [RaylibTextureModeExt::draw_texture_mode] . This version returns a handle that calls [raylib_sys::EndTextureMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    #[inline]
     #[must_use]
     fn begin_texture_mode<'a, 'b>(
         &'a mut self,
@@ -173,6 +175,7 @@ where
 {
     /// Begin stereo rendering (requires VR simulator).
     /// Prefer using the closure version, [RaylibVRModeExt::draw_vr_stereo_mode] . This version returns a handle that calls [raylib_sys::EndVrStereoMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    #[inline]
     #[must_use]
     fn begin_vr_stereo_mode<'a, 'b>(
         &'a mut self,
@@ -227,6 +230,7 @@ where
     /// Begin 2D mode with custom camera (2D).
     /// Prefer using the closure version, [RaylibMode2DExt::draw_mode2D]. This version returns a handle that calls [raylib_sys::EndMode2D] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[allow(non_snake_case)]
+    #[inline]
     #[must_use]
     fn begin_mode2D(&mut self, camera: impl Into<ffi::Camera2D>) -> RaylibMode2D<'_, Self> {
         unsafe {
@@ -285,6 +289,7 @@ where
     /// Prefer using the closure version, [RaylibMode3DExt::draw_mode3D]. This version returns a handle that calls [raylib_sys::EndMode3D] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[allow(non_snake_case)]
     #[must_use]
+    #[inline]
     fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<'_, Self> {
         unsafe {
             ffi::BeginMode3D(camera.into());
@@ -343,6 +348,7 @@ where
     /// Begin custom shader drawing.
     /// Prefer using the closure version, [RaylibShaderModeExt::draw_shader_mode]. This version returns a handle that calls [raylib_sys::EndShaderMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
+    #[inline]
     fn begin_shader_mode<'a, 'b>(
         &'a mut self,
         shader: &'b mut Shader,
@@ -395,6 +401,7 @@ where
 {
     /// Begin blending mode (alpha, additive, multiplied, subtract, custom).
     /// Prefer using the closure version, [RaylibBlendModeExt::draw_blend_mode]. This version returns a handle that calls [raylib_sys::EndBlendMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
+    #[inline]
     #[must_use]
     fn begin_blend_mode(
         &mut self,
@@ -449,6 +456,7 @@ where
     /// Begin scissor mode (define screen area for following drawing).
     /// Prefer using the closure version, [RaylibScissorModeExt::draw_scissor_mode]. This version returns a handle that calls [raylib_sys::EndScissorMode] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[must_use]
+    #[inline]
     fn begin_scissor_mode(
         &mut self,
         x: i32,
@@ -493,12 +501,14 @@ pub trait RaylibDraw {
 
     /// Get texture that is used for shapes drawing
     #[inline]
+    #[must_use]
     fn get_shapes_texture(&self) -> Texture2D {
         Texture2D(unsafe { ffi::GetShapesTexture() })
     }
 
     /// Get texture source rectangle that is used for shapes drawing
     #[inline]
+    #[must_use]
     fn get_shapes_texture_rectangle(&self) -> Rectangle {
         unsafe { ffi::GetShapesTextureRectangle() }
     }
@@ -1519,6 +1529,7 @@ pub trait RaylibDraw {
 
     /// Get (evaluate) spline point: Linear
     #[inline]
+    #[must_use]
     fn get_spline_point_linear(
         &mut self,
         start_pos: impl Into<MintVec2>,
@@ -1530,6 +1541,7 @@ pub trait RaylibDraw {
 
     /// Get (evaluate) spline point: B-Spline
     #[inline]
+    #[must_use]
     fn get_spline_point_basis(
         &mut self,
         p1: impl Into<MintVec2>,
@@ -1543,6 +1555,7 @@ pub trait RaylibDraw {
 
     /// Get (evaluate) spline point: Catmull-Rom
     #[inline]
+    #[must_use]
     fn get_spline_point_catmull_rom(
         &mut self,
         p1: impl Into<MintVec2>,
@@ -1558,6 +1571,7 @@ pub trait RaylibDraw {
 
     /// Get (evaluate) spline point: Quadratic Bezier
     #[inline]
+    #[must_use]
     fn get_spline_point_bezier_quad(
         &mut self,
         p1: impl Into<MintVec2>,
@@ -1570,6 +1584,7 @@ pub trait RaylibDraw {
 
     /// Get (evaluate) spline point: Cubic Bezier
     #[inline]
+    #[must_use]
     fn get_spline_point_bezier_cubic(
         &mut self,
         p1: impl Into<MintVec2>,

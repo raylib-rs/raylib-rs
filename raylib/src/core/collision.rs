@@ -6,6 +6,8 @@ use crate::math::{Matrix, RayCollision};
 use crate::models::Mesh;
 
 /// Check if circle collides with a line created betweeen two points [p1] and [p2]
+#[inline]
+#[must_use]
 pub fn check_collision_circle_line(
     center: impl Into<ffi::Vector2>,
     radius: f32,
@@ -18,6 +20,7 @@ pub fn check_collision_circle_line(
 // Collision Handling
 /// Checks collision between two circles.
 #[inline]
+#[must_use]
 pub fn check_collision_circles(
     center1: impl Into<ffi::Vector2>,
     radius1: f32,
@@ -29,6 +32,7 @@ pub fn check_collision_circles(
 
 /// Checks if point is inside circle.
 #[inline]
+#[must_use]
 pub fn check_collision_point_circle(
     point: impl Into<ffi::Vector2>,
     center: impl Into<ffi::Vector2>,
@@ -38,6 +42,8 @@ pub fn check_collision_point_circle(
 }
 
 /// Check if point is within a polygon described by array of vertices
+#[inline]
+#[must_use]
 pub fn check_collision_point_poly(point: impl Into<ffi::Vector2>, points: &[Vector2]) -> bool {
     unsafe {
         ffi::CheckCollisionPointPoly(
@@ -49,6 +55,8 @@ pub fn check_collision_point_poly(point: impl Into<ffi::Vector2>, points: &[Vect
 }
 
 /// Check if point belongs to line created between two points [p1] and [p2] with defined margin in pixels [threshold]
+#[inline]
+#[must_use]
 pub fn check_collision_point_line(
     point: impl Into<ffi::Vector2>,
     p1: impl Into<ffi::Vector2>,
@@ -60,6 +68,7 @@ pub fn check_collision_point_line(
 
 /// Checks if point is inside a triangle.
 #[inline]
+#[must_use]
 pub fn check_collision_point_triangle(
     point: impl Into<ffi::Vector2>,
     p1: impl Into<ffi::Vector2>,
@@ -71,6 +80,7 @@ pub fn check_collision_point_triangle(
 
 /// Check the collision between two lines defined by two points each, returns collision point by reference
 #[inline]
+#[must_use]
 pub fn check_collision_lines(
     start_pos1: impl Into<ffi::Vector2>,
     end_pos1: impl Into<ffi::Vector2>,
@@ -97,6 +107,7 @@ pub fn check_collision_lines(
 
 /// Detects collision between two spheres.
 #[inline]
+#[must_use]
 pub fn check_collision_spheres(
     center_a: impl Into<ffi::Vector3>,
     radius_a: f32,
@@ -108,6 +119,7 @@ pub fn check_collision_spheres(
 
 /// Detects collision between ray and sphere.
 #[inline]
+#[must_use]
 pub fn get_ray_collision_sphere(
     ray: impl Into<ffi::Ray>,
     sphere_position: impl Into<ffi::Vector3>,
@@ -118,6 +130,7 @@ pub fn get_ray_collision_sphere(
 
 /// Gets collision info between ray and model.
 #[inline]
+#[must_use]
 pub fn get_ray_collision_model(
     ray: impl Into<ffi::Ray>,
     model: &Mesh,
@@ -128,6 +141,7 @@ pub fn get_ray_collision_model(
 
 /// Gets collision info between ray and triangle.
 #[inline]
+#[must_use]
 pub fn get_ray_collision_triangle(
     ray: impl Into<ffi::Ray>,
     p1: impl Into<ffi::Vector3>,
@@ -139,6 +153,7 @@ pub fn get_ray_collision_triangle(
 
 /// Gets collision info between ray and model.
 #[inline]
+#[must_use]
 pub fn get_ray_collision_quad(
     ray: impl Into<ffi::Ray>,
     p1: impl Into<ffi::Vector3>,

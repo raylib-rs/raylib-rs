@@ -19,6 +19,7 @@ make_thin_wrapper!(WeakShader, ffi::Shader, no_drop);
 // unsafe impl Sync for Shader {}
 
 impl RaylibHandle {
+    #[must_use]
     /// Loads a custom shader and binds default locations.
     pub fn load_shader(
         &mut self,
@@ -39,6 +40,7 @@ impl RaylibHandle {
         Shader(unsafe { ffi::LoadShader(vs, fs) })
     }
 
+    #[must_use]
     /// Loads shader from code strings and binds default locations.
     pub fn load_shader_from_memory(
         &mut self,
@@ -76,6 +78,7 @@ impl RaylibHandle {
     }
 
     /// Gets internal modelview matrix.
+    #[must_use]
     #[inline]
     pub fn get_matrix_modelview(&self) -> Matrix {
         unsafe { ffi::rlGetMatrixModelview().into() }
@@ -83,9 +86,12 @@ impl RaylibHandle {
 
     /// Gets internal projection matrix.
     #[inline]
+    #[must_use]
     pub fn get_matrix_projection(&self) -> Matrix {
         unsafe { ffi::rlGetMatrixProjection().into() }
     }
+    #[inline]
+    #[must_use]
     /// Get default shader. Modifying it modifies everthing that uses that shader
     pub fn get_shader_default() -> WeakShader {
         unsafe {
@@ -199,6 +205,8 @@ impl ShaderV for &[i32] {
 }
 
 impl Shader {
+    #[inline]
+    #[must_use]
     pub unsafe fn make_weak(self) -> WeakShader {
         let m = WeakShader(self.0);
         std::mem::forget(self);
@@ -207,6 +215,7 @@ impl Shader {
 
     /// Check if shader is valid
     #[inline]
+    #[must_use]
     pub fn is_shader_valid(&self) -> bool {
         unsafe { ffi::IsShaderValid(self.0) }
     }
@@ -265,18 +274,21 @@ impl RaylibShader for Shader {}
 pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]
+    #[must_use]
     fn locs(&self) -> &[i32] {
         unsafe { std::slice::from_raw_parts(self.as_ref().locs, 32) }
     }
 
     /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]
+    #[must_use]
     fn locs_mut(&mut self) -> &mut [i32] {
         unsafe { std::slice::from_raw_parts_mut(self.as_mut().locs, 32) }
     }
 
     /// Gets shader uniform location by name.
     #[inline]
+    #[must_use]
     fn get_shader_location(&self, uniform_name: &str) -> i32 {
         let c_uniform_name = CString::new(uniform_name).unwrap();
         unsafe { ffi::GetShaderLocation(*self.as_ref(), c_uniform_name.as_ptr()) }
@@ -284,6 +296,7 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
 
     /// Gets shader attribute location by name.
     #[inline]
+    #[must_use]
     fn get_shader_location_attribute(&self, attribute_name: &str) -> i32 {
         let c_attribute_name = CString::new(attribute_name).unwrap();
         unsafe { ffi::GetShaderLocationAttrib(*self.as_ref(), c_attribute_name.as_ptr()) }

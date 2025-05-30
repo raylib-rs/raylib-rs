@@ -87,6 +87,7 @@ impl Clone for WeakModelAnimation {
 }
 
 impl RaylibHandle {
+    #[must_use]
     /// Loads model from files (mesh and material).
     // #[inline]
     pub fn load_model(
@@ -106,6 +107,7 @@ impl RaylibHandle {
         Ok(Model(m))
     }
 
+    #[must_use]
     /// Loads model from a generated mesh
     pub fn load_model_from_mesh(
         &mut self,
@@ -121,6 +123,7 @@ impl RaylibHandle {
         Ok(Model(m))
     }
 
+    #[must_use]
     /// Load model animations from file
     pub fn load_model_animations(
         &mut self,
@@ -188,17 +191,21 @@ impl Model {
 }
 
 pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
+    #[inline]
+    #[must_use]
     /// Local transform matrix
     fn transform(&self) -> &Matrix {
         unsafe { std::mem::transmute(&self.as_ref().transform) }
     }
 
+    #[inline]
     fn set_transform(&mut self, mat: &Matrix) {
         self.as_mut().transform = (*mat).into();
     }
 
     /// Meshes array
     #[inline]
+    #[must_use]
     fn meshes(&self) -> &[WeakMesh] {
         unsafe {
             std::slice::from_raw_parts(
@@ -209,6 +216,7 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
     // Meshes array
     #[inline]
+    #[must_use]
     fn meshes_mut(&mut self) -> &mut [WeakMesh] {
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -219,6 +227,7 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
     /// Materials array
     #[inline]
+    #[must_use]
     fn materials(&self) -> &[WeakMaterial] {
         unsafe {
             std::slice::from_raw_parts(
@@ -229,6 +238,7 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
     /// Materials array
     #[inline]
+    #[must_use]
     fn materials_mut(&mut self) -> &mut [WeakMaterial] {
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -237,7 +247,8 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
             )
         }
     }
-
+    #[inline]
+    #[must_use]
     /// Bones information (skeleton)
     fn bones(&self) -> Option<&[BoneInfo]> {
         if self.as_ref().bones.is_null() {
@@ -251,6 +262,8 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
             )
         })
     }
+    #[inline]
+    #[must_use]
     /// Bones information (skeleton)
     fn bones_mut(&mut self) -> Option<&mut [BoneInfo]> {
         if self.as_ref().bones.is_null() {
@@ -264,6 +277,8 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
             )
         })
     }
+    #[inline]
+    #[must_use]
     /// Bones base transformation (pose)
     fn bind_pose(&self) -> Option<&Transform> {
         if self.as_ref().bindPose.is_null() {
@@ -271,7 +286,8 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
         }
         Some(unsafe { std::mem::transmute(self.as_ref().bindPose) })
     }
-
+    #[inline]
+    #[must_use]
     /// Bones base transformation (pose)
     fn bind_pose_mut(&mut self) -> Option<&mut Transform> {
         if self.as_ref().bindPose.is_null() {
@@ -279,25 +295,27 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
         }
         Some(unsafe { std::mem::transmute(self.as_mut().bindPose) })
     }
-
-    /// Check model animation skeleton match
     #[inline]
+    #[must_use]
+    /// Check model animation skeleton match
     fn is_model_animation_valid(&self, anim: &ModelAnimation) -> bool {
         unsafe { ffi::IsModelAnimationValid(*self.as_ref(), anim.0) }
     }
 
     /// Check if a model is ready
     #[inline]
+    #[must_use]
     fn is_model_valid(&self) -> bool {
         unsafe { ffi::IsModelValid(*self.as_ref()) }
     }
 
     /// Compute model bounding box limits (considers all meshes)
     #[inline]
+    #[must_use]
     fn get_model_bounding_box(&self) -> BoundingBox {
         unsafe { BoundingBox::from(ffi::GetModelBoundingBox(*self.as_ref())) }
     }
-
+    #[inline]
     /// Set material for a mesh
     fn set_model_mesh_material(
         &mut self,
@@ -345,6 +363,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
+    #[must_use]
     fn vertices(&self) -> &[Vector3] {
         unsafe {
             std::slice::from_raw_parts(
@@ -355,6 +374,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
+    #[must_use]
     fn vertices_mut(&mut self) -> &mut [Vector3] {
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -365,6 +385,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
+    #[must_use]
     fn normals(&self) -> &[Vector3] {
         unsafe {
             std::slice::from_raw_parts(
@@ -375,6 +396,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
+    #[must_use]
     fn normals_mut(&mut self) -> &mut [Vector3] {
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -385,6 +407,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
+    #[must_use]
     fn tangents(&self) -> &[Vector3] {
         unsafe {
             std::slice::from_raw_parts(
@@ -395,6 +418,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
+    #[must_use]
     fn tangents_mut(&mut self) -> &mut [Vector3] {
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -405,6 +429,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
+    #[must_use]
     fn colors(&self) -> &[Color] {
         unsafe {
             std::slice::from_raw_parts(
@@ -415,6 +440,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
+    #[must_use]
     fn colors_mut(&mut self) -> &mut [Color] {
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -425,6 +451,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex indices (in case vertex data comes indexed)
     #[inline]
+    #[must_use]
     fn indicies(&self) -> &[u16] {
         unsafe {
             std::slice::from_raw_parts(
@@ -435,6 +462,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex indices (in case vertex data comes indexed)
     #[inline]
+    #[must_use]
     fn indicies_mut(&mut self) -> &mut [u16] {
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -446,60 +474,70 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
 
     /// Generate polygonal mesh
     #[inline]
+    #[must_use]
     fn gen_mesh_poly(_: &RaylibThread, sides: i32, radius: f32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshPoly(sides, radius)) }
     }
 
     /// Generates plane mesh (with subdivisions).
     #[inline]
+    #[must_use]
     fn gen_mesh_plane(_: &RaylibThread, width: f32, length: f32, res_x: i32, res_z: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshPlane(width, length, res_x, res_z)) }
     }
 
     /// Generates cuboid mesh.
     #[inline]
+    #[must_use]
     fn gen_mesh_cube(_: &RaylibThread, width: f32, height: f32, length: f32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshCube(width, height, length)) }
     }
 
     /// Generates sphere mesh (standard sphere).
     #[inline]
+    #[must_use]
     fn gen_mesh_sphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshSphere(radius, rings, slices)) }
     }
 
     /// Generates half-sphere mesh (no bottom cap).
     #[inline]
+    #[must_use]
     fn gen_mesh_hemisphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshHemiSphere(radius, rings, slices)) }
     }
 
     /// Generates cylinder mesh.
     #[inline]
+    #[must_use]
     fn gen_mesh_cylinder(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshCylinder(radius, height, slices)) }
     }
 
     /// Generates torus mesh.
     #[inline]
+    #[must_use]
     fn gen_mesh_torus(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshTorus(radius, size, rad_seg, sides)) }
     }
 
     /// Generates trefoil knot mesh.
     #[inline]
+    #[must_use]
     fn gen_mesh_knot(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshKnot(radius, size, rad_seg, sides)) }
     }
 
     /// Generates heightmap mesh from image data.
     #[inline]
+    #[must_use]
     fn gen_mesh_heightmap(_: &RaylibThread, heightmap: &Image, size: impl Into<MintVec3>) -> Mesh {
         unsafe { Mesh(ffi::GenMeshHeightmap(heightmap.0, size.into())) }
     }
 
     /// Generates cubes-based map mesh from image data.
     #[inline]
+    #[must_use]
     fn gen_mesh_cubicmap(
         _: &RaylibThread,
         cubicmap: &Image,
@@ -510,12 +548,14 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
 
     /// Generate cone/pyramid mesh
     #[inline]
+    #[must_use]
     fn gen_mesh_cone(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshCone(radius, height, slices)) }
     }
 
     /// Computes mesh bounding box limits.
     #[inline]
+    #[must_use]
     fn get_mesh_bounding_box(&self) -> BoundingBox {
         unsafe { ffi::GetMeshBoundingBox(*self.as_ref()).into() }
     }
@@ -549,6 +589,8 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
 }
 
 impl Material {
+    #[must_use]
+    #[inline]
     pub unsafe fn make_weak(self) -> WeakMaterial {
         let m = WeakMaterial(self.0);
         std::mem::forget(self);
@@ -556,6 +598,7 @@ impl Material {
     }
 
     /// Load materials from model file
+    #[must_use]
     pub fn load_materials(filename: &str) -> Result<Vec<Material>, LoadMaterialError> {
         let c_filename = CString::new(filename).unwrap();
         let mut m_size = 0;
@@ -583,15 +626,19 @@ impl RaylibMaterial for Material {}
 
 pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     /// Material shader
+    #[must_use]
+    #[inline]
     fn shader(&self) -> &crate::shaders::WeakShader {
         unsafe { std::mem::transmute(&self.as_ref().shader) }
     }
-
+    #[must_use]
+    #[inline]
     /// Material shader
     fn shader_mut(&mut self) -> &mut crate::shaders::WeakShader {
         unsafe { std::mem::transmute(&mut self.as_mut().shader) }
     }
-
+    #[must_use]
+    #[inline]
     /// Material maps array (MAX_MATERIAL_MAPS)
     fn maps(&self) -> &[MaterialMap] {
         unsafe {
@@ -601,7 +648,8 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
             )
         }
     }
-
+    #[must_use]
+    #[inline]
     /// Material maps array (MAX_MATERIAL_MAPS)
     fn maps_mut(&mut self) -> &mut [MaterialMap] {
         unsafe {
@@ -626,6 +674,7 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
 
     /// Check if a material is valid (shader assigned, map textures loaded in GPU)
     #[inline]
+    #[must_use]
     fn is_material_valid(&mut self) -> bool {
         unsafe { ffi::IsMaterialValid(*self.as_ref()) }
     }
@@ -637,6 +686,7 @@ pub struct FramePoseIter<'a> {
     bone_count: usize,
 }
 impl<'a> FramePoseIter<'a> {
+    #[must_use]
     unsafe fn new(
         frame_poses: *mut *mut ffi::Transform,
         frame_count: usize,
@@ -790,6 +840,8 @@ impl RaylibModelAnimation for ModelAnimation {}
 impl RaylibModelAnimation for WeakModelAnimation {}
 
 impl ModelAnimation {
+    #[inline]
+    #[must_use]
     pub unsafe fn make_weak(self) -> WeakModelAnimation {
         let m = WeakModelAnimation(self.0);
         std::mem::forget(self);
@@ -800,6 +852,7 @@ impl ModelAnimation {
 pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAnimation> {
     /// Bones information (skeleton)
     #[inline]
+    #[must_use]
     fn bones(&self) -> &[BoneInfo] {
         unsafe {
             std::slice::from_raw_parts(
@@ -811,6 +864,7 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
 
     /// Bones information (skeleton)
     #[inline]
+    #[must_use]
     fn bones_mut(&mut self) -> &mut [BoneInfo] {
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -820,6 +874,7 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
         }
     }
 
+    #[must_use]
     /// Poses array by frame
     fn frame_poses(&self) -> Vec<&[Transform]> {
         let anim = self.as_ref();
@@ -836,6 +891,7 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
 
         top
     }
+    #[must_use]
     fn frame_poses_iter<'a>(&'a self) -> FramePoseIter<'a> {
         let anim = self.as_ref();
         unsafe {
@@ -847,6 +903,7 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
         }
     }
 
+    #[must_use]
     /// Poses array by frame
     fn frame_poses_mut(&mut self) -> Vec<&mut [Transform]> {
         let anim = self.as_ref();
@@ -863,6 +920,7 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
 
         top
     }
+    #[must_use]
     fn frame_poses_iter_mut<'a>(&'a mut self) -> FramePoseIterMut<'a> {
         let anim = self.as_ref();
         unsafe {
@@ -878,33 +936,39 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
 impl MaterialMap {
     /// Material map texture
     #[inline]
+    #[must_use]
     pub fn texture(&self) -> &crate::texture::WeakTexture2D {
         unsafe { std::mem::transmute(&self.0.texture) }
     }
     /// Material map texture
     #[inline]
+    #[must_use]
     pub fn texture_mut(&mut self) -> &mut crate::texture::WeakTexture2D {
         unsafe { std::mem::transmute(&mut self.0.texture) }
     }
 
     /// Material map color
     #[inline]
+    #[must_use]
     pub fn color(&self) -> &Color {
         unsafe { std::mem::transmute(&self.0.color) }
     }
     /// Material map color
     #[inline]
+    #[must_use]
     pub fn color_mut(&mut self) -> &mut Color {
         unsafe { std::mem::transmute(&mut self.0.color) }
     }
 
     /// Material map value
     #[inline]
+    #[must_use]
     pub fn value(&self) -> &f32 {
         unsafe { std::mem::transmute(&self.0.value) }
     }
     /// Material map value
     #[inline]
+    #[must_use]
     pub fn value_mut(&mut self) -> &mut f32 {
         unsafe { std::mem::transmute(&mut self.0.value) }
     }
@@ -913,6 +977,7 @@ impl MaterialMap {
 impl RaylibHandle {
     /// Load default material (Supports: DIFFUSE, SPECULAR, NORMAL maps)
     #[inline]
+    #[must_use]
     pub fn load_material_default(&self, _: &RaylibThread) -> WeakMaterial {
         WeakMaterial(unsafe { ffi::LoadMaterialDefault() })
     }
