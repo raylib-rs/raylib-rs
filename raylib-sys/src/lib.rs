@@ -12,6 +12,13 @@ include!(env!("RAYLIB_BINDGEN_LOCATION"));
 #[cfg(target_os = "macos")]
 pub const MAX_MATERIAL_MAPS: u32 = 12;
 
+mod color;
+mod math;
+#[allow(unused_imports)]
+pub use color::*;
+#[allow(unused_imports)]
+pub use math::*;
+
 impl Default for TraceLogLevel {
     fn default() -> Self {
         TraceLogLevel::LOG_INFO

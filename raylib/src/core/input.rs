@@ -1,10 +1,9 @@
 //! Keyboard, Controller, and Mouse related functions
-use raylib_sys::{GamepadButton, TraceLogLevel};
-
 use crate::consts::Gesture;
 use crate::core::math::Vector2;
 use crate::core::RaylibHandle;
-use crate::ffi;
+use crate::{ffi, trace_log};
+use raylib_sys::{GamepadButton, TraceLogLevel};
 
 use std::ffi::c_char;
 use std::ffi::CStr;
@@ -96,7 +95,7 @@ impl RaylibHandle {
                 false => match CStr::from_ptr(name).to_str() {
                     Ok(a) => Some(a.to_owned()),
                     Err(err) => {
-                        self.trace_log(
+                        trace_log(
                             TraceLogLevel::LOG_WARNING,
                             format!("Result of get_gamepad_name was not valid UTF-8; \"{}\". Returning None.",err).as_str(),
                         );

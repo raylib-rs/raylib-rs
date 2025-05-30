@@ -50,7 +50,7 @@ Follow instructions for building raylib for your platform [here](https://github.
 
 ```toml
 [dependencies]
-raylib = { version = "5.6.0" }
+raylib = { version = "5.7.0" }
 ```
 
 2. Start coding!

@@ -6,7 +6,10 @@ pub mod automation;
 pub mod callbacks;
 pub mod camera;
 pub mod collision;
-pub mod color;
+pub mod color {
+    #[allow(unused_imports)]
+    pub use crate::ffi::Color;
+}
 pub mod data;
 pub mod drawing;
 pub mod error;

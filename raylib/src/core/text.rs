@@ -5,9 +5,9 @@ use raylib_sys::LoadUTF8;
 use crate::core::math::Vector2;
 use crate::core::texture::{Image, Texture2D};
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::ffi;
-use crate::math::Rectangle;
 use crate::error::LoadFontError;
+use crate::ffi;
+use crate::ffi::Rectangle;
 
 use std::convert::{AsMut, AsRef, TryInto};
 use std::ffi::{CString, OsString};
@@ -137,7 +137,9 @@ impl RaylibHandle {
         let c_filename = CString::new(filename).unwrap();
         let f = unsafe { ffi::LoadFont(c_filename.as_ptr()) };
         if f.glyphs.is_null() || f.texture.id == 0 {
-            return Err(LoadFontError::LoadFromFileFailed { path: filename.into() });
+            return Err(LoadFontError::LoadFromFileFailed {
+                path: filename.into(),
+            });
         }
         Ok(Font(f))
     }
@@ -168,7 +170,9 @@ impl RaylibHandle {
             }
         };
         if f.glyphs.is_null() || f.texture.id == 0 {
-            return Err(LoadFontError::LoadFromFileFailed { path: filename.into() });
+            return Err(LoadFontError::LoadFromFileFailed {
+                path: filename.into(),
+            });
         }
         Ok(Font(f))
     }

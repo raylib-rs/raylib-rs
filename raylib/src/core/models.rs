@@ -1,9 +1,18 @@
 //! 3D Model, Mesh, and Animation
 
-use crate::core::math::{BoundingBox, Vector3};
+use crate::core::math::BoundingBox;
+use crate::core::math::Matrix;
+use crate::core::math::Transform;
+use crate::core::math::Vector3;
 use crate::core::texture::Image;
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::{consts, ffi, error::{LoadMaterialError, LoadModelAnimError, LoadModelError, SetMaterialError}};
+use crate::ffi::Color;
+use crate::MintVec3;
+use crate::{
+    consts,
+    error::{LoadMaterialError, LoadModelAnimError, LoadModelError, SetMaterialError},
+    ffi,
+};
 use std::ffi::CString;
 use std::os::raw::c_void;
 
@@ -80,12 +89,18 @@ impl Clone for WeakModelAnimation {
 impl RaylibHandle {
     /// Loads model from files (mesh and material).
     // #[inline]
-    pub fn load_model(&mut self, _: &RaylibThread, filename: &str) -> Result<Model, LoadModelError> {
+    pub fn load_model(
+        &mut self,
+        _: &RaylibThread,
+        filename: &str,
+    ) -> Result<Model, LoadModelError> {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadModel(c_filename.as_ptr()) };
         if m.meshes.is_null() && m.materials.is_null() && m.bones.is_null() && m.bindPose.is_null()
         {
-            return Err(LoadModelError::LoadFromFileFailed { path: filename.into() });
+            return Err(LoadModelError::LoadFromFileFailed {
+                path: filename.into(),
+            });
         }
         // TODO check if null pointer checks are necessary.
         Ok(Model(m))
@@ -116,7 +131,9 @@ impl RaylibHandle {
         let mut m_size = 0;
         let m_ptr = unsafe { ffi::LoadModelAnimations(c_filename.as_ptr(), &mut m_size) };
         if m_size <= 0 {
-            return Err(LoadModelAnimError::NoAnimationsLoaded { path: filename.into() });
+            return Err(LoadModelAnimError::NoAnimationsLoaded {
+                path: filename.into(),
+            });
         }
         let mut m_vec = Vec::with_capacity(m_size as usize);
         for i in 0..m_size {
@@ -172,12 +189,12 @@ impl Model {
 
 pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     /// Local transform matrix
-    fn transform(&self) -> &crate::math::Matrix {
+    fn transform(&self) -> &Matrix {
         unsafe { std::mem::transmute(&self.as_ref().transform) }
     }
 
-    fn set_transform(&mut self, mat: &crate::math::Matrix) {
-        self.as_mut().transform = mat.into();
+    fn set_transform(&mut self, mat: &Matrix) {
+        self.as_mut().transform = (*mat).into();
     }
 
     /// Meshes array
@@ -248,7 +265,7 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
         })
     }
     /// Bones base transformation (pose)
-    fn bind_pose(&self) -> Option<&crate::math::Transform> {
+    fn bind_pose(&self) -> Option<&Transform> {
         if self.as_ref().bindPose.is_null() {
             return None;
         }
@@ -256,7 +273,7 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
 
     /// Bones base transformation (pose)
-    fn bind_pose_mut(&mut self) -> Option<&mut crate::math::Transform> {
+    fn bind_pose_mut(&mut self) -> Option<&mut Transform> {
         if self.as_ref().bindPose.is_null() {
             return None;
         }
@@ -282,7 +299,11 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
 
     /// Set material for a mesh
-    fn set_model_mesh_material(&mut self, mesh_id: i32, material_id: i32) -> Result<(), SetMaterialError> {
+    fn set_model_mesh_material(
+        &mut self,
+        mesh_id: i32,
+        material_id: i32,
+    ) -> Result<(), SetMaterialError> {
         // should this be an assertion?
         if mesh_id >= self.as_ref().meshCount {
             Err(SetMaterialError::MeshIdOutOfBounds)
@@ -384,20 +405,20 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
-    fn colors(&self) -> &[crate::color::Color] {
+    fn colors(&self) -> &[Color] {
         unsafe {
             std::slice::from_raw_parts(
-                self.as_ref().colors as *const crate::color::Color,
+                self.as_ref().colors as *const Color,
                 self.as_ref().vertexCount as usize,
             )
         }
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
-    fn colors_mut(&mut self) -> &mut [crate::color::Color] {
+    fn colors_mut(&mut self) -> &mut [Color] {
         unsafe {
             std::slice::from_raw_parts_mut(
-                self.as_mut().colors as *mut crate::color::Color,
+                self.as_mut().colors as *mut Color,
                 self.as_mut().vertexCount as usize,
             )
         }
@@ -473,11 +494,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
 
     /// Generates heightmap mesh from image data.
     #[inline]
-    fn gen_mesh_heightmap(
-        _: &RaylibThread,
-        heightmap: &Image,
-        size: impl Into<ffi::Vector3>,
-    ) -> Mesh {
+    fn gen_mesh_heightmap(_: &RaylibThread, heightmap: &Image, size: impl Into<MintVec3>) -> Mesh {
         unsafe { Mesh(ffi::GenMeshHeightmap(heightmap.0, size.into())) }
     }
 
@@ -486,7 +503,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     fn gen_mesh_cubicmap(
         _: &RaylibThread,
         cubicmap: &Image,
-        cube_size: impl Into<ffi::Vector3>,
+        cube_size: impl Into<MintVec3>,
     ) -> Mesh {
         unsafe { Mesh(ffi::GenMeshCubicmap(cubicmap.0, cube_size.into())) }
     }
@@ -544,7 +561,9 @@ impl Material {
         let mut m_size = 0;
         let m_ptr = unsafe { ffi::LoadMaterials(c_filename.as_ptr(), &mut m_size) };
         if m_size <= 0 {
-            return Err(LoadMaterialError::NoneLoaded { path: filename.into() });
+            return Err(LoadMaterialError::NoneLoaded {
+                path: filename.into(),
+            });
         }
         let mut m_vec = Vec::with_capacity(m_size as usize);
         for i in 0..m_size {
@@ -614,24 +633,33 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
 
 #[derive(Debug, Clone)]
 pub struct FramePoseIter<'a> {
-    iter: std::slice::Iter<'a, Option<&'a [crate::math::Transform]>>,
+    iter: std::slice::Iter<'a, Option<&'a [Transform]>>,
     bone_count: usize,
 }
 impl<'a> FramePoseIter<'a> {
-    unsafe fn new(frame_poses: *mut *mut ffi::Transform, frame_count: usize, bone_count: usize) -> Self {
+    unsafe fn new(
+        frame_poses: *mut *mut ffi::Transform,
+        frame_count: usize,
+        bone_count: usize,
+    ) -> Self {
         // No new items are being created that get dropped here, these are just changes in perspective of how to borrow-check the pointers.
         assert!(!frame_poses.is_null(), "frame pose array cannot be null");
         assert!(frame_poses.is_aligned(), "frame pose array must be aligned");
-        let frame_poses = frame_poses.cast::<Option<&'a [crate::math::Transform]>>();
+        let frame_poses = frame_poses.cast::<Option<&'a [Transform]>>();
         let iter = unsafe { std::slice::from_raw_parts(frame_poses, frame_count) }.iter();
         Self { iter, bone_count }
     }
-    fn func(tf: &Option<&'a [crate::math::Transform]>, bone_count: usize) -> &'a [crate::math::Transform] {
-        unsafe { std::slice::from_raw_parts(tf.expect("frame pose transform cannot be null").as_ptr(), bone_count) }
+    fn func(tf: &Option<&'a [Transform]>, bone_count: usize) -> &'a [Transform] {
+        unsafe {
+            std::slice::from_raw_parts(
+                tf.expect("frame pose transform cannot be null").as_ptr(),
+                bone_count,
+            )
+        }
     }
 }
 impl<'a> Iterator for FramePoseIter<'a> {
-    type Item = &'a [crate::math::Transform];
+    type Item = &'a [Transform];
 
     fn next(&mut self) -> Option<Self::Item> {
         let bone_count = self.bone_count;
@@ -661,12 +689,16 @@ impl<'a> Iterator for FramePoseIter<'a> {
 impl<'a> DoubleEndedIterator for FramePoseIter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let bone_count = self.bone_count;
-        self.iter.next_back().map(move |tf| Self::func(tf, bone_count))
+        self.iter
+            .next_back()
+            .map(move |tf| Self::func(tf, bone_count))
     }
 
     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
         let bone_count = self.bone_count;
-        self.iter.nth_back(n).map(move |tf| Self::func(tf, bone_count))
+        self.iter
+            .nth_back(n)
+            .map(move |tf| Self::func(tf, bone_count))
     }
 }
 impl<'a> ExactSizeIterator for FramePoseIter<'a> {
@@ -677,24 +709,35 @@ impl<'a> ExactSizeIterator for FramePoseIter<'a> {
 }
 #[derive(Debug)]
 pub struct FramePoseIterMut<'a> {
-    iter: std::slice::IterMut<'a, Option<&'a mut [crate::math::Transform]>>,
+    iter: std::slice::IterMut<'a, Option<&'a mut [Transform]>>,
     bone_count: usize,
 }
 impl<'a> FramePoseIterMut<'a> {
-    unsafe fn new(frame_poses: *mut *mut ffi::Transform, frame_count: usize, bone_count: usize) -> Self {
+    unsafe fn new(
+        frame_poses: *mut *mut ffi::Transform,
+        frame_count: usize,
+        bone_count: usize,
+    ) -> Self {
         // No new items are being created that get dropped here, these are just changes in perspective of how to borrow-check the pointers.
         assert!(!frame_poses.is_null(), "frame pose array cannot be null");
         assert!(frame_poses.is_aligned(), "frame pose array must be aligned");
-        let frame_poses = frame_poses.cast::<Option<&'a mut [crate::math::Transform]>>();
+        let frame_poses = frame_poses.cast::<Option<&'a mut [Transform]>>();
         let iter = unsafe { std::slice::from_raw_parts_mut(frame_poses, frame_count) }.iter_mut();
         Self { iter, bone_count }
     }
-    fn func(tf: &mut Option<&'a mut [crate::math::Transform]>, bone_count: usize) -> &'a mut [crate::math::Transform] {
-        unsafe { std::slice::from_raw_parts_mut(tf.as_mut().expect("frame pose transform cannot be null").as_mut_ptr(), bone_count) }
+    fn func(tf: &mut Option<&'a mut [Transform]>, bone_count: usize) -> &'a mut [Transform] {
+        unsafe {
+            std::slice::from_raw_parts_mut(
+                tf.as_mut()
+                    .expect("frame pose transform cannot be null")
+                    .as_mut_ptr(),
+                bone_count,
+            )
+        }
     }
 }
 impl<'a> Iterator for FramePoseIterMut<'a> {
-    type Item = &'a mut [crate::math::Transform];
+    type Item = &'a mut [Transform];
 
     fn next(&mut self) -> Option<Self::Item> {
         let bone_count = self.bone_count;
@@ -724,12 +767,16 @@ impl<'a> Iterator for FramePoseIterMut<'a> {
 impl<'a> DoubleEndedIterator for FramePoseIterMut<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let bone_count = self.bone_count;
-        self.iter.next_back().map(move |tf| Self::func(tf, bone_count))
+        self.iter
+            .next_back()
+            .map(move |tf| Self::func(tf, bone_count))
     }
 
     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
         let bone_count = self.bone_count;
-        self.iter.nth_back(n).map(move |tf| Self::func(tf, bone_count))
+        self.iter
+            .nth_back(n)
+            .map(move |tf| Self::func(tf, bone_count))
     }
 }
 impl<'a> ExactSizeIterator for FramePoseIterMut<'a> {
@@ -774,14 +821,14 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
     }
 
     /// Poses array by frame
-    fn frame_poses(&self) -> Vec<&[crate::math::Transform]> {
+    fn frame_poses(&self) -> Vec<&[Transform]> {
         let anim = self.as_ref();
         let mut top = Vec::with_capacity(anim.frameCount as usize);
 
         for i in 0..anim.frameCount {
             top.push(unsafe {
                 std::slice::from_raw_parts(
-                    *(anim.framePoses.offset(i as isize) as *const *const crate::math::Transform),
+                    *(anim.framePoses.offset(i as isize) as *const *const Transform),
                     anim.boneCount as usize,
                 )
             });
@@ -791,18 +838,24 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
     }
     fn frame_poses_iter<'a>(&'a self) -> FramePoseIter<'a> {
         let anim = self.as_ref();
-        unsafe { FramePoseIter::new(anim.framePoses, anim.frameCount as usize, anim.boneCount as usize) }
+        unsafe {
+            FramePoseIter::new(
+                anim.framePoses,
+                anim.frameCount as usize,
+                anim.boneCount as usize,
+            )
+        }
     }
 
     /// Poses array by frame
-    fn frame_poses_mut(&mut self) -> Vec<&mut [crate::math::Transform]> {
+    fn frame_poses_mut(&mut self) -> Vec<&mut [Transform]> {
         let anim = self.as_ref();
         let mut top = Vec::with_capacity(anim.frameCount as usize);
 
         for i in 0..anim.frameCount {
             top.push(unsafe {
                 std::slice::from_raw_parts_mut(
-                    *(anim.framePoses.offset(i as isize) as *mut *mut crate::math::Transform),
+                    *(anim.framePoses.offset(i as isize) as *mut *mut Transform),
                     anim.boneCount as usize,
                 )
             });
@@ -812,7 +865,13 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
     }
     fn frame_poses_iter_mut<'a>(&'a mut self) -> FramePoseIterMut<'a> {
         let anim = self.as_ref();
-        unsafe { FramePoseIterMut::new(anim.framePoses, anim.frameCount as usize, anim.boneCount as usize) }
+        unsafe {
+            FramePoseIterMut::new(
+                anim.framePoses,
+                anim.frameCount as usize,
+                anim.boneCount as usize,
+            )
+        }
     }
 }
 
@@ -830,12 +889,12 @@ impl MaterialMap {
 
     /// Material map color
     #[inline]
-    pub fn color(&self) -> &crate::color::Color {
+    pub fn color(&self) -> &Color {
         unsafe { std::mem::transmute(&self.0.color) }
     }
     /// Material map color
     #[inline]
-    pub fn color_mut(&mut self) -> &mut crate::color::Color {
+    pub fn color_mut(&mut self) -> &mut Color {
         unsafe { std::mem::transmute(&mut self.0.color) }
     }
 
