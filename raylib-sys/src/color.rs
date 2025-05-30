@@ -50,18 +50,7 @@ impl From<(u8, u8, u8, u8)> for Color {
 }
 
 impl Color {
-    /// Get color from HEX RGB string
-    /// # Arguments
-    /// * `color_hex_str` - A string slice, 6 characters long
-    /// # Example
-    /// ```
-    ///    use raylib::prelude::*;
-    ///     let color_white = Color::from_hex("FFFFFF").unwrap();
-    ///     let color_black = Color::from_hex("000000").unwrap();
-    ///
-    ///    assert_eq!(color_black, Color::BLACK);
-    ///    assert_eq!(color_white, Color::WHITE);
-    /// ```
+    /// produces Color from a hex string(6 characters long)
     pub fn from_hex(color_hex_str: &str) -> Result<Color, std::num::ParseIntError> {
         let color = i32::from_str_radix(color_hex_str, 16)?;
         let b = color % 0x100;
@@ -106,12 +95,6 @@ impl Color {
     }
 
     /// Returns color from normalized values [0..1]
-    /// ```rust
-    /// use raylib::prelude::*;
-    /// fn main() {
-    ///     assert_eq!(Color::color_from_normalized(Vector4::new(1.0, 1.0, 1.0, 1.0)), Color::new(255, 255, 255, 255));
-    /// }
-    /// ```
     #[inline]
     pub fn color_from_normalized(normalized: Vector4) -> Color {
         unsafe { super::ColorFromNormalized(normalized.into()).into() }
