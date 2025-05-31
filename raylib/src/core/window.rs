@@ -1,7 +1,7 @@
 //! Window manipulation functions
 use crate::core::math::{Matrix, Ray, Vector2};
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::{ffi, MintVec2, MintVec3};
+use crate::{MintVec2, MintVec3, ffi};
 use std::ffi::{CStr, CString, IntoStringError, NulError};
 use std::os::raw::c_char;
 
@@ -881,7 +881,7 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub unsafe fn get_window_handle(&mut self) -> *mut ::std::os::raw::c_void {
-        ffi::GetWindowHandle()
+        unsafe { ffi::GetWindowHandle() }
     }
 }
 

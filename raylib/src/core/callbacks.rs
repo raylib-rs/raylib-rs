@@ -1,11 +1,11 @@
 #![allow(non_camel_case_types)]
 
-use crate::{audio::AudioStream, ffi, RaylibHandle};
+use crate::{RaylibHandle, audio::AudioStream, ffi};
 pub use raylib_sys::TraceLogLevel;
 use std::{
     borrow::Cow,
     convert::TryInto,
-    ffi::{c_char, c_int, c_void, CStr, CString},
+    ffi::{CStr, CString, c_char, c_int, c_void},
     mem::{size_of, transmute},
     pin::Pin,
     ptr::null_mut,
@@ -17,7 +17,7 @@ use super::audio::Music;
 use stream_processor_with_user_data_wrapper::*;
 
 type TraceLogCallback = unsafe extern "C" fn(*mut i8, *const i8, ...);
-extern "C" {
+unsafe extern "C" {
     fn SetTraceLogCallback(cb: Option<TraceLogCallback>);
 }
 
@@ -65,7 +65,7 @@ fn audio_stream_callback() -> Option<RustAudioStreamCallback> {
     unsafe { transmute(AUDIO_STREAM_CALLBACK.load(Ordering::Relaxed)) }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn custom_trace_log_callback(level: TraceLogLevel, text: *const c_char) {
     if let Some(trace_log) = trace_log_callback() {
         let text = if text.is_null() {

@@ -8,7 +8,7 @@ documentation = "https://docs.rs/raylib-sys"
 repository = "https://github.com/raylib-rs/raylib-rs"
 keywords = ["bindings", "raylib", "gamedev", "ffi"]
 categories = ["external-ffi-bindings"]
-edition = "2021"
+edition = "2024"
 exclude = ["raylib/examples/*", "raylib/projects/*", "raylib/templates/*"]
 
 [dependencies]
@@ -20,7 +20,7 @@ serde = { version = "1.0", optional = true }
 [build-dependencies]
 cmake = "0.1.51"
 cc = { version = "1.0", features = ["parallel"] }
-bindgen = "0.70"
+bindgen = "0.71"
 
 [features]
 # default features follow the cmake version: https://github.com/raysan5/raylib/wiki/CMake-Build-Options

@@ -9,7 +9,7 @@ documentation = "https://docs.rs/raylib"
 repository = "https://github.com/raylib-rs/raylib-rs"
 keywords = ["bindings", "raylib", "gamedev"]
 categories = ["api-bindings", "game-engines", "graphics"]
-edition = "2021"
+edition = "2024"
 autoexamples = false
 
 [dependencies]

@@ -105,7 +105,7 @@ macro_rules! generate_functions {
             /// The real callback passed to raylib.
             /// Each callback has a fixed association with
             /// a given context "slot".
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [< callback_ $n >](data_ptr: *mut ::std::os::raw::c_void, frames: u32) -> () {
               let guard = [< CLOSURE_ $n >].lock().unwrap();
               let audio_callback = &(*guard);

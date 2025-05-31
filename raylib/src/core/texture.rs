@@ -1,9 +1,9 @@
 //! Image and texture related functions
 
+use crate::MintVec2;
 use crate::core::ffi::{Color, Rectangle};
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi;
-use crate::MintVec2;
 use std::convert::TryInto;
 use std::ffi::CString;
 use std::mem::ManuallyDrop;
@@ -1371,16 +1371,12 @@ impl RaylibHandle {
     /// Unload textures from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_texture(&mut self, _: &RaylibThread, texture: WeakTexture2D) {
-        {
-            ffi::UnloadTexture(*texture.as_ref())
-        }
+        unsafe { ffi::UnloadTexture(*texture.as_ref()) }
     }
     /// Weak RenderTextures will leak memeory if they are not unloaded
     /// Unload RenderTextures from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_render_texture(&mut self, _: &RaylibThread, texture: WeakRenderTexture2D) {
-        {
-            ffi::UnloadRenderTexture(*texture.as_ref())
-        }
+        unsafe { ffi::UnloadRenderTexture(*texture.as_ref()) }
     }
 }

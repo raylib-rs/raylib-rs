@@ -1,5 +1,6 @@
 //! 3D Model, Mesh, and Animation
 
+use crate::MintVec3;
 use crate::core::math::BoundingBox;
 use crate::core::math::Matrix;
 use crate::core::math::Transform;
@@ -7,7 +8,6 @@ use crate::core::math::Vector3;
 use crate::core::texture::Image;
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi::Color;
-use crate::MintVec3;
 use crate::{
     consts,
     error::{LoadMaterialError, LoadModelAnimError, LoadModelError, SetMaterialError},
@@ -348,18 +348,20 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// Upload mesh vertex data in GPU and provide VAO/VBO ids
     #[inline]
     unsafe fn upload(&mut self, dynamic: bool) {
-        ffi::UploadMesh(self.as_mut(), dynamic);
+        unsafe { ffi::UploadMesh(self.as_mut(), dynamic) };
     }
     /// Update mesh vertex data in GPU for a specific buffer index
     #[inline]
     unsafe fn update_buffer<A>(&mut self, index: i32, data: &[u8], offset: i32) {
-        ffi::UpdateMeshBuffer(
-            *self.as_ref(),
-            index,
-            data.as_ptr() as *const c_void,
-            data.len() as i32,
-            offset,
-        );
+        unsafe {
+            ffi::UpdateMeshBuffer(
+                *self.as_ref(),
+                index,
+                data.as_ptr() as *const c_void,
+                data.len() as i32,
+                offset,
+            )
+        };
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
@@ -986,18 +988,14 @@ impl RaylibHandle {
     /// Unload material from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_material(&mut self, _: &RaylibThread, material: WeakMaterial) {
-        {
-            ffi::UnloadMaterial(*material.as_ref())
-        }
+        unsafe { ffi::UnloadMaterial(*material.as_ref()) }
     }
 
     /// Weak models will leak memeory if they are not unlaoded
     /// Unload model from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_model(&mut self, _: &RaylibThread, model: WeakModel) {
-        {
-            ffi::UnloadModel(*model.as_ref())
-        }
+        unsafe { ffi::UnloadModel(*model.as_ref()) }
     }
 
     /// Weak model_animations will leak memeory if they are not unlaoded
@@ -1008,17 +1006,13 @@ impl RaylibHandle {
         _: &RaylibThread,
         model_animation: WeakModelAnimation,
     ) {
-        {
-            ffi::UnloadModelAnimation(*model_animation.as_ref())
-        }
+        unsafe { ffi::UnloadModelAnimation(*model_animation.as_ref()) }
     }
 
     /// Weak meshs will leak memeory if they are not unlaoded
     /// Unload mesh from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_mesh(&mut self, _: &RaylibThread, mesh: WeakMesh) {
-        {
-            ffi::UnloadMesh(*mesh.as_ref())
-        }
+        unsafe { ffi::UnloadMesh(*mesh.as_ref()) }
     }
 }
