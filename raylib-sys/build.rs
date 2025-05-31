@@ -325,24 +325,12 @@ fn gen_bindings() {
 
 fn gen_rgui() {
     // Compile the code and link with cc crate
-    #[cfg(target_os = "windows")]
-    {
-        cc::Build::new()
-            .files(vec!["binding/rgui_wrapper.cpp"])
-            .include("binding")
-            .warnings(false)
-            .extra_warnings(false)
-            .compile("rgui");
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        cc::Build::new()
-            .files(vec!["binding/rgui_wrapper.c"])
-            .include("binding")
-            .warnings(false)
-            .extra_warnings(false)
-            .compile("rgui");
-    }
+    cc::Build::new()
+        .files(vec!["binding/rgui_wrapper.c"])
+        .include("binding")
+        .warnings(false)
+        .extra_warnings(false)
+        .compile("rgui");
 }
 
 fn gen_imgui() {
@@ -360,24 +348,12 @@ fn gen_imgui() {
 
 fn gen_utils() {
     // Compile the code and link with cc crate
-    #[cfg(target_os = "windows")]
-    {
-        cc::Build::new()
-            .files(vec!["binding/utils_log.cpp"])
-            .include("binding")
-            .warnings(false)
-            .extra_warnings(false)
-            .compile("utils_log");
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        cc::Build::new()
-            .files(vec!["binding/utils_log.c"])
-            .include("binding")
-            .warnings(false)
-            .extra_warnings(false)
-            .compile("utils_log");
-    }
+    cc::Build::new()
+        .files(vec!["binding/utils_log.c"])
+        .include("binding")
+        .warnings(false)
+        .extra_warnings(false)
+        .compile("utils_log");
 }
 
 #[cfg(feature = "nobuild")]

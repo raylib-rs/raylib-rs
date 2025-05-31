@@ -730,7 +730,7 @@ impl GuiProperty for crate::consts::GuiSliderProperty {
         self as i32
     }
 }
-impl GuiProperty for crate::consts::GuiSpinnerProperty {
+impl GuiProperty for crate::consts::GuiValueBoxProperty {
     fn as_i32(self) -> i32 {
         self as i32
     }
