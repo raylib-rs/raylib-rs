@@ -598,17 +598,13 @@ impl Image {
     /// Draw a triangle fan defined by points within an image (first vertex is the center)
     pub fn draw_triangle_fan(
         &mut self,
-        points: Vec<crate::math::Vector2>,
+        points: &mut [crate::math::Vector2],
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
             ffi::ImageDrawTriangleFan(
                 &mut self.0,
-                points
-                    .iter()
-                    .map(|f| (*f).into())
-                    .collect::<Vec<MintVec2>>()
-                    .as_ptr() as *mut ffi::Vector2,
+                points.as_ptr() as *mut MintVec2,
                 points.len() as i32,
                 color.into(),
             )
@@ -618,17 +614,13 @@ impl Image {
     /// Draw a triangle strip defined by points within an image
     pub fn draw_triangle_strip(
         &mut self,
-        points: Vec<crate::math::Vector2>,
+        points: &mut [crate::math::Vector2],
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
             ffi::ImageDrawTriangleStrip(
                 &mut self.0,
-                points
-                    .iter()
-                    .map(|f| (*f).into())
-                    .collect::<Vec<MintVec2>>()
-                    .as_ptr() as *mut ffi::Vector2,
+                points.as_ptr() as *mut MintVec2,
                 points.len() as i32,
                 color.into(),
             )

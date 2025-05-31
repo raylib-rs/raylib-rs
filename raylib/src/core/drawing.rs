@@ -9,8 +9,8 @@ use crate::math::Matrix;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::models::WeakMaterial;
-use crate::MintVec2;
-use crate::{ffi, MintVec3};
+use crate::{MintMatrix, MintVec2};
+use crate::{MintVec3, ffi};
 use std::ffi::CString;
 use std::{convert::AsRef, marker::PhantomData};
 
@@ -1744,15 +1744,11 @@ pub trait RaylibDraw3D {
         material: WeakMaterial,
         transforms: &[Matrix],
     ) {
-        let tr = transforms
-            .iter()
-            .map(|f| (*f).into())
-            .collect::<Vec<ffi::Matrix>>();
         unsafe {
             ffi::DrawMeshInstanced(
                 *mesh.as_ref(),
                 material.0,
-                tr.as_ptr(),
+                transforms.as_ptr() as *const MintMatrix,
                 transforms.len() as i32,
             )
         }
