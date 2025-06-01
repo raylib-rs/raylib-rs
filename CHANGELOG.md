@@ -11,12 +11,13 @@
 - MOVED: `Rectangle` to `raylib-sys` because having 2 versions of this simple structure is pointless
 - REMOVED: needless `target_os = windows` for rlgl getting&setting matrix functions
 - BUGFIX : `build.rs` gen_utils function generated the `util_log.c` as `rgui`making raygui not work
+- Removed: Removed imgui from being a feature on `raylib-sys`, instead check [imgui example](https://github.com/raylib-rs/raylib-rs/blob/unstable/samples/imgui.rs) for integration
 ## build script changes:
 - Blacklist Vector2, Vector3, Vector4, Matrix, Quaternion, Rectangle, Color from generating in bindgen as they are replaced by mint and manual implementations
 - BUGFIX: Fixed bug where `utils_log` compiled as "rgui" making the rust build fail in some cases
 - Prevent android builds from turning on GLFW flags
 
-## 3.7.0 (WIP)
+## 3.7.0
 
 - [core] ADDED: LoadVrStereoConfig()
 - [core] ADDED: UnloadVrStereoConfig()
