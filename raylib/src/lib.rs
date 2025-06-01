@@ -68,6 +68,14 @@ pub mod ffi {
 }
 
 pub use crate::core::collision::*;
+
+pub type MintVec2 = ffi::Vector2;
+pub type MintVec3 = ffi::Vector3;
+pub type MintVec4 = ffi::Vector4;
+pub type MintMatrix = ffi::Matrix;
+pub type MintQuat = ffi::Quaternion;
+
+pub use crate::core::logging::*;
 pub use crate::core::misc::open_url;
 pub use crate::core::*;
 

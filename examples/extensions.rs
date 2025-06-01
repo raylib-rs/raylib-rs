@@ -6,7 +6,14 @@ mod options;
 
 trait RaylibDrawExt: RaylibDraw {
     fn custom_draw(&mut self, font: &WeakFont) {
-        self.draw_text_ex(font, "custom draw", rvec2(0, 0), 16.0, 0.0, Color::GREEN);
+        self.draw_text_ex(
+            font,
+            "custom",
+            Vector2::new(0.0, 0.0),
+            16.0,
+            0.0,
+            Color::GREEN,
+        );
     }
 }
 

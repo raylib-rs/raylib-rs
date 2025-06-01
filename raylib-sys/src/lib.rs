@@ -3,18 +3,22 @@
 #![allow(non_snake_case)]
 #![allow(clippy::approx_constant)]
 
-#[cfg(feature = "bindgen")]
+#[cfg(not(feature = "nobindgen"))]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-#[cfg(not(feature = "bindgen"))]
+#[cfg(feature = "nobindgen")]
 include!(env!("RAYLIB_BINDGEN_LOCATION"));
 
 #[cfg(target_os = "macos")]
 pub const MAX_MATERIAL_MAPS: u32 = 12;
 
-// TraceLogLevel is bindgen-generated so we can't use `#[default]` on its
-// variants; the manual Default impl is the only way to select LOG_INFO here.
-#[allow(clippy::derivable_impls)]
+mod color;
+mod math;
+#[allow(unused_imports)]
+pub use color::*;
+#[allow(unused_imports)]
+pub use math::*;
+
 impl Default for TraceLogLevel {
     fn default() -> Self {
         TraceLogLevel::LOG_INFO

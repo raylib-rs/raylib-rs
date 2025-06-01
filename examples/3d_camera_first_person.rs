@@ -13,19 +13,14 @@ struct Column {
 
 impl Column {
     fn create_random() -> Column {
-        let mut rng = rand::rng();
-        let height: f32 = rng.random_range(1.0..12.0);
+        let mut rng = rand::thread_rng();
+        let height: f32 = rng.gen_range(1.0..12.0);
         let position = Vector3::new(
-            rng.random_range(-15.0..15.0),
+            rng.gen_range(-15.0..15.0),
             height / 2.0,
-            rng.random_range(-15.0..15.0),
+            rng.gen_range(-15.0..15.0),
         );
-        let color = Color::new(
-            rng.random_range(20..255),
-            rng.random_range(10..55),
-            30,
-            255,
-        );
+        let color = Color::new(rng.gen_range(20..255), rng.gen_range(10..55), 30, 255);
 
         Column {
             height,
@@ -38,8 +33,7 @@ impl Column {
 fn main() {
     let (mut rl, thread) = raylib::init()
         .size(WINDOW_WIDTH, WINDOW_HEIGHT)
-        .title("3D Camera - First-Person")
-        .highdpi()
+        .title("Hello, world!")
         .build();
 
     let mut camera = Camera3D::perspective(
@@ -56,11 +50,11 @@ fn main() {
     rl.set_target_fps(60);
 
     while !rl.window_should_close() {
-        rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
+        camera.update_camera(CameraMode::CAMERA_FIRST_PERSON);
 
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::DARKGREEN);
-            d.draw_mode3D(camera, |mut d2, _camera| {
+            d.draw_mode3D(camera, |mut d2| {
                 d2.draw_plane(
                     Vector3::new(0.0, 0.0, 0.0),
                     Vector2::new(32.0, 32.0),

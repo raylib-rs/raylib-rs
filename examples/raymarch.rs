@@ -37,7 +37,7 @@ pub fn main() {
     while !rl.window_should_close() {
         // Update
         //----------------------------------------------------------------------------------
-        rl.update_camera(&mut camera, CameraMode::CAMERA_FREE);
+        camera.update_camera(CameraMode::CAMERA_FREE);
 
         let camera_pos = Vector3::new(camera.position.x, camera.position.y, camera.position.z);
         let camera_target = Vector3::new(camera.target.x, camera.target.y, camera.target.z);

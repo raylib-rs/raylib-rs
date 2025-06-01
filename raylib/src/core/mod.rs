@@ -6,7 +6,10 @@ pub mod automation;
 pub mod callbacks;
 pub mod camera;
 pub mod collision;
-pub mod color;
+pub mod color {
+    #[allow(unused_imports)]
+    pub use crate::ffi::Color;
+}
 pub mod data;
 pub mod drawing;
 pub mod error;
@@ -87,7 +90,8 @@ pub struct RaylibBuilder {
     height: i32,
     title: String,
 }
-
+#[inline]
+#[must_use]
 /// Creates a `RaylibBuilder` for choosing window options before initialization.
 pub fn init() -> RaylibBuilder {
     RaylibBuilder {

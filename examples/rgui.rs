@@ -45,8 +45,10 @@ pub fn main() {
     let mut text_box_text = String::from("Text box");
     let mut text_box_edit_mode = false;
 
-    let mut text_box_multi_text = String::from("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n\nDuis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat Nonea pariatur.\n\nThisisastringlongerthanexpectedwithoutspacestotestcharbreaksforthosecases,checkingifworkingasexpected.\n\nExcepteur slet occaecatcupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.");
-    let mut text_box_multi_edit_mode = false;
+    let mut textBoxMultiText = String::from(
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n\nDuis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat Nonea pariatur.\n\nThisisastringlongerthanexpectedwithoutspacestotestcharbreaksforthosecases,checkingifworkingasexpected.\n\nExcepteur slet occaecatcupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+    );
+    let mut textBoxMultiEditMode = false;
 
     let mut list_view_scroll_index = 0;
     let mut list_view_active = -1;
@@ -359,8 +361,8 @@ pub fn main() {
             Rectangle::new(560.0, 25.0, 102.0, 354.0),
             "",
             Rectangle::new(560.0, 25.0, 300.0, 1200.0),
-            &view_scroll,
-            &view,
+            viewScroll,
+            view,
         );
 
         d.gui_grid(

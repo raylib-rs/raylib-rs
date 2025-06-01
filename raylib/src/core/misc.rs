@@ -66,6 +66,7 @@ pub fn open_url(url: &str) {
 }
 
 impl RaylibHandle {
+    #[must_use]
     /// Load random values sequence, no values repeated
     pub fn load_random_sequence<'a>(&self, num: Range<i32>, count: u32) -> RandomSequence<'a> {
         unsafe {
@@ -73,6 +74,8 @@ impl RaylibHandle {
             RandomSequence(std::slice::from_raw_parts_mut(ptr, count as usize))
         }
     }
+    #[inline]
+    #[must_use]
     /// Load pixels from the screen into a CPU image
     pub fn load_image_from_screen(&self, _: &RaylibThread) -> Image {
         unsafe { Image(ffi::LoadImageFromScreen()) }
@@ -85,7 +88,8 @@ impl RaylibHandle {
             ffi::TakeScreenshot(c_filename.as_ptr());
         }
     }
-
+    #[inline]
+    #[must_use]
     /// Returns a random value between min and max (both included)
     /// ```ignore
     /// use sola_raylib::*;

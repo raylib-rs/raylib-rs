@@ -184,7 +184,7 @@ fn main() {
                 });
             }
             // Draw 3D model (recomended to draw 3D always before 2D)
-            d.draw_mode3D(camera, |mut d, _camera| {
+            d.draw_mode3D(camera, |mut d| {
                 d.draw_model(&model, Vector3::new(0.0, 6.0, 0.0), 1.0, Color::WHITE); // Draw 3d model with texture
                 d.draw_grid(10, 10.0);
             });

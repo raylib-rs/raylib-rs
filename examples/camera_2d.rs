@@ -73,7 +73,7 @@ fn main() {
 
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::RAYWHITE);
-            d.draw_mode2D(camera, |mut d2, _camera| {
+            d.draw_mode2D(camera, |mut d2| {
                 d2.draw_rectangle(-6000, 320, 13000, 8000, Color::DARKGRAY);
 
                 for i in 0..MAX_BUILDINGS {

@@ -1,12 +1,4 @@
 [workspace]
 members = ["raylib", "raylib-sys"]
-exclude = ["examples"]
-
-[workspace.lints.rust]
-# Workspace lints apply only to our own crates, never to dependencies.
-warnings = "deny"
-
-[workspace.lints.clippy]
-# The default clippy group (correctness, suspicious, style, complexity, perf).
-# Priority lets more-specific lints below (or per-crate/per-item) override.
-all = { level = "deny", priority = -1 }
+exclude = ["raylib-test", "samples"]
+resolver = "2"
