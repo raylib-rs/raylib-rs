@@ -38,6 +38,9 @@ raygui = ["raylib-sys/raygui"]
 # ----- Copy and paste these from `raylib-sys` for easier maintance
 # Build Raylib headless for docs/esoteric platforms. Up to you to link.
 nobuild = ["raylib-sys/nobuild"]
+# Do not autogenerate bindings, instead read an existing one specified by env RAYLIB_BINDGEN_LOCATION
+# useful when bindgen doesn't generate correctly on esoteric platforms and need manual auidting
+nobindgen = ["raylib-sys/nobindgen"]
 
 # opengl stuff
 opengl_11 = ["raylib-sys/opengl_11"]       # buggy? might not work with wayland

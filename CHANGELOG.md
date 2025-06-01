@@ -15,6 +15,9 @@
 - Blacklist Vector2, Vector3, Vector4, Matrix, Quaternion, Rectangle, Color from generating in bindgen as they are replaced by mint and manual implementations
 - BUGFIX: Fixed bug where `utils_log` compiled as "rgui" making the rust build fail in some cases
 - Prevent android builds from turning on GLFW flags
+- Added/exposed various feature flags
+- Invert `bindgen` feature flag to `nobindgen` since its a more saner default
+
 
 ## 3.7.0 (WIP)
 

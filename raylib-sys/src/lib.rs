@@ -3,10 +3,10 @@
 #![allow(non_snake_case)]
 #![allow(clippy::approx_constant)]
 
-#[cfg(feature = "bindgen")]
+#[cfg(not(feature = "nobindgen"))]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-#[cfg(not(feature = "bindgen"))]
+#[cfg(feature = "nobindgen")]
 include!(env!("RAYLIB_BINDGEN_LOCATION"));
 
 #[cfg(target_os = "macos")]
