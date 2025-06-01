@@ -83,6 +83,3 @@ pub use crate::core::*;
 // Re-exports
 #[cfg(feature = "serde")]
 pub use serde;
-
-#[cfg(feature = "imgui")]
-pub mod imgui;

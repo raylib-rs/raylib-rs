@@ -295,14 +295,6 @@ fn gen_bindings() {
         .clang_arg(plat)
         .parse_callbacks(Box::new(ignored_macros));
 
-    #[cfg(feature = "imgui")]
-    {
-        builder = builder
-            .clang_arg("-I./binding/imgui/decoy")
-            .clang_arg("-I./raylib/src")
-            .header("binding/rlImGui/rlImGui.h");
-    }
-
     if platform == Platform::Desktop && os == PlatformOS::Windows {
         // odd workaround for booleans being broken
         builder = builder.clang_arg("-D__STDC__");
@@ -331,19 +323,6 @@ fn gen_rgui() {
         .warnings(false)
         .extra_warnings(false)
         .compile("rgui");
-}
-
-fn gen_imgui() {
-    println!("cargo:rustc-link-lib=dylib=stdc++");
-
-    cc::Build::new()
-        .define("NO_FONT_AWESOME", "1")
-        .files(vec!["binding/rlImGui/rlImGui.cpp"])
-        .include("binding/imgui")
-        .include("raylib/src")
-        .warnings(false)
-        .extra_warnings(false)
-        .compile("rlImGui");
 }
 
 fn gen_utils() {
@@ -456,9 +435,6 @@ fn main() {
 
     #[cfg(feature = "raygui")]
     gen_rgui();
-
-    #[cfg(feature = "imgui")]
-    gen_imgui();
 
     gen_utils();
 }
@@ -630,9 +606,5 @@ fn features_from_env(cmake: &mut Config) {
 }
 #[must_use]
 fn bstr(b: bool) -> &'static str {
-    if b {
-        "ON"
-    } else {
-        "OFF"
-    }
+    if b { "ON" } else { "OFF" }
 }

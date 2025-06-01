@@ -16,8 +16,6 @@ autoexamples = false
 raylib-sys = { version = "5.7.0", path = "../raylib-sys", default-features = false }
 serde = { version = "1.0.125", features = ["derive"], optional = true }
 serde_json = { version = "1.0.64", optional = true }
-imgui = { version = "0.12.0", optional = true, features = [] }
-imgui-sys = { version = "0.12.0", optional = true }
 
 glam = { version = "0.30", features = ["mint"] }
 
@@ -35,7 +33,6 @@ rand = "0.9"
 default = ["raylib-sys/default"]
 nightly = []
 serde = ["dep:serde", "raylib-sys/serde", "glam/serde"]
-imgui = ["raylib-sys/imgui", "dep:imgui", "dep:imgui-sys"]
 
 raygui = ["raylib-sys/raygui"]
 # ----- Copy and paste these from `raylib-sys` for easier maintance
