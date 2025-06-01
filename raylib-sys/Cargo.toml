@@ -12,8 +12,6 @@ edition = "2024"
 exclude = ["raylib/examples/*", "raylib/projects/*", "raylib/templates/*"]
 
 [dependencies]
-imgui = { version = "0.12.0", optional = true, features = [] }
-imgui-sys = { version = "0.12.0", optional = true }
 mint = { version = "0.5" }
 serde = { version = "1.0", optional = true }
 
@@ -80,7 +78,6 @@ raygui = []
 # You can turn this off if you wanna go into the source and put in your own bindings.rs, which is
 # useful since bindgen doesn't work on esoteric platforms.
 bindgen = []
-imgui = ["dep:imgui", "dep:imgui-sys"]
 
 
 # ----- Copy and paste these from `raylib-sys` for easier maintance
