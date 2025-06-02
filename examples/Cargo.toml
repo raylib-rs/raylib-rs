@@ -30,6 +30,7 @@ platform_web_rgfw = ["raylib/platform_web_rgfw"]
 [[bin]]
 name = "rgui"
 path = "./rgui.rs"
+required-features = ["raylib/raygui"]
 
 [[bin]]
 name = "arkanoid"

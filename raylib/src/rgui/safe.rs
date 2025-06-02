@@ -1,10 +1,10 @@
+use crate::core::RaylibHandle;
 use crate::core::drawing::RaylibDraw;
 use crate::core::text::WeakFont;
-use crate::core::RaylibHandle;
 use crate::ffi::{Color, Rectangle, Vector2};
-use crate::{ffi, MintVec2};
+use crate::{MintVec2, ffi};
 
-use std::ffi::{c_char, CStr, CString};
+use std::ffi::{CStr, CString, c_char};
 
 /// Global gui modification functions
 impl RaylibHandle {
