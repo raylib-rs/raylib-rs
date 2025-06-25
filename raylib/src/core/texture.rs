@@ -1,9 +1,10 @@
 //! Image and texture related functions
 
 use crate::MintVec2;
-use crate::core::ffi::{Color, Rectangle};
+use crate::core::ffi::Color;
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi;
+use crate::math::Rectangle;
 use std::convert::TryInto;
 use std::ffi::CString;
 use std::mem::ManuallyDrop;
