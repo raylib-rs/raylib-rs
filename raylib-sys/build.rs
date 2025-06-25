@@ -64,7 +64,6 @@ impl ParseCallbacks for TypeOverrideCallback {
             "Vector4",
             "Matrix",
             "Quaternion",
-            "Rectangle",
             "Color",
         ];
 
@@ -284,7 +283,6 @@ fn gen_bindings() {
         .blocklist_type("Vector4")
         .blocklist_type("Matrix")
         .blocklist_type("Quaternion")
-        .blocklist_type("Rectangle")
         .blocklist_type("Color")
         .parse_callbacks(Box::new(TypeOverrideCallback))
         // Tell cargo to invalidate the built crate whenever any of the
