@@ -4,7 +4,7 @@ use crate::MintVec3;
 use crate::core::math::BoundingBox;
 use crate::core::math::Matrix;
 use crate::core::math::Transform;
-use crate::core::math::Vector3;
+use crate::core::math::{Vector3, Vector4};
 use crate::core::texture::Image;
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi::Color;
@@ -15,6 +15,7 @@ use crate::{
 };
 use std::ffi::CString;
 use std::os::raw::c_void;
+use std::ptr::NonNull;
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
@@ -24,13 +25,6 @@ make_thin_wrapper!(
     ffi::UnloadModel
 );
 make_thin_wrapper!(WeakModel, ffi::Model, no_drop);
-make_thin_wrapper!(
-    /// Mesh, vertex data and vao/vbo
-    Mesh,
-    ffi::Mesh,
-    |mesh: ffi::Mesh| ffi::UnloadMesh(mesh)
-);
-make_thin_wrapper!(WeakMesh, ffi::Mesh, no_drop);
 make_thin_wrapper!(
     /// Material, includes shader and maps
     Material,
@@ -58,17 +52,153 @@ make_thin_wrapper!(
     no_drop
 );
 
-// Weak things can be clone
-impl Clone for WeakModel {
-    fn clone(&self) -> WeakModel {
-        WeakModel(self.0)
+#[repr(C)]
+#[derive(Debug)]
+pub struct Mesh {
+    vertex_count: i32,
+    triangle_count: i32,
+    vertices: NonNull<f32>,
+    texcoords: NonNull<f32>,
+    texcoords2: NonNull<f32>,
+    normals: NonNull<f32>,
+    tangents: NonNull<f32>,
+    colors: NonNull<u8>,
+    indices: NonNull<u16>,
+    anim_vertices: NonNull<f32>,
+    anim_normals: NonNull<f32>,
+    bone_ids: NonNull<u8>,
+    bone_weights: NonNull<f32>,
+    bone_matrices: NonNull<ffi::Matrix>,
+    bone_count: i32,
+    vao_id: u32,
+    vbo_id: NonNull<u32>,
+}
+
+const _: () = {
+    assert!(std::mem::offset_of!(Mesh, vertex_count) == std::mem::offset_of!(ffi::Mesh, vertexCount));
+    assert!(std::mem::offset_of!(Mesh, triangle_count) == std::mem::offset_of!(ffi::Mesh, triangleCount));
+    assert!(std::mem::offset_of!(Mesh, vertices) == std::mem::offset_of!(ffi::Mesh, vertices));
+    assert!(std::mem::offset_of!(Mesh, texcoords) == std::mem::offset_of!(ffi::Mesh, texcoords));
+    assert!(std::mem::offset_of!(Mesh, texcoords2) == std::mem::offset_of!(ffi::Mesh, texcoords2));
+    assert!(std::mem::offset_of!(Mesh, normals) == std::mem::offset_of!(ffi::Mesh, normals));
+    assert!(std::mem::offset_of!(Mesh, tangents) == std::mem::offset_of!(ffi::Mesh, tangents));
+    assert!(std::mem::offset_of!(Mesh, colors) == std::mem::offset_of!(ffi::Mesh, colors));
+    assert!(std::mem::offset_of!(Mesh, indices) == std::mem::offset_of!(ffi::Mesh, indices));
+    assert!(std::mem::offset_of!(Mesh, anim_vertices) == std::mem::offset_of!(ffi::Mesh, animVertices));
+    assert!(std::mem::offset_of!(Mesh, anim_normals) == std::mem::offset_of!(ffi::Mesh, animNormals));
+    assert!(std::mem::offset_of!(Mesh, bone_ids) == std::mem::offset_of!(ffi::Mesh, boneIds));
+    assert!(std::mem::offset_of!(Mesh, bone_weights) == std::mem::offset_of!(ffi::Mesh, boneWeights));
+    assert!(std::mem::offset_of!(Mesh, bone_matrices) == std::mem::offset_of!(ffi::Mesh, boneMatrices));
+    assert!(std::mem::offset_of!(Mesh, bone_count) == std::mem::offset_of!(ffi::Mesh, boneCount));
+    assert!(std::mem::offset_of!(Mesh, vao_id) == std::mem::offset_of!(ffi::Mesh, vaoId));
+    assert!(std::mem::offset_of!(Mesh, vbo_id) == std::mem::offset_of!(ffi::Mesh, vboId));
+    assert!(std::mem::size_of::<Mesh>() == std::mem::size_of::<ffi::Mesh>());
+};
+
+impl Drop for Mesh {
+    fn drop(&mut self) {
+        // SAFETY: `mesh` will not be used after `self` drops.
+        let mesh = unsafe { self.make_raw() };
+        // SAFETY: Mesh must be valid if constructed
+        unsafe { ffi::UnloadMesh(mesh) }
+    }
+}
+
+impl Mesh {
+    /// Casts a strong [`Mesh`] reference to a weak [`ffi::Mesh`] reference.
+    ///
+    /// # Safety
+    ///
+    /// Do not mutate the data pointed to by any field of the returned reference in
+    /// such a way that it would no longer be valid.
+    pub unsafe fn as_raw(&self) -> &ffi::Mesh {
+        // SAFETY: `Mesh` has the same size, fields, and layout as `ffi::Mesh`.
+        unsafe { std::mem::transmute(self) }
+    }
+
+    /// Casts a strong [`Mesh`] mutable reference to a weak [`ffi::Mesh`] mutable reference.
+    ///
+    /// # Safety
+    ///
+    /// Do not mutate any field of the returned reference in such a way that it would
+    /// no longer be valid.
+    pub unsafe fn as_raw_mut(&mut self) -> &mut ffi::Mesh {
+        // SAFETY: `Mesh` has the same size, fields, and layout as `ffi::Mesh`.
+        unsafe { std::mem::transmute(self) }
+    }
+
+    /// Returns a raylib-sys mesh referring to the same resource as `self`.
+    ///
+    /// # Safety
+    ///
+    /// The returned mesh is a **weak, shallow copy**. Dropping it will not free the
+    /// resources associated with `self`. When `self` is dropped, the weak copy will
+    /// contain dangling pointers, which will cause UB if dereferenced.
+    ///
+    /// The returned mesh must not be used after any copy of `self` is released.
+    pub unsafe fn make_raw(&self) -> ffi::Mesh {
+        unsafe { *self.as_raw() }
+    }
+
+    /// Converts raylib-sys object to a "safe" version.
+    ///
+    /// # Safety
+    ///
+    /// Make sure to call this function from the thread the resource was created.
+    ///
+    /// The mesh resource that `raw` represents must be released **exactly once**.
+    /// It is strongly recommended to avoid having multiple [`Mesh`]es referring
+    /// to the same mesh resource, for the sake of sanity.
+    pub unsafe fn from_raw(raw: ffi::Mesh) -> Option<Self> {
+        if
+            raw.vertexCount >= 0 &&
+            raw.triangleCount >= 0 &&
+            !raw.vertices.is_null() &&
+            !raw.texcoords.is_null() &&
+            !raw.texcoords2.is_null() &&
+            !raw.normals.is_null() &&
+            !raw.tangents.is_null() &&
+            !raw.colors.is_null() &&
+            !raw.indices.is_null() &&
+            !raw.animVertices.is_null() &&
+            !raw.animNormals.is_null() &&
+            !raw.boneIds.is_null() &&
+            !raw.boneWeights.is_null() &&
+            !raw.boneMatrices.is_null() &&
+            raw.boneCount >= 0 &&
+            raw.vaoId != 0 &&
+            !raw.vboId.is_null()
+        {
+            Some(unsafe { Self::from_raw_unchecked(raw) })
+        } else {
+            None
+        }
+    }
+
+    /// Converts raylib-sys object to a "safe" version.
+    ///
+    /// # Safety
+    ///
+    /// Mesh must be valid:
+    /// - All pointer fields must be non-null, not dangling, and [valid](std::ptr#safety).
+    /// - All count fields must be non-negative.
+    ///
+    /// Make sure to call this function from the thread the resource was created.
+    ///
+    /// The mesh resource that `raw` represents must be released **exactly once**.
+    /// It is strongly recommended to avoid having multiple [`Mesh`]es referring
+    /// to the same mesh resource, for the sake of sanity.
+    pub unsafe fn from_raw_unchecked(raw: ffi::Mesh) -> Self {
+        // SAFETY: `Mesh` has the same size, fields, and layout as `ffi::Mesh`.
+        // Caller must uphold remaining safety contracts.
+        unsafe { std::mem::transmute(raw) }
     }
 }
 
 // Weak things can be clone
-impl Clone for WeakMesh {
-    fn clone(&self) -> WeakMesh {
-        WeakMesh(self.0)
+impl Clone for WeakModel {
+    fn clone(&self) -> WeakModel {
+        WeakModel(self.0)
     }
 }
 
@@ -112,9 +242,9 @@ impl RaylibHandle {
     pub fn load_model_from_mesh(
         &mut self,
         _: &RaylibThread,
-        mesh: WeakMesh,
+        mesh: ffi::Mesh,
     ) -> Result<Model, LoadModelError> {
-        let m = unsafe { ffi::LoadModelFromMesh(mesh.0) };
+        let m = unsafe { ffi::LoadModelFromMesh(mesh) };
 
         if m.meshes.is_null() || m.materials.is_null() {
             return Err(LoadModelError::LoadFromMeshFailed);
@@ -206,21 +336,22 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     /// Meshes array
     #[inline]
     #[must_use]
-    fn meshes(&self) -> &[WeakMesh] {
+    fn meshes(&self) -> &[ffi::Mesh] {
         unsafe {
             std::slice::from_raw_parts(
-                self.as_ref().meshes as *const WeakMesh,
+                self.as_ref().meshes as *const ffi::Mesh,
                 self.as_ref().meshCount as usize,
             )
         }
     }
+
     // Meshes array
     #[inline]
     #[must_use]
-    fn meshes_mut(&mut self) -> &mut [WeakMesh] {
+    fn meshes_mut(&mut self) -> &mut [ffi::Mesh] {
         unsafe {
             std::slice::from_raw_parts_mut(
-                self.as_mut().meshes as *mut WeakMesh,
+                self.as_mut().meshes as *mut ffi::Mesh,
                 self.as_mut().meshCount as usize,
             )
         }
@@ -334,258 +465,382 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
 }
 
-impl RaylibMesh for WeakMesh {}
-impl RaylibMesh for Mesh {}
-
 impl Mesh {
-    pub unsafe fn make_weak(self) -> WeakMesh {
-        let m = WeakMesh(self.0);
-        std::mem::forget(self);
-        m
-    }
-}
-pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
-    /// Upload mesh vertex data in GPU and provide VAO/VBO ids
-    #[inline]
-    unsafe fn upload(&mut self, dynamic: bool) {
-        unsafe { ffi::UploadMesh(self.as_mut(), dynamic) };
-    }
+    // Mesh is required to already be uploaded in order to be valid.
+    //
+    // /// Upload mesh vertex data in GPU and provide VAO/VBO ids
+    // #[inline]
+    // pub unsafe fn upload(&mut self, dynamic: bool) {
+    //     unsafe { ffi::UploadMesh(self.as_mut(), dynamic) };
+    // }
+
     /// Update mesh vertex data in GPU for a specific buffer index
+    ///
+    /// Requires OpenGL 3.3 or ES 2.0 to have any effect
+    ///
+    /// # Safety
+    ///
+    /// `data` and `offset` must define a range entirely contained by the
+    /// `index`th buffer of `self`.
     #[inline]
-    unsafe fn update_buffer<A>(&mut self, index: i32, data: &[u8], offset: i32) {
+    pub unsafe fn update_buffer(&mut self, index: i32, data: &[u8], offset: i32) {
+        // SAFETY: `raw` will not be used after the resource is released
+        // because it goes out of scope when this method returns, and `self`
+        // is not dropped in this method.
+        let raw = unsafe { self.make_raw() };
+
+        // SAFETY:
+        // - `raw` refers to a loaded Mesh
+        // - `dataSize` and `offset` are provided in bytes
+        // - Caller must ensure `dataSize` and `offset` define a range
+        //   lying entirely within the buffer object's data store
         unsafe {
             ffi::UpdateMeshBuffer(
-                *self.as_ref(),
+                raw,
                 index,
-                data.as_ptr() as *const c_void,
+                data.as_ptr().cast::<c_void>(),
                 data.len() as i32,
                 offset,
             )
         };
     }
+
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
+    ///
+    /// # Safety
+    ///
+    /// For the lifetime of the returned slice, the memory it points to must not get mutated.
     #[inline]
     #[must_use]
-    fn vertices(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().vertices as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+    pub unsafe fn vertices(&self) -> &[Vector3] {
+        let ptr = NonNull::slice_from_raw_parts(
+            self.vertices.cast::<Vector3>(),
+            self.vertex_count.try_into().expect("vertex_count should never be negative"),
+        );
+        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+        // aligned, dereferenceable, and pointing to valid data.
+        // It is the caller's responsibility to enforce Rust's aliasing rules.
+        unsafe { ptr.as_ref() }
     }
+
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
+    ///
+    /// # Safety
+    ///
+    /// For the lifetime of the returned slice, the memory it points to must not get accessed
+    /// (read or written) through any other pointer or reference not derived from it.
     #[inline]
     #[must_use]
-    fn vertices_mut(&mut self) -> &mut [Vector3] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().vertices as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+    pub unsafe fn vertices_mut(&mut self) -> &mut [Vector3] {
+        let mut ptr = NonNull::slice_from_raw_parts(
+            self.vertices.cast::<Vector3>(),
+            self.vertex_count.try_into().expect("vertex_count should never be negative"),
+        );
+        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+        // aligned, dereferenceable, and pointing to valid data.
+        // It is the caller's responsibility to enforce Rust's aliasing rules.
+        unsafe { ptr.as_mut() }
     }
+
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
+    ///
+    /// # Safety
+    ///
+    /// For the lifetime of the returned slice, the memory it points to must not get mutated.
     #[inline]
     #[must_use]
-    fn normals(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().normals as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+    pub unsafe fn normals(&self) -> &[Vector3] {
+        let ptr = NonNull::slice_from_raw_parts(
+            self.normals.cast::<Vector3>(),
+            self.vertex_count.try_into().expect("vertex_count should never be negative"),
+        );
+        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+        // aligned, dereferenceable, and pointing to valid data.
+        // It is the caller's responsibility to enforce Rust's aliasing rules.
+        unsafe { ptr.as_ref() }
     }
+
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
+    ///
+    /// # Safety
+    ///
+    /// For the lifetime of the returned slice, the memory it points to must not get accessed
+    /// (read or written) through any other pointer or reference not derived from it.
     #[inline]
     #[must_use]
-    fn normals_mut(&mut self) -> &mut [Vector3] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().normals as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+    pub unsafe fn normals_mut(&mut self) -> &mut [Vector3] {
+        let mut ptr = NonNull::slice_from_raw_parts(
+            self.normals.cast::<Vector3>(),
+            self.vertex_count.try_into().expect("vertex_count should never be negative"),
+        );
+        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+        // aligned, dereferenceable, and pointing to valid data.
+        // It is the caller's responsibility to enforce Rust's aliasing rules.
+        unsafe { ptr.as_mut() }
     }
+
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
+    ///
+    /// # Safety
+    ///
+    /// For the lifetime of the returned slice, the memory it points to must not get mutated.
     #[inline]
     #[must_use]
-    fn tangents(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().tangents as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+    pub unsafe fn tangents(&self) -> &[Vector4] {
+        let ptr = NonNull::slice_from_raw_parts(
+            self.tangents.cast::<Vector4>(),
+            self.vertex_count.try_into().expect("vertex_count should never be negative"),
+        );
+        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+        // aligned, dereferenceable, and pointing to valid data.
+        // It is the caller's responsibility to enforce Rust's aliasing rules.
+        unsafe { ptr.as_ref() }
     }
+
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
+    ///
+    /// # Safety
+    ///
+    /// For the lifetime of the returned slice, the memory it points to must not get accessed
+    /// (read or written) through any other pointer or reference not derived from it.
     #[inline]
     #[must_use]
-    fn tangents_mut(&mut self) -> &mut [Vector3] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().tangents as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+    pub unsafe fn tangents_mut(&mut self) -> &mut [Vector4] {
+        let mut ptr = NonNull::slice_from_raw_parts(
+            self.tangents.cast::<Vector4>(),
+            self.vertex_count.try_into().expect("vertex_count should never be negative"),
+        );
+        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+        // aligned, dereferenceable, and pointing to valid data.
+        // It is the caller's responsibility to enforce Rust's aliasing rules.
+        unsafe { ptr.as_mut() }
     }
+
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
+    ///
+    /// # Safety
+    ///
+    /// For the lifetime of the returned slice, the memory it points to must not get mutated.
     #[inline]
     #[must_use]
-    fn colors(&self) -> &[Color] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().colors as *const Color,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+    pub fn colors(&self) -> &[Color] {
+        let ptr = NonNull::slice_from_raw_parts(
+            self.colors.cast::<Color>(),
+            self.vertex_count.try_into().expect("vertex_count should never be negative"),
+        );
+        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+        // aligned, dereferenceable, and pointing to valid data.
+        // It is the caller's responsibility to enforce Rust's aliasing rules.
+        unsafe { ptr.as_ref() }
     }
+
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
+    ///
+    /// # Safety
+    ///
+    /// For the lifetime of the returned slice, the memory it points to must not get accessed
+    /// (read or written) through any other pointer or reference not derived from it.
     #[inline]
     #[must_use]
-    fn colors_mut(&mut self) -> &mut [Color] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().colors as *mut Color,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+    pub fn colors_mut(&mut self) -> &mut [Color] {
+        let mut ptr = NonNull::slice_from_raw_parts(
+            self.colors.cast::<Color>(),
+            self.vertex_count.try_into().expect("vertex_count should never be negative"),
+        );
+        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+        // aligned, dereferenceable, and pointing to valid data.
+        // It is the caller's responsibility to enforce Rust's aliasing rules.
+        unsafe { ptr.as_mut() }
     }
+
     /// Vertex indices (in case vertex data comes indexed)
+    ///
+    /// # Safety
+    ///
+    /// For the lifetime of the returned slice, the memory it points to must not get mutated.
     #[inline]
     #[must_use]
-    fn indicies(&self) -> &[u16] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().indices as *const u16,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+    pub fn indicies(&self) -> &[u16] {
+        let ptr = NonNull::slice_from_raw_parts(
+            self.indices,
+            self.vertex_count.try_into().expect("vertex_count should never be negative"),
+        );
+        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+        // aligned, dereferenceable, and pointing to valid data.
+        // It is the caller's responsibility to enforce Rust's aliasing rules.
+        unsafe { ptr.as_ref() }
     }
+
     /// Vertex indices (in case vertex data comes indexed)
+    ///
+    /// # Safety
+    ///
+    /// For the lifetime of the returned slice, the memory it points to must not get accessed
+    /// (read or written) through any other pointer or reference not derived from it.
     #[inline]
     #[must_use]
-    fn indicies_mut(&mut self) -> &mut [u16] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().indices as *mut u16,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+    pub fn indicies_mut(&mut self) -> &mut [u16] {
+        let mut ptr = NonNull::slice_from_raw_parts(
+            self.indices,
+            self.vertex_count.try_into().expect("vertex_count should never be negative"),
+        );
+        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+        // aligned, dereferenceable, and pointing to valid data.
+        // It is the caller's responsibility to enforce Rust's aliasing rules.
+        unsafe { ptr.as_mut() }
     }
 
     /// Generate polygonal mesh
     #[inline]
     #[must_use]
-    fn gen_mesh_poly(_: &RaylibThread, sides: i32, radius: f32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshPoly(sides, radius)) }
+    pub fn gen_mesh_poly(_: &RaylibThread, sides: i32, radius: f32) -> Option<Mesh> {
+        // SAFETY:
+        // - `RaylibThread` proves we are on the correct thread
+        // - We are creating a new mesh, so it isn't pointing to an existing resource
+        unsafe { Mesh::from_raw(ffi::GenMeshPoly(sides, radius)) }
     }
 
     /// Generates plane mesh (with subdivisions).
     #[inline]
     #[must_use]
-    fn gen_mesh_plane(_: &RaylibThread, width: f32, length: f32, res_x: i32, res_z: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshPlane(width, length, res_x, res_z)) }
+    pub fn gen_mesh_plane(_: &RaylibThread, width: f32, length: f32, res_x: i32, res_z: i32) -> Option<Mesh> {
+        // SAFETY:
+        // - `RaylibThread` proves we are on the correct thread
+        // - We are creating a new mesh, so it isn't pointing to an existing resource
+        unsafe { Mesh::from_raw(ffi::GenMeshPlane(width, length, res_x, res_z)) }
     }
 
     /// Generates cuboid mesh.
     #[inline]
     #[must_use]
-    fn gen_mesh_cube(_: &RaylibThread, width: f32, height: f32, length: f32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshCube(width, height, length)) }
+    pub fn gen_mesh_cube(_: &RaylibThread, width: f32, height: f32, length: f32) -> Option<Mesh> {
+        // SAFETY:
+        // - `RaylibThread` proves we are on the correct thread
+        // - We are creating a new mesh, so it isn't pointing to an existing resource
+        unsafe { Mesh::from_raw(ffi::GenMeshCube(width, height, length)) }
     }
 
     /// Generates sphere mesh (standard sphere).
     #[inline]
     #[must_use]
-    fn gen_mesh_sphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshSphere(radius, rings, slices)) }
+    pub fn gen_mesh_sphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Option<Mesh> {
+        // SAFETY:
+        // - `RaylibThread` proves we are on the correct thread
+        // - We are creating a new mesh, so it isn't pointing to an existing resource
+        unsafe { Mesh::from_raw(ffi::GenMeshSphere(radius, rings, slices)) }
     }
 
     /// Generates half-sphere mesh (no bottom cap).
     #[inline]
     #[must_use]
-    fn gen_mesh_hemisphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshHemiSphere(radius, rings, slices)) }
+    pub fn gen_mesh_hemisphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Option<Mesh> {
+        // SAFETY:
+        // - `RaylibThread` proves we are on the correct thread
+        // - We are creating a new mesh, so it isn't pointing to an existing resource
+        unsafe { Mesh::from_raw(ffi::GenMeshHemiSphere(radius, rings, slices)) }
     }
 
     /// Generates cylinder mesh.
     #[inline]
     #[must_use]
-    fn gen_mesh_cylinder(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshCylinder(radius, height, slices)) }
+    pub fn gen_mesh_cylinder(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Option<Mesh> {
+        // SAFETY:
+        // - `RaylibThread` proves we are on the correct thread
+        // - We are creating a new mesh, so it isn't pointing to an existing resource
+        unsafe { Mesh::from_raw(ffi::GenMeshCylinder(radius, height, slices)) }
     }
 
     /// Generates torus mesh.
     #[inline]
     #[must_use]
-    fn gen_mesh_torus(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshTorus(radius, size, rad_seg, sides)) }
+    pub fn gen_mesh_torus(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Option<Mesh> {
+        // SAFETY:
+        // - `RaylibThread` proves we are on the correct thread
+        // - We are creating a new mesh, so it isn't pointing to an existing resource
+        unsafe { Mesh::from_raw(ffi::GenMeshTorus(radius, size, rad_seg, sides)) }
     }
 
     /// Generates trefoil knot mesh.
     #[inline]
     #[must_use]
-    fn gen_mesh_knot(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshKnot(radius, size, rad_seg, sides)) }
+    pub fn gen_mesh_knot(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Option<Mesh> {
+        // SAFETY:
+        // - `RaylibThread` proves we are on the correct thread
+        // - We are creating a new mesh, so it isn't pointing to an existing resource
+        unsafe { Mesh::from_raw(ffi::GenMeshKnot(radius, size, rad_seg, sides)) }
     }
 
     /// Generates heightmap mesh from image data.
     #[inline]
     #[must_use]
-    fn gen_mesh_heightmap(_: &RaylibThread, heightmap: &Image, size: impl Into<MintVec3>) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshHeightmap(heightmap.0, size.into())) }
+    pub fn gen_mesh_heightmap(_: &RaylibThread, heightmap: &Image, size: impl Into<MintVec3>) -> Option<Mesh> {
+        // SAFETY:
+        // - `RaylibThread` proves we are on the correct thread
+        // - We are creating a new mesh, so it isn't pointing to an existing resource
+        unsafe { Mesh::from_raw(ffi::GenMeshHeightmap(heightmap.0, size.into())) }
     }
 
     /// Generates cubes-based map mesh from image data.
     #[inline]
     #[must_use]
-    fn gen_mesh_cubicmap(
+    pub fn gen_mesh_cubicmap(
         _: &RaylibThread,
         cubicmap: &Image,
         cube_size: impl Into<MintVec3>,
-    ) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshCubicmap(cubicmap.0, cube_size.into())) }
+    ) -> Option<Mesh> {
+        unsafe { Mesh::from_raw(ffi::GenMeshCubicmap(cubicmap.0, cube_size.into())) }
     }
 
     /// Generate cone/pyramid mesh
     #[inline]
     #[must_use]
-    fn gen_mesh_cone(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshCone(radius, height, slices)) }
+    pub fn gen_mesh_cone(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Option<Mesh> {
+        unsafe { Mesh::from_raw(ffi::GenMeshCone(radius, height, slices)) }
     }
 
     /// Computes mesh bounding box limits.
     #[inline]
     #[must_use]
-    fn get_mesh_bounding_box(&self) -> BoundingBox {
-        unsafe { ffi::GetMeshBoundingBox(*self.as_ref()).into() }
+    pub fn get_mesh_bounding_box(&self) -> BoundingBox {
+        // SAFETY: `raw` will not be used after the resource is released
+        // because it goes out of scope when this method returns, and `self`
+        // is not dropped in this method.
+        let raw = unsafe { self.make_raw() };
+        unsafe { ffi::GetMeshBoundingBox(raw).into() }
     }
 
     /// Computes mesh tangents.
     // NOTE: New VBO for tangents is generated at default location and also binded to mesh VAO
     #[inline]
-    fn gen_mesh_tangents(&mut self, _: &RaylibThread) {
+    pub fn gen_mesh_tangents(&mut self, _: &RaylibThread) {
         unsafe {
-            ffi::GenMeshTangents(self.as_mut());
+            ffi::GenMeshTangents(self.as_raw_mut());
         }
     }
 
     /// Exports mesh as an OBJ file.
     #[inline]
-    fn export(&self, filename: &str) {
+    pub fn export(&self, filename: &str) {
+        // SAFETY: `raw` will not be used after the resource is released
+        // because it goes out of scope when this method returns, and `self`
+        // is not dropped in this method.
+        let raw = unsafe { self.make_raw() };
         let c_filename = CString::new(filename).unwrap();
         unsafe {
-            ffi::ExportMesh(*self.as_ref(), c_filename.as_ptr());
+            ffi::ExportMesh(raw, c_filename.as_ptr());
         }
     }
 
     /// Export mesh as code file (.h) defining multiple arrays of vertex attributes
     #[inline]
-    fn export_as_code(&self, filename: &str) {
+    pub fn export_as_code(&self, filename: &str) {
+        // SAFETY: `raw` will not be used after the resource is released
+        // because it goes out of scope when this method returns, and `self`
+        // is not dropped in this method.
+        let raw = unsafe { self.make_raw() };
         let c_filename = CString::new(filename).unwrap();
         unsafe {
-            ffi::ExportMeshAsCode(*self.as_ref(), c_filename.as_ptr());
+            ffi::ExportMeshAsCode(raw, c_filename.as_ptr());
         }
     }
 }
@@ -1011,8 +1266,15 @@ impl RaylibHandle {
 
     /// Weak meshs will leak memeory if they are not unlaoded
     /// Unload mesh from GPU memory (VRAM)
+    ///
+    /// # Safety
+    ///
+    /// Any unique mesh must be unloaded **exactly once**.
+    /// The drop implementation on [`Mesh`] already does this,
+    /// you do not need to convert your [`Mesh`] into a weak
+    /// [`ffi::Mesh`] in order to unload it.
     #[inline]
-    pub unsafe fn unload_mesh(&mut self, _: &RaylibThread, mesh: WeakMesh) {
-        unsafe { ffi::UnloadMesh(*mesh.as_ref()) }
+    pub unsafe fn unload_mesh(&mut self, _: &RaylibThread, mesh: ffi::Mesh) {
+        unsafe { ffi::UnloadMesh(mesh) }
     }
 }
