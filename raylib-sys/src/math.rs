@@ -1,4 +1,3 @@
-#[cfg(feature = "serde")]
 // pub use glam;
 // pub type Vector2 = glam::f32::Vec2;
 // pub type Vector3 = glam::f32::Vec3;
