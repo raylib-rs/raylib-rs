@@ -465,6 +465,88 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
 }
 
+macro_rules! pointer_field {
+    (
+        $(#[$shared:meta])*
+        $(
+            # Safety
+            $(#[$shared_safety:meta])*
+        )?
+        [$($StorageTy:ty)?] -> [$AccessTy:ty]
+
+        $(#[$accessor_meta:meta])*
+        $(
+            # Safety
+            $(#[$accessor_safety:meta])*
+        )?
+        $field:ident();
+
+        $(#[$mutator_meta:meta])*
+        $(
+            # Safety
+            $(#[$mutator_safety:meta])*
+        )?
+        $field_mut:ident();
+    ) => {
+        $(#[$accessor_meta])*
+        ///
+        $(#[$shared])*
+        ///
+        /// # Safety
+        ///
+        /// For the lifetime of the returned slice, the memory it points to must not get mutated.
+        ///
+        $($(#[$shared_safety])*)?
+        ///
+        $($(#[$accessor_safety])*)?
+        #[inline]
+        #[must_use]
+        pub const unsafe fn $field(&self) -> &[$AccessTy] {
+            $(const _: () = assert!((std::mem::align_of::<$AccessTy>() % std::mem::size_of::<$StorageTy>()) == 0);)?
+            debug_assert!(0 <= self.vertex_count && (i32::BITS <= usize::BITS || self.vertex_count <= usize::MAX as i32),
+                "vertex_count should always be in usize range");
+
+            let ptr = NonNull::slice_from_raw_parts(
+                self.$field.cast::<$AccessTy>(),
+                self.vertex_count as usize,
+            );
+            // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+            // aligned, dereferenceable, and pointing to valid data.
+            // It is the caller's responsibility to enforce Rust's aliasing rules.
+            unsafe { ptr.as_ref() }
+        }
+
+        $(#[$mutator_meta])*
+        ///
+        $(#[$shared])*
+        ///
+        /// # Safety
+        ///
+        /// For the lifetime of the returned slice, the memory it points to must not get accessed
+        /// (read or written) through any other pointer or reference not derived from it.
+        ///
+        $($(#[$shared_safety])*)?
+        ///
+        $($(#[$mutator_safety])*)?
+        #[inline]
+        #[must_use]
+        pub const unsafe fn $field_mut(&mut self) -> &mut [$AccessTy] {
+            $(const _: () = assert!((std::mem::align_of::<$AccessTy>() % std::mem::size_of::<$StorageTy>()) == 0);)?
+            debug_assert!(0 <= self.vertex_count && (i32::BITS <= usize::BITS || self.vertex_count <= usize::MAX as i32),
+                "vertex_count should always be in usize range");
+
+            let mut ptr = NonNull::slice_from_raw_parts(
+                self.$field.cast::<$AccessTy>(),
+                self.vertex_count as usize,
+            );
+            // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
+            // aligned, dereferenceable, and pointing to valid data.
+            // It is the caller's responsibility to enforce Rust's aliasing rules.
+            unsafe { ptr.as_mut() }
+        }
+    };
+}
+
 impl Mesh {
     // Mesh is required to already be uploaded in order to be valid.
     //
@@ -505,189 +587,35 @@ impl Mesh {
         };
     }
 
-    /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
-    ///
-    /// # Safety
-    ///
-    /// For the lifetime of the returned slice, the memory it points to must not get mutated.
-    #[inline]
-    #[must_use]
-    pub unsafe fn vertices(&self) -> &[Vector3] {
-        let ptr = NonNull::slice_from_raw_parts(
-            self.vertices.cast::<Vector3>(),
-            self.vertex_count.try_into().expect("vertex_count should never be negative"),
-        );
-        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
-        // aligned, dereferenceable, and pointing to valid data.
-        // It is the caller's responsibility to enforce Rust's aliasing rules.
-        unsafe { ptr.as_ref() }
+    pointer_field!{
+        /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
+        [f32] -> [Vector3]
+        vertices();
+        vertices_mut();
     }
-
-    /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
-    ///
-    /// # Safety
-    ///
-    /// For the lifetime of the returned slice, the memory it points to must not get accessed
-    /// (read or written) through any other pointer or reference not derived from it.
-    #[inline]
-    #[must_use]
-    pub unsafe fn vertices_mut(&mut self) -> &mut [Vector3] {
-        let mut ptr = NonNull::slice_from_raw_parts(
-            self.vertices.cast::<Vector3>(),
-            self.vertex_count.try_into().expect("vertex_count should never be negative"),
-        );
-        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
-        // aligned, dereferenceable, and pointing to valid data.
-        // It is the caller's responsibility to enforce Rust's aliasing rules.
-        unsafe { ptr.as_mut() }
+    pointer_field!{
+        /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
+        [f32] -> [Vector3]
+        normals();
+        normals_mut();
     }
-
-    /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
-    ///
-    /// # Safety
-    ///
-    /// For the lifetime of the returned slice, the memory it points to must not get mutated.
-    #[inline]
-    #[must_use]
-    pub unsafe fn normals(&self) -> &[Vector3] {
-        let ptr = NonNull::slice_from_raw_parts(
-            self.normals.cast::<Vector3>(),
-            self.vertex_count.try_into().expect("vertex_count should never be negative"),
-        );
-        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
-        // aligned, dereferenceable, and pointing to valid data.
-        // It is the caller's responsibility to enforce Rust's aliasing rules.
-        unsafe { ptr.as_ref() }
+    pointer_field!{
+        /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
+        [f32] -> [Vector4]
+        tangents();
+        tangents_mut();
     }
-
-    /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
-    ///
-    /// # Safety
-    ///
-    /// For the lifetime of the returned slice, the memory it points to must not get accessed
-    /// (read or written) through any other pointer or reference not derived from it.
-    #[inline]
-    #[must_use]
-    pub unsafe fn normals_mut(&mut self) -> &mut [Vector3] {
-        let mut ptr = NonNull::slice_from_raw_parts(
-            self.normals.cast::<Vector3>(),
-            self.vertex_count.try_into().expect("vertex_count should never be negative"),
-        );
-        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
-        // aligned, dereferenceable, and pointing to valid data.
-        // It is the caller's responsibility to enforce Rust's aliasing rules.
-        unsafe { ptr.as_mut() }
+    pointer_field!{
+        /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
+        [u8] -> [Color]
+        colors();
+        colors_mut();
     }
-
-    /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
-    ///
-    /// # Safety
-    ///
-    /// For the lifetime of the returned slice, the memory it points to must not get mutated.
-    #[inline]
-    #[must_use]
-    pub unsafe fn tangents(&self) -> &[Vector4] {
-        let ptr = NonNull::slice_from_raw_parts(
-            self.tangents.cast::<Vector4>(),
-            self.vertex_count.try_into().expect("vertex_count should never be negative"),
-        );
-        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
-        // aligned, dereferenceable, and pointing to valid data.
-        // It is the caller's responsibility to enforce Rust's aliasing rules.
-        unsafe { ptr.as_ref() }
-    }
-
-    /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
-    ///
-    /// # Safety
-    ///
-    /// For the lifetime of the returned slice, the memory it points to must not get accessed
-    /// (read or written) through any other pointer or reference not derived from it.
-    #[inline]
-    #[must_use]
-    pub unsafe fn tangents_mut(&mut self) -> &mut [Vector4] {
-        let mut ptr = NonNull::slice_from_raw_parts(
-            self.tangents.cast::<Vector4>(),
-            self.vertex_count.try_into().expect("vertex_count should never be negative"),
-        );
-        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
-        // aligned, dereferenceable, and pointing to valid data.
-        // It is the caller's responsibility to enforce Rust's aliasing rules.
-        unsafe { ptr.as_mut() }
-    }
-
-    /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
-    ///
-    /// # Safety
-    ///
-    /// For the lifetime of the returned slice, the memory it points to must not get mutated.
-    #[inline]
-    #[must_use]
-    pub fn colors(&self) -> &[Color] {
-        let ptr = NonNull::slice_from_raw_parts(
-            self.colors.cast::<Color>(),
-            self.vertex_count.try_into().expect("vertex_count should never be negative"),
-        );
-        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
-        // aligned, dereferenceable, and pointing to valid data.
-        // It is the caller's responsibility to enforce Rust's aliasing rules.
-        unsafe { ptr.as_ref() }
-    }
-
-    /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
-    ///
-    /// # Safety
-    ///
-    /// For the lifetime of the returned slice, the memory it points to must not get accessed
-    /// (read or written) through any other pointer or reference not derived from it.
-    #[inline]
-    #[must_use]
-    pub fn colors_mut(&mut self) -> &mut [Color] {
-        let mut ptr = NonNull::slice_from_raw_parts(
-            self.colors.cast::<Color>(),
-            self.vertex_count.try_into().expect("vertex_count should never be negative"),
-        );
-        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
-        // aligned, dereferenceable, and pointing to valid data.
-        // It is the caller's responsibility to enforce Rust's aliasing rules.
-        unsafe { ptr.as_mut() }
-    }
-
-    /// Vertex indices (in case vertex data comes indexed)
-    ///
-    /// # Safety
-    ///
-    /// For the lifetime of the returned slice, the memory it points to must not get mutated.
-    #[inline]
-    #[must_use]
-    pub fn indicies(&self) -> &[u16] {
-        let ptr = NonNull::slice_from_raw_parts(
-            self.indices,
-            self.vertex_count.try_into().expect("vertex_count should never be negative"),
-        );
-        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
-        // aligned, dereferenceable, and pointing to valid data.
-        // It is the caller's responsibility to enforce Rust's aliasing rules.
-        unsafe { ptr.as_ref() }
-    }
-
-    /// Vertex indices (in case vertex data comes indexed)
-    ///
-    /// # Safety
-    ///
-    /// For the lifetime of the returned slice, the memory it points to must not get accessed
-    /// (read or written) through any other pointer or reference not derived from it.
-    #[inline]
-    #[must_use]
-    pub fn indicies_mut(&mut self) -> &mut [u16] {
-        let mut ptr = NonNull::slice_from_raw_parts(
-            self.indices,
-            self.vertex_count.try_into().expect("vertex_count should never be negative"),
-        );
-        // SAFETY: All pointer fields of `Mesh` are non-null and assumed to be
-        // aligned, dereferenceable, and pointing to valid data.
-        // It is the caller's responsibility to enforce Rust's aliasing rules.
-        unsafe { ptr.as_mut() }
+    pointer_field!{
+        /// Vertex indices (in case vertex data comes indexed)
+        [] -> [u16]
+        indices();
+        indices_mut();
     }
 
     /// Generate polygonal mesh
