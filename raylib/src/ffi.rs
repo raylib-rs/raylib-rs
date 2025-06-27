@@ -1,3 +1,8 @@
+pub use raylib_sys::*;
+
+/// Provides handwritten documentation comments for FFI functions via rustdoc
+pub mod with_docs {
+
 macro_rules! provide_docs {
     ($(
         [$file:literal]
@@ -7,8 +12,8 @@ macro_rules! provide_docs {
         )*
     )*) => {$(
         $(
-            #[doc = concat!("[", $file, "#`", stringify!($item), "`](https://github.com/search?q=repo:raysan5/raylib+src/", $file, "+", stringify!($item), "&type=code) &mdash; ")]
             $(#[doc = $($doc)+])*
+            #[doc = concat!("\n\nSee [", $file, "#`", stringify!($item), "`](https://github.com/search?q=repo:raysan5/raylib+src/", $file, "+", stringify!($item), "&type=code)")]
             pub use raylib_sys::$item;
         )*
     )*};
@@ -57,11 +62,11 @@ rlScalef
 /// # Safety
 /// TODO
 rlMultMatrixf
-/// ?
+/// TBD
 /// # Safety
 /// TODO
 rlFrustum
-/// ?
+/// TBD
 /// # Safety
 /// TODO
 rlOrtho
@@ -85,6 +90,7 @@ rlGetCullDistanceFar
 //------------------------------------------------------------------------------------
 // Functions Declaration - Vertex level operations
 //------------------------------------------------------------------------------------
+
 /// Initialize drawing mode (how to organize vertex)
 /// # Safety
 /// TODO
@@ -508,17 +514,39 @@ rlDrawVertexArrayElementsInstanced
 // Textures management
 
 /// Load texture data
+///
+/// # Errors
+///
+/// This function will error if `format` is not supported by the graphics
+/// API or if [`glGenTextures`][] fails. The id returned will be zero if
+/// an error has occurred.
+///
 /// # Safety
-/// - calls glBindTexture(GL_TEXTURE_2D, 0)
-/// - reads RLGL.ExtSupported
-/// - returns 0 if format is unsupported
-/// - calls glPixelStorei
-/// - calls glGenTextures
-/// - calls glBindTexture
-/// - casts data from `*const c_void` to `*mut u8` (with alias dataPtr)
-/// - calls rlGetGlTextureFormats
-/// - if out parameter internalFormat is
-/// TODO
+///
+/// `glBindTexture` is called with arguments `GL_TEXTURE_2D, 0` unconditionally
+/// at the start of the function. GL must be loaded and ready to be called into.
+///
+/// If `format` is valid, `data` is passed to either [`glTexImage2D`][] or
+/// [`glCompressedTexImage2D`][] as bytes. In this case, `data` must be either
+/// null[^nulldata] *or* initialized and valid. `width`, `height`, `mipmapCount`,
+/// and `format` must accurately describe the memory `data` points to.
+///
+/// `width` and `height` must be >= 0.
+///
+/// This function may read the static `RLGL.ExtSupported` without locking.
+/// Either ensure this function is only called on the same thread that
+/// initialized RLGL, or use appropriate synchronization.
+///
+/// [^nulldata]: "`data` may be a null pointer. In this case, texture memory
+/// is allocated to accommodate a texture of width `width` and height `height`.
+/// You can then download subtextures to initialize this texture memory. The
+/// image is undefined if the user tries to apply an uninitialized portion of the
+/// texture image to a primitive." &mdash; [*`glTexImage2D`#notes*][`glTexImage2D`#notes]
+///
+/// [`glGenTextures`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGenTextures.xhtml "khronos.org GL4 glGenTextures Refpage"
+/// [`glTexImage2D`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexImage2D.xhtml "khronos.org GL4 glTexImage2D Refpage"
+/// [`glTexImage2D`#notes]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexImage2D.xhtml#notes "khronos.org GL4 glTexImage2D Refpage - Notes"
+/// [`glCompressedTexImage2D`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glCompressedTexImage2D.xhtml "khronos.org GL4 glCompressedTexImage2D Refpage"
 rlLoadTexture
 /// Load depth texture/renderbuffer (to be attached to fbo)
 /// # Safety
@@ -535,9 +563,9 @@ rlUpdateTexture
 /// Get OpenGL internal formats
 ///
 /// # Errors
-/// This function will error `format` is not supported by the graphics API.
-/// After returning, `glInternalFormat`, `glFormat`, and `glType` are zero
-/// if an error has occurred.
+/// This function will error if `format` is not supported by the graphics
+/// API. After returning, `glInternalFormat`, `glFormat`, and `glType` are
+/// zero if an error has occurred.
 ///
 /// # Safety
 /// RLGL must be initialized.
@@ -3385,5 +3413,7 @@ AttachAudioMixedProcessor
 /// # Safety
 /// TODO
 DetachAudioMixedProcessor
+
+}
 
 }
