@@ -14,6 +14,7 @@ use crate::{
     ffi,
 };
 use std::ffi::CString;
+use std::num::NonZeroU32;
 use std::os::raw::c_void;
 use std::ptr::NonNull;
 
@@ -53,6 +54,33 @@ make_thin_wrapper!(
 );
 
 #[repr(C)]
+pub struct MeshVboId {
+    position: NonZeroU32,
+    texcoord: NonZeroU32,
+    normal: NonZeroU32,
+    color: NonZeroU32,
+    tangent: NonZeroU32,
+    texcoord2: NonZeroU32,
+    indices: NonZeroU32,
+    // boneids: NonZeroU32,
+    // boneweights: NonZeroU32,
+}
+
+const _: () = {
+    assert!(std::mem::offset_of!(MeshVboId, position) == ffi::RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION as usize * size_of::<u32>());
+    assert!(std::mem::offset_of!(MeshVboId, texcoord) == ffi::RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD as usize * size_of::<u32>());
+    assert!(std::mem::offset_of!(MeshVboId, normal) == ffi::RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL as usize * size_of::<u32>());
+    assert!(std::mem::offset_of!(MeshVboId, color) == ffi::RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR as usize * size_of::<u32>());
+    assert!(std::mem::offset_of!(MeshVboId, tangent) == ffi::RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT as usize * size_of::<u32>());
+    assert!(std::mem::offset_of!(MeshVboId, texcoord2) == ffi::RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD2 as usize * size_of::<u32>());
+    assert!(std::mem::offset_of!(MeshVboId, indices) == ffi::RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES as usize * size_of::<u32>());
+    assert!(size_of::<MeshVboId>() == size_of::<[u32; 7]>());
+    // if RL_SUPPORT_MESH_GPU_SKINNING
+    // assert!(std::mem::offset_of!(MeshVboId, boneids) == ffi::RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEIDS as usize * size_of::<u32>());
+    // assert!(std::mem::offset_of!(MeshVboId, boneweights) == ffi::RL_DEFAULT_SHADER_ATTRIB_LOCATION_BONEWEIGHTS as usize * size_of::<u32>());
+};
+
+#[repr(C)]
 #[derive(Debug)]
 pub struct Mesh {
     vertex_count: i32,
@@ -70,8 +98,8 @@ pub struct Mesh {
     bone_weights: NonNull<f32>,
     bone_matrices: NonNull<ffi::Matrix>,
     bone_count: i32,
-    vao_id: u32,
-    vbo_id: NonNull<u32>,
+    vao_id: NonZeroU32,
+    vbo_id: NonNull<MeshVboId>,
 }
 
 const _: () = {
@@ -111,7 +139,7 @@ impl Mesh {
     ///
     /// Do not mutate the data pointed to by any field of the returned reference in
     /// such a way that it would no longer be valid.
-    pub unsafe fn as_raw(&self) -> &ffi::Mesh {
+    pub const unsafe fn as_raw(&self) -> &ffi::Mesh {
         // SAFETY: `Mesh` has the same size, fields, and layout as `ffi::Mesh`.
         unsafe { std::mem::transmute(self) }
     }
@@ -122,7 +150,7 @@ impl Mesh {
     ///
     /// Do not mutate any field of the returned reference in such a way that it would
     /// no longer be valid.
-    pub unsafe fn as_raw_mut(&mut self) -> &mut ffi::Mesh {
+    pub const unsafe fn as_raw_mut(&mut self) -> &mut ffi::Mesh {
         // SAFETY: `Mesh` has the same size, fields, and layout as `ffi::Mesh`.
         unsafe { std::mem::transmute(self) }
     }
@@ -136,7 +164,7 @@ impl Mesh {
     /// contain dangling pointers, which will cause UB if dereferenced.
     ///
     /// The returned mesh must not be used after any copy of `self` is released.
-    pub unsafe fn make_raw(&self) -> ffi::Mesh {
+    pub const unsafe fn make_raw(&self) -> ffi::Mesh {
         unsafe { *self.as_raw() }
     }
 
@@ -149,7 +177,7 @@ impl Mesh {
     /// The mesh resource that `raw` represents must be released **exactly once**.
     /// It is strongly recommended to avoid having multiple [`Mesh`]es referring
     /// to the same mesh resource, for the sake of sanity.
-    pub unsafe fn from_raw(raw: ffi::Mesh) -> Option<Self> {
+    pub const unsafe fn from_raw(raw: ffi::Mesh) -> Option<Self> {
         if
             raw.vertexCount >= 0 &&
             raw.triangleCount >= 0 &&
@@ -167,8 +195,21 @@ impl Mesh {
             !raw.boneMatrices.is_null() &&
             raw.boneCount >= 0 &&
             raw.vaoId != 0 &&
-            !raw.vboId.is_null()
+            !raw.vboId.is_null() &&
+            // SAFETY: just confirmed non-null
+            // TODO: how to ensure number of elements?
+            unsafe {
+                *raw.vboId != 0 &&
+                *raw.vboId.add(1) != 0 &&
+                *raw.vboId.add(2) != 0 &&
+                *raw.vboId.add(3) != 0 &&
+                *raw.vboId.add(4) != 0 &&
+                *raw.vboId.add(5) != 0 &&
+                *raw.vboId.add(6) != 0
+            }
         {
+            // SAFETY: Just checked field validity.
+            // Responsibiltiy of caller to uphold remaining contracts.
             Some(unsafe { Self::from_raw_unchecked(raw) })
         } else {
             None
@@ -188,7 +229,7 @@ impl Mesh {
     /// The mesh resource that `raw` represents must be released **exactly once**.
     /// It is strongly recommended to avoid having multiple [`Mesh`]es referring
     /// to the same mesh resource, for the sake of sanity.
-    pub unsafe fn from_raw_unchecked(raw: ffi::Mesh) -> Self {
+    pub const unsafe fn from_raw_unchecked(raw: ffi::Mesh) -> Self {
         // SAFETY: `Mesh` has the same size, fields, and layout as `ffi::Mesh`.
         // Caller must uphold remaining safety contracts.
         unsafe { std::mem::transmute(raw) }
@@ -727,6 +768,7 @@ impl Mesh {
     }
 
     /// Computes mesh bounding box limits.
+    // NOTE: minVertex and maxVertex should be transformed by model transform matrix
     #[inline]
     #[must_use]
     pub fn get_mesh_bounding_box(&self) -> BoundingBox {
@@ -734,6 +776,7 @@ impl Mesh {
         // because it goes out of scope when this method returns, and `self`
         // is not dropped in this method.
         let raw = unsafe { self.make_raw() };
+        // SAFETY: GetMeshBoundingBox has no preconditions.
         unsafe { ffi::GetMeshBoundingBox(raw).into() }
     }
 
