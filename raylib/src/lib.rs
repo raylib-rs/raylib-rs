@@ -45,10 +45,10 @@ Permission is granted to anyone to use this software for any purpose, including 
 //!         .size(640, 480)
 //!         .title("Hello, World")
 //!         .build();
-//!     
+//!
 //!     while !rl.window_should_close() {
 //!         let mut d = rl.begin_drawing(&thread);
-//!         
+//!
 //!         d.clear_background(Color::WHITE);
 //!         d.draw_text("Hello, world!", 12, 12, 20, Color::BLACK);
 //!     }
@@ -66,6 +66,9 @@ pub mod rgui;
 /// The raw, unsafe FFI binding, in case you need that escape hatch or the safe layer doesn't provide something you need.
 pub mod ffi {
     pub use raylib_sys::*;
+
+    /// Provides handwritten documentation comments for FFI functions via rustdoc
+    pub mod with_docs;
 }
 
 pub use crate::core::collision::*;
