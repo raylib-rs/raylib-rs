@@ -3,6 +3,35 @@ pub use raylib_sys::*;
 /// Provides handwritten documentation comments for FFI functions via rustdoc
 pub mod with_docs {
 
+macro_rules! static_access {
+    ($access:ident $global:expr) => {
+        concat!("This function may ", static_access!(@$access), " the static `", stringify!($global), "` without locking. \
+        Either ensure this function is only called on the same thread that initialized RLGL, or use appropriate synchronization.")
+    };
+    (@const) => { "read" };
+    (@mut) => { "assign" };
+}
+
+macro_rules! require_gl {
+    ($($list:ident),+ $(,)? if $cond:literal) => { concat!("This function may call ", require_gl!(@[$($list),+]), " if ", $cond, ". ", require_gl!()) };
+    ($($list:ident),+ $(,)?) => { concat!("This function will call ", require_gl!(@[$($list),+]), " unconditionally. ", require_gl!()) };
+    (@[$a:ident]) => { concat!("[`", stringify!($a), "`][]") };
+    (@[$a:ident, $b:ident]) => { concat!(require_gl!(@[$a]), " or ", require_gl!(@[$b])) };
+    (@[$a:ident, $b:ident, $($c:ident),+]) => { concat!($a, ", ", require_gl!(@[$b, $($c),+])) };
+    () => { "GL must be loaded and ready to be called into." };
+}
+
+macro_rules! link_gl {
+    (2.1::{$($fn:ident),+}) => {
+        concat!($("[`", stringify!($fn), "`]: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/", stringify!($fn), ".xml \"", stringify!($fn), " - OpenGL 2.1 Reference Pages\"\n",)+)
+    };
+    (4::{$($fn:ident),+}) => {
+        concat!($("[`", stringify!($fn), "`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/", stringify!($fn), ".xhtml \"", stringify!($fn), " - OpenGL 4 Reference Pages\"\n",)+)
+    };
+}
+
+use {static_access, require_gl, link_gl};
+
 macro_rules! provide_docs {
     ($(
         [$file:literal]
@@ -32,12 +61,11 @@ provide_docs!{
 /// This function may call [`glMatrixMode`][] if `mode` is [`RL_PROJECTION`][], [`RL_MODELVIEW`][], or [`RL_TEXTURE`][].
 /// GL must be loaded and ready to be called into.
 ///
-/// [`glMatrixMode`]: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/glMatrixMode.xml "khronos GL1.1 glMatrixMode Refpage"
+#[doc = link_gl!(2.1::{glMatrixMode})]
 ///
 /// ## `GRAPHICS_API_OPENGL_33` and `GRAPHICS_API_OPENGL_ES2`
 ///
-/// This function may assign to the static `RLGL.State` without locking.
-/// Either ensure this function is only called on the same thread that initialized RLGL, or use appropriate synchronization.
+#[doc = static_access!(mut RLGL.State)]
 ///
 /// [`RL_TEXTURE`][] is not supported with `GRAPHICS_API_OPENGL_33` or `GRAPHICS_API_OPENGL_ES2`.
 /// `RLGL.State.currentMatrixMode` is assigned with `mode` unchecked, but `RLGL.State.currentMatrix` is only updated if `mode` is valid for the graphics API.
@@ -48,12 +76,16 @@ provide_docs!{
 /// [`RL_TEXTURE`]: raylib_sys::RL_TEXTURE
 rlMatrixMode
 /// Push the current matrix to stack
+///
 /// # Safety
-/// - reads RLGL
-/// - if currentMatrixMode is RL_MODELVIEW
-///   - assigns RLGL.State.currentMatrix with a pointer to RLGL.State.transform
-/// - dereferences RLGL.State.currentMatrix
-/// TODO
+///
+/// ## `GRAPHICS_API_OPENGL_11`
+///
+#[doc = require_gl!(glPushMatrix)]
+///
+#[doc = link_gl!(2.1::{glPushMatrix})]
+///
+/// ## `GRAPHICS_API_OPENGL_33` and `GRAPHICS_API_OPENGL_ES2`
 rlPushMatrix
 /// Pop latest inserted matrix from stack
 /// # Safety
@@ -545,24 +577,19 @@ rlDrawVertexArrayElementsInstanced
 ///
 /// # Safety
 ///
-/// `glBindTexture` is called with arguments `GL_TEXTURE_2D, 0` unconditionally at the start of the function.
-/// GL must be loaded and ready to be called into.
+#[doc = require_gl!(glBindTexture)]
 ///
 /// If `format` is valid, `data` is passed to either [`glTexImage2D`][] or [`glCompressedTexImage2D`][] as bytes.
 /// In this case, `data` must be either null[^nulldata] *or* initialized and valid. `width`, `height`, `mipmapCount`, and `format` must accurately describe the memory `data` points to.
 ///
-/// This function may read the static `RLGL.ExtSupported` without locking.
-/// Either ensure this function is only called on the same thread that initialized RLGL, or use appropriate synchronization.
+#[doc = static_access!(mut RLGL.ExtSupported)]
 ///
 /// [^nulldata]: "`data` may be a null pointer. In this case, texture memory is allocated to accommodate a texture of width `width` and height `height`.
 /// You can then download subtextures to initialize this texture memory.
 /// The image is undefined if the user tries to apply an uninitialized portion of the texture image to a primitive."
-/// &mdash; [`glTexImage2D`#notes][]
+/// &mdash; [`glTexImage2D`][]
 ///
-/// [`glGenTextures`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGenTextures.xhtml "khronos.org GL4 glGenTextures Refpage"
-/// [`glTexImage2D`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexImage2D.xhtml "khronos.org GL4 glTexImage2D Refpage"
-/// [`glTexImage2D`#notes]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexImage2D.xhtml#notes "khronos.org GL4 glTexImage2D Refpage - Notes"
-/// [`glCompressedTexImage2D`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glCompressedTexImage2D.xhtml "khronos.org GL4 glCompressedTexImage2D Refpage"
+#[doc = link_gl!(4::{glBindTexture, glGenTextures, glTexImage2D, glCompressedTexImage2D})]
 rlLoadTexture
 /// Load depth texture/renderbuffer (to be attached to fbo)
 /// # Safety
@@ -579,20 +606,18 @@ rlUpdateTexture
 /// Get OpenGL internal formats
 ///
 /// # Errors
-/// This function will error if `format` is not supported by the graphics
-/// API. After returning, `glInternalFormat`, `glFormat`, and `glType` are
-/// zero if an error has occurred.
+///
+/// This function will error if `format` is not supported by the graphics API.
+/// After returning, `glInternalFormat`, `glFormat`, and `glType` are zero if an error has occurred.
 ///
 /// # Safety
+///
 /// RLGL must be initialized.
 ///
-/// This function may read the static `RLGL.ExtSupported` without locking.
-/// Either ensure this function is only called on the same thread that
-/// initialized RLGL, or use appropriate synchronization.
+#[doc = static_access!(mut RLGL.ExtSupported)]
 ///
-/// `glInternalFormat`, `glFormat`, and `glType` will be written
-/// unconditionally. They must be safe to dereference and write to, but do
-/// not need to be initialized prior to calling.
+/// `glInternalFormat`, `glFormat`, and `glType` will be written unconditionally.
+/// They must be safe to dereference and write to, but do not need to be initialized prior to calling.
 rlGetGlTextureFormats
 /// Get name string for pixel format
 /// # Safety
@@ -645,7 +670,7 @@ rlLoadShaderCode
 /// # Notes
 ///
 /// `shaderCode` does not need to outlive the compiled shader.
-/// &mdash; [`glShaderSource`#notes][]
+/// &mdash; [`glShaderSource`][]
 ///
 /// # Errors
 ///
@@ -662,10 +687,7 @@ rlLoadShaderCode
 ///
 /// `shaderCode` must be safe to dereference for reading and must be a nul-terminated string.
 ///
-/// [`glCreateShader`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glCreateShader.xhtml
-/// [`glShaderSource`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glShaderSource.xhtml
-/// [`glShaderSource`#notes]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glShaderSource.xhtml
-/// [`glCompileShader`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glCompileShader.xhtml
+#[doc = link_gl!(4::{glCreateShader, glShaderSource, glCompileShader})]
 /// [`RL_VERTEX_SHADER`]: raylib_sys::RL_VERTEX_SHADER
 /// [`RL_FRAGMENT_SHADER`]: raylib_sys::RL_FRAGMENT_SHADER
 /// [`RL_COMPUTE_SHADER`]: raylib_sys::RL_COMPUTE_SHADER
