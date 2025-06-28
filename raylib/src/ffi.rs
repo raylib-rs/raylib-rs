@@ -21,14 +21,31 @@ macro_rules! provide_docs {
 
 provide_docs!{
 
-["rlgl.c"]
+["rlgl.h"]
 
 /// Choose the current matrix to be transformed
+///
 /// # Safety
-/// - creates a pointer to either RLGL.State.projection or RLGL.State.modelview
-/// - only RL_PROJECTION and RL_MODELVIEW are supported (RL_TEXTURE is not)
-/// - assigns RLGL
-/// TODO
+///
+/// ## `GRAPHICS_API_OPENGL_11`
+///
+/// This function may call [`glMatrixMode`][] if `mode` is [`RL_PROJECTION`][], [`RL_MODELVIEW`][], or [`RL_TEXTURE`][].
+/// GL must be loaded and ready to be called into.
+///
+/// [`glMatrixMode`]: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/glMatrixMode.xml "khronos GL1.1 glMatrixMode Refpage"
+///
+/// ## `GRAPHICS_API_OPENGL_33` and `GRAPHICS_API_OPENGL_ES2`
+///
+/// This function may assign to the static `RLGL.State` without locking.
+/// Either ensure this function is only called on the same thread that initialized RLGL, or use appropriate synchronization.
+///
+/// [`RL_TEXTURE`][] is not supported with `GRAPHICS_API_OPENGL_33` or `GRAPHICS_API_OPENGL_ES2`.
+/// `RLGL.State.currentMatrixMode` is assigned with `mode` unchecked, but `RLGL.State.currentMatrix` is only updated if `mode` is valid for the graphics API.
+/// This can cause unexpected (but not undefined) behavior. Please avoid it.
+///
+/// [`RL_PROJECTION`]: raylib_sys::RL_PROJECTION
+/// [`RL_MODELVIEW`]: raylib_sys::RL_MODELVIEW
+/// [`RL_TEXTURE`]: raylib_sys::RL_TEXTURE
 rlMatrixMode
 /// Push the current matrix to stack
 /// # Safety
