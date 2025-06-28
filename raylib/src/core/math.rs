@@ -1434,7 +1434,7 @@ impl Rectangle {
     ///
     /// # Example
     /// ```
-    /// #use raylib::core::math::Rectangle;
+    /// # use raylib::core::math::Rectangle;
     /// let r1 = Rectangle::new(0.0, 0.0, 10.0, 10.0);
     /// let r2 = Rectangle::new(20.0, 20.0, 10.0, 10.0);
     /// assert_eq!(r1.get_collision_rec(r2), None);
