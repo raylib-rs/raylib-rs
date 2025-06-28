@@ -7,12 +7,12 @@ macro_rules! provide_docs {
     ($(
         [$file:literal]
         $(
-            $(#[doc = $($doc:tt)+])*
+            $(#[$m:meta])*
             $item:ident
         )*
     )*) => {$(
         $(
-            $(#[doc = $($doc)+])*
+            $(#[$m])*
             #[doc = concat!("\n\nSee [", $file, "#`", stringify!($item), "`](https://github.com/search?q=repo:raysan5/raylib+src/", $file, "+", stringify!($item), "&type=code)")]
             pub use raylib_sys::$item;
         )*
@@ -370,8 +370,12 @@ rlSetBlendFactorsSeparate
 /// Initialize rlgl (buffers, shaders, textures, states)
 /// # Safety
 /// - if GRAPHICS_API_OPENGL_33 or GRAPHICS_API_OPENGL_ES2
-///   - calls rlLoadTexture (unchecked)
-///   - assigns RLGL.State.defaultTextureId with return
+///   - calls rlLoadTexture and assigns RLGL.State.defaultTextureId with return (possibly 0)
+///   - calls rlLoadShaderDefault, assigning
+///     - RLGL.State.defaultShaderLocs
+///     - RLGL.State.defaultVShaderId
+///     - RLGL.State.defaultFShaderId
+///     - RLGL.State.defaultShaderId (possibly 0)
 /// TODO
 rlglInit
 /// De-initialize rlgl (buffers, shaders, textures)
@@ -517,31 +521,26 @@ rlDrawVertexArrayElementsInstanced
 ///
 /// # Errors
 ///
-/// This function will error if `format` is not supported by the graphics
-/// API or if [`glGenTextures`][] fails. The id returned will be zero if
-/// an error has occurred.
+/// This function will error if `format` is not supported by the graphics API or if [`glGenTextures`][] fails.
+/// The id returned will be zero if an error has occurred.
+///
+/// `width` and `height` should be >= 0 to avoid an error.
 ///
 /// # Safety
 ///
-/// `glBindTexture` is called with arguments `GL_TEXTURE_2D, 0` unconditionally
-/// at the start of the function. GL must be loaded and ready to be called into.
+/// `glBindTexture` is called with arguments `GL_TEXTURE_2D, 0` unconditionally at the start of the function.
+/// GL must be loaded and ready to be called into.
 ///
-/// If `format` is valid, `data` is passed to either [`glTexImage2D`][] or
-/// [`glCompressedTexImage2D`][] as bytes. In this case, `data` must be either
-/// null[^nulldata] *or* initialized and valid. `width`, `height`, `mipmapCount`,
-/// and `format` must accurately describe the memory `data` points to.
-///
-/// `width` and `height` must be >= 0.
+/// If `format` is valid, `data` is passed to either [`glTexImage2D`][] or [`glCompressedTexImage2D`][] as bytes.
+/// In this case, `data` must be either null[^nulldata] *or* initialized and valid. `width`, `height`, `mipmapCount`, and `format` must accurately describe the memory `data` points to.
 ///
 /// This function may read the static `RLGL.ExtSupported` without locking.
-/// Either ensure this function is only called on the same thread that
-/// initialized RLGL, or use appropriate synchronization.
+/// Either ensure this function is only called on the same thread that initialized RLGL, or use appropriate synchronization.
 ///
-/// [^nulldata]: "`data` may be a null pointer. In this case, texture memory
-/// is allocated to accommodate a texture of width `width` and height `height`.
-/// You can then download subtextures to initialize this texture memory. The
-/// image is undefined if the user tries to apply an uninitialized portion of the
-/// texture image to a primitive." &mdash; [*`glTexImage2D`#notes*][`glTexImage2D`#notes]
+/// [^nulldata]: "`data` may be a null pointer. In this case, texture memory is allocated to accommodate a texture of width `width` and height `height`.
+/// You can then download subtextures to initialize this texture memory.
+/// The image is undefined if the user tries to apply an uninitialized portion of the texture image to a primitive."
+/// &mdash; [`glTexImage2D`#notes][]
 ///
 /// [`glGenTextures`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGenTextures.xhtml "khronos.org GL4 glGenTextures Refpage"
 /// [`glTexImage2D`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexImage2D.xhtml "khronos.org GL4 glTexImage2D Refpage"
@@ -624,9 +623,37 @@ rlUnloadFramebuffer
 /// # Safety
 /// TODO
 rlLoadShaderCode
-/// Compile custom shader and return shader id (type: RL_VERTEX_SHADER, RL_FRAGMENT_SHADER, RL_COMPUTE_SHADER)
+/// Compile custom shader and return shader id (type: [`RL_VERTEX_SHADER`][], [`RL_FRAGMENT_SHADER`][], [`RL_COMPUTE_SHADER`][])
+///
+/// # Notes
+///
+/// `shaderCode` does not need to outlive the compiled shader.
+/// &mdash; [`glShaderSource`#notes][]
+///
+/// # Errors
+///
+/// This function will error either if shaders are not supported by the graphics API[^shaderapi] or if either [`glCreateShader`][] or [`glCompileShader`][] fails.
+/// The id returned will be zero if an error has occurred.
+///
 /// # Safety
-/// TODO
+///
+/// This function does nothing if shaders are not supported[^shaderapi].
+/// **Otherwise,**
+///
+/// Multiple OpenGL functions are called unconditionally.
+/// GL must be loaded and ready to call into.
+///
+/// `shaderCode` must be safe to dereference for reading and must be a nul-terminated string.
+///
+/// [`glCreateShader`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glCreateShader.xhtml
+/// [`glShaderSource`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glShaderSource.xhtml
+/// [`glShaderSource`#notes]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glShaderSource.xhtml
+/// [`glCompileShader`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glCompileShader.xhtml
+/// [`RL_VERTEX_SHADER`]: raylib_sys::RL_VERTEX_SHADER
+/// [`RL_FRAGMENT_SHADER`]: raylib_sys::RL_FRAGMENT_SHADER
+/// [`RL_COMPUTE_SHADER`]: raylib_sys::RL_COMPUTE_SHADER
+///
+/// [^shaderapi]: Either `GRAPHICS_API_OPENGL_33` or `GRAPHICS_API_OPENGL_ES2` is required for shader support.
 rlCompileShader
 /// Load custom shader program
 /// # Safety
