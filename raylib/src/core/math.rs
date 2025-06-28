@@ -1245,8 +1245,10 @@ impl From<&Rectangle> for ffi::Rectangle {
 }
 
 impl Rectangle {
+    /// Rectangle with all components set to zero
     pub const ZERO: Self = Rectangle::new(0.0, 0.0, 0.0, 0.0);
-    /// Creates a new rectangle from position and size.
+   
+    /// Creates a new rectangle from position and size
     #[must_use]
     #[inline(always)]
     pub const fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
@@ -1258,7 +1260,7 @@ impl Rectangle {
         }
     }
 
-    /// Creates a rectangle from position and size vectors.
+    /// Creates a rectangle from position and size vectors
     #[must_use]
     #[inline(always)]
     pub fn v2(pos: impl Into<MintVec2>, dims: impl Into<MintVec2>) -> Self {
@@ -1272,8 +1274,9 @@ impl Rectangle {
         }
     }
 
-    /// Returns the position as a `Vector2`.
-    /// Alt name: [Self::pos]
+    /// Returns the position as a [`Vector2`]
+    ///
+    /// Alias: [`Self::pos`]
     #[must_use]
     #[inline(always)]
     pub const fn xy(self) -> Vector2 {
@@ -1283,15 +1286,16 @@ impl Rectangle {
         }
     }
 
-    /// Returns the position as a `Vector2`.
+    /// Returns the position as a [`Vector2`]
+    ///
+    /// Alias: [`Self::xy`]
     #[must_use]
     #[inline(always)]
-    /// Alt name: [Self::xy]
     pub const fn pos(self) -> Vector2 {
         self.xy()
     }
 
-    /// Returns the width & height as a `Vector2`.
+    /// Returns the width & height as a [`Vector2`]
     #[must_use]
     #[inline(always)]
     pub const fn size(self) -> Vector2 {
@@ -1301,7 +1305,7 @@ impl Rectangle {
         }
     }
 
-    /// Returns the bottom right corner by adding x&y to w&h
+    /// Returns the bottom right corner by adding x & y to width & height
     #[must_use]
     #[inline(always)]
     pub const fn max(self) -> Vector2 {
@@ -1311,9 +1315,9 @@ impl Rectangle {
         }
     }
 
+    /// Returns the half the width & height as a [`Vector2`]
     #[must_use]
     #[inline(always)]
-    /// Returns the half the width & height as a `Vector2`.
     pub fn half_size(self) -> Vector2 {
         self.size() / 2.0
     }
@@ -1330,7 +1334,8 @@ impl Rectangle {
             height: self.height,
         }
     }
-    /// Returns a copy with the given `x` and `y`.
+
+    /// Returns a copy with the given `x` and `y`
     #[must_use]
     #[inline(always)]
     pub const fn with_xy(self, x: f32, y: f32) -> Self {
@@ -1355,7 +1360,7 @@ impl Rectangle {
         }
     }
 
-    /// Returns a copy with the given `width` and `height`.
+    /// Returns a copy with the given `width` and `height`
     #[must_use]
     #[inline(always)]
     pub const fn with_wh(self, width: f32, height: f32) -> Self {
@@ -1368,134 +1373,93 @@ impl Rectangle {
     }
 
     /// Check collision between two rectangles
-    /// Shorter alias name: [Self::overlap]
+    ///
+    /// Alias: [`Self::overlap`]
     #[inline(always)]
     #[must_use]
     pub fn check_collision_recs(self, other: impl Into<ffi::Rectangle>) -> bool {
-        //unsafe { ffi::CheckCollisionRecs(self.into(), other.into()) }
-        let rec1 = self;
-        let rec2 = other.into();
-        (rec1.x < (rec2.x + rec2.width) && (rec1.x + rec1.width) > rec2.x)
-            && (rec1.y < (rec2.y + rec2.height) && (rec1.y + rec1.height) > rec2.y)
+        unsafe { ffi::CheckCollisionRecs(self.into(), other.into()) }
     }
 
     /// Check collision between two rectangles
-    /// Alias of [Self::check_collision_recs]
-    /// Use [Self::get_overlap_area] if you want the region of collision
+    ///
+    /// Alias: [`Self::check_collision_recs`]
+    ///
+    /// Use [`Self::get_overlap_area`] if you want the region of collision
     #[inline(always)]
     #[must_use]
     pub fn overlap(self, other: impl Into<ffi::Rectangle>) -> bool {
         self.check_collision_recs(other)
     }
 
-    /// Checks collision between circle and rectangle.
-    /// Shorter alias name: [Self::overlaps_circle]
+    /// Checks collision between circle and rectangle
+    ///
+    /// Alias: [`Self::overlaps_circle`]
     #[inline(always)]
     #[must_use]
     pub fn check_collision_circle_rec(self, center: impl Into<MintVec2>, radius: f32) -> bool {
-        //unsafe { ffi::CheckCollisionCircleRec(center.into(), radius, self.into()) }
-        let rec = self;
-        let center = center.into();
-        let collision;
-
-        let rec_center_x = rec.x + rec.width / 2.0;
-        let rec_center_y = rec.y + rec.height / 2.0;
-
-        let dx = (center.x - rec_center_x).abs();
-        let dy = (center.y - rec_center_y).abs();
-
-        if dx > (rec.width / 2.0 + radius) {
-            return false;
-        }
-        if dy > (rec.height / 2.0 + radius) {
-            return false;
-        }
-
-        if dx <= (rec.width / 2.0) {
-            return true;
-        }
-        if dy <= (rec.height / 2.0) {
-            return true;
-        }
-
-        let corner_distance_sq = (dx - rec.width / 2.0) * (dx - rec.width / 2.0)
-            + (dy - rec.height / 2.0) * (dy - rec.height / 2.0);
-
-        collision = corner_distance_sq <= (radius * radius);
-
-        return collision;
+        unsafe { ffi::CheckCollisionCircleRec(center.into(), radius, self.into()) }
     }
 
+    /// Checks collision between circle and rectangle
+    ///
+    /// Alias: [`Self::check_collision_circle_rec`]
     #[inline(always)]
     #[must_use]
-    /// Checks collision between circle and rectangle.
-    /// alias for [Self::check_collision_circle_rec]
     pub fn overlaps_circle(self, center: impl Into<MintVec2>, radius: f32) -> bool {
         self.check_collision_circle_rec(center, radius)
     }
 
-    /// Checks if point is inside rectangle.
-    /// Shorter alias name: [Self::contains_point]
+    /// Checks if point is inside rectangle
+    ///
+    /// Alias: [`Self::contains_point`]
     #[inline(always)]
     #[must_use]
     pub fn check_collision_point_rec(self, point: impl Into<MintVec2>) -> bool {
-        //unsafe { ffi::CheckCollisionPointRec(point.into(), self.into()) }
-        let point = point.into();
-        (point.x >= self.x)
-            && (point.x < (self.x + self.width))
-            && (point.y >= self.y)
-            && (point.y < (self.y + self.height))
+        unsafe { ffi::CheckCollisionPointRec(point.into(), self.into()) }
     }
 
-    /// Checks if point is inside rectangle.
-    /// alias for [Self::check_collision_point_rec]
+    /// Checks if point is inside rectangle
+    ///
+    /// Alias: [`Self::check_collision_point_rec`]
     #[inline(always)]
     #[must_use]
     pub fn contains_point(self, point: impl Into<MintVec2>) -> bool {
         self.check_collision_point_rec(point)
     }
-    /// Gets the overlap between two colliding rectangles.
-    /// Shorter alias name: [Self::get_overlap_area]
-    /// ```rust
-    /// use raylib::core::math::Rectangle;
+
+    /// Gets the overlap between two colliding rectangles
+    ///
+    /// Alias: [`Self::get_overlap_area`]
+    ///
+    /// # Example
+    /// ```
+    /// #use raylib::core::math::Rectangle;
     /// let r1 = Rectangle::new(0.0, 0.0, 10.0, 10.0);
     /// let r2 = Rectangle::new(20.0, 20.0, 10.0, 10.0);
-    /// assert_eq!(None, r1.get_collision_rec(r2));
-    /// assert_eq!(Some(r1), r1.get_collision_rec(r1));
+    /// assert_eq!(r1.get_collision_rec(r2), None);
+    /// assert_eq!(r1.get_collision_rec(r1), Some(r1));
     /// ```
     #[inline]
     #[must_use]
     pub fn get_collision_rec(self, other: impl Into<ffi::Rectangle>) -> Option<Self> {
-        //unsafe { ffi::GetCollisionRec(self.into(), other.into()) }
-        let rec1 = self;
-        let rec2 = other.into();
-
-        let left = if rec1.x > rec2.x { rec1.x } else { rec2.x };
-        let right1 = rec1.x + rec1.width;
-        let right2 = rec2.x + rec2.width;
-        let right = if right1 < right2 { right1 } else { right2 };
-        let top = if rec1.y > rec2.y { rec1.y } else { rec2.y };
-        let bottom1 = rec1.y + rec1.height;
-        let bottom2 = rec2.y + rec2.height;
-        let bottom = if bottom1 < bottom2 { bottom1 } else { bottom2 };
-
-        if (left < right) && (top < bottom) {
-            let overlap = Rectangle::new(left, top, right - left, bottom - top);
-            return Some(overlap);
-        }
-        return None;
+        let rec = unsafe { ffi::GetCollisionRec(self.into(), other.into()).into() }
+        (rec != Self::ZERO).then_some(rec)
     }
+
+    /// Gets the overlap between two colliding rectangles
+    ///
+    /// Alias: [`Self::get_collision_rec`]
+    ///
+    /// Use [`Self::overlap`] if you don't care about the overlap area
     #[inline]
     #[must_use]
-    /// Gets the overlap between two colliding rectangles.
-    /// Shorter alias name: [Self::get_collision_rec]
-    /// Use [Self::overlap] if you don't care about the overlap area
     pub fn get_overlap_area(self, other: impl Into<ffi::Rectangle>) -> Option<Self> {
         self.get_collision_rec(other)
     }
 }
 
-/// Creates a [Rectangle] from any number type by loosely casting "as f32"
+/// Creates a [`Rectangle`] from any number type by loosely casting `as f32`
 #[must_use]
 #[inline(always)]
 pub fn rrect<T1: AsF32, T2: AsF32, T3: AsF32, T4: AsF32>(
@@ -1507,16 +1471,16 @@ pub fn rrect<T1: AsF32, T2: AsF32, T3: AsF32, T4: AsF32>(
     Rectangle::new(x.as_f32(), y.as_f32(), width.as_f32(), height.as_f32())
 }
 
+/// Shorthand for creating a [`Rectangle`] from `f32`s
 #[must_use]
 #[inline(always)]
-/// Shorthand for creating a rectangle [Rectangle]
 pub const fn rectf(x: f32, y: f32, width: f32, height: f32) -> Rectangle {
     Rectangle::new(x, y, width, height)
 }
 
+/// Shorthand for creating a [`Rectangle`] from vectors
 #[must_use]
 #[inline(always)]
-/// Shorthand for creating a rectangle [Rectangle] with [Vector2]'s
 pub fn rectv(pos: impl Into<MintVec2>, size: impl Into<MintVec2>) -> Rectangle {
     Rectangle::v2(pos, size)
 }
