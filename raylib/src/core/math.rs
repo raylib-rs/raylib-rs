@@ -1315,7 +1315,7 @@ impl Rectangle {
         }
     }
 
-    /// Returns the half the width & height as a [`Vector2`]
+    /// Returns half the width & height as a [`Vector2`]
     #[must_use]
     #[inline(always)]
     pub fn half_size(self) -> Vector2 {
