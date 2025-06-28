@@ -1444,7 +1444,7 @@ impl Rectangle {
     #[must_use]
     pub fn get_collision_rec(self, other: impl Into<ffi::Rectangle>) -> Option<Self> {
         self.check_collision_recs(other)
-             .then(|| unsafe { crate::GetCollisionRec(self.into(), other.into()).into() })
+             .then(|| unsafe { ffi::GetCollisionRec(self.into(), other.into()).into() })
     }
 
     /// Gets the overlap between two colliding rectangles
