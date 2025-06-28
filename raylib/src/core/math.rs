@@ -1443,7 +1443,7 @@ impl Rectangle {
     #[inline]
     #[must_use]
     pub fn get_collision_rec(self, other: impl Into<ffi::Rectangle>) -> Option<Self> {
-        let rec = unsafe { ffi::GetCollisionRec(self.into(), other.into()).into() }
+        let rec = unsafe { ffi::GetCollisionRec(self.into(), other.into()).into() };
         (rec != Self::ZERO).then_some(rec)
     }
 
