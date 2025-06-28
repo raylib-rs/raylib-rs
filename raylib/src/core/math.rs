@@ -1247,7 +1247,7 @@ impl From<&Rectangle> for ffi::Rectangle {
 impl Rectangle {
     /// Rectangle with all components set to zero
     pub const ZERO: Self = Rectangle::new(0.0, 0.0, 0.0, 0.0);
-   
+
     /// Creates a new rectangle from position and size
     #[must_use]
     #[inline(always)]
@@ -1443,8 +1443,9 @@ impl Rectangle {
     #[inline]
     #[must_use]
     pub fn get_collision_rec(self, other: impl Into<ffi::Rectangle>) -> Option<Self> {
+        let other = other.into();
         self.check_collision_recs(other)
-             .then(|| unsafe { ffi::GetCollisionRec(self.into(), other.into()).into() })
+             .then(|| unsafe { ffi::GetCollisionRec(self.into(), other).into() })
     }
 
     /// Gets the overlap between two colliding rectangles
