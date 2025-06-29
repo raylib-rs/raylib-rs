@@ -118,15 +118,15 @@ macro_rules! require_gl {
         concat!(require_gl!(@[$a]), " and/or ", require_gl!(@[$b]))
     };
     (@[$a:ident, $b:ident, $($c:ident),+]) => {
-        concat!($a, ", ", require_gl!(@[$b, $($c),+]))
+        concat!(require_gl!(@[$a]), ", ", require_gl!(@[$b, $($c),+]))
     };
 
     // unconditional call(s)
-    ($($list:ident),+ $(,)?) => {
+    ($($list:ident),+) => {
         concat!("This function will call ", require_gl!(@[$($list),+]), " unconditionally. ", require_gl!())
     };
     // conditional call(s)
-    ($($list:ident),+ $(,)? if $cond:literal) => {
+    ($($list:ident),+ if $cond:literal) => {
         concat!("This function may call ", require_gl!(@[$($list),+]), " if ", $cond, ". In which case ", require_gl!())
     };
     // soundness
@@ -197,7 +197,141 @@ macro_rules! link_gl {
     };
 }
 
-use {static_access, require_gl, link_gl};
+// /// Supplies the feature flags of a given graphics API
+// ///
+// /// GRAPHICS API NOTES:
+// /// - `GRAPHICS_API_OPENGL_11` => `feature = "opengl_11"`
+// /// - `GRAPHICS_API_OPENGL_21` => `feature = "opengl_21"`
+// /// - `GRAPHICS_API_OPENGL_33` => `feature = "opengl_33"`
+// /// - `GRAPHICS_API_OPENGL_43` => `feature = "opengl_43"`
+// /// - `GRAPHICS_API_OPENGL_ES2` => `feature = "opengl_es_20"`
+// /// - `GRAPHICS_API_OPENGL_ES3` => `feature = "opengl_es_30"`
+// #[allow(unused, reason = "currently not compatible with cfg, but macro expansion is still useful for generating them")]
+// macro_rules! graphics_api {
+//     (gl_11) => {
+//         feature = "opengl_11"
+//     };
+
+//     (gl_21) => {
+//         all(
+//             feature = "opengl_21",
+//             // // Security check in case multiple GRAPHICS_API_OPENGL_* defined
+//             // #if defined(GRAPHICS_API_OPENGL_11)
+//             //     #if defined(GRAPHICS_API_OPENGL_21)
+//             //         #undef GRAPHICS_API_OPENGL_21
+//             //     #endif
+//             //     // ...
+//             // #endif
+//             not(feature = "opengl_11")
+//         )
+//     };
+
+//     (gl_33) => {
+//         all(
+//             any(
+//                 feature = "opengl_33",
+//                 // // Security check in case no GRAPHICS_API_OPENGL_* defined
+//                 // #if !defined(GRAPHICS_API_OPENGL_11) && \
+//                 //     !defined(GRAPHICS_API_OPENGL_21) && \
+//                 //     !defined(GRAPHICS_API_OPENGL_33) && \
+//                 //     !defined(GRAPHICS_API_OPENGL_43) && \
+//                 //     !defined(GRAPHICS_API_OPENGL_ES2) && \
+//                 //     !defined(GRAPHICS_API_OPENGL_ES3)
+//                 //         #define GRAPHICS_API_OPENGL_33
+//                 // #endif
+//                 all(
+//                     not(feature = "opengl_11"),
+//                     not(feature = "opengl_21"),
+//                     not(feature = "opengl_33"),
+//                     not(feature = "opengl_43"),
+//                     not(feature = "opengl_es_20"),
+//                     not(feature = "opengl_es_30"),
+//                 ),
+//                 // // OpenGL 2.1 uses most of OpenGL 3.3 Core functionality
+//                 // // WARNING: Specific parts are checked with #if defines
+//                 // #if defined(GRAPHICS_API_OPENGL_21)
+//                 //     #define GRAPHICS_API_OPENGL_33
+//                 // #endif
+//                 feature = "opengl_21",
+//                 // // OpenGL 4.3 uses OpenGL 3.3 Core functionality
+//                 // #if defined(GRAPHICS_API_OPENGL_43)
+//                 //     #define GRAPHICS_API_OPENGL_33
+//                 // #endif
+//                 feature = "opengl_43",
+//             ),
+//             // // Security check in case multiple GRAPHICS_API_OPENGL_* defined
+//             // #if defined(GRAPHICS_API_OPENGL_11)
+//             //     // ...
+//             //     #if defined(GRAPHICS_API_OPENGL_33)
+//             //         #undef GRAPHICS_API_OPENGL_33
+//             //     #endif
+//             //     // ...
+//             // #endif
+//             not(feature = "opengl_11")
+//         )
+//     };
+
+//     (gl_43) => {
+//         all(
+//             feature = "opengl_43",
+//             // // Security check in case multiple GRAPHICS_API_OPENGL_* defined
+//             // #if defined(GRAPHICS_API_OPENGL_11)
+//             //     // ...
+//             //     #if defined(GRAPHICS_API_OPENGL_43)
+//             //         #undef GRAPHICS_API_OPENGL_43
+//             //     #endif
+//             //     // ...
+//             // #endif
+//             not(feature = "opengl_11")
+//         )
+//     };
+
+//     (gl_es2) => {
+//         all(
+//             any(
+//                 feature = "opengl_es_20",
+//                 // // OpenGL ES 3.0 uses OpenGL ES 2.0 functionality (and more)
+//                 // #if defined(GRAPHICS_API_OPENGL_ES3)
+//                 //     #define GRAPHICS_API_OPENGL_ES2
+//                 // #endif
+//                 feature = "opengl_es_30",
+//             ),
+//             // // Security check in case multiple GRAPHICS_API_OPENGL_* defined
+//             // #if defined(GRAPHICS_API_OPENGL_11)
+//             //     // ...
+//             //     #if defined(GRAPHICS_API_OPENGL_ES2)
+//             //         #undef GRAPHICS_API_OPENGL_ES2
+//             //     #endif
+//             // #endif
+//             not(feature = "opengl_11")
+//         )
+//     };
+
+//     (gl_es3) => {
+//         feature = "opengl_es_30" // Something tells me the lack of "not(opengl_11)" might be unintentional
+//     };
+
+//     // Combinations
+//     (($($tokens:tt)+)) => {
+//         graphics_api!($($tokens)+)
+//     };
+//     (!$item:tt) => {
+//         not(graphics_api!($item))
+//     };
+//     ($first:tt|$($rest:tt)|+) => {
+//         any(graphics_api!($first), $(graphics_api!($rest)),+)
+//     };
+//     ($first:tt&$($rest:tt)&+) => {
+//         all(graphics_api!($first), $(graphics_api!($rest)),+)
+//     };
+// }
+
+use {
+    static_access,
+    require_gl,
+    link_gl,
+    // graphics_api,
+};
 
 /// Provide documentation for public reexports of [`raylib_sys`] items,
 /// automatically generating Raylib Github links to the symbols.
@@ -237,7 +371,209 @@ macro_rules! provide_docs {
 
 provide_docs!{
 
-["rlgl.h"]
+["rlgl.h"] // rlgl.h is header-only; we are still targeting the definitions not just declarations
+
+/// Default internal render batch elements limits
+///
+/// ## `GRAPHICS_API_OPENGL_11` or `GRAPHICS_API_OPENGL_33`
+///
+/// This is the maximum amount of elements (quads) per batch
+///
+/// NOTE: Be careful with text, every letter maps to a quad
+///
+/// ## `GRAPHICS_API_OPENGL_ES2`
+///
+/// We reduce memory sizes for embedded systems (RPI and HTML5)
+///
+/// NOTE: On HTML5 (emscripten) this is allocated on heap,
+/// by default it's only 16MB!...just take care...
+RL_DEFAULT_BATCH_BUFFER_ELEMENTS
+
+/// Default number of batch buffers (multi-buffering)
+RL_DEFAULT_BATCH_BUFFERS
+
+/// Default number of batch draw calls (by state changes: mode, texture)
+RL_DEFAULT_BATCH_DRAWCALLS
+
+/// Maximum number of textures units that can be activated on batch drawing ([`SetShaderValueTexture()`])
+RL_DEFAULT_BATCH_MAX_TEXTURE_UNITS
+
+// Internal Matrix stack
+
+/// Maximum size of Matrix stack
+RL_MAX_MATRIX_STACK_SIZE
+
+// Shader limits
+
+/// Maximum number of shader locations supported
+RL_MAX_SHADER_LOCATIONS
+
+// Projection matrix culling
+
+/// Default near cull distance
+RL_CULL_DISTANCE_NEAR
+
+/// Default far cull distance
+RL_CULL_DISTANCE_FAR
+
+// Texture parameters (equivalent to OpenGL defines)
+
+/// `GL_TEXTURE_WRAP_S`
+RL_TEXTURE_WRAP_S
+/// `GL_TEXTURE_WRAP_T`
+RL_TEXTURE_WRAP_T
+/// `GL_TEXTURE_MAG_FILTER`
+RL_TEXTURE_MAG_FILTER
+/// `GL_TEXTURE_MIN_FILTER`
+RL_TEXTURE_MIN_FILTER
+/// `GL_NEAREST`
+RL_TEXTURE_FILTER_NEAREST
+/// `GL_LINEAR`
+RL_TEXTURE_FILTER_LINEAR
+/// `GL_NEAREST_MIPMAP_NEAREST`
+RL_TEXTURE_FILTER_MIP_NEAREST
+/// `GL_NEAREST_MIPMAP_LINEAR`
+RL_TEXTURE_FILTER_NEAREST_MIP_LINEAR
+/// `GL_LINEAR_MIPMAP_NEAREST`
+RL_TEXTURE_FILTER_LINEAR_MIP_NEAREST
+/// `GL_LINEAR_MIPMAP_LINEAR`
+RL_TEXTURE_FILTER_MIP_LINEAR
+/// Anisotropic filter (custom identifier)
+RL_TEXTURE_FILTER_ANISOTROPIC
+/// Texture mipmap bias, percentage ratio (custom identifier)
+RL_TEXTURE_MIPMAP_BIAS_RATIO
+/// `GL_REPEAT`
+RL_TEXTURE_WRAP_REPEAT
+/// `GL_CLAMP_TO_EDGE`
+RL_TEXTURE_WRAP_CLAMP
+/// `GL_MIRRORED_REPEAT`
+RL_TEXTURE_WRAP_MIRROR_REPEAT
+/// `GL_MIRROR_CLAMP_EXT`
+RL_TEXTURE_WRAP_MIRROR_CLAMP
+
+// Matrix modes (equivalent to OpenGL)
+
+/// `GL_MODELVIEW`
+RL_MODELVIEW
+/// `GL_PROJECTION`
+RL_PROJECTION
+/// `GL_TEXTURE`
+RL_TEXTURE
+
+// Primitive assembly draw modes
+
+/// `GL_LINES`
+RL_LINES
+/// `GL_TRIANGLES`
+RL_TRIANGLES
+/// `GL_QUADS`
+RL_QUADS
+
+// GL equivalent data types
+
+/// `GL_UNSIGNED_BYTE`
+RL_UNSIGNED_BYTE
+/// `GL_FLOAT`
+RL_FLOAT
+
+// GL buffer usage hint
+
+/// `GL_STREAM_DRAW`
+RL_STREAM_DRAW
+/// `GL_STREAM_READ`
+RL_STREAM_READ
+/// `GL_STREAM_COPY`
+RL_STREAM_COPY
+/// `GL_STATIC_DRAW`
+RL_STATIC_DRAW
+/// `GL_STATIC_READ`
+RL_STATIC_READ
+/// `GL_STATIC_COPY`
+RL_STATIC_COPY
+/// `GL_DYNAMIC_DRAW`
+RL_DYNAMIC_DRAW
+/// `GL_DYNAMIC_READ`
+RL_DYNAMIC_READ
+/// `GL_DYNAMIC_COPY`
+RL_DYNAMIC_COPY
+
+// GL Shader type
+
+/// `GL_FRAGMENT_SHADER`
+RL_FRAGMENT_SHADER
+/// `GL_VERTEX_SHADER`
+RL_VERTEX_SHADER
+/// `GL_COMPUTE_SHADER`
+RL_COMPUTE_SHADER
+
+// GL blending factors
+
+/// `GL_ZERO`
+RL_ZERO
+/// `GL_ONE`
+RL_ONE
+/// `GL_SRC_COLOR`
+RL_SRC_COLOR
+/// `GL_ONE_MINUS_SRC_COLOR`
+RL_ONE_MINUS_SRC_COLOR
+/// `GL_SRC_ALPHA`
+RL_SRC_ALPHA
+/// `GL_ONE_MINUS_SRC_ALPHA`
+RL_ONE_MINUS_SRC_ALPHA
+/// `GL_DST_ALPHA`
+RL_DST_ALPHA
+/// `GL_ONE_MINUS_DST_ALPHA`
+RL_ONE_MINUS_DST_ALPHA
+/// `GL_DST_COLOR`
+RL_DST_COLOR
+/// `GL_ONE_MINUS_DST_COLOR`
+RL_ONE_MINUS_DST_COLOR
+/// `GL_SRC_ALPHA_SATURATE`
+RL_SRC_ALPHA_SATURATE
+/// `GL_CONSTANT_COLOR`
+RL_CONSTANT_COLOR
+/// `GL_ONE_MINUS_CONSTANT_COLOR`
+RL_ONE_MINUS_CONSTANT_COLOR
+/// `GL_CONSTANT_ALPHA`
+RL_CONSTANT_ALPHA
+/// `GL_ONE_MINUS_CONSTANT_ALPHA`
+RL_ONE_MINUS_CONSTANT_ALPHA
+
+// GL blending functions/equations
+
+/// `GL_FUNC_ADD`
+RL_FUNC_ADD
+/// `GL_MIN`
+RL_MIN
+/// `GL_MAX`
+RL_MAX
+/// `GL_FUNC_SUBTRACT`
+RL_FUNC_SUBTRACT
+/// `GL_FUNC_REVERSE_SUBTRACT`
+RL_FUNC_REVERSE_SUBTRACT
+/// `GL_BLEND_EQUATION`
+RL_BLEND_EQUATION
+/// `GL_BLEND_EQUATION_RGB`
+/// (Same as [`RL_BLEND_EQUATION`])
+RL_BLEND_EQUATION_RGB
+/// `GL_BLEND_EQUATION_ALPHA`
+RL_BLEND_EQUATION_ALPHA
+/// `GL_BLEND_DST_RGB`
+RL_BLEND_DST_RGB
+/// `GL_BLEND_SRC_RGB`
+RL_BLEND_SRC_RGB
+/// `GL_BLEND_DST_ALPHA`
+RL_BLEND_DST_ALPHA
+/// `GL_BLEND_SRC_ALPHA`
+RL_BLEND_SRC_ALPHA
+/// `GL_BLEND_COLOR`
+RL_BLEND_COLOR
+
+/// `GL_READ_FRAMEBUFFER`
+RL_READ_FRAMEBUFFER
+/// `GL_DRAW_FRAMEBUFFER`
+RL_DRAW_FRAMEBUFFER
+
 
 /// Choose the current matrix to be transformed
 ///
@@ -245,22 +581,18 @@ provide_docs!{
 ///
 /// ## `GRAPHICS_API_OPENGL_11`
 ///
-/// This function may call [`glMatrixMode`][] if `mode` is [`RL_PROJECTION`][], [`RL_MODELVIEW`][], or [`RL_TEXTURE`][].
+/// This function may call [`glMatrixMode`][] if `mode` is [`RL_PROJECTION`], [`RL_MODELVIEW`], or [`RL_TEXTURE`].
 /// GL must be loaded and ready to be called into.
 ///
 #[doc = link_gl!(2.1::{glMatrixMode})]
 ///
-/// ## `GRAPHICS_API_OPENGL_33` and `GRAPHICS_API_OPENGL_ES2`
+/// ## `GRAPHICS_API_OPENGL_33` or `GRAPHICS_API_OPENGL_ES2`
 ///
 #[doc = static_access!(mut RLGL.State)]
 ///
-/// [`RL_TEXTURE`][] is not supported with `GRAPHICS_API_OPENGL_33` or `GRAPHICS_API_OPENGL_ES2`.
+/// [`RL_TEXTURE`] is not supported with `GRAPHICS_API_OPENGL_33` or `GRAPHICS_API_OPENGL_ES2`.
 /// `RLGL.State.currentMatrixMode` is assigned with `mode` unchecked, but `RLGL.State.currentMatrix` is only updated if `mode` is valid for the graphics API.
 /// This can cause unexpected (but not undefined) behavior. Please avoid it.
-///
-/// [`RL_PROJECTION`]: raylib_sys::RL_PROJECTION
-/// [`RL_MODELVIEW`]: raylib_sys::RL_MODELVIEW
-/// [`RL_TEXTURE`]: raylib_sys::RL_TEXTURE
 rlMatrixMode
 
 /// Push the current matrix to stack
@@ -273,21 +605,18 @@ rlMatrixMode
 ///
 #[doc = link_gl!(2.1::{glPushMatrix})]
 ///
-/// ## `GRAPHICS_API_OPENGL_33` and `GRAPHICS_API_OPENGL_ES2`
+/// ## `GRAPHICS_API_OPENGL_33` or `GRAPHICS_API_OPENGL_ES2`
 ///
 #[doc = static_access!(mut RLGL.State)]
 ///
-/// If `RLGL.State.stackCounter` is [`RL_MAX_MATRIX_STACK_SIZE`][] or more, `RLGL.State.stack` will be assigned out of bounds.
+/// If `RLGL.State.stackCounter` is [`RL_MAX_MATRIX_STACK_SIZE`] or more, `RLGL.State.stack` will be assigned out of bounds.
 /// Every [`rlPushMatrix`] call increments `RLGL.State.stackCounter`.
 ///
 /// Make sure each [`rlPushMatrix`] call is paired with a corresponding [`rlPopMatrix`] call.
 ///
 /// This function will dereference `RLGL.State.currentMatrix` unconditionally.
-/// If `RLGL.State.currentMatrixMode` is [`RL_MODELVIEW`][], this function will assign `RLGL.State.currentMatrix` with a pointer guaranteed to be non-null and dereferenceable.
+/// If `RLGL.State.currentMatrixMode` is [`RL_MODELVIEW`], this function will assign `RLGL.State.currentMatrix` with a pointer guaranteed to be non-null and dereferenceable.
 /// Otherwise, it is the caller's responsibility to ensure `RLGL.State.currentMatrix` is non-null and dereferenceable before calling.
-///
-/// [`RL_MAX_MATRIX_STACK_SIZE`]: raylib_sys::RL_MAX_MATRIX_STACK_SIZE
-/// [`RL_MODELVIEW`]: raylib_sys::RL_MODELVIEW
 rlPushMatrix
 
 /// Pop latest inserted matrix from stack
@@ -974,7 +1303,7 @@ rlUnloadFramebuffer
 /// TODO
 rlLoadShaderCode
 
-/// Compile custom shader and return shader id (type: [`RL_VERTEX_SHADER`][], [`RL_FRAGMENT_SHADER`][], [`RL_COMPUTE_SHADER`][])
+/// Compile custom shader and return shader id (type: [`RL_VERTEX_SHADER`], [`RL_FRAGMENT_SHADER`], [`RL_COMPUTE_SHADER`])
 ///
 /// # Notes
 ///
@@ -988,18 +1317,11 @@ rlLoadShaderCode
 ///
 /// # Safety
 ///
-/// This function does nothing if shaders are not supported[^shaderapi].
-/// **Otherwise,**
-///
-/// Multiple OpenGL functions are called unconditionally.
-/// GL must be loaded and ready to call into.
+#[doc = require_gl!(glCreateShader, glShaderSource, glCompileShader if "shaders are supported[^shaderapi]")]
 ///
 /// `shaderCode` must be safe to dereference for reading and must be a nul-terminated string.
 ///
 #[doc = link_gl!(4::{glCreateShader, glShaderSource, glCompileShader})]
-/// [`RL_VERTEX_SHADER`]: raylib_sys::RL_VERTEX_SHADER
-/// [`RL_FRAGMENT_SHADER`]: raylib_sys::RL_FRAGMENT_SHADER
-/// [`RL_COMPUTE_SHADER`]: raylib_sys::RL_COMPUTE_SHADER
 ///
 /// [^shaderapi]: Either `GRAPHICS_API_OPENGL_33` or `GRAPHICS_API_OPENGL_ES2` is required for shader support.
 rlCompileShader
