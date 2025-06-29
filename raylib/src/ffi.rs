@@ -3,6 +3,42 @@ pub use raylib_sys::*;
 /// Provides handwritten documentation comments for FFI functions via rustdoc
 pub mod with_docs {
 
+/// Document that a function accesses a static variable without locking, and advises
+/// readers of the proper precautions associated with thread-unsafe static access.
+///
+/// # Examples
+///
+/// ## Write access
+/// ```ignore
+/// static mut UNLOCKED_STATIC: bool;
+///
+/// /// Does dangerous stuff without checking
+/// ///
+/// /// #Safety
+/// ///
+/// #[doc = static_access!(mut UNLOCKED_STATIC)]
+/// unsafe fn dangerous() {
+///     unsafe {
+///         UNLOCKED_STATIC = !UNLOCKED_STATIC;
+///     }
+/// }
+/// ```
+///
+/// ## Read access
+/// ```ignore
+/// static mut UNLOCKED_STATIC: bool;
+///
+/// /// Does dangerous stuff without checking
+/// ///
+/// /// #Safety
+/// ///
+/// #[doc = static_access!(const UNLOCKED_STATIC)]
+/// unsafe fn dangerous() {
+///     if unsafe { UNLOCKED_STATIC } {
+///         ...
+///     }
+/// }
+/// ```
 macro_rules! static_access {
     ($access:ident $global:expr) => {
         concat!("This function may ", static_access!(@$access), " the static `", stringify!($global), "` without locking. \
@@ -12,26 +48,177 @@ macro_rules! static_access {
     (@mut) => { "assign" };
 }
 
+/// Document that a function calls a GL function without validating GL, and advises readers
+/// of the proper precautions associated with calling possibly-unloaded external functions.
+///
+/// [`link_gl`] should also be used to create links to the documentation of the GL functions
+/// referenced.
+///
+/// # Examples
+///
+/// ## Unconditional
+/// ```ignore
+/// /// Does dangerous stuff without checking
+/// ///
+/// /// #Safety
+/// ///
+/// #[doc = require_gl!(glBindTexture)]
+/// ///
+/// #[doc = link_gl!(4::glBindTexture)]
+/// unsafe fn dangerous() {
+///     unsafe {
+///         glBindTexture(GL_TEXTURE_2D, 0);
+///     }
+/// }
+/// ```
+///
+/// ## Multiple unconditional
+/// ```ignore
+/// /// Does dangerous stuff without checking
+/// ///
+/// /// #Safety
+/// ///
+/// #[doc = require_gl!(glBindTexture, glGenTextures, glTexImage2D)]
+/// ///
+/// #[doc = link_gl!(4::{glBindTexture, glGenTextures, glTexImage2D})]
+/// unsafe fn dangerous() {
+///     unsafe {
+///         glBindTexture(GL_TEXTURE_2D, 0);
+///         glGenTextures(GL_TEXTURE_2D, 0);
+///         glTexImage2D(GL_TEXTURE_2D, 0);
+///     }
+/// }
+/// ```
+///
+/// ## Multiple conditional
+/// ```ignore
+/// /// Does dangerous stuff without checking
+/// ///
+/// /// #Safety
+/// ///
+/// #[doc = require_gl!(glBindTexture, glGenTextures, glTexImage2D if "`x` is true")]
+/// ///
+/// #[doc = link_gl!(4::{glBindTexture, glGenTextures, glTexImage2D})]
+/// unsafe fn dangerous(x: bool) {
+///     if x {
+///         unsafe {
+///             glBindTexture(GL_TEXTURE_2D, 0);
+///             glGenTextures(GL_TEXTURE_2D, 0);
+///             glTexImage2D(GL_TEXTURE_2D, 0);
+///         }
+///     }
+/// }
+/// ```
 macro_rules! require_gl {
-    ($($list:ident),+ $(,)? if $cond:literal) => { concat!("This function may call ", require_gl!(@[$($list),+]), " if ", $cond, ". ", require_gl!()) };
-    ($($list:ident),+ $(,)?) => { concat!("This function will call ", require_gl!(@[$($list),+]), " unconditionally. ", require_gl!()) };
-    (@[$a:ident]) => { concat!("[`", stringify!($a), "`][]") };
-    (@[$a:ident, $b:ident]) => { concat!(require_gl!(@[$a]), " or ", require_gl!(@[$b])) };
-    (@[$a:ident, $b:ident, $($c:ident),+]) => { concat!($a, ", ", require_gl!(@[$b, $($c),+])) };
+    // reference-style link list
+    (@[$a:ident]) => {
+        concat!("[`", stringify!($a), "`][]")
+    };
+    (@[$a:ident, $b:ident]) => {
+        concat!(require_gl!(@[$a]), " and/or ", require_gl!(@[$b]))
+    };
+    (@[$a:ident, $b:ident, $($c:ident),+]) => {
+        concat!($a, ", ", require_gl!(@[$b, $($c),+]))
+    };
+
+    // unconditional call(s)
+    ($($list:ident),+ $(,)?) => {
+        concat!("This function will call ", require_gl!(@[$($list),+]), " unconditionally. ", require_gl!())
+    };
+    // conditional call(s)
+    ($($list:ident),+ $(,)? if $cond:literal) => {
+        concat!("This function may call ", require_gl!(@[$($list),+]), " if ", $cond, ". In which case ", require_gl!())
+    };
+    // soundness
     () => { "GL must be loaded and ready to be called into." };
 }
 
+/// Create reusable (not inline) reference-style links to khronos.org OpenGL refpages.
+///
+/// Uses syntax inspired by Rust glob-import.
+///
+/// # Examples
+///
+/// ## Linking a single OpenGL 4 function
+/// ```ignore
+/// /// Calls [`glBindTexture`][]
+/// ///
+/// #[doc = link_gl!(4::glBindTexture)]
+/// fn foo() { ... }
+/// ```
+///
+/// ## Linking multiple OpenGL 4 functions
+/// ```ignore
+/// /// Calls [`glBindTexture`][], [`glGenTextures`][], and [`glTexImage2D`][]
+/// ///
+/// #[doc = link_gl!(4::{glBindTexture, glGenTextures, glTexImage2D})]
+/// fn foo() { ... }
+/// ```
+///
+/// ## Linking functions from both OpenGL 4 and 2.1
+/// ```ignore
+/// /// Calls [`glMatrixMode`][] and [`glPushMatrix`][] when using GL 2.1,
+/// /// or [`glBindTexture`][] if using GL 4
+/// ///
+/// #[doc = link_gl!(2.1::{glMatrixMode, glPushMatrix}, 4::glBindTexture)]
+/// fn foo() { ... }
+/// ```
 macro_rules! link_gl {
-    (2.1::{$($fn:ident),+}) => {
-        concat!($("[`", stringify!($fn), "`]: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/", stringify!($fn), ".xml \"", stringify!($fn), " - OpenGL 2.1 Reference Pages\"\n",)+)
+    // single item doesn't need braces
+    ($version:tt::$fn:ident) => {
+        link_gl!($version::{$fn})
     };
-    (4::{$($fn:ident),+}) => {
-        concat!($("[`", stringify!($fn), "`]: https://registry.khronos.org/OpenGL-Refpages/gl4/html/", stringify!($fn), ".xhtml \"", stringify!($fn), " - OpenGL 4 Reference Pages\"\n",)+)
+
+    // link gen
+    ($version:tt::{$($fn:ident),+ $(,)?}) => {
+        concat!($(
+            // reference identifier
+            "[`", stringify!($fn), "`]: ",
+
+            // link
+            link_gl!(@ $version $fn),
+
+            // title
+            " \"",
+                stringify!($fn), " - OpenGL ", stringify!($version), " Reference Pages",
+            "\"\n",
+        )+)
+    };
+
+    // multiple versions into one item
+    ($($version:tt::$fns:tt),+ $(,)?) => { concat!($(link_gl!($version::$fns)),+) };
+
+    // version-specific links
+    (@ 2.1 $fn:ident) => {
+        concat!("https://registry.khronos.org/OpenGL-Refpages/gl", stringify!($version), "/xhtml/", stringify!($fn), ".xml")
+    };
+    (@ 4 $fn:ident) => {
+        concat!("https://registry.khronos.org/OpenGL-Refpages/gl", stringify!($version), "/html/", stringify!($fn), ".xhtml")
     };
 }
 
 use {static_access, require_gl, link_gl};
 
+/// Provide documentation for public reexports of [`raylib_sys`] items,
+/// automatically generating Raylib Github links to the symbols.
+///
+/// # Example
+/// ```ignore
+/// provide_docs!{
+///     ["rcore.c"] // the Raylib source file defining the upcoming symbols
+///
+///     /// Begins drawing
+///     BeginDrawing
+///
+///     /// Ends drawing
+///     EndDrawing
+///
+///     ["rshapes.c"]
+///
+///     /// Test if two rectangles are colliding
+///     CheckCollisionRecs
+/// }
+/// ```
 macro_rules! provide_docs {
     ($(
         [$file:literal]
@@ -87,6 +274,20 @@ rlMatrixMode
 #[doc = link_gl!(2.1::{glPushMatrix})]
 ///
 /// ## `GRAPHICS_API_OPENGL_33` and `GRAPHICS_API_OPENGL_ES2`
+///
+#[doc = static_access!(mut RLGL.State)]
+///
+/// If `RLGL.State.stackCounter` is [`RL_MAX_MATRIX_STACK_SIZE`][] or more, `RLGL.State.stack` will be assigned out of bounds.
+/// Every [`rlPushMatrix`] call increments `RLGL.State.stackCounter`.
+///
+/// Make sure each [`rlPushMatrix`] call is paired with a corresponding [`rlPopMatrix`] call.
+///
+/// This function will dereference `RLGL.State.currentMatrix` unconditionally.
+/// If `RLGL.State.currentMatrixMode` is [`RL_MODELVIEW`][], this function will assign `RLGL.State.currentMatrix` with a pointer guaranteed to be non-null and dereferenceable.
+/// Otherwise, it is the caller's responsibility to ensure `RLGL.State.currentMatrix` is non-null and dereferenceable before calling.
+///
+/// [`RL_MAX_MATRIX_STACK_SIZE`]: raylib_sys::RL_MAX_MATRIX_STACK_SIZE
+/// [`RL_MODELVIEW`]: raylib_sys::RL_MODELVIEW
 rlPushMatrix
 
 /// Pop latest inserted matrix from stack
