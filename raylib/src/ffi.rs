@@ -129,7 +129,7 @@ macro_rules! join {
 /// The above example uses `(n [^"null"])` for demonstration. In practice, this would be
 /// better expressed with
 /// ```ignore
-/// ptr_deref!(const "`foo`" [[u16; "`len`"] i] if "`foo` is non-null")
+/// ptr_deref!(const "`foo`" [[u16; "`len`"] i] if "`foo` is non-null" else "truncates and returns `len` instead")
 /// ```
 macro_rules! ptr_deref {
     // conditional
