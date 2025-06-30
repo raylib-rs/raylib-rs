@@ -48,6 +48,117 @@ macro_rules! static_access {
     (@mut) => { "assign" };
 }
 
+macro_rules! join {
+    (#($sep:literal, $final_sep:literal) $a:expr $(,)?) => { $a };
+    (#($sep:literal, $final_sep:literal) $a:expr, $b:expr $(,)?) => { concat!($a, $final_sep, $b) };
+    (#($sep:literal, $final_sep:literal) $a:expr, $b:expr, $($rest:expr),+ $(,)?) => { concat!($a, $sep, join!(#($sep, $final_sep) $b, $($rest),+)) };
+}
+
+/// Document that an item dereferences a pointer, and advise readers of the proper precautions
+/// associated with pointer dereferencing.
+///
+/// # Arguments
+///
+/// ## `$access`
+///
+/// - `const` - Read-only access
+/// - `mut` - Write access
+///
+/// ## `$reqs`
+///
+/// Pointer requirements
+///
+/// Requirements are whitespace-separated (NOT comma-separated) within square brackets (ex: `[n z i]`).
+///
+/// - `n` - Pointer must be non-null
+/// - `z` - Pointer must be nul-terminated (C-string) (incompatible with `[T; n]`)
+/// - `[T; n]` - Pointer must be an array of type `T` with `n` elements (incompatible with `z`)
+/// - `i` - Data pointed to must be initialized *prior to calling* (as opposed to uninitialized)
+///
+/// A literal string can be made into a requirement by enclosing it in curly braces (ex: `{"not a fat pointer"}`).
+/// A requirement can be enclosed in parentheses to append a footnote (ex: `(z [^"my_footnote"])`).
+///
+/// Any requirement can be made an explicit non-requirement by putting it in an optional, second square
+/// bracket list with a ! at the start. (ex: `[n z] ![i]`: must be non-null and nul-terminated, but does
+/// not need to be initialized).
+///
+/// # Examples
+///
+/// Mutable, uninitialized C-string
+/// ```ignore
+/// /// Does dangerous stuff without checking
+/// ///
+/// /// #Safety
+/// ///
+/// #[doc = ptr_deref!(mut "`foo`" [z n])]
+/// unsafe fn dangerous(foo: *mut c_void) {
+///     unsafe {
+///         let p = foo.cast::<u8>();
+///         while *p != 0 {
+///             *p = 255;
+///             p = p.add(1);
+///         }
+///     }
+/// }
+/// ```
+///
+/// Immutable, initialized array with special case for null
+/// ```ignore
+/// /// Does dangerous stuff without checking
+/// ///
+/// /// #Safety
+/// ///
+/// #[doc = ptr_deref!(mut "`foo`" [(n [^"null"]) [u16; "`len`"] i])]
+/// ///
+/// /// [^null]: If `foo` is null, truncates and returns `len` instead
+/// unsafe fn dangerous(foo: *const c_void, len: usize) -> u32 {
+///     if !foo.is_null() {
+///         let mut hash = 0;
+///         unsafe {
+///             let p = foo.cast::<u16>();
+///             for i in 0..len {
+///                 hash ^= *p.add(i);
+///             }
+///         }
+///         hash
+///     } else {
+///         len as u32
+///     }
+/// }
+/// ```
+/// The above example uses `(n [^"null"])` for demonstration. In practice, this would be
+/// better expressed with
+/// ```ignore
+/// ptr_deref!(mut "`foo`" [[u16; "`len`"] i] if "`foo` is non-null")
+/// ```
+macro_rules! ptr_deref {
+    // conditional
+    ($access:ident $($ptr:literal),+ $(,)? [$($reqs:tt)*] $(![$($nonreqs:tt)+])? if $cond:literal $(else $else:literal)?) => {
+        concat!("This function may dereference ", join!(#(", ", " and/or ") $($ptr),+), " if ", $cond, ". \
+        In this case, the caller must ", ptr_deref!(%$access $($ptr),+ [$($reqs)*] $(![$($nonreqs)+])?),
+        $(" otherwise, ", $else)?)
+    };
+    // unconditional
+    ($access:ident $($ptr:literal),+ $(,)? [$($reqs:tt)*] $(![$($nonreqs:tt)+])?) => {
+        concat!("This function will dereference ", join!(#(", ", " and/or ") $($ptr),+), " unconditionally. \
+        The caller must ", ptr_deref!(%$access $($ptr),+ [$($reqs)*] $(![$($nonreqs)+])?))
+    };
+    // shared
+    (%$access:ident $($ptr:literal),+ $(,)? [$($reqs:tt)*] $(![$($nonreqs:tt)+])?) => {
+        concat!("ensure ", join!(#(", ", " and/or ") $($ptr),+), " is/are ", join!(#(", ", " and ") $(ptr_deref!(#$reqs),)* concat!(" safe to dereference for ", ptr_deref!(@$access))), "."
+        $(, " However there is no requirement for it/them to be ", join!(#(", ", " or ") $(ptr_deref!(#$nonreqs),)+), ".")?)
+    };
+    // arguments
+    (@const) => { "reading" };
+    (@mut) => { "writing" };
+    (#n) => { "non-null" };
+    (#z) => { "nul-terminated" };
+    (#[$T:ty; $n:literal]) => { concat!("pointing to ", $n, " elements of ", stringify!($T)) };
+    (#i) => { "initialized prior to calling" };
+    (#{$lit:literal}) => { $lit };
+    (#($token:tt [^$footnote:literal])) => { concat!(ptr_deref!(#$token), "[^", $footnote, "]") };
+}
+
 /// Document that a function calls a GL function without validating GL, and advises readers
 /// of the proper precautions associated with calling possibly-unloaded external functions.
 ///
@@ -110,24 +221,13 @@ macro_rules! static_access {
 /// }
 /// ```
 macro_rules! require_gl {
-    // reference-style link list
-    (@[$a:ident]) => {
-        concat!("[`", stringify!($a), "`][]")
-    };
-    (@[$a:ident, $b:ident]) => {
-        concat!(require_gl!(@[$a]), " and/or ", require_gl!(@[$b]))
-    };
-    (@[$a:ident, $b:ident, $($c:ident),+]) => {
-        concat!(require_gl!(@[$a]), ", ", require_gl!(@[$b, $($c),+]))
-    };
-
     // unconditional call(s)
     ($($list:ident),+) => {
-        concat!("This function will call ", require_gl!(@[$($list),+]), " unconditionally. ", require_gl!())
+        concat!("This function will call ", join!(#(", ", " and/or ") $(concat!("[`", stringify!($list), "`][]")),+), " unconditionally. ", require_gl!())
     };
     // conditional call(s)
     ($($list:ident),+ if $cond:literal) => {
-        concat!("This function may call ", require_gl!(@[$($list),+]), " if ", $cond, ". In which case ", require_gl!())
+        concat!("This function may call ", join!(#(", ", " and/or ") $(concat!("[`", stringify!($list), "`][]")),+), " if ", $cond, ". In which case ", require_gl!())
     };
     // soundness
     () => { "GL must be loaded and ready to be called into." };
@@ -328,8 +428,10 @@ macro_rules! link_gl {
 
 use {
     static_access,
+    ptr_deref,
     require_gl,
     link_gl,
+    join,
     // graphics_api,
 };
 
@@ -581,8 +683,7 @@ RL_DRAW_FRAMEBUFFER
 ///
 /// ## `GRAPHICS_API_OPENGL_11`
 ///
-/// This function may call [`glMatrixMode`][] if `mode` is [`RL_PROJECTION`], [`RL_MODELVIEW`], or [`RL_TEXTURE`].
-/// GL must be loaded and ready to be called into.
+#[doc = require_gl!(glMatrixMode if "`mode` is [`RL_PROJECTION`], [`RL_MODELVIEW`], or [`RL_TEXTURE`]")]
 ///
 #[doc = link_gl!(2.1::{glMatrixMode})]
 ///
@@ -614,14 +715,27 @@ rlMatrixMode
 ///
 /// Make sure each [`rlPushMatrix`] call is paired with a corresponding [`rlPopMatrix`] call.
 ///
-/// This function will dereference `RLGL.State.currentMatrix` unconditionally.
 /// If `RLGL.State.currentMatrixMode` is [`RL_MODELVIEW`], this function will assign `RLGL.State.currentMatrix` with a pointer guaranteed to be non-null and dereferenceable.
-/// Otherwise, it is the caller's responsibility to ensure `RLGL.State.currentMatrix` is non-null and dereferenceable before calling.
+#[doc = ptr_deref!(mut "`RLGL.State.currentMatrix`" [n])]
 rlPushMatrix
 
 /// Pop latest inserted matrix from stack
+///
 /// # Safety
-/// TODO
+///
+/// ## `GRAPHICS_API_OPENGL_11`
+///
+#[doc = require_gl!(glPushMatrix)]
+///
+#[doc = link_gl!(2.1::{glPushMatrix})]
+///
+/// ## `GRAPHICS_API_OPENGL_33` or `GRAPHICS_API_OPENGL_ES2`
+///
+#[doc = static_access!(mut RLGL.State)]
+///
+#[doc = ptr_deref!(mut "`RLGL.State.currentMatrix`" [n] if "the stack is not empty")]
+///
+/// If the stack becomes empty **after popping**, and `RLGL.State.currentMatrixMode` is [`RL_MODELVIEW`], this function will assign `RLGL.State.currentMatrix` with a pointer guaranteed to be non-null and dereferenceable.
 rlPopMatrix
 
 /// Reset current matrix to identity matrix
@@ -1245,8 +1359,7 @@ rlUpdateTexture
 ///
 #[doc = static_access!(mut RLGL.ExtSupported)]
 ///
-/// `glInternalFormat`, `glFormat`, and `glType` will be written unconditionally.
-/// They must be safe to dereference and write to, but do not need to be initialized prior to calling.
+#[doc = ptr_deref!(mut "`glInternalFormat`", "`glFormat`", "`glType`" [n] ![i] if "the stack is not empty")]
 rlGetGlTextureFormats
 
 /// Get name string for pixel format
@@ -1319,7 +1432,7 @@ rlLoadShaderCode
 ///
 #[doc = require_gl!(glCreateShader, glShaderSource, glCompileShader if "shaders are supported[^shaderapi]")]
 ///
-/// `shaderCode` must be safe to dereference for reading and must be a nul-terminated string.
+#[doc = ptr_deref!(const "`shaderCode`" [n z i])]
 ///
 #[doc = link_gl!(4::{glCreateShader, glShaderSource, glCompileShader})]
 ///
