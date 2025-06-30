@@ -108,7 +108,7 @@ macro_rules! join {
 /// ///
 /// /// #Safety
 /// ///
-/// #[doc = ptr_deref!(mut "`foo`" [(n [^"null"]) [u16; "`len`"] i])]
+/// #[doc = ptr_deref!(const "`foo`" [(n [^"null"]) [u16; "`len`"] i])]
 /// ///
 /// /// [^null]: If `foo` is null, truncates and returns `len` instead
 /// unsafe fn dangerous(foo: *const c_void, len: usize) -> u32 {
@@ -129,7 +129,7 @@ macro_rules! join {
 /// The above example uses `(n [^"null"])` for demonstration. In practice, this would be
 /// better expressed with
 /// ```ignore
-/// ptr_deref!(mut "`foo`" [[u16; "`len`"] i] if "`foo` is non-null")
+/// ptr_deref!(const "`foo`" [[u16; "`len`"] i] if "`foo` is non-null")
 /// ```
 macro_rules! ptr_deref {
     // conditional
