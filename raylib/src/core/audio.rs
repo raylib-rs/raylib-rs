@@ -425,6 +425,18 @@ impl<'aud> Sound<'aud> {
     //         );
     //     }
     // }}
+
+    /// Updates sound buffer with new data.
+    #[inline]
+    pub fn update<T: AudioSample>(&mut self, data: &[T]) {
+        unsafe {
+            ffi::UpdateSound(
+                self.0,
+                data.as_ptr() as *const std::os::raw::c_void,
+                (data.len() /* * std::mem::size_of::<T>() */) as i32,
+            );
+        }
+    }
 }
 
 impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
@@ -628,7 +640,7 @@ impl<'aud> AudioStream<'aud> {
             ffi::UpdateAudioStream(
                 self.0,
                 data.as_ptr() as *const std::os::raw::c_void,
-                (data.len() * std::mem::size_of::<T>()) as i32,
+                (data.len() /* * std::mem::size_of::<T>() */) as i32,
             );
         }
     }
