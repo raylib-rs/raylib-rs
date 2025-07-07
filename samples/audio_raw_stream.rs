@@ -17,11 +17,7 @@ pub fn main() {
     raylib_handle.set_target_fps(60);
     let raylib_audio = RaylibAudio::init_audio_device().unwrap();
     raylib_audio.set_audio_stream_buffer_size_default(MAX_SAMPLES_PER_UPDATE as i32);
-    // unsafe {
-    //     SetAudioStreamBufferSizeDefault(MAX_SAMPLES_PER_UPDATE as i32);
-    // }
     let mut audio_stream = raylib_audio.new_audio_stream(SAMPLE_RATE, SAMPLE_SIZE, 1);
-    //let audio_stream = unsafe { LoadAudioStream(SAMPLE_RATE, SAMPLE_SIZE, 1) };
     let mut data: [i16; DATA_ELEMENTS_PER_CYCLE] = [0; DATA_ELEMENTS_PER_CYCLE];
     let mut write_buf: [i16; MAX_SAMPLES_PER_UPDATE] = [0; MAX_SAMPLES_PER_UPDATE];
 
@@ -31,9 +27,6 @@ pub fn main() {
     let mut wave_length = 1;
     let mut position = vec2(0.0, 0.0);
     audio_stream.play();
-    // unsafe {
-    //     PlayAudioStream(audio_stream);
-    // }
     while !raylib_handle.window_should_close() {
         let mouse_position = raylib_handle.get_mouse_position();
         if raylib_handle.is_mouse_button_down(MOUSE_BUTTON_LEFT) {
@@ -56,7 +49,6 @@ pub fn main() {
             read_cursor = read_cursor * wave_length / prev_cycle_length;
             old_frequency = frequency;
         }
-        //if unsafe { IsAudioStreamProcessed(audio_stream) } {
         if audio_stream.is_processed() {
             let mut chunk_write_index = 0;
             while chunk_write_index < MAX_SAMPLES_PER_UPDATE {
@@ -70,13 +62,6 @@ pub fn main() {
                 read_cursor = (read_cursor + chunk_len) % wave_length;
                 chunk_write_index += chunk_len;
             }
-            // unsafe {
-            //     UpdateAudioStream(
-            //         audio_stream,
-            //         chunk_samples.as_ptr() as *const _,
-            //         MAX_SAMPLES_PER_UPDATE as i32,
-            //     );
-            // }
             audio_stream.update(&write_buf);
 
         }
