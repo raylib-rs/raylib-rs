@@ -49,7 +49,7 @@ pub fn main() {
             }
             for i in 0..wave_length * 2 {
                 data[i] = ((2.0 * std::f32::consts::PI * i as f32 / wave_length as f32).sin()
-                    * 32000.0) as i16;
+                    * 32000f32) as i16;
             }
             // Clear the ghost sine wave drawings. (Concern: not in the original raylib c)
             for j in wave_length * 2..MAX_SAMPLES {
@@ -76,7 +76,7 @@ pub fn main() {
         let mut draw_handle = raylib_handle.begin_drawing(&raylib_thread);
         draw_handle.clear_background(Color::RAYWHITE);
         draw_handle.draw_text(
-            &format!("sine frequency: {:.1}", frequency),
+            &format!("sine frequency: {}", frequency as i32),
             screen_width - 220,
             10,
             20,
@@ -92,7 +92,7 @@ pub fn main() {
         for i in 0..screen_width {
             position.x = i as f32;
             position.y = 250.0
-                + 50.0 * data[i as usize * MAX_SAMPLES / screen_width as usize] as f32 / 32000.0;
+                + 50.0 * data[i as usize * MAX_SAMPLES / screen_width as usize] as f32 / 32000f32;
             draw_handle.draw_pixel_v(position, Color::RED);
         }
     }
