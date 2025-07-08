@@ -18,7 +18,7 @@ pub fn main() {
         .build();
     raylib_handle.set_target_fps(30);
     let raylib_audio = RaylibAudio::init_audio_device().unwrap();
-    raylib_audio.set_audio_stream_buffer_size_default(MAX_SAMPLES_PER_UPDATE.try_into().unwrap());
+    raylib_audio.set_audio_stream_buffer_size_default(MAX_SAMPLES_PER_UPDATE as i32);
     let mut stream = raylib_audio.new_audio_stream(SAMPLE_RATE, SAMPLE_SIZE, 1);
     let mut data: [i16; MAX_SAMPLES] = [0; MAX_SAMPLES];
     let mut write_buf: [i16; MAX_SAMPLES_PER_UPDATE] = [0; MAX_SAMPLES_PER_UPDATE];

@@ -420,7 +420,7 @@ impl<'aud> Sound<'aud> {
             ffi::UpdateSound(
                 self.0,
                 data.as_ptr() as *const std::os::raw::c_void,
-                data.len() as i32,
+                data.len().try_into().unwrap(),
             );
         }
     }
@@ -627,7 +627,7 @@ impl<'aud> AudioStream<'aud> {
             ffi::UpdateAudioStream(
                 self.0,
                 data.as_ptr() as *const std::os::raw::c_void,
-                data.len() as i32,
+                data.len().try_into().unwrap(),
             );
         }
     }
