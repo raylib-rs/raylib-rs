@@ -43,7 +43,7 @@ jobs:
         uses: ./.github/actions/install-linux-deps
       - name: Build & run tests
         # Run tests
-        run: cargo run -p raylib -- test
+        run: cargo test -p raylib
         env:
           RUSTFLAGS: "-C debuginfo=0 -D warnings"
 
