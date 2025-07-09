@@ -200,7 +200,7 @@ impl RaylibHandle {
     }
     /// Load font data from a given memory buffer.
     /// `file_type` refers to the extension, e.g. ".ttf".
-    /// You can pass Some(...) to chars to get the desired charaters, or None to get the whole set.
+    /// You can pass Some(...) to chars to get the desired characters, or None to get the whole set.
     #[inline]
     #[must_use]
     pub fn load_font_from_memory(
