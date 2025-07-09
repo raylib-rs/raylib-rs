@@ -58,7 +58,7 @@ impl ParseCallbacks for TypeOverrideCallback {
             DeriveTrait::Debug,
             DeriveTrait::PartialEqOrPartialOrd,
         ];
-        let overriden_types = [
+        let overridden_types = [
             "Vector2",
             "Vector3",
             "Vector4",
@@ -68,7 +68,7 @@ impl ParseCallbacks for TypeOverrideCallback {
             "Color",
         ];
 
-        (OK_TRAITS.contains(&derive_trait) && overriden_types.contains(&name))
+        (OK_TRAITS.contains(&derive_trait) && overridden_types.contains(&name))
             .then_some(ImplementsTrait::Yes)
     }
 }
@@ -527,7 +527,7 @@ enum PlatformOS {
 }
 
 /// Copied from https://github.com/raysan5/raylib/wiki/CMake-Build-Options and https://github.com/raysan5/raylib/blob/master/src/config.h
-/// You should be copy pasting into both raylib/raylib-sys `Cargo.toml` and here while keeping it as close as possible to raylibs `config.h`` for easy maintance
+/// You should be copy pasting into both raylib/raylib-sys `Cargo.toml` and here while keeping it as close as possible to raylibs `config.h`` for easy maintenance
 #[rustfmt::skip]
 fn features_from_env(cmake: &mut Config) {
     let is_android = cfg!(target_os = "android"); // skip linking to x11 & wayland
