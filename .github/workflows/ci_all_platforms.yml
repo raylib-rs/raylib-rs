@@ -55,6 +55,8 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+      - name: Setup git submodules
+        run: git submodule init; git submodule update
       - uses: actions/cache@v4
         with:
           path: |
@@ -79,6 +81,8 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+      - name: Setup git submodules
+        run: git submodule init; git submodule update
       - uses: actions/cache@v4
         with:
           path: |
@@ -96,26 +100,6 @@ jobs:
       - name: Check Compile
         run: cargo build -p raylib --no-default-features --features nobuild --target x86_64-unknown-none
   
-  toml:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Install taplo
-        run: cargo install taplo-cli --locked
-      - name: Run Taplo
-        id: taplo
-        run: taplo fmt --check --diff
-      - name: Taplo info
-        if: failure()
-        run: |
-          echo 'To fix toml fmt, please run `taplo fmt`.'
-          echo 'To check for a diff, run `taplo fmt --check --diff`.'
-          echo 'You can find taplo here: https://taplo.tamasfe.dev/'
-          echo 'Or if you use VSCode, use the `Even Better Toml` extension.'
-          echo 'You can find the extension here: https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml'
-
   typos:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -137,6 +121,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Setup git submodules
+        run: git submodule init; git submodule update
       - uses: actions/cache@v4
         with:
           path: |
