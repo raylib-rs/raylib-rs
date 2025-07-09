@@ -35,25 +35,29 @@
 - [core] RENAMED: SetMatrixModelview() to rlSetMatrixModelview()
 - [core] RENAMED: GetMatrixModelview() to rlGetMatrixModelview()
 - [core] RENAMED: GetMatrixProjection() to rlGetMatrixProjection()
-- [core] RENAMED: GetShaderDefault() to rlGetShaderDefault() [core] RENAMED:
-  GetTextureDefault() to rlGetTextureDefault() [core] REMOVED:
-  GetShapesTexture() [core] REMOVED: GetShapesTextureRec() [core] REMOVED:
-  GetMouseCursor()
-- [core] REMOVED: SetTraceLogExit() [core] REVIEWED: GetFileName() and
-  GetDirectoryPath() (#1534) by @gilzoide [core] REVIEWED: Wait() to support
-  FreeBSD (#1618) [core] REVIEWED: HighDPI support on macOS retina (#1510)
-  [core] REDESIGNED: GetFileExtension(), includes the .dot [core] REDESIGNED:
-  IsFileExtension(), includes the .dot [core] REDESIGNED: Compresion API to use
-  sdefl/sinfl libs
-- [rlgl] ADDED: SUPPORT_GL_DETAILS_INFO config flag [rlgl] REMOVED:
-  GenTexture\*() functions (#721) [rlgl] REVIEWED: rlLoadShaderDefault() [rlgl]
-  REDESIGNED: rlLoadExtensions(), more details exposed [raymath] REVIEWED:
-  QuaternionFromEuler() (#1651) [raymath] REVIEWED: MatrixRotateZYX() (#1642)
-- [shapes] ADDED: DrawLineBezierQuad() (#1468) by @epsilon-phase [shapes] ADDED:
-  CheckCollisionLines()
-- [shapes] ADDED: CheckCollisionPointLine() by @mkupiec1 [shapes] REVIEWED:
-  CheckCollisionPointTriangle() by @mkupiec1 [shapes] REDESIGNED:
-  SetShapesTexture()
+- [core] RENAMED: GetShaderDefault() to rlGetShaderDefault()
+  [core] RENAMED: GetTextureDefault() to rlGetTextureDefault()
+  [core] REMOVED: GetShapesTexture()
+  [core] REMOVED: GetShapesTextureRec()
+  [core] REMOVED: GetMouseCursor()
+- [core] REMOVED: SetTraceLogExit()
+  [core] REVIEWED: GetFileName() and GetDirectoryPath() (#1534) by @gilzoide
+  [core] REVIEWED: Wait() to support FreeBSD (#1618)
+  [core] REVIEWED: HighDPI support on macOS retina (#1510)
+  [core] REDESIGNED: GetFileExtension(), includes the .dot
+  [core] REDESIGNED: IsFileExtension(), includes the .dot
+  [core] REDESIGNED: Compression API to use sdefl/sinfl libs
+- [rlgl] ADDED: SUPPORT_GL_DETAILS_INFO config flag
+  [rlgl] REMOVED: GenTexture\*() functions (#721)
+  [rlgl] REVIEWED: rlLoadShaderDefault()
+  [rlgl] REDESIGNED: rlLoadExtensions(), more details exposed
+  [raymath] REVIEWED: QuaternionFromEuler() (#1651)
+  [raymath] REVIEWED: MatrixRotateZYX() (#1642)
+- [shapes] ADDED: DrawLineBezierQuad() (#1468) by @epsilon-phase
+  [shapes] ADDED: CheckCollisionLines()
+- [shapes] ADDED: CheckCollisionPointLine() by @mkupiec1
+  [shapes] REVIEWED: CheckCollisionPointTriangle() by @mkupiec1
+  [shapes] REDESIGNED: SetShapesTexture()
 - [shapes] REDESIGNED: DrawCircleSector(), to use float params
 - [shapes] REDESIGNED: DrawCircleSectorLines(), to use float params
 - [shapes] REDESIGNED: DrawRing(), to use float params
@@ -90,16 +94,36 @@
 
 ## 3.5.0 (Done)
 
-Added: SetWindowState Added: ClearW‌indowState Added: IsWindowFocused Added:
-GetWindowScaleDPI Added: GetMonitorRefreshRate Added: IsCursorOnScreen Added:
-SetMouseCursor/GetMouseCursor Added: Normalize Added: Remap Added:
-Vector2Reflect Added: Vector2LengthSqr Added: Vector2MoveTowards Added:
-UnloadFontData Added: LoadFontFromMemmory(ttf) Added: ColorAlphaBlend Added:
-GetPixelColor Added: SetPixelColor Added: LoadImageFromMemory Added:
-LoadImageAnim Added: DrawTextureTiled Added: UpdateTextureRec Added:
-UnloadImageColors, Added: UnloadImagePallet, Added: UnloadWaveSample Added:
-DrawTriangle3D Added: DrawTriangleStrip3D Added: LoadWaveFromMemory Added:
-MemAlloc() / MemFree() Added: UnloadFileData Added: UnloadFileText
+Added: SetWindowState
+Added: ClearW‌indowState
+Added: IsWindowFocused
+Added: GetWindowScaleDPI
+Added: GetMonitorRefreshRate
+Added: IsCursorOnScreen
+Added: SetMouseCursor/GetMouseCursor
+Added: Normalize
+Added: Remap
+Added: Vector2Reflect
+Added: Vector2LengthSqr
+Added: Vector2MoveTowards
+Added: UnloadFontData
+Added: LoadFontFromMemory(ttf)
+Added: ColorAlphaBlend
+Added: GetPixelColor
+Added: SetPixelColor
+Added: LoadImageFromMemory
+Added: LoadImageAnim
+Added: DrawTextureTiled
+Added: UpdateTextureRec
+Added: UnloadImageColors,
+Added: UnloadImagePallet,
+Added: UnloadWaveSample
+Added: DrawTriangle3D
+Added: DrawTriangleStrip3D
+Added: LoadWaveFromMemory
+Added: MemAlloc() / MemFree()
+Added: UnloadFileData
+Added: UnloadFileText
 
 ## 0.10.0 (WIP)
 

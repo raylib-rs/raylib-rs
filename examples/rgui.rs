@@ -292,9 +292,9 @@ pub fn main() {
         // Second GUI column
         d.gui_list_view(
             Rectangle::new(165.0, 25.0, 140.0, 124.0),
-            "Charmander;Bulbasaur;#18#Squirtel;Pikachu;Eevee;Pidgey",
-            &mut list_view_scroll_index,
-            &mut list_view_active,
+            "Charmander;Bulbasaur;#18#Squirtle;Pikachu;Eevee;Pidgey",
+            &mut listViewScrollIndex,
+            &mut listViewActive,
         );
         d.gui_list_view_ex(
             Rectangle::new(165.0, 162.0, 140.0, 184.0),

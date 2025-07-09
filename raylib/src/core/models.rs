@@ -487,7 +487,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// Vertex indices (in case vertex data comes indexed)
     #[inline]
     #[must_use]
-    fn indicies(&self) -> &[u16] {
+    fn indices(&self) -> &[u16] {
         unsafe {
             std::slice::from_raw_parts(
                 self.as_ref().indices as *const u16,
@@ -498,7 +498,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// Vertex indices (in case vertex data comes indexed)
     #[inline]
     #[must_use]
-    fn indicies_mut(&mut self) -> &mut [u16] {
+    fn indices_mut(&mut self) -> &mut [u16] {
         unsafe {
             std::slice::from_raw_parts_mut(
                 self.as_mut().indices as *mut u16,
@@ -1017,21 +1017,21 @@ impl RaylibHandle {
         WeakMaterial(unsafe { ffi::LoadMaterialDefault() })
     }
 
-    /// Weak materials will leak memeory if they are not unlaoded
+    /// Weak materials will leak memory if they are not unlaoded
     /// Unload material from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_material(&mut self, _: &RaylibThread, material: WeakMaterial) {
         unsafe { ffi::UnloadMaterial(*material.as_ref()) }
     }
 
-    /// Weak models will leak memeory if they are not unlaoded
+    /// Weak models will leak memory if they are not unlaoded
     /// Unload model from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_model(&mut self, _: &RaylibThread, model: WeakModel) {
         unsafe { ffi::UnloadModel(*model.as_ref()) }
     }
 
-    /// Weak model_animations will leak memeory if they are not unlaoded
+    /// Weak model_animations will leak memory if they are not unlaoded
     /// Unload model_animation from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_model_animation(
@@ -1042,7 +1042,7 @@ impl RaylibHandle {
         unsafe { ffi::UnloadModelAnimation(*model_animation.as_ref()) }
     }
 
-    /// Weak meshs will leak memeory if they are not unlaoded
+    /// Weak meshs will leak memory if they are not unlaoded
     /// Unload mesh from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_mesh(&mut self, _: &RaylibThread, mesh: WeakMesh) {
