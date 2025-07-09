@@ -35,6 +35,14 @@ pub enum LoadSoundError {
 }
 
 #[derive(Error, Debug)]
+pub enum UpdateAudioStreamError {
+    #[error("update data format must match sound: expected {expected} bits, got {provided} bits")]
+    SampleSizeMismatch { expected: usize, provided: usize },
+    #[error("Attempting to write too many frames to buffer: provided {provided}, max {max}")]
+    TooManyFrames { max: usize, provided: usize },
+}
+
+#[derive(Error, Debug)]
 pub enum AllocationError {
     #[error("memory request does not produce a valid layout")]
     InvalidLayout,

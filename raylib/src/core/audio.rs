@@ -1,7 +1,7 @@
 //! Contains code related to audio. [`RaylibAudio`] plays sounds and music.
 
 use crate::{
-    error::{AudioInitError, LoadSoundError},
+    error::{AudioInitError, LoadSoundError, UpdateAudioStreamError},
     ffi,
 };
 use std::ffi::{CStr, CString};
@@ -415,14 +415,33 @@ impl<'aud> Sound<'aud> {
 
     /// Updates sound buffer with new data.
     #[inline]
-    pub fn update<T: AudioSample>(&mut self, data: &[T]) {
+    pub fn update<T: AudioSample>(&mut self, data: &[T]) -> Result<(), UpdateAudioStreamError> {
+        let expected_sample_size_bits =
+            usize::try_from(self.stream.sampleSize).expect("sampleSize should be 8, 16, or 32");
+        let provided_sample_size_bits = size_of::<T>() * u8::BITS as usize;
+        if provided_sample_size_bits != expected_sample_size_bits {
+            return Err(UpdateAudioStreamError::SampleSizeMismatch {
+                expected: expected_sample_size_bits,
+                provided: provided_sample_size_bits,
+            });
+        }
+        let max_frame_count = usize::try_from(self.frameCount)
+            .expect("frameCount should be a valid memory allocation size");
+        let provided_frame_count = data.len();
+        if provided_frame_count > max_frame_count {
+            return Err(UpdateAudioStreamError::TooManyFrames {
+                max: max_frame_count,
+                provided: provided_frame_count,
+            });
+        }
         unsafe {
             ffi::UpdateSound(
                 self.0,
                 data.as_ptr() as *const std::os::raw::c_void,
-                data.len().try_into().unwrap(),
+                provided_frame_count.try_into().unwrap(),
             );
         }
+        Ok(())
     }
 }
 
@@ -622,14 +641,35 @@ impl<'aud> AudioStream<'aud> {
 
     /// Updates audio stream buffers with data.
     #[inline]
-    pub fn update<T: AudioSample>(&mut self, data: &[T]) {
+    pub fn update<T: AudioSample>(&mut self, data: &[T]) -> Result<(), UpdateAudioStreamError> {
+        let expected_sample_size =
+            usize::try_from(self.sampleSize).expect("sampleSize should be 8, 16, or 32");
+        let provided_sample_size_bits = size_of::<T>() * u8::BITS as usize;
+        if provided_sample_size_bits != expected_sample_size {
+            return Err(UpdateAudioStreamError::SampleSizeMismatch {
+                expected: expected_sample_size,
+                provided: provided_sample_size_bits,
+            });
+        }
+        let provided_frame_count = data.len();
+
+        // TODO: ~RESOLVE THIS BEFORE MERGE~ should not enter main branch. raylib makes the frame count bounds check here: https://github.com/raysan5/raylib/blob/defbeee1a7caee75f209017aace0f71714f24eb8/src/raudio.c#L2691 but it only logs a WARNING when the mismatch occurs...
+        //  marking this just for documentation to further investigate good behavior on raylib's side
+        // let max_frame_count = usize::try_from(self.0.frameCount).expect("frameCount should be a valid memory allocation size");
+        // if provided_frame_count > max_frame_count {
+        //     return Err(UpdateAudioError::TooManyFrames {
+        //         max: max_frame_count,
+        //         provided: provided_frame_count,
+        //     });
+        // }
         unsafe {
             ffi::UpdateAudioStream(
                 self.0,
                 data.as_ptr() as *const std::os::raw::c_void,
-                data.len().try_into().unwrap(),
+                provided_frame_count.try_into().unwrap(),
             );
         }
+        Ok(())
     }
 
     /// Plays audio stream.

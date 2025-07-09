@@ -1,6 +1,6 @@
 use raylib::prelude::*;
 use raylib::prelude::glam::vec2;
-use raylib::prelude::MouseButton::MOUSE_BUTTON_LEFT;
+use raylib::prelude::{MouseButton::MOUSE_BUTTON_LEFT, KeyboardKey::KEY_SPACE};
 
 const MAX_SAMPLES: usize = 512;
 const MAX_SAMPLES_PER_UPDATE: usize = 4096;
@@ -9,7 +9,7 @@ const SAMPLE_RATE: u32 = 44100;
 const SAMPLE_RATE_HALVED: f32 = 22050.0;
 const SAMPLE_SIZE: u32 = 16;
 
-pub fn main() {
+fn main() {
     let screen_width = 800;
     let screen_height = 450;
     let (mut raylib_handle, raylib_thread) = init()
@@ -23,11 +23,14 @@ pub fn main() {
     let mut data: [i16; MAX_SAMPLES] = [0; MAX_SAMPLES];
     let mut write_buf: [i16; MAX_SAMPLES_PER_UPDATE] = [0; MAX_SAMPLES_PER_UPDATE];
     stream.play();
-    let mut frequency = 440.0;
+    let mut frequency = 220.0;
     let mut old_frequency = 1.0;
     let mut read_cursor = 0;
     let mut wave_length = 1;
     let mut position = vec2(0.0, 0.0);
+
+    let sound = sound_update_test(&raylib_audio);
+    sound.play();
     while !raylib_handle.window_should_close() {
         //original raylib c sample never reads from the initialized -100.0, -100.0 mouse position...
         let mouse_position = raylib_handle.get_mouse_position();
@@ -37,6 +40,9 @@ pub fn main() {
             let invert_mouse_x_position = -1.0;
             let pan = invert_mouse_x_position * mouse_position.x / screen_width as f32;
             stream.set_pan(pan);
+        }
+        if raylib_handle.is_key_pressed(KEY_SPACE) {
+            sound.play();
         }
         if frequency != old_frequency {
             let old_wave_length = wave_length;
@@ -71,7 +77,9 @@ pub fn main() {
                 read_cursor = (read_cursor + write_length) % wave_length;
                 write_cursor += write_length;
             }
-            stream.update(&write_buf);
+            if let Err(e) = stream.update(&write_buf) {
+                eprintln!("Failed to update sound: {e}");
+            }
         }
         let mut draw_handle = raylib_handle.begin_drawing(&raylib_thread);
         draw_handle.clear_background(Color::RAYWHITE);
@@ -96,4 +104,36 @@ pub fn main() {
             draw_handle.draw_pixel_v(position, Color::RED);
         }
     }
+}
+
+fn sound_update_test(raylib_audio: &RaylibAudio) -> Sound {
+    let mut sound_data: [f32; MAX_SAMPLES] = [0f32; MAX_SAMPLES];
+    let freq = 440.0;
+    for i in 0..MAX_SAMPLES {
+        sound_data[i] =
+            (2.0 * std::f32::consts::PI * i as f32 * freq / SAMPLE_RATE as f32).sin() * 32000.0;
+    }
+    // this 16-bit sound data will Error with our new sample size check because sample size is always set to 32 bit
+    // let mut sound_data: [i16; MAX_SAMPLES] = [0; MAX_SAMPLES];
+    // let freq = 440.0;
+    // for i in 0..MAX_SAMPLES {
+    //     sound_data[i] =
+    //         ((2.0 * std::f32::consts::PI * i as f32 * freq / SAMPLE_RATE as f32).sin() * 32000.0) as i16;
+    // }
+
+    // This .wav acts as a placeholder for us to inject test data using Sound::update, currently UpdateSound in raylib's raudio.c has no examples.
+    let mut wave = raylib_audio.new_wave("static/coin_16bit.wav").unwrap();
+    wave.format(SAMPLE_RATE as i32, 16, 1); //wave file is already 16 bit but just for emphasis
+    println!(
+        "wave: sampleSize = {}, sampleRate = {}, channels = {}",
+        wave.sample_size(),
+        wave.sample_rate(),
+        wave.channels()
+    );
+    let mut sound = raylib_audio.new_sound_from_wave(&wave).unwrap();
+    println!("sound.stream.sampleSize = {}", sound.stream.sampleSize); //32 always even when passing in 16 bit
+    if let Err(e) = sound.update(&sound_data) {
+        eprintln!("WARNING: Failed to update sound buffer: {e}");
+    }
+    sound
 }
