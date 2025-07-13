@@ -164,7 +164,7 @@ impl<T: Copy> DataBuf<T> {
     }
 }
 
-/// Compress data (DEFLATE algorythm)
+/// Compress data (DEFLATE algorithm)
 /// ```rust
 /// use raylib::prelude::*;
 /// let data = compress_data(b"11111").unwrap();
@@ -181,7 +181,7 @@ pub fn compress_data(data: &[u8]) -> Result<DataBuf<u8>, CompressionError> {
         .ok_or_else(|| CompressionError::CompressionFailed)
 }
 
-/// Decompress data (DEFLATE algorythm)
+/// Decompress data (DEFLATE algorithm)
 /// ```rust
 /// use raylib::prelude::*;
 /// let input: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];

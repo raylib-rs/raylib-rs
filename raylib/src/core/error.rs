@@ -1,4 +1,4 @@
-//! Definitions for error types used throught the crate
+//! Definitions for error types used throughout the crate
 
 use thiserror::Error;
 
