@@ -37,13 +37,11 @@ pub enum LoadSoundError {
 #[derive(Error, Debug)]
 pub enum AllocationError {
     #[error("memory request does not produce a valid layout")]
-    InvalidLayout,
+    InvalidLayout(std::alloc::LayoutError),
     #[error("memory request exceeds capacity")]
     ExceedsCapacity,
-    #[error("memory request exceeds unsigned integer maximum")]
+    #[error("memory request in bytes exceeds unsigned integer maximum")]
     ExceedsUIntMax,
-    #[error("cannot allocate less than 1 element")]
-    SubMinSize,
 }
 
 #[derive(Error, Debug)]
