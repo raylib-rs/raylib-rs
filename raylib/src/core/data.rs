@@ -35,7 +35,7 @@ use crate::{
 /// - `buf` must be safe to dereference.
 /// - `buf` must be a **unique, owned** pointer (not to static or local memory, and the memory must not be
 ///   accessible through any pointers/references not derived from the returned [`DataBuf`]).
-/// - `buf` must point to valid, intialized data.
+/// - `buf` must point to [valid](https://doc.rust-lang.org/std/ptr/index.html#safety), intialized data.
 /// - `buf` must have been created with `RL_MALLOC`/[`ffi::MemAlloc`] or `RL_REALLOC`/[`ffi::MemRealloc`].
 ///
 /// This structure is only intended for use with pointers given by Raylib with the expectation that you
@@ -108,7 +108,7 @@ impl<T> DataBuf<MaybeUninit<T>> {
     ///
     /// The data pointed to by `self` must actually be initialized.
     pub const unsafe fn assume_init(self) -> DataBuf<T> {
-        // SAFETY: `T` and `MaybeUninit<T>` have the same layout.
+        // SAFETY: `T` and `MaybeUninit<T>` have the same layout, and `DataBuf` and `NonNull` are repr(transparent).
         unsafe { std::mem::transmute::<DataBuf<MaybeUninit<T>>, DataBuf<T>>(self) }
     }
 }
@@ -120,12 +120,14 @@ impl<T> DataBuf<[MaybeUninit<T>]> {
     ///
     /// The data pointed to by `self` must actually be initialized.
     pub const unsafe fn assume_init(self) -> DataBuf<[T]> {
-        // SAFETY: `[T]` and `[MaybeUninit<T>]` have the same layout.
+        // SAFETY: `[T]` and `[MaybeUninit<T>]` have the same layout, and `DataBuf` and `NonNull` are repr(transparent).
         unsafe { std::mem::transmute::<DataBuf<[MaybeUninit<T>]>, DataBuf<[T]>>(self) }
     }
 }
 
 impl<T> DataBuf<T> {
+    const _NO_ZST: () = assert!(std::mem::size_of::<T>() > 0, "DataBuf cannot contain zero-sized types");
+
     /// Wrap an already allocated pointer in a [`DataBuf`].
     /// Returns [`None`] if `buf` is null.
     ///
@@ -155,8 +157,10 @@ impl<T> DataBuf<T> {
     }
 
     /// Extract the pointer without freeing it, for the purpose of transferring ownership.
+    ///
+    /// **WARNING:** The returned pointer must be unloaded manually to avoid a memory leak.
     #[inline]
-    pub(crate) const fn leak(self) -> NonNull<T> {
+    pub const fn leak(self) -> NonNull<T> {
         let buf = self.buf.cast::<T>();
         std::mem::forget(self);
         buf
@@ -199,6 +203,8 @@ impl<T> DataBuf<T> {
 }
 
 impl<T> DataBuf<[T]> {
+    const _NO_ZST: () = assert!(std::mem::size_of::<T>() > 0, "DataBuf cannot contain zero-sized types");
+
     /// Wrap an already allocated pointer in a [`DataBuf`].
     /// Returns [`None`] if `buf` is null.
     ///
@@ -239,29 +245,20 @@ impl<T> DataBuf<[T]> {
 
     /// Extract the pointer without freeing it, for the purpose of transferring ownership.
     ///
+    /// **WARNING:** The returned pointer must be unloaded manually to avoid a memory leak.
+    ///
     /// **NOTE:** This method eliminates the slice metadata, converting it from a wide pointer
     /// to a thin pointer. This is intentional. Raylib does not use wide pointers, so the thin
     /// pointer will be more applicable.
     /// (and is what was returned by the allocator in the first place, making it safe to free)
     #[inline]
-    pub(crate) const fn leak(self) -> NonNull<T> {
+    pub const fn leak(self) -> NonNull<T> {
         let buf = self.buf.cast::<T>();
         std::mem::forget(self);
         buf
     }
 
     /// Allocate new memory managed by Raylib.
-    ///
-    /// # Errors
-    ///
-    /// - [`InvalidLayout`](AllocationError::InvalidLayout):
-    ///   [`Layout::array::<T>(count.get())`](Layout::array) resulted in an error.
-    ///
-    /// - [`ExceedsUIntMax`](AllocationError::ExceedsUIntMax):
-    ///   The size of `[T; count]` in bytes exceeds [`u32::MAX`].
-    ///
-    /// - [`ExceedsCapacity`](AllocationError::ExceedsCapacity):
-    ///   [`ffi::MemAlloc`] returned null.
     ///
     /// # Panics
     ///
@@ -301,14 +298,6 @@ impl<T> DataBuf<[T]> {
     }
 
     /// Allocate memory managed by Raylib and initialize by copying.
-    ///
-    /// # Errors
-    ///
-    /// - [`ExceedsUIntMax`](AllocationError::ExceedsUIntMax):
-    ///   The size of `[T; count]` in bytes exceeds [`u32::MAX`].
-    ///
-    /// - [`ExceedsCapacity`](AllocationError::ExceedsCapacity):
-    ///   [`ffi::MemAlloc`] returned null.
     ///
     /// # Panics
     ///
@@ -352,17 +341,6 @@ impl<T> DataBuf<[T]> {
     }
 
     /// Reallocate memory already managed by Raylib.
-    ///
-    /// # Errors
-    ///
-    /// - [`InvalidLayout`](AllocationError::InvalidLayout):
-    ///   [`Layout::array::<T>(count.get())`](Layout::array) resulted in an error.
-    ///
-    /// - [`ExceedsUIntMax`](AllocationError::ExceedsUIntMax):
-    ///   The size of `[T; count]` in bytes exceeds [`u32::MAX`].
-    ///
-    /// - [`ExceedsCapacity`](AllocationError::ExceedsCapacity):
-    ///   [`ffi::MemAlloc`] returned null.
     ///
     /// # Panics
     ///

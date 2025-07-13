@@ -36,10 +36,14 @@ pub enum LoadSoundError {
 
 #[derive(Error, Debug)]
 pub enum AllocationError {
+    /// [`Layout::array::<T>(n)`](std::mem::Layout::array) resulted in an error.
     #[error("memory request does not produce a valid layout")]
     InvalidLayout(std::alloc::LayoutError),
+    /// [`MemAlloc`](crate::ffi::MemAlloc) returned null.
     #[error("memory request exceeds capacity")]
     ExceedsCapacity,
+    /// The size of `[T; count]` in bytes exceeds [`u32::MAX`]
+    /// (the largest value [`MemAlloc`](crate::ffi::MemAlloc) can be passed)
     #[error("memory request in bytes exceeds unsigned integer maximum")]
     ExceedsUIntMax,
 }
