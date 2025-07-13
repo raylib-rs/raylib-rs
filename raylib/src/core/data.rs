@@ -54,6 +54,7 @@ impl<T: ?Sized> Drop for DataBuf<T> {
 impl<T: ?Sized> Deref for DataBuf<T> {
     type Target = T;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         // SAFETY: Guaranteed by constructor.
         // Caller must have ensured that `buf` is non-null, valid, and unique.
@@ -62,6 +63,7 @@ impl<T: ?Sized> Deref for DataBuf<T> {
 }
 
 impl<T: ?Sized> DerefMut for DataBuf<T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         // SAFETY: Guaranteed by constructor.
         // Caller must have ensured that `buf` is non-null, valid, and unique.
