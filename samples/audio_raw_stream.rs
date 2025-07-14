@@ -1,6 +1,7 @@
 use raylib::prelude::*;
 use raylib::prelude::glam::vec2;
 use raylib::prelude::{MouseButton::MOUSE_BUTTON_LEFT, KeyboardKey::KEY_SPACE};
+use raylib::error::UpdateAudioStreamError;
 
 const MAX_SAMPLES: usize = 512;
 const MAX_SAMPLES_PER_UPDATE: usize = 4096;
@@ -107,33 +108,32 @@ fn main() {
 }
 
 fn sound_update_test(raylib_audio: &RaylibAudio) -> Sound {
-    let mut sound_data: [f32; MAX_SAMPLES] = [0f32; MAX_SAMPLES];
-    let freq = 440.0;
-    for i in 0..MAX_SAMPLES {
-        sound_data[i] =
-            (2.0 * std::f32::consts::PI * i as f32 * freq / SAMPLE_RATE as f32).sin() * 32000.0;
-    }
-    // this 16-bit sound data will Error with our new sample size check because sample size is always set to 32 bit
-    // let mut sound_data: [i16; MAX_SAMPLES] = [0; MAX_SAMPLES];
-    // let freq = 440.0;
-    // for i in 0..MAX_SAMPLES {
-    //     sound_data[i] =
-    //         ((2.0 * std::f32::consts::PI * i as f32 * freq / SAMPLE_RATE as f32).sin() * 32000.0) as i16;
-    // }
-
-    // This .wav acts as a placeholder for us to inject test data using Sound::update, currently UpdateSound in raylib's raudio.c has no examples.
+    // This .wav acts as a placeholder for us to inject test data using Sound::update. currently `UpdateSound` in raylib's raudio.c has no examples
     let mut wave = raylib_audio.new_wave("static/coin_16bit.wav").unwrap();
-    wave.format(SAMPLE_RATE as i32, 16, 1); //wave file is already 16 bit but just for emphasis
+    wave.format(SAMPLE_RATE as i32, 16, 1); // wave file should already be 16 bit but just for emphasis here
     println!(
         "wave: sampleSize = {}, sampleRate = {}, channels = {}",
         wave.sample_size(),
         wave.sample_rate(),
         wave.channels()
     );
+    let freq = 440.0;
     let mut sound = raylib_audio.new_sound_from_wave(&wave).unwrap();
-    println!("sound.stream.sampleSize = {}", sound.stream.sampleSize); //32 always even when passing in 16 bit
-    if let Err(e) = sound.update(&sound_data) {
-        eprintln!("WARNING: Failed to update sound buffer: {e}");
+    // Notes (iann): see comment: https://github.com/meisei4/raylib-rs/blob/unstable/raylib/src/core/audio.rs#L421
+    // 1. We load a 16-bit wave to show our `UpdateAudioStreamError::SampleSizeMismatch` error
+    // 2. We load the 32-bit up scale data -> no error
+    let mut sound_data_16bit: [i16; MAX_SAMPLES] = [0; MAX_SAMPLES];
+    for i in 0..MAX_SAMPLES {
+        sound_data_16bit[i] = ((2.0 * std::f32::consts::PI * i as f32 * freq / SAMPLE_RATE as f32).sin() * 32000.0) as i16;
     }
+    let update_result_16bit = sound.update(&sound_data_16bit);
+    println!("update(&sound_data_16bit) returned: {update_result_16bit:?}");
+    assert!(matches!(update_result_16bit, Err(UpdateAudioStreamError::SampleSizeMismatch { .. })));
+
+    let mut sound_data_32bit: [f32; MAX_SAMPLES] = [0f32; MAX_SAMPLES];
+    for i in 0..MAX_SAMPLES {
+        sound_data_32bit[i] = (2.0 * std::f32::consts::PI * i as f32 * freq / SAMPLE_RATE as f32).sin() * 32000.0;
+    }
+    let _ = sound.update(&sound_data_32bit);
     sound
 }
