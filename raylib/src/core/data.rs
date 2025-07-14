@@ -329,7 +329,8 @@ impl<T> DataBuf<[T]> {
         assert!(buf.is_aligned(), "DataBuf should be aligned");
         // SAFETY: Caller must uphold `from_raw_parts_mut` safety contract
         let slice = unsafe { std::slice::from_raw_parts_mut(buf.as_ptr(), len.get()) };
-        let buf = NonNull::from_mut(slice);
+        // SAFETY: A mutable reference cannot be null.
+        let buf = unsafe { NonNull::new_unchecked(slice) };
         // SAFETY: Calller must uphold `DataBuf` safety contract
         unsafe { Self::from_nonnull(buf) }
     }
