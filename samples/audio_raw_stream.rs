@@ -23,7 +23,7 @@ fn main() {
     let mut data: [i16; MAX_SAMPLES] = [0; MAX_SAMPLES];
     let mut write_buf: [i16; MAX_SAMPLES_PER_UPDATE] = [0; MAX_SAMPLES_PER_UPDATE];
     stream.play();
-    let mut frequency = 220.0;
+    let mut frequency = 440.0;
     let mut old_frequency = 1.0;
     let mut read_cursor = 0;
     let mut wave_length = 1;
