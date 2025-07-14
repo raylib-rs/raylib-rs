@@ -3,9 +3,9 @@ use std::{
     alloc::Layout,
     ffi::{CString, c_char},
     marker::PhantomData,
-    mem::MaybeUninit,
+    mem::{MaybeUninit, size_of},
+    num::{NonZeroU32, NonZeroUsize},
     ops::{Deref, DerefMut},
-    os::raw::c_void,
     path::Path,
     ptr::NonNull,
 };
@@ -14,6 +14,135 @@ use crate::{
     error::{AllocationError, CompressionError},
     ffi,
 };
+
+/// Calculate the number of bytes needed to allocate `layout`.
+#[inline]
+fn allocation_layout_size(layout: Layout) -> Result<NonZeroU32, AllocationError> {
+    let bytes = layout
+        .size()
+        .try_into()
+        .ok()
+        .ok_or(AllocationError::IntoUIntFailed)?;
+
+    NonZeroU32::new(bytes).ok_or(AllocationError::ZeroBytes)
+}
+
+/// Calculate the number of bytes needed to allocate `[T; count]`.
+#[inline]
+fn allocation_array_size<T>(count: usize) -> Result<NonZeroU32, AllocationError> {
+    allocation_layout_size(Layout::array::<T>(count).map_err(|_| AllocationError::IntoUIntFailed)?)
+}
+
+/// Calculate the number of bytes needed to allocate a copy of `val`
+#[inline]
+fn allocation_val_size<T: ?Sized>(val: &T) -> Result<NonZeroU32, AllocationError> {
+    allocation_layout_size(Layout::for_value(val))
+}
+
+mod rl_managed {
+    use super::*;
+
+    /// Raylib-managed [`NonNull`].
+    ///
+    /// # Safety
+    ///
+    /// Field must have been allocated with `RL_ALLOC`/[`ffi::MemAlloc`] or `RL_REALLOC`/[`ffi::MemRealloc`].
+    #[repr(transparent)]
+    pub struct RlManaged<T: ?Sized>(/* unsafe */ NonNull<T>);
+
+    impl<T: ?Sized> Clone for RlManaged<T> {
+        #[inline]
+        fn clone(&self) -> Self {
+            *self
+        }
+    }
+
+    impl<T: ?Sized> Copy for RlManaged<T> {}
+
+    impl<T: ?Sized> std::ops::Deref for RlManaged<T> {
+        type Target = NonNull<T>;
+
+        #[inline]
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl<T: ?Sized> std::ops::DerefMut for RlManaged<T> {
+        #[inline]
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+
+    impl<T: ?Sized> RlManaged<T> {
+        /// Mark memory as Raylib-managed.
+        ///
+        /// # Safety
+        ///
+        /// Must uphold [`RlManaged`] safety requirements.
+        #[inline]
+        pub(crate) const unsafe fn new(data: NonNull<T>) -> Self {
+            Self(data)
+        }
+    }
+
+    impl<T> RlManaged<[T]> {
+        /// Create a Raylib-managed slice from a thin pointer and a length.
+        ///
+        /// The `len` argument is the number of **elements**, not the number of bytes.
+        #[inline]
+        pub(crate) const fn slice_from_raw_parts(data: RlManaged<T>, len: usize) -> Self {
+            Self(NonNull::slice_from_raw_parts(data.0, len))
+        }
+
+        /// Access the pointer of this allocation.
+        ///
+        /// **NOTE:** This method eliminates the slice metadata, converting it from a wide pointer
+        /// to a thin pointer. This is intentional. Raylib does not use wide pointers, so the thin
+        /// pointer will be more applicable.
+        /// (and is what was returned by the allocator in the first place, making it safe to free)
+        #[inline]
+        pub const fn as_ptr(self) -> *mut T {
+            self.0.cast().as_ptr()
+        }
+    }
+
+    /// Allocate `size` bytes of memory aligned to `T` using [`ffi::MemAlloc`].
+    ///
+    /// Returns [`None`] if [`ffi::MemAlloc`] returned null.
+    #[inline]
+    pub fn mem_alloc<T>(size: NonZeroU32) -> Option<RlManaged<MaybeUninit<T>>> {
+        // SAFETY: `size` is not zero.
+        let ptr = unsafe { ffi::MemAlloc(size.get()) }.cast();
+        NonNull::new(ptr).map(RlManaged)
+    }
+
+    impl<T: ?Sized> RlManaged<T> {
+        /// Reallocate `ptr` to have `size` bytes of memory aligned to `U` using [`ffi::MemRealloc`].
+        ///
+        /// Any elements that were initialized prior to calling will still be initialized after reallocating.
+        /// Any elements that were not previously in the allocation are uninitialized.
+        ///
+        /// Returns the original memory block if [`ffi::MemRealloc`] returned null.
+        #[inline]
+        pub fn mem_realloc<U>(self, size: NonZeroU32) -> Result<RlManaged<MaybeUninit<U>>, Self> {
+            // SAFETY: `self` is non-null and is Raylib-allocated, and `size` is not zero.
+            let new_ptr = unsafe { ffi::MemRealloc(self.0.as_ptr().cast(), size.get()) }.cast();
+            NonNull::new(new_ptr).map(RlManaged).ok_or_else(|| self)
+        }
+
+        /// Free `ptr` using [`ffi::MemFree`].
+        #[inline]
+        pub fn mem_free(self) {
+            // SAFETY: `self` is non-null and Raylib-allocated.
+            unsafe {
+                ffi::MemFree(self.0.as_ptr().cast());
+            }
+        }
+    }
+}
+pub use rl_managed::*;
 
 /// A wrapper acting as an owned buffer for Raylib-allocated memory.
 /// Automatically releases the memory with [`ffi::MemFree()`] when dropped.
@@ -36,6 +165,7 @@ use crate::{
 /// - `buf` must be a **unique, owned** pointer (not to static or local memory, and the memory must not be
 ///   accessible through any pointers/references not derived from the returned [`DataBuf`]).
 /// - `buf` must point to [valid](https://doc.rust-lang.org/std/ptr/index.html#safety), intialized data.
+/// - `buf` must be [convertible to a reference](std::ptr#pointer-to-reference-conversion).
 /// - `buf` must have been created with `RL_MALLOC`/[`ffi::MemAlloc`] or `RL_REALLOC`/[`ffi::MemRealloc`].
 ///
 /// This structure is only intended for use with pointers given by Raylib with the expectation that you
@@ -45,25 +175,19 @@ use crate::{
 /// If the pointer is expected to be conditionally deallocated by Raylib,
 /// (i.e. conditionally passing the buffer to a Raylib function that will certainly deallocatate it)
 /// use [`DataBuf::leak`] to prevent [`DataBuf::drop`] from causing a double-free.
-#[derive(Debug)]
+// #[derive(Debug)]
 #[repr(transparent)]
 pub struct DataBuf<T: ?Sized> {
-    buf: NonNull<T>,
+    buf: RlManaged<T>,
     /// Tell the compiler that this instance logically owns a `T`.
     _marker: PhantomData<T>,
 }
 
 impl<T: ?Sized> Drop for DataBuf<T> {
+    #[inline]
     fn drop(&mut self) {
         // The `T` in the `DataBuf` is dropped by the compiler before the destructor is run
-
-        let ptr = self.buf.as_ptr().cast::<c_void>();
-
-        // SAFETY: Guaranteed by constructor.
-        // Caller must have ensured that `buf` is a non-dangling pointer to Raylib-managed memory.
-        unsafe {
-            ffi::MemFree(ptr);
-        }
+        self.buf.mem_free();
     }
 }
 
@@ -72,8 +196,7 @@ impl<T: ?Sized> Deref for DataBuf<T> {
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        // SAFETY: Guaranteed by constructor.
-        // Caller must have ensured that `buf` is non-null, valid, and unique.
+        // SAFETY: `buf` is non-null, unique, & valid, and guaranteed convertible to a reference.
         unsafe { self.buf.as_ref() }
     }
 }
@@ -81,8 +204,7 @@ impl<T: ?Sized> Deref for DataBuf<T> {
 impl<T: ?Sized> DerefMut for DataBuf<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // SAFETY: Guaranteed by constructor.
-        // Caller must have ensured that `buf` is non-null, valid, and unique.
+        // SAFETY: `buf` is non-null, unique, & valid, and guaranteed convertible to a reference.
         unsafe { self.buf.as_mut() }
     }
 }
@@ -107,8 +229,9 @@ impl<T> DataBuf<MaybeUninit<T>> {
     /// # Safety
     ///
     /// The data pointed to by `self` must actually be initialized.
+    #[inline]
     pub const unsafe fn assume_init(self) -> DataBuf<T> {
-        // SAFETY: `T` and `MaybeUninit<T>` have the same layout, and `DataBuf` and `NonNull` are repr(transparent).
+        // SAFETY: `DataBuf<MaybeUninit<T>>` and `DataBuf<T>` have the same layout
         unsafe { std::mem::transmute::<DataBuf<MaybeUninit<T>>, DataBuf<T>>(self) }
     }
 }
@@ -119,14 +242,34 @@ impl<T> DataBuf<[MaybeUninit<T>]> {
     /// # Safety
     ///
     /// The data pointed to by `self` must actually be initialized.
+    #[inline]
     pub const unsafe fn assume_init(self) -> DataBuf<[T]> {
-        // SAFETY: `[T]` and `[MaybeUninit<T>]` have the same layout, and `DataBuf` and `NonNull` are repr(transparent).
+        // SAFETY: `DataBuf<[MaybeUninit<T>]>` and `DataBuf<[T]>` have the same layout
         unsafe { std::mem::transmute::<DataBuf<[MaybeUninit<T>]>, DataBuf<[T]>>(self) }
     }
 }
 
-impl<T> DataBuf<T> {
-    const _NO_ZST: () = assert!(std::mem::size_of::<T>() > 0, "DataBuf cannot contain zero-sized types");
+impl<T: ?Sized> DataBuf<T> {
+    /// Wrap an already allocated, non-null, Raylib-managed pointer in a [`DataBuf`].
+    #[inline]
+    pub(crate) fn from_rlmanaged(buf: RlManaged<T>) -> Self {
+        Self {
+            buf,
+            _marker: PhantomData,
+        }
+    }
+
+    /// Wrap an already allocated, non-null pointer in a [`DataBuf`].
+    ///
+    /// # Safety
+    ///
+    /// See the [`DataBuf`] safety requirements.
+    #[inline]
+    pub(crate) unsafe fn from_nonnull(data: NonNull<T>) -> Self {
+        // SAFETY: Caller must ensure `data` is Raylib-managed.
+        let buf = unsafe { RlManaged::new(data) };
+        Self::from_rlmanaged(buf)
+    }
 
     /// Wrap an already allocated pointer in a [`DataBuf`].
     /// Returns [`None`] if `buf` is null.
@@ -134,76 +277,62 @@ impl<T> DataBuf<T> {
     /// # Safety
     ///
     /// See the [`DataBuf`] safety requirements.
-    ///
-    /// # Panics
-    ///
-    /// This method may panic if any of the following are true while `buf` is non-null:
-    /// - `buf` is unaligned
-    /// - total bytes exceed [`isize::MAX`]
-    pub(crate) unsafe fn from_raw(buf: *mut T) -> Option<Self> {
-        NonNull::new(buf).map(|buf| {
-            // SAFETY: Caller must ensure `count` is initialized if `buf` is non-null.
-            assert!(buf.is_aligned(), "DataBuf should be aligned");
-            assert!(
-                std::mem::size_of::<T>() <= (isize::MAX as usize),
-                "total size of DataBuf should not exceed `isize::MAX`"
-            );
-
-            Self {
-                buf,
-                _marker: PhantomData,
-            }
-        })
+    #[inline]
+    pub(crate) unsafe fn from_raw(ptr: *mut T) -> Option<Self> {
+        NonNull::new(ptr).map(|buf|
+            // SAFETY: Caller must uphold safety contract.
+            unsafe { Self::from_nonnull(buf) })
     }
 
     /// Extract the pointer without freeing it, for the purpose of transferring ownership.
     ///
     /// **WARNING:** The returned pointer must be unloaded manually to avoid a memory leak.
     #[inline]
-    pub const fn leak(self) -> NonNull<T> {
-        let buf = self.buf.cast::<T>();
+    pub const fn leak(self) -> RlManaged<T> {
+        let buf = self.buf;
         std::mem::forget(self);
         buf
-    }
-
-    /// Allocate new memory managed by Raylib.
-    ///
-    /// # Errors
-    ///
-    /// - [`InvalidLayout`](AllocationError::InvalidLayout):
-    ///   [`Layout::array::<T>(count.get())`](Layout::array) resulted in an error.
-    ///
-    /// - [`ExceedsUIntMax`](AllocationError::ExceedsUIntMax):
-    ///   The size of `[T; count]` in bytes exceeds [`u32::MAX`].
-    ///
-    /// - [`ExceedsCapacity`](AllocationError::ExceedsCapacity):
-    ///   [`ffi::MemAlloc`] returned null.
-    ///
-    /// # Panics
-    ///
-    /// This method may panic in debug if the pointer returned by [`ffi::MemAlloc`] is unaligned.
-    pub fn alloc() -> Result<DataBuf<MaybeUninit<T>>, AllocationError> {
-        let bytes = Layout::array::<T>(1)
-            .map_err(AllocationError::InvalidLayout)?
-            .size()
-            .try_into()
-            .map_err(|_| AllocationError::ExceedsUIntMax)?;
-        // SAFETY: `bytes` is guaranteed to be non-zero.
-        let ptr = unsafe { ffi::MemAlloc(bytes) }.cast::<MaybeUninit<T>>();
-        let buf = NonNull::new(ptr).ok_or(AllocationError::ExceedsCapacity)?;
-        debug_assert!(
-            buf.is_aligned(),
-            "allocated buffer should always be aligned"
-        );
-        Ok(DataBuf {
-            buf,
-            _marker: PhantomData,
-        })
     }
 }
 
 impl<T> DataBuf<[T]> {
-    const _NO_ZST: () = assert!(std::mem::size_of::<T>() > 0, "DataBuf cannot contain zero-sized types");
+    const _SIZE_REQS: () = {
+        assert!(
+            size_of::<T>() > 0,
+            "DataBuf cannot contain zero-sized types"
+        );
+        assert!(
+            size_of::<T>() <= (isize::MAX as usize),
+            "total size of DataBuf cannot exceed `isize::MAX`"
+        );
+        assert!(
+            size_of::<T>() <= (u32::MAX as usize),
+            "total size of DataBuf cannot exceed `u32::MAX`"
+        );
+    };
+
+    /// Wrap an already allocated pointer in a [`DataBuf`].
+    ///
+    /// # Safety
+    ///
+    /// **In addition** to the [`DataBuf`] and [`slice`](std::slice::from_raw_parts_mut#safety) safety requirements, this function also requires:
+    /// - `buf` must point to an array of as many valid, initialized elements as defined by `count`.
+    ///
+    /// # Panics
+    ///
+    /// This method may panic if any of the following are true while `buf` is non-null:
+    /// - `count` is less than 1
+    /// - `buf` is unaligned
+    /// - total bytes exceed [`isize::MAX`]
+    #[inline]
+    pub(crate) unsafe fn slice_from_nonnull(buf: NonNull<T>, len: NonZeroUsize) -> Self {
+        assert!(buf.is_aligned(), "DataBuf should be aligned");
+        // SAFETY: Caller must uphold `from_raw_parts_mut` safety contract
+        let slice = unsafe { std::slice::from_raw_parts_mut(buf.as_ptr(), len.get()) };
+        let buf = NonNull::from_mut(slice);
+        // SAFETY: Calller must uphold `DataBuf` safety contract
+        unsafe { Self::from_nonnull(buf) }
+    }
 
     /// Wrap an already allocated pointer in a [`DataBuf`].
     /// Returns [`None`] if `buf` is null.
@@ -213,7 +342,7 @@ impl<T> DataBuf<[T]> {
     ///
     /// # Safety
     ///
-    /// **In addition** to the [`DataBuf`] safety requirements, this function also requires:
+    /// **In addition** to the [`DataBuf`] and [`slice`](std::slice::from_raw_parts_mut#safety) safety requirements, this function also requires:
     /// - `count` must be initialized if `buf` is non-null.
     /// - `buf` must point to an array of as many valid, initialized elements as defined by `count`.
     ///
@@ -221,48 +350,21 @@ impl<T> DataBuf<[T]> {
     ///
     /// This method may panic if any of the following are true while `buf` is non-null:
     /// - `count` is less than 1
-    /// - `buf` is unaligned
-    /// - total bytes exceed [`isize::MAX`]
-    pub(crate) unsafe fn slice_from_raw(buf: *mut T, count: MaybeUninit<i32>) -> Option<Self> {
-        NonNull::new(buf).map(|buf| {
+    #[inline]
+    pub(crate) unsafe fn slice_from_raw(ptr: *mut T, count: MaybeUninit<i32>) -> Option<Self> {
+        NonNull::new(ptr).map(|buf| {
             // SAFETY: Caller must ensure `count` is initialized if `buf` is non-null.
-            let len = unsafe { count.assume_init() }.try_into().unwrap();
-            assert!(len >= 1, "non-null data should be at least 1 byte");
-            assert!(buf.is_aligned(), "DataBuf should be aligned");
-            assert!(
-                std::mem::size_of::<T>()
-                    .checked_mul(len)
-                    .is_some_and(|total_size| total_size <= (isize::MAX as usize)),
-                "total size of DataBuf should not exceed `isize::MAX`"
-            );
-
-            Self {
-                buf: NonNull::slice_from_raw_parts(buf, len),
-                _marker: PhantomData,
-            }
+            let len = unsafe { count.assume_init() }
+                .try_into()
+                .ok()
+                .and_then(NonZeroUsize::new)
+                .unwrap();
+            // SAFETY: Caller must uphold safety contract
+            unsafe { Self::slice_from_nonnull(buf, len) }
         })
     }
 
-    /// Extract the pointer without freeing it, for the purpose of transferring ownership.
-    ///
-    /// **WARNING:** The returned pointer must be unloaded manually to avoid a memory leak.
-    ///
-    /// **NOTE:** This method eliminates the slice metadata, converting it from a wide pointer
-    /// to a thin pointer. This is intentional. Raylib does not use wide pointers, so the thin
-    /// pointer will be more applicable.
-    /// (and is what was returned by the allocator in the first place, making it safe to free)
-    #[inline]
-    pub const fn leak(self) -> NonNull<T> {
-        let buf = self.buf.cast::<T>();
-        std::mem::forget(self);
-        buf
-    }
-
     /// Allocate new memory managed by Raylib.
-    ///
-    /// # Panics
-    ///
-    /// This method may panic in debug if the pointer returned by [`ffi::MemAlloc`] is unaligned.
     ///
     /// # Example
     /// ```
@@ -278,21 +380,13 @@ impl<T> DataBuf<[T]> {
     /// assert_eq!(data_buf.as_ref(), &[4, 8, -23, 9, 0]);
     /// ```
     /// (See also: [`DataBuf::alloc_from_copy`])
+    #[inline]
     pub fn alloc(count: usize) -> Result<DataBuf<[MaybeUninit<T>]>, AllocationError> {
-        let bytes = Layout::array::<T>(count)
-            .map_err(AllocationError::InvalidLayout)?
-            .size()
-            .try_into()
-            .map_err(|_| AllocationError::ExceedsUIntMax)?;
+        let bytes = allocation_array_size::<T>(count)?;
         // SAFETY: `bytes` is guaranteed to be non-zero.
-        let ptr = unsafe { ffi::MemAlloc(bytes) }.cast::<MaybeUninit<T>>();
-        let buf = NonNull::new(ptr).ok_or(AllocationError::ExceedsCapacity)?;
-        debug_assert!(
-            buf.is_aligned(),
-            "allocated buffer should always be aligned"
-        );
+        let buf = mem_alloc::<T>(bytes).ok_or(AllocationError::NullAlloc)?;
         Ok(DataBuf {
-            buf: NonNull::slice_from_raw_parts(buf, count),
+            buf: RlManaged::slice_from_raw_parts(buf, count),
             _marker: PhantomData,
         })
     }
@@ -314,30 +408,15 @@ impl<T> DataBuf<[T]> {
     where
         T: Copy,
     {
-        let bytes = Layout::for_value(src)
-            .size()
-            .try_into()
-            .map_err(|_| AllocationError::ExceedsUIntMax)?;
-        // SAFETY: `bytes` is guaranteed to be non-zero.
-        let ptr = unsafe { ffi::MemAlloc(bytes) }.cast::<MaybeUninit<T>>();
-        let buf = NonNull::new(ptr).ok_or(AllocationError::ExceedsCapacity)?;
-        debug_assert!(
-            buf.is_aligned(),
-            "allocated buffer should always be aligned"
-        );
-        let mut buf = NonNull::slice_from_raw_parts(buf, src.len());
-        // SAFETY: `&[T]` and `&[MaybeUninit<T>]` have the same layout
+        let bytes = allocation_val_size(src)?;
+        let buf = mem_alloc::<T>(bytes).ok_or(AllocationError::NullAlloc)?;
+        let buf = RlManaged::slice_from_raw_parts(buf, src.len());
+        // SAFETY: `&[T]` and `&[MaybeUninit<T>]` have the same layout.
         let uninit_src = unsafe { std::mem::transmute::<&[T], &[MaybeUninit<T>]>(src) };
-        // SAFETY: `MemAlloc` has not returned NULL and `MaybeUninit` removes the requirement for
-        // the data to be initialized, so `buf` is convertible to a reference.
-        unsafe { buf.as_mut() }.copy_from_slice(uninit_src);
-        // SAFETY: Valid elements have just been copied into `self` so it is initialized,
-        // and `NonNull<[MaybeUninit<T>]>` and `NonNull<[T]>` have the same layout
-        let buf = unsafe { std::mem::transmute::<NonNull<[MaybeUninit<T>]>, NonNull<[T]>>(buf) };
-        Ok(DataBuf {
-            buf,
-            _marker: PhantomData,
-        })
+        let mut buf = DataBuf::from_rlmanaged(buf);
+        buf.copy_from_slice(uninit_src);
+        // SAFETY: Valid elements have just been copied into `self` so it is initialized.
+        Ok(unsafe { buf.assume_init() })
     }
 
     /// Reallocate memory already managed by Raylib.
@@ -346,25 +425,14 @@ impl<T> DataBuf<[T]> {
     ///
     /// This method may panic in debug if the pointer returned by [`ffi::MemAlloc`] is unaligned.
     pub fn realloc(self, new_count: usize) -> Result<DataBuf<[MaybeUninit<T>]>, AllocationError> {
-        let bytes = Layout::array::<T>(new_count)
-            .map_err(AllocationError::InvalidLayout)?
-            .size()
-            .try_into()
-            .map_err(|_| AllocationError::ExceedsUIntMax)?;
-        let old_ptr = self.leak().cast::<c_void>().as_ptr();
-        // SAFETY: `bytes` is guaranteed to be non-zero and `self.buf` is guaranteed to be
-        // both non-null and raylib-managed.
-        let new_ptr = unsafe { ffi::MemRealloc(old_ptr, bytes) }.cast::<MaybeUninit<T>>();
-        let buf = NonNull::new(new_ptr).ok_or(AllocationError::ExceedsCapacity)?;
-        debug_assert!(
-            buf.is_aligned(),
-            "allocated buffer should always be aligned"
-        );
-
-        Ok(DataBuf {
-            buf: NonNull::slice_from_raw_parts(buf, new_count),
-            _marker: PhantomData,
-        })
+        let bytes = allocation_array_size::<T>(new_count)?;
+        let old_ptr = self.leak();
+        let new_buf = old_ptr.mem_realloc(bytes).map_err(|old_ptr| {
+            old_ptr.mem_free();
+            AllocationError::NullAlloc
+        })?;
+        let new_buf = RlManaged::slice_from_raw_parts(new_buf, new_count);
+        Ok(DataBuf::from_rlmanaged(new_buf))
     }
 }
 
