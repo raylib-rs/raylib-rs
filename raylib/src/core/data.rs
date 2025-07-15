@@ -361,7 +361,6 @@ impl<T> DataBuf<[T]> {
     #[inline]
     pub fn alloc(count: usize) -> Result<DataBuf<[MaybeUninit<T>]>, AllocationError> {
         let bytes = allocation_array_size::<T>(count)?;
-        // SAFETY: `bytes` is guaranteed to be non-zero.
         let buf = mem_alloc::<T>(bytes).ok_or(AllocationError::NullAlloc)?;
         Ok(DataBuf {
             buf: RlManaged::slice_from_raw_parts(buf, count),
