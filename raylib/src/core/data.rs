@@ -3,7 +3,7 @@ use std::{
     alloc::Layout,
     ffi::{CString, c_char},
     marker::PhantomData,
-    mem::{MaybeUninit, size_of},
+    mem::MaybeUninit,
     num::{NonZeroU32, NonZeroUsize},
     ops::{Deref, DerefMut},
     path::Path,
@@ -43,21 +43,9 @@ mod rl_managed {
     use super::*;
 
     /// Raylib-managed [`NonNull`].
-    ///
-    /// # Safety
-    ///
-    /// Field must have been allocated with `RL_ALLOC`/[`ffi::MemAlloc`] or `RL_REALLOC`/[`ffi::MemRealloc`].
     #[repr(transparent)]
+    #[derive(Debug)]
     pub struct RlManaged<T: ?Sized>(/* unsafe */ NonNull<T>);
-
-    impl<T: ?Sized> Clone for RlManaged<T> {
-        #[inline]
-        fn clone(&self) -> Self {
-            *self
-        }
-    }
-
-    impl<T: ?Sized> Copy for RlManaged<T> {}
 
     impl<T: ?Sized> std::ops::Deref for RlManaged<T> {
         type Target = NonNull<T>;
@@ -80,7 +68,7 @@ mod rl_managed {
         ///
         /// # Safety
         ///
-        /// Must uphold [`RlManaged`] safety requirements.
+        /// `data` must be unique, not dangling, and allocated with `RL_ALLOC`/[`ffi::MemAlloc`] or `RL_REALLOC`/[`ffi::MemRealloc`].
         #[inline]
         pub(crate) const unsafe fn new(data: NonNull<T>) -> Self {
             Self(data)
@@ -91,6 +79,9 @@ mod rl_managed {
         /// Create a Raylib-managed slice from a thin pointer and a length.
         ///
         /// The `len` argument is the number of **elements**, not the number of bytes.
+        ///
+        /// This function is safe, but dereferencing the return value is unsafe.
+        /// See the documentation of [`std::slice::from_raw_parts`] for slice safety requirements.
         #[inline]
         pub(crate) const fn slice_from_raw_parts(data: RlManaged<T>, len: usize) -> Self {
             Self(NonNull::slice_from_raw_parts(data.0, len))
@@ -175,7 +166,7 @@ pub use rl_managed::*;
 /// If the pointer is expected to be conditionally deallocated by Raylib,
 /// (i.e. conditionally passing the buffer to a Raylib function that will certainly deallocatate it)
 /// use [`DataBuf::leak`] to prevent [`DataBuf::drop`] from causing a double-free.
-// #[derive(Debug)]
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct DataBuf<T: ?Sized> {
     buf: RlManaged<T>,
@@ -186,8 +177,18 @@ pub struct DataBuf<T: ?Sized> {
 impl<T: ?Sized> Drop for DataBuf<T> {
     #[inline]
     fn drop(&mut self) {
-        // The `T` in the `DataBuf` is dropped by the compiler before the destructor is run
-        self.buf.mem_free();
+        let mut ptr = MaybeUninit::uninit();
+        // SAFETY: Both `self.buf` and `ptr` are non-null and valid for 1 element.
+        unsafe {
+            std::ptr::copy_nonoverlapping(std::ptr::from_ref(&self.buf), ptr.as_mut_ptr(), 1)
+        };
+        // SAFETY: Just written to with a valid value
+        let ptr = unsafe { ptr.assume_init() };
+        // SAFETY: `RlManaged` is guaranteed to be unique, non-null, valid, and not dangling
+        unsafe {
+            ptr.drop_in_place();
+        }
+        ptr.mem_free(); // `ptr` will not be observed after free
     }
 }
 
@@ -220,19 +221,6 @@ impl<T: ?Sized> AsMut<T> for DataBuf<T> {
     #[inline]
     fn as_mut(&mut self) -> &mut T {
         self.deref_mut()
-    }
-}
-
-impl<T> DataBuf<MaybeUninit<T>> {
-    /// Mark that the data pointed to by `self` is initialized.
-    ///
-    /// # Safety
-    ///
-    /// The data pointed to by `self` must actually be initialized.
-    #[inline]
-    pub const unsafe fn assume_init(self) -> DataBuf<T> {
-        // SAFETY: `DataBuf<MaybeUninit<T>>` and `DataBuf<T>` have the same layout
-        unsafe { std::mem::transmute::<DataBuf<MaybeUninit<T>>, DataBuf<T>>(self) }
     }
 }
 
@@ -289,41 +277,30 @@ impl<T: ?Sized> DataBuf<T> {
     /// **WARNING:** The returned pointer must be unloaded manually to avoid a memory leak.
     #[inline]
     pub const fn leak(self) -> RlManaged<T> {
-        let buf = self.buf;
-        std::mem::forget(self);
+        let mut buf = MaybeUninit::uninit();
+        // SAFETY: Both `self.buf` and `ptr` are non-null and valid for 1 element.
+        unsafe {
+            std::ptr::copy_nonoverlapping(std::ptr::from_ref(&self.buf), buf.as_mut_ptr(), 1);
+        }
+        // SAFETY: Just written to with a valid value
+        let buf = unsafe { buf.assume_init() };
+        std::mem::forget(self); // Prevent `self` from causing double-free
         buf
     }
 }
 
 impl<T> DataBuf<[T]> {
-    const _SIZE_REQS: () = {
-        assert!(
-            size_of::<T>() > 0,
-            "DataBuf cannot contain zero-sized types"
-        );
-        assert!(
-            size_of::<T>() <= (isize::MAX as usize),
-            "total size of DataBuf cannot exceed `isize::MAX`"
-        );
-        assert!(
-            size_of::<T>() <= (u32::MAX as usize),
-            "total size of DataBuf cannot exceed `u32::MAX`"
-        );
-    };
-
     /// Wrap an already allocated pointer in a [`DataBuf`].
     ///
     /// # Safety
     ///
-    /// **In addition** to the [`DataBuf`] and [`slice`](std::slice::from_raw_parts_mut#safety) safety requirements, this function also requires:
+    /// **In addition** to the [`DataBuf`] and [`from_raw_parts_mut`](std::slice::from_raw_parts_mut)
+    /// safety requirements, this function also requires:
     /// - `buf` must point to an array of as many valid, initialized elements as defined by `count`.
     ///
     /// # Panics
     ///
-    /// This method may panic if any of the following are true while `buf` is non-null:
-    /// - `count` is less than 1
-    /// - `buf` is unaligned
-    /// - total bytes exceed [`isize::MAX`]
+    /// This method may panic if `buf` is both non-null and unaligned.
     #[inline]
     pub(crate) unsafe fn slice_from_nonnull(buf: NonNull<T>, len: NonZeroUsize) -> Self {
         assert!(buf.is_aligned(), "DataBuf should be aligned");
@@ -343,14 +320,14 @@ impl<T> DataBuf<[T]> {
     ///
     /// # Safety
     ///
-    /// **In addition** to the [`DataBuf`] and [`slice`](std::slice::from_raw_parts_mut#safety) safety requirements, this function also requires:
+    /// **In addition** to the [`DataBuf`] and [`from_raw_parts_mut`](std::slice::from_raw_parts_mut) safety requirements,
+    /// this function also requires:
     /// - `count` must be initialized if `buf` is non-null.
     /// - `buf` must point to an array of as many valid, initialized elements as defined by `count`.
     ///
     /// # Panics
     ///
-    /// This method may panic if any of the following are true while `buf` is non-null:
-    /// - `count` is less than 1
+    /// This method may panic if `count` is less than 1 while `buf` is non-null.
     #[inline]
     pub(crate) unsafe fn slice_from_raw(ptr: *mut T, count: MaybeUninit<i32>) -> Option<Self> {
         NonNull::new(ptr).map(|buf| {
@@ -360,7 +337,7 @@ impl<T> DataBuf<[T]> {
                 .ok()
                 .and_then(NonZeroUsize::new)
                 .unwrap();
-            // SAFETY: Caller must uphold safety contract
+            // SAFETY: Caller must uphold `DataBuf` and `slice` safety contracts
             unsafe { Self::slice_from_nonnull(buf, len) }
         })
     }
