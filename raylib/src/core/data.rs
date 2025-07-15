@@ -198,6 +198,7 @@ impl<T: ?Sized> Deref for DataBuf<T> {
     #[inline]
     fn deref(&self) -> &Self::Target {
         // SAFETY: `buf` is non-null, unique, & valid, and guaranteed convertible to a reference.
+        // Mutating the original pointer while the reference is live is impossible because the method accepts `&self`.
         unsafe { self.buf.as_ref() }
     }
 }
@@ -206,6 +207,8 @@ impl<T: ?Sized> DerefMut for DataBuf<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         // SAFETY: `buf` is non-null, unique, & valid, and guaranteed convertible to a reference.
+        // Accessing the original pointer while the reference is live is impossible because the method accepts `&mut self`.
+        // `RL_MALLOC` always returns mutable memory, so making the pointer into a mutable reference is valid.
         unsafe { self.buf.as_mut() }
     }
 }
