@@ -73,6 +73,22 @@ mod rl_managed {
         pub(crate) const unsafe fn new(data: NonNull<T>) -> Self {
             Self(data)
         }
+
+        /// Returns a shared reference to the value.
+        #[inline]
+        pub const fn as_ref(&self) -> &T {
+            // SAFETY: Field must be unique, not dangling, and convertible to reference.
+            // Taking `self` by reference guarantees aliasing rules are followed.
+            unsafe { self.0.as_ref() }
+        }
+
+        /// Returns a unique reference to the value.
+        #[inline]
+        pub const fn as_mut(&mut self) -> &mut T {
+            // SAFETY: Field must be unique, not dangling, and convertible to reference.
+            // Taking `self` by mutable reference guarantees aliasing rules are followed.
+            unsafe { self.0.as_mut() }
+        }
     }
 
     impl<T> RlManaged<[T]> {
@@ -126,7 +142,7 @@ mod rl_managed {
         /// Free `ptr` using [`ffi::MemFree`].
         #[inline]
         pub fn mem_free(self) {
-            // SAFETY: `self` is non-null and Raylib-allocated.
+            // SAFETY: `self` is non-null, not dangling, and Raylib-allocated.
             unsafe {
                 ffi::MemFree(self.0.as_ptr().cast());
             }
@@ -197,19 +213,14 @@ impl<T: ?Sized> Deref for DataBuf<T> {
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        // SAFETY: `buf` is non-null, unique, & valid, and guaranteed convertible to a reference.
-        // Mutating the original pointer while the reference is live is impossible because the method accepts `&self`.
-        unsafe { self.buf.as_ref() }
+        self.as_ref()
     }
 }
 
 impl<T: ?Sized> DerefMut for DataBuf<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // SAFETY: `buf` is non-null, unique, & valid, and guaranteed convertible to a reference.
-        // Accessing the original pointer while the reference is live is impossible because the method accepts `&mut self`.
-        // `RL_MALLOC` always returns mutable memory, so making the pointer into a mutable reference is valid.
-        unsafe { self.buf.as_mut() }
+        self.as_mut()
     }
 }
 
@@ -227,6 +238,27 @@ impl<T: ?Sized> AsMut<T> for DataBuf<T> {
     }
 }
 
+impl<T> DataBuf<MaybeUninit<T>> {
+    /// Initialize the buffer with valid memory.
+    #[inline]
+    pub const fn write(mut self, val: T) -> DataBuf<T> {
+        MaybeUninit::write(self.buf.as_mut(), val);
+        // SAFETY: We just initialized this value.
+        unsafe { self.assume_init() }
+    }
+
+    /// Mark that the data pointed to by `self` is initialized.
+    ///
+    /// # Safety
+    ///
+    /// The data pointed to by `self` must actually be initialized.
+    #[inline]
+    pub const unsafe fn assume_init(self) -> DataBuf<T> {
+        // SAFETY: `DataBuf<MaybeUninit<T>>` and `DataBuf<T>` have the same layout
+        unsafe { std::mem::transmute::<DataBuf<MaybeUninit<T>>, DataBuf<T>>(self) }
+    }
+}
+
 impl<T> DataBuf<[MaybeUninit<T>]> {
     /// Mark that the data pointed to by `self` is initialized.
     ///
@@ -241,9 +273,21 @@ impl<T> DataBuf<[MaybeUninit<T>]> {
 }
 
 impl<T: ?Sized> DataBuf<T> {
+    /// Returns a shared reference to the value.
+    #[inline]
+    pub const fn as_ref(&self) -> &T {
+        self.buf.as_ref()
+    }
+
+    /// Returns a unique reference to the value.
+    #[inline]
+    pub const fn as_mut(&mut self) -> &mut T {
+        self.buf.as_mut()
+    }
+
     /// Wrap an already allocated, non-null, Raylib-managed pointer in a [`DataBuf`].
     #[inline]
-    pub(crate) fn from_rlmanaged(buf: RlManaged<T>) -> Self {
+    pub(crate) const fn from_rlmanaged(buf: RlManaged<T>) -> Self {
         Self {
             buf,
             _marker: PhantomData,
@@ -256,7 +300,7 @@ impl<T: ?Sized> DataBuf<T> {
     ///
     /// See the [`DataBuf`] safety requirements.
     #[inline]
-    pub(crate) unsafe fn from_nonnull(data: NonNull<T>) -> Self {
+    pub(crate) const unsafe fn from_nonnull(data: NonNull<T>) -> Self {
         // SAFETY: Caller must ensure `data` is Raylib-managed.
         let buf = unsafe { RlManaged::new(data) };
         Self::from_rlmanaged(buf)
@@ -269,10 +313,13 @@ impl<T: ?Sized> DataBuf<T> {
     ///
     /// See the [`DataBuf`] safety requirements.
     #[inline]
-    pub(crate) unsafe fn from_raw(ptr: *mut T) -> Option<Self> {
-        NonNull::new(ptr).map(|buf|
+    pub(crate) const unsafe fn from_raw(ptr: *mut T) -> Option<Self> {
+        if let Some(buf) = NonNull::new(ptr) {
             // SAFETY: Caller must uphold safety contract.
-            unsafe { Self::from_nonnull(buf) })
+            Some(unsafe { Self::from_nonnull(buf) })
+        } else {
+            None
+        }
     }
 
     /// Extract the pointer without freeing it, for the purpose of transferring ownership.
@@ -292,6 +339,43 @@ impl<T: ?Sized> DataBuf<T> {
     }
 }
 
+impl<T> DataBuf<T> {
+    /// Allocate new memory managed by Raylib.
+    #[inline]
+    pub fn alloc() -> Result<DataBuf<MaybeUninit<T>>, AllocationError> {
+        let bytes = allocation_array_size::<T>(1)?;
+        let buf = mem_alloc::<T>(bytes).ok_or(AllocationError::NullAlloc)?;
+        Ok(DataBuf::from_rlmanaged(buf))
+    }
+
+    /// Allocate new memory managed by Raylib and move `val` into it.
+    #[inline]
+    pub fn alloc_from(val: T) -> Result<Self, (AllocationError, T)> {
+        match Self::alloc() {
+            Ok(buf) => Ok(buf.write(val)),
+            Err(e) => Err((e, val)),
+        }
+    }
+
+    /// Allocate new memory managed by Raylib and clone `val` into it.
+    #[inline]
+    pub fn alloc_from_clone(src: &T) -> Result<Self, AllocationError>
+    where
+        T: Clone,
+    {
+        Ok(Self::alloc()?.write(src.clone()))
+    }
+
+    /// Allocate new memory managed by Raylib and copy `val` into it.
+    #[inline]
+    pub fn alloc_from_copy(src: &T) -> Result<Self, AllocationError>
+    where
+        T: Copy,
+    {
+        Ok(Self::alloc()?.write(*src))
+    }
+}
+
 impl<T> DataBuf<[T]> {
     /// Wrap an already allocated pointer in a [`DataBuf`].
     ///
@@ -300,13 +384,8 @@ impl<T> DataBuf<[T]> {
     /// **In addition** to the [`DataBuf`] and [`from_raw_parts_mut`](std::slice::from_raw_parts_mut)
     /// safety requirements, this function also requires:
     /// - `buf` must point to an array of as many valid, initialized elements as defined by `count`.
-    ///
-    /// # Panics
-    ///
-    /// This method may panic if `buf` is both non-null and unaligned.
     #[inline]
-    pub(crate) unsafe fn slice_from_nonnull(buf: NonNull<T>, len: NonZeroUsize) -> Self {
-        assert!(buf.is_aligned(), "DataBuf should be aligned");
+    pub(crate) const unsafe fn slice_from_nonnull(buf: NonNull<T>, len: NonZeroUsize) -> Self {
         // SAFETY: Caller must uphold `from_raw_parts_mut` safety contract
         let slice = unsafe { std::slice::from_raw_parts_mut(buf.as_ptr(), len.get()) };
         // SAFETY: A mutable reference cannot be null.
@@ -330,19 +409,30 @@ impl<T> DataBuf<[T]> {
     ///
     /// # Panics
     ///
-    /// This method may panic if `count` is less than 1 while `buf` is non-null.
+    /// This method may panic if `count` is less than 1 or greater than [`usize::MAX`] while `buf` is non-null.
     #[inline]
-    pub(crate) unsafe fn slice_from_raw(ptr: *mut T, count: MaybeUninit<i32>) -> Option<Self> {
-        NonNull::new(ptr).map(|buf| {
+    pub(crate) const unsafe fn slice_from_raw(
+        ptr: *mut T,
+        count: MaybeUninit<i32>,
+    ) -> Option<Self> {
+        if let Some(buf) = NonNull::new(ptr) {
             // SAFETY: Caller must ensure `count` is initialized if `buf` is non-null.
-            let len = unsafe { count.assume_init() }
-                .try_into()
-                .ok()
-                .and_then(NonZeroUsize::new)
-                .unwrap();
+            let count = unsafe { count.assume_init() };
+            assert!(count >= 1, "`count` should be positive");
+            // confirm `as usize` will not overflow
+            if const { i32::BITS > usize::BITS } {
+                assert!(
+                    count <= usize::MAX as i32,
+                    "`count` should fit within usize"
+                );
+            }
+            // SAFETY: Just checked that count is non-zero and positive.
+            let len = unsafe { NonZeroUsize::new_unchecked(count as usize) };
             // SAFETY: Caller must uphold `DataBuf` and `slice` safety contracts
-            unsafe { Self::slice_from_nonnull(buf, len) }
-        })
+            Some(unsafe { Self::slice_from_nonnull(buf, len) })
+        } else {
+            None
+        }
     }
 
     /// Allocate new memory managed by Raylib.
@@ -384,16 +474,38 @@ impl<T> DataBuf<[T]> {
     /// let mut data_buf = DataBuf::<[i32]>::alloc_from_copy(&src).unwrap();
     /// assert_eq!(data_buf.as_ref(), &src);
     /// ```
+    pub fn alloc_from_clone(src: &[T]) -> Result<Self, AllocationError>
+    where
+        T: Copy,
+    {
+        let mut buf = Self::alloc(src.len())?;
+        // SAFETY: `&[T]` and `&[MaybeUninit<T>]` have the same layout.
+        let uninit_src = unsafe { std::mem::transmute::<&[T], &[MaybeUninit<T>]>(src) };
+        buf.copy_from_slice(uninit_src);
+        // SAFETY: Valid elements have just been copied into `self` so it is initialized.
+        Ok(unsafe { buf.assume_init() })
+    }
+
+    /// Allocate memory managed by Raylib and initialize by copying.
+    ///
+    /// # Panics
+    ///
+    /// This method may panic in debug if the pointer returned by [`ffi::MemAlloc`] is unaligned.
+    ///
+    /// # Example
+    /// ```
+    /// # use raylib::prelude::DataBuf;
+    /// let src = [4, 8, -23, 9, 0];
+    /// let mut data_buf = DataBuf::<[i32]>::alloc_from_copy(&src).unwrap();
+    /// assert_eq!(data_buf.as_ref(), &src);
+    /// ```
     pub fn alloc_from_copy(src: &[T]) -> Result<Self, AllocationError>
     where
         T: Copy,
     {
-        let bytes = allocation_val_size(src)?;
-        let buf = mem_alloc::<T>(bytes).ok_or(AllocationError::NullAlloc)?;
-        let buf = RlManaged::slice_from_raw_parts(buf, src.len());
+        let mut buf = Self::alloc(src.len())?;
         // SAFETY: `&[T]` and `&[MaybeUninit<T>]` have the same layout.
         let uninit_src = unsafe { std::mem::transmute::<&[T], &[MaybeUninit<T>]>(src) };
-        let mut buf = DataBuf::from_rlmanaged(buf);
         buf.copy_from_slice(uninit_src);
         // SAFETY: Valid elements have just been copied into `self` so it is initialized.
         Ok(unsafe { buf.assume_init() })
@@ -418,6 +530,77 @@ impl<T> DataBuf<[T]> {
                 Ok(DataBuf::from_rlmanaged(new_buf))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod databuf_tests {
+    use super::*;
+
+    #[test]
+    fn test_drop_value() {
+        struct DropTest<F: FnMut()>(F);
+        impl<F: FnMut()> Drop for DropTest<F> {
+            fn drop(&mut self) {
+                (self.0)();
+            }
+        }
+        impl<F: FnMut()> std::fmt::Debug for DropTest<F> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_tuple("DropTest").finish()
+            }
+        }
+
+        let mut times_dropped = 0;
+        let buf = DataBuf::alloc_from(DropTest(|| times_dropped += 1)).unwrap();
+        drop(buf);
+        assert_eq!(
+            times_dropped, 1,
+            "DataBuf should drop contents exactly once"
+        );
+    }
+
+    #[test]
+    fn test_from_raw() {
+        type ExpectTy = [i32; 5];
+        const EXPECT: [i32; 5] = [64, 264, -57, 653, -153];
+        let bytes @ 1.. = (std::mem::size_of::<i32>() * EXPECT.len())
+            .try_into()
+            .unwrap()
+        else {
+            unreachable!()
+        };
+        let ptr = unsafe { ffi::MemAlloc(bytes) }.cast::<ExpectTy>();
+        assert!(!ptr.is_null(), "should be able to allocate");
+        // SAFETY: `ptr` is not null and `MemAlloc` returns owned memory.
+        unsafe {
+            ptr.write(EXPECT);
+        };
+        let buf = unsafe { DataBuf::from_raw(ptr) }.expect("ptr should be convertible to DataBuf");
+        assert_eq!(&*buf, &EXPECT);
+    }
+
+    #[test]
+    fn test_slice_from_raw() {
+        type ExpectTy = [i32; 5];
+        const EXPECT: ExpectTy = [6, -453, 364, 45632, -1233];
+        let bytes @ 1.. = (std::mem::size_of::<i32>() * EXPECT.len())
+            .try_into()
+            .unwrap()
+        else {
+            unreachable!()
+        };
+        let ptr = unsafe { ffi::MemAlloc(bytes) }.cast::<i32>();
+        assert!(!ptr.is_null(), "should be able to allocate");
+        // SAFETY: `ptr` is not null and `MemAlloc` returns owned memory.
+        unsafe {
+            ptr.cast::<ExpectTy>().write(EXPECT);
+        };
+        let buf = unsafe {
+            DataBuf::slice_from_raw(ptr, MaybeUninit::new(EXPECT.len().try_into().unwrap()))
+        }
+        .expect("ptr should be convertible to DataBuf");
+        assert_eq!(&*buf, &EXPECT);
     }
 }
 
