@@ -401,15 +401,20 @@ impl<T> DataBuf<[T]> {
     /// # Panics
     ///
     /// This method may panic in debug if the pointer returned by [`ffi::MemAlloc`] is unaligned.
-    pub fn realloc(self, new_count: usize) -> Result<DataBuf<[MaybeUninit<T>]>, AllocationError> {
-        let bytes = allocation_array_size::<T>(new_count)?;
-        let old_ptr = self.leak();
-        let new_buf = old_ptr.mem_realloc(bytes).map_err(|old_ptr| {
-            old_ptr.mem_free();
-            AllocationError::NullAlloc
-        })?;
-        let new_buf = RlManaged::slice_from_raw_parts(new_buf, new_count);
-        Ok(DataBuf::from_rlmanaged(new_buf))
+    pub fn realloc(
+        self,
+        new_count: usize,
+    ) -> Result<DataBuf<[MaybeUninit<T>]>, (AllocationError, Self)> {
+        match allocation_array_size::<T>(new_count) {
+            Err(e) => Err((e, self)),
+            Ok(bytes) => {
+                let new_buf = self.leak().mem_realloc(bytes).map_err(|old_buf| {
+                    (AllocationError::NullAlloc, Self::from_rlmanaged(old_buf))
+                })?;
+                let new_buf = RlManaged::slice_from_raw_parts(new_buf, new_count);
+                Ok(DataBuf::from_rlmanaged(new_buf))
+            }
+        }
     }
 }
 
