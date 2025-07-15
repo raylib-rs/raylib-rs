@@ -91,11 +91,11 @@ mod rl_managed {
         ///
         /// **NOTE:** This method eliminates the slice metadata, converting it from a wide pointer
         /// to a thin pointer. This is intentional. Raylib does not use wide pointers, so the thin
-        /// pointer will be more applicable.
-        /// (and is what was returned by the allocator in the first place, making it safe to free)
+        /// pointer will be more applicable (and is what was returned by the allocator in the first
+        /// place, making it safe to call [`ffi::MemFree`] with).
         #[inline]
-        pub const fn as_ptr(self) -> *mut T {
-            self.0.cast().as_ptr()
+        pub const fn into_inner(self) -> NonNull<T> {
+            self.0.cast()
         }
     }
 
@@ -276,7 +276,7 @@ impl<T: ?Sized> DataBuf<T> {
     ///
     /// **WARNING:** The returned pointer must be unloaded manually to avoid a memory leak.
     #[inline]
-    pub const fn leak(self) -> RlManaged<T> {
+    pub const fn into_inner(self) -> RlManaged<T> {
         let mut buf = MaybeUninit::uninit();
         // SAFETY: Both `self.buf` and `ptr` are non-null and valid for 1 element.
         unsafe {
@@ -408,7 +408,7 @@ impl<T> DataBuf<[T]> {
         match allocation_array_size::<T>(new_count) {
             Err(e) => Err((e, self)),
             Ok(bytes) => {
-                let new_buf = self.leak().mem_realloc(bytes).map_err(|old_buf| {
+                let new_buf = self.into_inner().mem_realloc(bytes).map_err(|old_buf| {
                     (AllocationError::NullAlloc, Self::from_rlmanaged(old_buf))
                 })?;
                 let new_buf = RlManaged::slice_from_raw_parts(new_buf, new_count);
