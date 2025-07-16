@@ -43,24 +43,30 @@ mod rl_managed {
     use super::*;
 
     /// Raylib-managed [`NonNull`].
+    ///
+    /// # Safety
+    ///
+    /// [`RlManaged`] must be unique, not dangling, and allocated with `RL_ALLOC`/[`ffi::MemAlloc`]
+    /// or `RL_REALLOC`/[`ffi::MemRealloc`].
+    ///
+    /// **However**, it is *not* guaranteed to be safe to dereference. It is the user's responsibility
+    /// to ensure the pointer stored in [`RlManaged`] is safe to dereference as the type it claims to
+    /// be, for the count it claims to be, before dereferencing.
+    ///
+    /// [`RlManaged`] does not guarantee the size, alignment, nor validity of its allocation -- **it
+    /// only guarantees that its memory block is safe for Raylib to re/deallocate**.
     #[repr(transparent)]
     #[derive(Debug)]
     pub struct RlManaged<T: ?Sized>(/* unsafe */ NonNull<T>);
 
-    impl<T: ?Sized> std::ops::Deref for RlManaged<T> {
-        type Target = NonNull<T>;
-
-        #[inline]
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
-    }
-
-    impl<T: ?Sized> std::ops::DerefMut for RlManaged<T> {
-        #[inline]
-        fn deref_mut(&mut self) -> &mut Self::Target {
-            &mut self.0
-        }
+    /// Allocate `size` bytes of memory aligned to `T` using [`ffi::MemAlloc`].
+    ///
+    /// Returns [`None`] if [`ffi::MemAlloc`] returned null.
+    #[inline]
+    pub fn mem_alloc<T>(size: NonZeroU32) -> Option<RlManaged<MaybeUninit<T>>> {
+        // SAFETY: `size` is not zero.
+        let ptr = unsafe { ffi::MemAlloc(size.get()) }.cast();
+        NonNull::new(ptr).map(RlManaged)
     }
 
     impl<T: ?Sized> RlManaged<T> {
@@ -75,19 +81,63 @@ mod rl_managed {
         }
 
         /// Returns a shared reference to the value.
+        ///
+        /// # Safety
+        ///
+        /// `self` must be safe to dereference as `T`.
+        /// See [`RlManaged`] safety for more information.
         #[inline]
-        pub const fn as_ref(&self) -> &T {
-            // SAFETY: Field must be unique, not dangling, and convertible to reference.
+        pub const unsafe fn as_ref(&self) -> &T {
+            // SAFETY: RlManaged must be unique and cannot dangle.
             // Taking `self` by reference guarantees aliasing rules are followed.
+            // Caller must ensure `self` is safe to dereference.
             unsafe { self.0.as_ref() }
         }
 
         /// Returns a unique reference to the value.
+        ///
+        /// # Safety
+        ///
+        /// `self` must be safe to dereference as `T`.
+        /// See [`RlManaged`] safety for more information.
         #[inline]
-        pub const fn as_mut(&mut self) -> &mut T {
-            // SAFETY: Field must be unique, not dangling, and convertible to reference.
+        pub const unsafe fn as_mut(&mut self) -> &mut T {
+            // SAFETY: RlManaged must be unique and cannot dangle.
             // Taking `self` by mutable reference guarantees aliasing rules are followed.
+            // Caller must ensure `self` is safe to dereference.
             unsafe { self.0.as_mut() }
+        }
+
+        /// Access the pointer of this allocation.
+        #[inline]
+        pub const fn into_inner(self) -> NonNull<T> {
+            self.0
+        }
+
+        /// Reallocate `self` to have `size` bytes of memory aligned to `U` using [`ffi::MemRealloc`].
+        ///
+        /// Any elements that were initialized prior to calling will still be initialized after reallocating.
+        /// Any elements that were not previously in the allocation are uninitialized.
+        ///
+        /// Returns the original memory block if [`ffi::MemRealloc`] returned null.
+        ///
+        /// **WARNING:** This method does not drop the contents of `self`.
+        #[inline]
+        pub fn mem_realloc<U>(self, size: NonZeroU32) -> Result<RlManaged<MaybeUninit<U>>, Self> {
+            // SAFETY: `self` is non-null and is Raylib-allocated, and `size` is not zero.
+            let new_ptr = unsafe { ffi::MemRealloc(self.0.as_ptr().cast(), size.get()) }.cast();
+            NonNull::new(new_ptr).map(RlManaged).ok_or_else(|| self)
+        }
+
+        /// Free `self` using [`ffi::MemFree`].
+        ///
+        /// **WARNING:** This method does not drop the contents of `self`.
+        #[inline]
+        pub fn mem_free(self) {
+            // SAFETY: `self` is non-null, not dangling, and Raylib-allocated.
+            unsafe {
+                ffi::MemFree(self.0.as_ptr().cast());
+            }
         }
     }
 
@@ -101,51 +151,6 @@ mod rl_managed {
         #[inline]
         pub(crate) const fn slice_from_raw_parts(data: RlManaged<T>, len: usize) -> Self {
             Self(NonNull::slice_from_raw_parts(data.0, len))
-        }
-
-        /// Access the pointer of this allocation.
-        ///
-        /// **NOTE:** This method eliminates the slice metadata, converting it from a wide pointer
-        /// to a thin pointer. This is intentional. Raylib does not use wide pointers, so the thin
-        /// pointer will be more applicable (and is what was returned by the allocator in the first
-        /// place, making it safe to call [`ffi::MemFree`] with).
-        #[inline]
-        pub const fn into_inner(self) -> NonNull<T> {
-            self.0.cast()
-        }
-    }
-
-    /// Allocate `size` bytes of memory aligned to `T` using [`ffi::MemAlloc`].
-    ///
-    /// Returns [`None`] if [`ffi::MemAlloc`] returned null.
-    #[inline]
-    pub fn mem_alloc<T>(size: NonZeroU32) -> Option<RlManaged<MaybeUninit<T>>> {
-        // SAFETY: `size` is not zero.
-        let ptr = unsafe { ffi::MemAlloc(size.get()) }.cast();
-        NonNull::new(ptr).map(RlManaged)
-    }
-
-    impl<T: ?Sized> RlManaged<T> {
-        /// Reallocate `ptr` to have `size` bytes of memory aligned to `U` using [`ffi::MemRealloc`].
-        ///
-        /// Any elements that were initialized prior to calling will still be initialized after reallocating.
-        /// Any elements that were not previously in the allocation are uninitialized.
-        ///
-        /// Returns the original memory block if [`ffi::MemRealloc`] returned null.
-        #[inline]
-        pub fn mem_realloc<U>(self, size: NonZeroU32) -> Result<RlManaged<MaybeUninit<U>>, Self> {
-            // SAFETY: `self` is non-null and is Raylib-allocated, and `size` is not zero.
-            let new_ptr = unsafe { ffi::MemRealloc(self.0.as_ptr().cast(), size.get()) }.cast();
-            NonNull::new(new_ptr).map(RlManaged).ok_or_else(|| self)
-        }
-
-        /// Free `ptr` using [`ffi::MemFree`].
-        #[inline]
-        pub fn mem_free(self) {
-            // SAFETY: `self` is non-null, not dangling, and Raylib-allocated.
-            unsafe {
-                ffi::MemFree(self.0.as_ptr().cast());
-            }
         }
     }
 }
@@ -195,16 +200,25 @@ impl<T: ?Sized> Drop for DataBuf<T> {
     fn drop(&mut self) {
         let mut ptr = MaybeUninit::uninit();
         // SAFETY: Both `self.buf` and `ptr` are non-null and valid for 1 element.
+        // Taking `self` by mutable reference ensures aliasing rules are upheld
+        // outside of the method; and `self` is not used again after this line.
+        // Because `drop` is the end of `self`'s lifetime, `buf` is guaranteed not
+        // to be accessed again after the function returns.
         unsafe {
             std::ptr::copy_nonoverlapping(std::ptr::from_ref(&self.buf), ptr.as_mut_ptr(), 1)
         };
-        // SAFETY: Just written to with a valid value
-        let ptr = unsafe { ptr.assume_init() };
-        // SAFETY: `RlManaged` is guaranteed to be unique, non-null, valid, and not dangling
+        // SAFETY: Just written to with a valid value.
+        let data = unsafe { ptr.assume_init() }.into_inner();
+        // SAFETY: DataBuf `buf` is guaranteed to be unique, owned, non-null, valid, and not dangling.
+        // DataBuf and RlManaged do not implement Clone, and `drop` is called *at most once*, so `data`
+        // is guaranteed not to have been dropped for `T` yet so long as DataBuf's safety contract has
+        // been upheld.
         unsafe {
-            ptr.drop_in_place();
+            data.drop_in_place();
         }
-        ptr.mem_free(); // `ptr` will not be observed after free
+        // SAFETY: `data` taken from `RlManaged` is still managed by Raylib after contents is dropped.
+        // Any copies of `data` go out of scope, preventing double-free.
+        unsafe { RlManaged::new(data) }.mem_free();
     }
 }
 
@@ -242,7 +256,10 @@ impl<T> DataBuf<MaybeUninit<T>> {
     /// Initialize the buffer with valid memory.
     #[inline]
     pub const fn write(mut self, val: T) -> DataBuf<T> {
-        MaybeUninit::write(self.buf.as_mut(), val);
+        // SAFETY: DataBuf guarantees `buf` is safe to dereference, and
+        // ownership of `self` ensures aliasing rules are followed.
+        let buf = unsafe { self.buf.as_mut() };
+        MaybeUninit::write(buf, val);
         // SAFETY: We just initialized this value.
         unsafe { self.assume_init() }
     }
@@ -276,13 +293,17 @@ impl<T: ?Sized> DataBuf<T> {
     /// Returns a shared reference to the value.
     #[inline]
     pub const fn as_ref(&self) -> &T {
-        self.buf.as_ref()
+        // SAFETY: DataBuf guarantees `buf` is safe to dereference, and taking
+        // `self` by reference ensures aliasing rules are followed.
+        unsafe { self.buf.as_ref() }
     }
 
     /// Returns a unique reference to the value.
     #[inline]
     pub const fn as_mut(&mut self) -> &mut T {
-        self.buf.as_mut()
+        // SAFETY: DataBuf guarantees `buf` is safe to dereference, and taking
+        // `self` by mutable reference ensures aliasing rules are followed.
+        unsafe { self.buf.as_mut() }
     }
 
     /// Wrap an already allocated, non-null, Raylib-managed pointer in a [`DataBuf`].
