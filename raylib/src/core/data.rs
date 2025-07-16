@@ -205,7 +205,7 @@ impl<T: ?Sized> Drop for DataBuf<T> {
         // Because `drop` is the end of `self`'s lifetime, `buf` is guaranteed not
         // to be accessed again after the function returns.
         unsafe {
-            std::ptr::copy_nonoverlapping(std::ptr::from_ref(&self.buf), ptr.as_mut_ptr(), 1)
+            std::ptr::copy_nonoverlapping(std::ptr::from_ref(&self.buf), ptr.as_mut_ptr(), 1);
         };
         // SAFETY: Just written to with a valid value.
         let data = unsafe { ptr.assume_init() }.into_inner();
