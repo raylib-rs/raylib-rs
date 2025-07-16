@@ -1,9 +1,8 @@
 use crate::{databuf::DataBuf, error::CompressionError, ffi};
-#[cfg(not(unix))]
-use std::path::Path;
 use std::{
     ffi::{CString, c_char},
     mem::MaybeUninit,
+    path::Path,
 };
 
 /// Compress data (DEFLATE algorithm)
