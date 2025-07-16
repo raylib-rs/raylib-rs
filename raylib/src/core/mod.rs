@@ -11,6 +11,7 @@ pub mod color {
     pub use crate::ffi::Color;
 }
 pub mod data;
+pub mod databuf;
 pub mod drawing;
 pub mod error;
 pub mod file;
