@@ -2154,3 +2154,35 @@ pub trait RaylibDraw3D {
         }
     }
 }
+
+/// Equivelent to `&mut dyn RaylibDraw`.
+// if a draw mode that actually requires an accurate &self for its methods is ever added,
+// this can be converted to use Cow.
+//
+// SAFETY: must be constructed by mutably borrowing an implementor of RaylibDraw
+pub struct DynRaylibDraw<'a>(PhantomData<&'a mut ()>);
+
+impl<'a> DynRaylibDraw<'a> {
+    pub fn new<T: RaylibDraw>(inner: &'a mut T) -> Self {
+        let _ = inner;
+        DynRaylibDraw(PhantomData)
+    }
+}
+
+impl<'a> RaylibDraw for DynRaylibDraw<'a> {}
+
+/// Equivelent to `&mut dyn RaylibDraw3D`.
+// if a draw mode that actually requires an accurate &self for its methods is ever added,
+// this can be converted to use Cow.
+//
+// SAFETY: must be constructed by mutably  borrowing an implementor of RaylibDraw3D
+pub struct DynRaylibDraw3D<'a>(PhantomData<&'a ()>);
+
+impl<'a> DynRaylibDraw3D<'a> {
+    pub fn new<T: RaylibDraw3D>(inner: &'a mut T) -> Self {
+        let _ = inner;
+        DynRaylibDraw3D(PhantomData)
+    }
+}
+
+impl<'a> RaylibDraw3D for DynRaylibDraw3D<'a> {}
