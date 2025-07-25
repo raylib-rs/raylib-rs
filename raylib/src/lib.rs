@@ -59,6 +59,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 #![warn(
     clippy::all,
     clippy::pedantic,
+    clippy::style,
     clippy::unwrap_used,
     reason = "temporary while cleaning up"
 )]
