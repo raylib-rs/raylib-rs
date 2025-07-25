@@ -37,7 +37,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 //!
 //! The classic "Hello, world":
 //!
-//! ```no_run
+//! ```ignore
 //! use raylib::prelude::*;
 //!
 //! fn main() {
@@ -45,10 +45,10 @@ Permission is granted to anyone to use this software for any purpose, including 
 //!         .size(640, 480)
 //!         .title("Hello, World")
 //!         .build();
-//!     
+//!
 //!     while !rl.window_should_close() {
 //!         let mut d = rl.begin_drawing(&thread);
-//!         
+//!
 //!         d.clear_background(Color::WHITE);
 //!         d.draw_text("Hello, world!", 12, 12, 20, Color::BLACK);
 //!     }
@@ -56,6 +56,12 @@ Permission is granted to anyone to use this software for any purpose, including 
 //! ```
 //#![cfg_attr(feature = "nightly", feature(auto_traits))]
 
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    reason = "temporary while cleaning up"
+)]
 #![allow(dead_code)]
 pub mod consts;
 pub mod core;

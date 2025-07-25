@@ -15,7 +15,7 @@ type RawAudioCallbackWithUserData = extern "C" fn(
 ) -> ();
 
 /// This is a tuple of `user_data` which represents
-/// our context (see RawAudioCallbackWithUserData)
+/// our context (see [`RawAudioCallbackWithUserData`])
 /// and the callback we wish to pass to our raylib
 /// abstraction layer (wrapping the real raylib
 /// callback to plug in our context).
@@ -32,7 +32,7 @@ impl AudioCallbackWithUserData {
         raw_callback: RawAudioCallbackWithUserData,
     ) -> Self {
         AudioCallbackWithUserData {
-            user_data: user_data,
+            user_data,
             callback: Some(raw_callback),
         }
     }

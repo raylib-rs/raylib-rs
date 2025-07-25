@@ -55,21 +55,28 @@ impl Drop for WaveSamples {
     }
 }
 
-/// A marker trait specifying an audio sample (`u8`, `i16`, or `f32`).
-pub trait AudioSample {}
-impl AudioSample for u8 {}
-impl AudioSample for i16 {}
-impl AudioSample for f32 {}
+mod sealed {
+    /// A marker trait specifying an audio sample (`u8`, `i16`, or `f32`).
+    pub trait AudioSample {}
+    impl AudioSample for u8 {}
+    impl AudioSample for i16 {}
+    impl AudioSample for f32 {}
+}
+pub use sealed::AudioSample;
 
 /// This token is used to indicate audio is initialized. It's also used to create [`Wave`], [`Sound`], [`Music`], [`AudioStream`], and [`SoundAlias`].
-/// All of those have a lifetime that is bound to RaylibAudio. The compiler will disallow you from using them without ensuring that the [`RaylibAudio`] is present while doing so.
+/// All of those have a lifetime that is bound to [`RaylibAudio`]. The compiler will disallow you from using them without ensuring that the [`RaylibAudio`] is present while doing so.
 #[derive(Debug, Clone)]
 pub struct RaylibAudio(PhantomData<()>);
 
 impl RaylibAudio {
     /// Initializes audio device and context.
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`AudioInitError::DoubleInit`] if the audio device is already initialized before calling,
+    /// or [`AudioInitError::InitFailed`] if the audio device fails to be initialized after calling.
     #[inline]
-    #[must_use]
     pub fn init_audio_device() -> Result<RaylibAudio, AudioInitError> {
         unsafe {
             if ffi::IsAudioDeviceReady() {
@@ -112,10 +119,18 @@ impl RaylibAudio {
     }
 
     /// Loads a new sound from file.
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadSoundError::LoadFailed`] if [`ffi::LoadSound`] returns a sound whose `buffer` is null.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte.
     #[inline]
-    #[must_use]
     pub fn new_sound<'aud>(&'aud self, filename: &str) -> Result<Sound<'aud>, LoadSoundError> {
-        let c_filename = CString::new(filename).unwrap();
+        let c_filename =
+            CString::new(filename).expect("filename should not contain an internal 0 byte");
         let s = unsafe { ffi::LoadSound(c_filename.as_ptr()) };
         if s.stream.buffer.is_null() {
             return Err(LoadSoundError::LoadFailed {
@@ -127,8 +142,11 @@ impl RaylibAudio {
     }
 
     /// Loads sound from wave data.
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadSoundError::LoadFromWaveFailed`] if [`ffi::LoadSoundFromWave`] returns a sound whose `buffer` is null.
     #[inline]
-    #[must_use]
     pub fn new_sound_from_wave<'aud>(
         &'aud self,
         wave: &Wave,
@@ -139,11 +157,20 @@ impl RaylibAudio {
         }
         Ok(Sound(s, self))
     }
+
     /// Loads wave data from file into RAM.
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadSoundError::LoadWaveFromFileFailed`] if [`ffi::LoadWave`] returns a sound whose `buffer` is null.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte.
     #[inline]
-    #[must_use]
     pub fn new_wave<'aud>(&'aud self, filename: &str) -> Result<Wave<'aud>, LoadSoundError> {
-        let c_filename = CString::new(filename).unwrap();
+        let c_filename =
+            CString::new(filename).expect("filename should not contain an internal 0 byte");
         let w = unsafe { ffi::LoadWave(c_filename.as_ptr()) };
         if w.data.is_null() {
             return Err(LoadSoundError::LoadWaveFromFileFailed {
@@ -154,28 +181,51 @@ impl RaylibAudio {
     }
 
     /// Load wave from memory buffer, fileType refers to extension: i.e. '.wav'
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadSoundError::Null`] if [`ffi::LoadWaveFromMemory`] returns a wave whose `data` is null.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filetype` contains an internal 0 byte or if `bytes` has a length greater than [`i32::MAX`].
     #[inline]
-    #[must_use]
     pub fn new_wave_from_memory<'aud>(
         &'aud self,
         filetype: &str,
         bytes: &[u8],
     ) -> Result<Wave<'aud>, LoadSoundError> {
-        let c_filetype = CString::new(filetype).unwrap();
+        let c_filetype =
+            CString::new(filetype).expect("filetype should not contain an internal 0 byte");
         let w = unsafe {
-            ffi::LoadWaveFromMemory(c_filetype.as_ptr(), bytes.as_ptr(), bytes.len() as i32)
+            ffi::LoadWaveFromMemory(
+                c_filetype.as_ptr(),
+                bytes.as_ptr(),
+                bytes
+                    .len()
+                    .try_into()
+                    .expect("bytes should not exceed i32::MAX elements"),
+            )
         };
         if w.data.is_null() {
             return Err(LoadSoundError::Null);
-        };
+        }
         Ok(Wave(w, self))
     }
 
     /// Loads music stream from file.
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadSoundError::LoadMusicFromFileFailed`] if [`ffi::LoadMusicStream`] returns a music whose stream buffer is null.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte.
     #[inline]
-    #[must_use]
     pub fn new_music<'aud>(&'aud self, filename: &str) -> Result<Music<'aud>, LoadSoundError> {
-        let c_filename = CString::new(filename).unwrap();
+        let c_filename =
+            CString::new(filename).expect("filename should not contain an internal 0 byte");
         let m = unsafe { ffi::LoadMusicStream(c_filename.as_ptr()) };
         if m.stream.buffer.is_null() {
             return Err(LoadSoundError::LoadMusicFromFileFailed {
@@ -186,32 +236,47 @@ impl RaylibAudio {
     }
 
     /// Load music stream from data
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadSoundError::MusicNull`] if [`ffi::LoadMusicStreamFromMemory`] returns a music whose stream buffer is null.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filetype` contains an internal 0 byte or if `bytes` has a length greater than [`i32::MAX`].
     #[inline]
-    #[must_use]
     pub fn new_music_from_memory<'aud>(
         &'aud self,
         filetype: &str,
-        bytes: &Vec<u8>,
+        bytes: &[u8],
     ) -> Result<Music<'aud>, LoadSoundError> {
-        let c_filetype = CString::new(filetype).unwrap();
+        let c_filetype =
+            CString::new(filetype).expect("filetype should not contain an internal 0 byte");
         let w = unsafe {
-            ffi::LoadMusicStreamFromMemory(c_filetype.as_ptr(), bytes.as_ptr(), bytes.len() as i32)
+            ffi::LoadMusicStreamFromMemory(
+                c_filetype.as_ptr(),
+                bytes.as_ptr(),
+                bytes
+                    .len()
+                    .try_into()
+                    .expect("bytes should not exceed i32::MAX elements"),
+            )
         };
         if w.stream.buffer.is_null() {
             return Err(LoadSoundError::MusicNull);
-        };
+        }
         Ok(Music(w, self))
     }
 
     /// Initializes audio stream (to stream raw PCM data).
     #[inline]
     #[must_use]
-    pub fn new_audio_stream<'aud>(
-        &'aud self,
+    pub fn new_audio_stream(
+        &self,
         sample_rate: u32,
         sample_size: u32,
         channels: u32,
-    ) -> AudioStream<'aud> {
+    ) -> AudioStream<'_> {
         unsafe {
             AudioStream(
                 ffi::LoadAudioStream(sample_rate, sample_size, channels),
@@ -221,7 +286,7 @@ impl RaylibAudio {
     }
 }
 
-impl<'aud> Drop for RaylibAudio {
+impl Drop for RaylibAudio {
     #[inline]
     fn drop(&mut self) {
         unsafe { ffi::CloseAudioDevice() }
@@ -253,6 +318,12 @@ impl<'aud> Wave<'aud> {
     pub const fn channels(&self) -> u32 {
         self.0.channels
     }
+
+    /// Convert the type to its raw [`ffi`] equivalent.
+    ///
+    /// # Safety
+    ///
+    /// The resource must be unloaded manually to prevent leaking memory.
     #[inline]
     #[must_use]
     pub unsafe fn inner(self) -> ffi::Wave {
@@ -269,22 +340,37 @@ impl<'aud> Wave<'aud> {
     }
 
     /// Export wave file. Extension must be .wav or .raw
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`ExportWaveError::ExportFailed`] if [`ffi::ExportWave`] returns `false`.
+    ///
+    /// This method returns [`ExportWaveError::QoaBadSamples`] if the reason [`ffi::ExportWave`] returned false is because
+    /// the file is in '.qoa' format and a sample size other than 16.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filename`, when converted to a lossy string with [`Path::to_string_lossy`], contains an internal 0 byte.
     #[inline]
-    #[must_use]
     pub fn export(&self, filename: impl AsRef<Path>) -> Result<(), ExportWaveError> {
-        let c_filename = CString::new(filename.as_ref().to_string_lossy().as_bytes()).unwrap();
+        let c_filename = CString::new(filename.as_ref().to_string_lossy().as_bytes())
+            .expect("lossy filename should not contain an internal 0 byte");
         let success = unsafe { ffi::ExportWave(self.0, c_filename.as_ptr()) };
         if success {
             Ok(())
         } else {
-            // const WAV: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".wav\0") };
-            const QOA: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".qoa\0") };
-            // const RAW: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".raw\0") };
+            // const WAV: &CStr = c".wav";
+            const QOA: &CStr = c".qoa";
+            // const RAW: &CStr = c".raw";
             let is_qoa = unsafe { ffi::IsFileExtension(c_filename.as_ptr(), QOA.as_ptr()) };
             if is_qoa {
-                let samples = self.0.sampleSize as i32;
+                let samples = self
+                    .0
+                    .sampleSize
+                    .try_into()
+                    .expect("sample size should not exceed i32::MAX");
                 if samples != 16 {
-                    return Err(ExportWaveError::QoaBadSamples(self.0.sampleSize as i32));
+                    return Err(ExportWaveError::QoaBadSamples(samples));
                 }
             }
             Err(ExportWaveError::ExportFailed)
@@ -294,32 +380,34 @@ impl<'aud> Wave<'aud> {
     /*/// Export wave sample data to code (.h)
     #[inline]
     pub fn export_wave_as_code(&self, filename: &str) -> bool {
-        let c_filename = CString::new(filename).unwrap();
+        let c_filename = CString::new(filename).expect("filename should not contain an internal 0 byte");
         unsafe { ffi::ExportWaveAsCode(self.0, c_filename.as_ptr()) }
     }*/
 
     /// Copies a wave to a new wave.
     #[inline]
     #[must_use]
-    pub(crate) fn copy(&self) -> Wave {
+    pub(crate) fn copy(&self) -> Wave<'aud> {
         unsafe { Wave(ffi::WaveCopy(self.0), self.1) }
     }
 
     /// Converts wave data to desired format.
     #[inline]
     pub fn format(&mut self, sample_rate: i32, sample_size: i32, channels: i32) {
-        unsafe { ffi::WaveFormat(&mut self.0, sample_rate, sample_size, channels) }
+        unsafe { ffi::WaveFormat(&raw mut self.0, sample_rate, sample_size, channels) }
     }
 
     /// Crops a wave to defined sample range.
     #[inline]
     pub fn crop(&mut self, init_sample: i32, final_sample: i32) {
-        unsafe { ffi::WaveCrop(&mut self.0, init_sample, final_sample) }
+        unsafe { ffi::WaveCrop(&raw mut self.0, init_sample, final_sample) }
     }
 
     /// Load samples data from wave as a floats array
+    ///
     /// NOTE 1: Returned sample values are normalized to range [-1..1]
-    /// NOTE 2: Sample data allocated should be freed with UnloadWaveSamples()
+    ///
+    /// NOTE 2: Sample data allocated should be freed with [`ffi::UnloadWaveSamples()`]
     #[inline]
     #[must_use]
     pub fn load_samples(&self) -> WaveSamples {
@@ -330,19 +418,19 @@ impl<'aud> Wave<'aud> {
     }
 }
 
-impl<'aud> AsRef<ffi::AudioStream> for Sound<'aud> {
+impl AsRef<ffi::AudioStream> for Sound<'_> {
     fn as_ref(&self) -> &ffi::AudioStream {
         &self.0.stream
     }
 }
 
-impl<'aud> AsMut<ffi::AudioStream> for Sound<'aud> {
+impl AsMut<ffi::AudioStream> for Sound<'_> {
     fn as_mut(&mut self) -> &mut ffi::AudioStream {
         &mut self.0.stream
     }
 }
 
-impl<'aud> Sound<'aud> {
+impl Sound<'_> {
     /// Checks if a sound is valid (data loaded and buffers initialized)
     #[inline]
     #[must_use]
@@ -356,6 +444,12 @@ impl<'aud> Sound<'aud> {
     pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
+
+    /// Convert the type to its raw [`ffi`] equivalent.
+    ///
+    /// # Safety
+    ///
+    /// The resource must be unloaded manually to prevent leaking memory.
     #[inline]
     #[must_use]
     pub unsafe fn inner(self) -> ffi::Sound {
@@ -427,7 +521,7 @@ impl<'aud> Sound<'aud> {
     // }}
 }
 
-impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
+impl SoundAlias<'_, '_> {
     /// Checks if a sound is valid (data loaded and buffers initialized)
     #[inline]
     #[must_use]
@@ -441,6 +535,12 @@ impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
     pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
+
+    /// Convert the type to its raw [`ffi`] equivalent.
+    ///
+    /// # Safety
+    ///
+    /// The resource must be unloaded manually to prevent leaking memory.
     #[must_use]
     pub unsafe fn inner(self) -> ffi::Sound {
         let inner = self.0;
@@ -504,7 +604,7 @@ impl Drop for SoundAlias<'_, '_> {
     }
 }
 
-impl<'aud> Music<'aud> {
+impl Music<'_> {
     /// Starts music playing.
     #[inline]
     pub fn play_stream(&self) {
@@ -588,7 +688,7 @@ impl<'aud> Music<'aud> {
     }
 }
 
-impl<'aud> AudioStream<'aud> {
+impl AudioStream<'_> {
     /// Checks if an audio stream is valid (buffers initialized)
     #[inline]
     #[must_use]
@@ -614,6 +714,11 @@ impl<'aud> AudioStream<'aud> {
         self.0.channels
     }
 
+    /// Convert the type to its raw [`ffi`] equivalent.
+    ///
+    /// # Safety
+    ///
+    /// The resource must be unloaded manually to prevent leaking memory.
     #[must_use]
     pub unsafe fn inner(self) -> ffi::AudioStream {
         let inner = self.0;
@@ -622,13 +727,19 @@ impl<'aud> AudioStream<'aud> {
     }
 
     /// Updates audio stream buffers with data.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `data` is more than [`i32::MAX`] total bytes.
     #[inline]
     pub fn update<T: AudioSample>(&mut self, data: &[T]) {
         unsafe {
             ffi::UpdateAudioStream(
                 self.0,
-                data.as_ptr() as *const std::os::raw::c_void,
-                (data.len() * std::mem::size_of::<T>()) as i32,
+                data.as_ptr().cast::<std::os::raw::c_void>(),
+                std::mem::size_of_val(data)
+                    .try_into()
+                    .expect("data should not exceed i32::MAX elements"),
             );
         }
     }
@@ -695,7 +806,7 @@ impl<'aud> AudioStream<'aud> {
         unsafe { ffi::IsAudioStreamProcessed(self.0) }
     }
 
-    /// Set pan for audio stream (0.5 is centered)
+    /// Set pan for audio stream (`0.5` is centered)
     #[inline]
     pub fn set_pan(&self, pan: f32) {
         unsafe {
@@ -707,8 +818,11 @@ impl<'aud> AudioStream<'aud> {
 impl<'bind> Sound<'bind> {
     /// Clone sound from existing sound data, clone does not own wave data
     // NOTE: Wave data must be unallocated manually and will be shared across all clones
-    #[must_use]
-    pub fn alias<'snd>(&'snd self) -> Result<SoundAlias<'snd, 'bind>, LoadSoundError> {
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadSoundError::LoadFromWaveFailed`] if [`ffi::LoadSoundAlias`] returns a sound alias whose stream buffer is null.
+    pub fn alias(&self) -> Result<SoundAlias<'_, 'bind>, LoadSoundError> {
         let s = unsafe { ffi::LoadSoundAlias(self.0) };
         if s.stream.buffer.is_null() {
             return Err(LoadSoundError::LoadFromWaveFailed);
