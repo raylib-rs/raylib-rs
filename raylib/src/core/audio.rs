@@ -78,14 +78,14 @@ impl RaylibAudio {
     /// or [`AudioInitError::InitFailed`] if the audio device fails to be initialized after calling.
     #[inline]
     pub fn init_audio_device() -> Result<RaylibAudio, AudioInitError> {
+        if unsafe { ffi::IsAudioDeviceReady() } {
+            return Err(AudioInitError::DoubleInit);
+        }
         unsafe {
-            if ffi::IsAudioDeviceReady() {
-                return Err(AudioInitError::DoubleInit);
-            }
             ffi::InitAudioDevice();
-            if !ffi::IsAudioDeviceReady() {
-                return Err(AudioInitError::InitFailed);
-            }
+        }
+        if !unsafe { ffi::IsAudioDeviceReady() } {
+            return Err(AudioInitError::InitFailed);
         }
         Ok(RaylibAudio(PhantomData))
     }
@@ -408,12 +408,18 @@ impl<'aud> Wave<'aud> {
     /// NOTE 1: Returned sample values are normalized to range [-1..1]
     ///
     /// NOTE 2: Sample data allocated should be freed with [`ffi::UnloadWaveSamples()`]
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `self.frameCount` is negative.
     #[inline]
     #[must_use]
     pub fn load_samples(&self) -> WaveSamples {
         WaveSamples(
             unsafe { ffi::LoadWaveSamples(self.0) },
-            self.frameCount as usize,
+            self.frameCount
+                .try_into()
+                .expect("frameCount not be negative"),
         )
     }
 }

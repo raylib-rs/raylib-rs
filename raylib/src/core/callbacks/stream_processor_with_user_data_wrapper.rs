@@ -1,5 +1,5 @@
+use crate::ffi;
 use paste::paste;
-use raylib_sys::{AttachAudioStreamProcessor, AudioStream};
 use seq_macro::seq;
 use std::sync::{LazyLock, Mutex};
 
@@ -139,13 +139,23 @@ seq!(I in 1..30 {
 // endregion: -- raw callbacks and linkage
 
 /// Here, we c
-pub fn attach_audio_stream_processor_with_user_data(
-    stream: AudioStream,
+///
+/// # Safety
+///
+/// This method calls [`ffi::AttachAudioStreamProcessor`], which performs the following unsafe operations:
+/// - `RL_CALLOC`s an [`ffi::rAudioProcessor`] and immediately dereferences the result without checks.
+/// - Dereferences `stream.buffer` without checks.
+///
+/// There must be enough memory for Rayib to safely allocate 1 [`ffi::rAudioProcessor`] without `RL_CALLOC` returning null.
+/// `stream.buffer` must be non-null, aligned, and safe dereference for writing. The caller must uphold Rust's aliasing rules.
+pub unsafe fn attach_audio_stream_processor_with_user_data(
+    stream: ffi::AudioStream,
     callback: AudioCallbackWithUserData,
 ) -> usize {
     let idx = set_context(callback);
+    // SAFETY: Caller must uphold safety contract
     unsafe {
-        AttachAudioStreamProcessor(stream, Some(get_callback(idx)));
+        ffi::AttachAudioStreamProcessor(stream, Some(get_callback(idx)));
     }
     idx
 }

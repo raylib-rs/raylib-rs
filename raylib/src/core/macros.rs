@@ -45,7 +45,14 @@ macro_rules! make_thin_wrapper_lifetime {
 macro_rules! impl_wrapper {
     ($name:ident$(<$lifetime:tt>)?, $t:ty, $dropfunc:expr, $rawfield:tt) => {
         impl$(<$lifetime>)? $name$(<$lifetime>)? {
-            /// Take the raw ffi type. Must manually free memory by calling the proper unload function
+            /// Take the raw ffi type.
+            ///
+            /// # Safety
+            ///
+            /// Must manually free memory by calling the proper unload function.
+            /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+            /// and copies must not be used after being unloaded to avoid use-after-free.
+            #[must_use]
             pub unsafe fn unwrap(self) -> $t {
                 let inner = self.$rawfield;
                 std::mem::forget(self);
@@ -56,29 +63,35 @@ macro_rules! impl_wrapper {
         impl$(<$lifetime>)? Drop for $name$(<$lifetime>)? {
             #[allow(unused_unsafe)]
             fn drop(&mut self) {
+                // SAFETY: `Self` does not implement `Clone`, and `unwrap` takes ownership of `self`.
+                // Taking `self` by mutable reference guarantees it has no aliases.
                 unsafe {
                     ($dropfunc)(self.$rawfield);
                 }
             }
         }
-
-
     };
 }
 
 macro_rules! gen_from_raw_wrapper {
     ($name:ident$(<$lifetime:tt>)?, $t:ty, $dropfunc:expr, $rawfield:tt) => {
         impl$(<$lifetime>)? $name$(<$lifetime>)? {
-            /// returns the unwrapped raylib-sys object
+            /// Returns the unwrapped raylib-sys object.
+            #[must_use]
             pub fn to_raw(self) -> $t {
                 let raw = self.$rawfield;
                 std::mem::forget(self);
                 raw
             }
 
-            /// converts raylib-sys object to a "safe"
-            /// version. Make sure to call this function
-            /// from the thread the resource was created.
+            /// Converts raylib-sys object to a "safe" version.
+            ///
+            /// # Safety
+            ///
+            /// Make sure to call this function from the thread the resource was created.
+            /// If there are any aliases to `raw`, they must not be used after this function's return drops,
+            /// and Rust's aliasing rules must be ensured by the caller.
+            #[must_use]
             pub unsafe fn from_raw(raw: $t) -> Self {
                 Self(raw)
             }
@@ -90,13 +103,13 @@ macro_rules! deref_impl_wrapper {
     ($name:ident$(<$lifetime:tt>)?, $t:ty, $dropfunc:expr, $rawfield:tt) => {
         impl$(<$lifetime>)? std::convert::AsRef<$t> for $name$(<$lifetime>)? {
             fn as_ref(&self) -> &$t {
-                &self.$rawfield
+                self
             }
         }
 
         impl$(<$lifetime>)? std::convert::AsMut<$t> for $name$(<$lifetime>)? {
             fn as_mut(&mut self) -> &mut $t {
-                &mut self.$rawfield
+                self
             }
         }
 
@@ -116,6 +129,7 @@ macro_rules! deref_impl_wrapper {
         }
     };
 }
+
 macro_rules! make_rslice {
     ($(#[$attrs:meta])* $name:ident, $t:ty, $dropfunc:expr) => {
         $(#[$attrs])*
@@ -132,10 +146,8 @@ macro_rules! impl_rslice {
         impl Drop for $name {
             #[allow(unused_unsafe)]
             fn drop(&mut self) {
-                unsafe {
-                    let inner = std::mem::ManuallyDrop::take(&mut self.0);
-                    ($dropfunc)(std::boxed::Box::leak(inner).as_mut_ptr() as *mut _);
-                }
+                let inner = unsafe { std::mem::ManuallyDrop::take(&mut self.0) };
+                unsafe { ($dropfunc)(std::boxed::Box::leak(inner).as_mut_ptr().cast()) };
             }
         }
 

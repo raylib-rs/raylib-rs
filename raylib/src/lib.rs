@@ -63,6 +63,12 @@ Permission is granted to anyone to use this software for any purpose, including 
     clippy::unwrap_used,
     reason = "temporary while cleaning up"
 )]
+#![warn(
+    clippy::missing_safety_doc,
+    // clippy::undocumented_unsafe_blocks, // TODO: Fixing safety would be a breaking change and deserves a separate PR
+    clippy::as_conversions,
+    clippy::multiple_unsafe_ops_per_block
+)]
 #![allow(dead_code)]
 pub mod consts;
 pub mod core;

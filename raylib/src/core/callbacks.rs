@@ -14,7 +14,10 @@ use std::{
 };
 mod stream_processor_with_user_data_wrapper;
 use super::audio::Music;
-use stream_processor_with_user_data_wrapper::*;
+use stream_processor_with_user_data_wrapper::{
+    AudioCallbackWithUserData, attach_audio_stream_processor_with_user_data,
+    detach_audio_stream_processor_with_user_data,
+};
 
 type TraceLogCallback = unsafe extern "C" fn(*mut i8, *const i8, ...);
 unsafe extern "C" {
@@ -65,6 +68,9 @@ fn audio_stream_callback() -> Option<RustAudioStreamCallback> {
     unsafe { transmute(AUDIO_STREAM_CALLBACK.load(Ordering::Relaxed)) }
 }
 
+/// # Safety
+///
+/// This method converts `text` to a [`CStr`] without checks. It is the caller's responsibility to ensure that `text` meets the safety requirements of [`CStr::from_ptr`].
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn custom_trace_log_callback(level: TraceLogLevel, text: *const c_char) {
     if let Some(trace_log) = trace_log_callback() {
@@ -74,7 +80,7 @@ pub unsafe extern "C" fn custom_trace_log_callback(level: TraceLogLevel, text: *
             unsafe { CStr::from_ptr(text).to_string_lossy() }
         };
 
-        trace_log(level, &text)
+        trace_log(level, &text);
     }
 }
 
@@ -85,9 +91,14 @@ extern "C" fn custom_save_file_data_callback(
 ) -> bool {
     let save_file_data = save_file_data_callback().expect("no callback");
     let path = unsafe { CStr::from_ptr(path) };
-    let buffer = unsafe { from_raw_parts_mut(buffer as *mut u8, size as usize) };
+    let buffer = unsafe {
+        from_raw_parts_mut(
+            buffer.cast::<u8>(),
+            size.try_into().expect("size should not be negative"),
+        )
+    };
 
-    save_file_data(path.to_str().expect("path is non utf-8"), buffer)
+    save_file_data(path.to_str().expect("path should be non utf-8"), buffer)
 }
 
 extern "C" fn custom_load_file_data_callback(path: *const c_char, size: *mut c_int) -> *mut u8 {
@@ -99,48 +110,53 @@ extern "C" fn custom_load_file_data_callback(path: *const c_char, size: *mut c_i
         *size = buffer.len().try_into().expect("out of range buffer size");
 
         // Copy everything to the raylib world
+        let buffer_ffi =
+            unsafe { ffi::MemAlloc((*size).try_into().expect("non representable buffer size")) }
+                .cast::<u8>();
         unsafe {
-            let buffer_ffi =
-                ffi::MemAlloc((*size).try_into().expect("non representable buffer size"))
-                    as *mut u8;
             buffer_ffi.copy_from_nonoverlapping(buffer.as_ptr(), buffer.len());
-
-            buffer_ffi
         }
+
+        buffer_ffi
     } else {
         null_mut()
     }
 }
 
 extern "C" fn custom_save_file_text_callback(a: *const c_char, b: *mut c_char) -> bool {
-    let save_file_text = save_file_text_callback().unwrap();
+    let save_file_text = save_file_text_callback().expect("callback should be initialized");
     let a = unsafe { CStr::from_ptr(a) };
     let b = unsafe { CStr::from_ptr(b) };
-    return save_file_text(a.to_str().unwrap(), b.to_str().unwrap());
+    save_file_text(
+        a.to_str().expect("string should be utf-8"),
+        b.to_str().expect("string should be utf-8"),
+    )
 }
 extern "C" fn custom_load_file_text_callback(a: *const c_char) -> *mut c_char {
-    let load_file_text = load_file_text_callback().unwrap();
+    let load_file_text = load_file_text_callback().expect("callback should be initialized");
     let a = unsafe { CStr::from_ptr(a) };
-    let st = load_file_text(a.to_str().unwrap());
-    let oh = Box::leak(Box::new(CString::new(st).unwrap()));
-    oh.as_ptr() as *mut c_char
+    let st = load_file_text(a.to_str().expect("string should be utf-8"));
+    let oh = Box::leak(Box::new(
+        CString::new(st).expect("string should not contain an internal 0 byte"),
+    ));
+    oh.as_ptr().cast_mut().cast::<c_char>()
 }
 
 extern "C" fn custom_audio_stream_callback(a: *mut c_void, b: u32) {
-    let audio_stream = audio_stream_callback().unwrap();
-    let a = unsafe { std::slice::from_raw_parts(a as *mut u8, b as usize) };
+    let audio_stream = audio_stream_callback().expect("callback should be initialized");
+    let a = unsafe { std::slice::from_raw_parts(a.cast::<u8>(), b as usize) };
     audio_stream(a);
 }
 #[derive(Debug)]
 pub struct SetLogError<'a>(&'a str);
 
-impl<'a> std::fmt::Display for SetLogError<'a> {
+impl std::fmt::Display for SetLogError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("There is a {} callback already set.", self.0))
     }
 }
 
-impl<'a> std::error::Error for SetLogError<'a> {}
+impl std::error::Error for SetLogError<'_> {}
 
 macro_rules! safe_callback_set_func {
     ($cb:expr, $target_cb:expr, $rawsetter:expr, $ogfunc:expr, $ty:literal) => {
@@ -208,12 +224,12 @@ pub fn set_load_file_text_callback<'a>(cb: fn(&str) -> String) -> Result<(), Set
 // region: -- AudioStreamProcessorCallback --
 
 /// This struct encapsulates a rust callback
-/// and guarantees the lifetime to be long enough ('a)
-/// (once `get_as_user_data` is called, it the struct
-/// should not be moved again! -> use Pin<..>)
+/// and guarantees the lifetime to be long enough (`'a`)
+/// (once [`Self::get_as_user_data`] is called, it the struct
+/// should not be moved again! -> use [`Pin<..>`])
 pub struct AudioStreamProcessorCallback<'a, F>
 where
-    F: FnMut(&mut [f32], u32) -> (),
+    F: FnMut(&mut [f32], u32),
 {
     rust_callback: &'a mut F,
     nb_channels: u32,
@@ -222,7 +238,7 @@ where
 
 impl<'a, F> AudioStreamProcessorCallback<'a, F>
 where
-    F: FnMut(&mut [f32], u32) -> (),
+    F: FnMut(&mut [f32], u32),
 {
     fn new(closure: &'a mut F, nb_channels_from_music: u32) -> Self {
         Self {
@@ -233,7 +249,7 @@ where
     }
 
     fn get_as_user_data(&mut self) -> *mut ::std::os::raw::c_void {
-        return self as *mut Self as *mut ::std::os::raw::c_void;
+        std::ptr::from_mut(self).cast::<::std::os::raw::c_void>()
     }
 
     fn get_c_callback(
@@ -242,7 +258,7 @@ where
         *mut ::std::os::raw::c_void,
         *mut ::std::os::raw::c_void,
         ::std::os::raw::c_uint,
-    ) -> () {
+    ) {
         Self::c_callback
     }
 
@@ -250,24 +266,23 @@ where
         user_data: *mut ::std::os::raw::c_void,
         data_ptr: *mut ::std::os::raw::c_void,
         frame_count: ::std::os::raw::c_uint,
-    ) -> () {
-        unsafe {
-            let stream_processor_callback: &mut Self = user_data.cast::<Self>().as_mut().unwrap();
-            let f32_ptr = data_ptr as *mut f32;
-            let data = {
-                std::slice::from_raw_parts_mut(
-                    f32_ptr,
-                    frame_count as usize * stream_processor_callback.nb_channels as usize,
-                )
-            };
-            (stream_processor_callback.rust_callback)(data, stream_processor_callback.nb_channels);
-        }
+    ) {
+        let stream_processor_callback =
+            unsafe { user_data.cast::<Self>().as_mut() }.expect("user_data should not be null");
+        let f32_ptr = data_ptr.cast();
+        let data = unsafe {
+            std::slice::from_raw_parts_mut(
+                f32_ptr,
+                frame_count as usize * stream_processor_callback.nb_channels as usize,
+            )
+        };
+        (stream_processor_callback.rust_callback)(data, stream_processor_callback.nb_channels);
     }
 }
 
 impl<'a, F> Drop for AudioStreamProcessorCallback<'a, F>
 where
-    F: FnMut(&mut [f32], u32) -> (),
+    F: FnMut(&mut [f32], u32) + 'a,
 {
     fn drop(&mut self) {
         if let Some(index) = self.callback_index {
@@ -278,22 +293,33 @@ where
 
 // endregion: -- AudioStreamProcessorCallback --
 
+/// # Panics
+///
+/// This method will panic if `music`'s stream buffer is null.
 pub fn attach_audio_stream_processor_to_music<'a, F>(
     music: &'a Music<'a>,
     processor: &'a mut F,
 ) -> Pin<Box<AudioStreamProcessorCallback<'a, F>>>
 where
-    F: FnMut(&mut [f32], u32) -> () + Send + 'static, // static because the function is executed in another thread
+    F: FnMut(&mut [f32], u32) + Send + 'static, // static because the function is executed in another thread
 {
+    assert!(
+        !music.stream.buffer.is_null(),
+        "music stream buffer should not be null"
+    );
     let mut stream_processor_callback =
         Box::new(AudioStreamProcessorCallback::<'a, F>::new(processor, 2));
-    stream_processor_callback.callback_index = Some(attach_audio_stream_processor_with_user_data(
-        music.stream,
-        AudioCallbackWithUserData::new(
-            stream_processor_callback.get_as_user_data(), // pass the address of the stream_processor_callback as void*
-            stream_processor_callback.get_c_callback(),
-        ),
-    ));
+    // SAFETY: Checked `music.stream.buffer` and it is not null.
+    // TODO: How can we ensure `music`'s stream does not have any copies
+    stream_processor_callback.callback_index = Some(unsafe {
+        attach_audio_stream_processor_with_user_data(
+            music.stream,
+            AudioCallbackWithUserData::new(
+                stream_processor_callback.get_as_user_data(), // pass the address of the stream_processor_callback as void*
+                stream_processor_callback.get_c_callback(),
+            ),
+        )
+    });
     assert!(stream_processor_callback.callback_index.is_some());
     Box::into_pin(stream_processor_callback)
 }
