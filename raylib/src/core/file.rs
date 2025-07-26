@@ -1,8 +1,6 @@
-//! File manipulation functions. Should be parity with std::fs except on emscripten
-use crate::ffi;
-
-use crate::core::RaylibHandle;
-use std::ffi::{c_char, CStr, CString, OsString};
+//! File manipulation functions. Should be parity with [`std::fs`] except on emscripten
+use crate::{core::RaylibHandle, ffi};
+use std::ffi::{CStr, CString, OsString, c_char};
 
 #[derive(Debug, Clone)]
 pub struct FilePathIter<'a> {
@@ -70,17 +68,19 @@ impl<'a> FilePathIter<'a> {
         let iter = unsafe { std::slice::from_raw_parts(list, count as usize) }.iter();
         Self { iter }
     }
-    fn func(f: &Option<&'a c_char>) -> &'a str {
+    fn func(f: Option<&'a c_char>) -> &'a str {
         // CStr isn't being "constructed", it's essentially an adapter on &[c_char]
         let s = std::slice::from_ref(f.expect("file path string cannot be null"));
-        unsafe { CStr::from_ptr(s.as_ptr()) }.to_str().unwrap()
+        unsafe { CStr::from_ptr(s.as_ptr()) }
+            .to_str()
+            .expect("file path string should be in utf-8") // no???
     }
 }
 impl<'a> Iterator for FilePathIter<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(Self::func)
+        self.iter.next().copied().map(Self::func)
     }
 
     #[inline]
@@ -94,23 +94,23 @@ impl<'a> Iterator for FilePathIter<'a> {
     }
 
     fn last(self) -> Option<Self::Item> {
-        self.iter.last().map(Self::func)
+        self.iter.last().copied().map(Self::func)
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.iter.nth(n).map(Self::func)
+        self.iter.nth(n).copied().map(Self::func)
     }
 }
-impl<'a> DoubleEndedIterator for FilePathIter<'a> {
+impl DoubleEndedIterator for FilePathIter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(Self::func)
+        self.iter.next_back().copied().map(Self::func)
     }
 
     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
-        self.iter.nth_back(n).map(Self::func)
+        self.iter.nth_back(n).copied().map(Self::func)
     }
 }
-impl<'a> ExactSizeIterator for FilePathIter<'a> {
+impl ExactSizeIterator for FilePathIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.iter.len()
@@ -127,140 +127,213 @@ make_thin_wrapper!(
 impl FilePathList {
     /// Length of the file path list
     #[inline]
+    #[must_use]
     pub const fn count(&self) -> u32 {
         self.0.count
     }
     /// The amount of files that can be held in this list.
     #[inline]
+    #[must_use]
     pub const fn capacity(&self) -> u32 {
         self.0.capacity
     }
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if a path is not compatible with utf-8.
+    //  which happens a lot??? WTF-8 is standard on windows!!
+    #[must_use]
     pub fn paths(&self) -> Vec<&str> {
         unsafe { std::slice::from_raw_parts(self.0.paths, self.count() as usize) }
             .iter()
-            .map(|f| unsafe { CStr::from_ptr(*f) }.to_str().unwrap())
+            .map(|f| {
+                unsafe { CStr::from_ptr(*f) }
+                    .to_str()
+                    .expect("file path string should be in utf-8") // no???
+            })
             .collect()
     }
     /// An iterator over the paths held in this list.
-    pub fn iter<'a>(&'a self) -> FilePathIter<'a> {
+    #[must_use]
+    pub fn iter(&self) -> FilePathIter<'_> {
         unsafe { FilePathIter::new(self.0.paths, self.count()) }
+    }
+}
+
+impl<'a> IntoIterator for &'a FilePathList {
+    type Item = <Self::IntoIter as Iterator>::Item;
+    type IntoIter = FilePathIter<'a>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
 impl DroppedFilePathList {
     /// Length of the file path list
     #[inline]
+    #[must_use]
     pub const fn count(&self) -> u32 {
         self.0.count
     }
     /// The amount of files that can be held in this list.
     #[inline]
+    #[must_use]
     pub const fn capacity(&self) -> u32 {
         self.0.capacity
     }
     /// The paths held in this list.
-    /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
+    /// This function is NOT constant and the inner array will be copied into the returned [`Vec`] every time you call this.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if a path is not compatible with utf-8.
+    #[must_use]
     pub fn paths(&self) -> Vec<&str> {
         unsafe { std::slice::from_raw_parts(self.0.paths, self.count() as usize) }
             .iter()
-            .map(|f| unsafe { CStr::from_ptr(*f) }.to_str().unwrap())
+            .map(|f| {
+                unsafe { CStr::from_ptr(*f) }
+                    .to_str()
+                    .expect("file path string should be in utf-8") // no???
+            })
             .collect()
     }
     /// An iterator over the paths held in this list.
-    pub fn iter<'a>(&'a self) -> FilePathIter<'a> {
+    #[must_use]
+    pub fn iter(&self) -> FilePathIter<'_> {
         unsafe { FilePathIter::new(self.0.paths, self.count()) }
+    }
+}
+
+impl<'a> IntoIterator for &'a DroppedFilePathList {
+    type Item = <Self::IntoIter as Iterator>::Item;
+    type IntoIter = FilePathIter<'a>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
 impl RaylibHandle {
     /// Checks if a file has been dropped into the window.
     #[inline]
+    #[must_use]
     pub fn is_file_dropped(&self) -> bool {
         unsafe { ffi::IsFileDropped() }
     }
 
     /// Checks a file's extension.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `file_name` or `file_ext`, when converted to a lossy string, has an internal 0 byte.
     #[inline]
-    pub fn is_file_extension<A>(&self, file_name: A, file_ext: A) -> bool
+    #[must_use]
+    pub fn is_file_extension<A, B>(&self, file_name: A, file_ext: B) -> bool
     where
         A: Into<OsString>,
+        B: Into<OsString>,
     {
-        let file_name = CString::new(file_name.into().to_string_lossy().as_bytes()).unwrap();
-        let file_ext = CString::new(file_ext.into().to_string_lossy().as_bytes()).unwrap();
+        let file_name = CString::new(file_name.into().to_string_lossy().as_bytes())
+            .expect("lossy file_name string should not have an internal 0 byte");
+        let file_ext = CString::new(file_ext.into().to_string_lossy().as_bytes())
+            .expect("lossy file_ext string should not have an internal 0 byte");
         unsafe { ffi::IsFileExtension(file_name.as_ptr(), file_ext.as_ptr()) }
     }
     /// Get the directory of the running application.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the application directory is not compatible with utf-8.
+    #[must_use]
     pub fn application_directory(&self) -> String {
-        unsafe {
-            let st = ffi::GetApplicationDirectory();
-            let c_str = CStr::from_ptr(st);
+        let st = unsafe { ffi::GetApplicationDirectory() };
+        let c_str = unsafe { CStr::from_ptr(st) };
 
-            // If this ever errors out, yell at @ioi_xd on Discord,
-            c_str.to_str().unwrap().to_string()
-        }
+        // If this ever errors out, yell at @ioi_xd on Discord,
+        c_str
+            .to_str()
+            .expect("application directory string should be in utf-8") // no???
+            .to_string()
     }
 
     /// Get file length in bytes.
     ///
-    /// # Errors
-    /// This function will return an error if the supplied bytes contain an internal 0 byte. The NulError returned will contain the bytes as well as the position of the nul byte.
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte.
     pub fn get_file_length<A>(&self, filename: A) -> i32
     where
         A: Into<OsString>,
     {
-        let c_str = CString::new(filename.into().to_string_lossy().as_bytes()).unwrap();
+        let c_str = CString::new(filename.into().to_string_lossy().as_bytes())
+            .expect("lossy filename string should not contain an internal 0 byte");
         unsafe { ffi::GetFileLength(c_str.as_ptr()) }
     }
 
     /// Check if a given path is a file or a directory
     ///
-    /// # Errors
-    /// This function will return an error if the supplied bytes contain an internal 0 byte. The NulError returned will contain the bytes as well as the position of the nul byte.
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte.
     #[must_use]
     pub fn is_path_file<A>(&self, filename: A) -> bool
     where
         A: Into<OsString>,
     {
-        let c_str = CString::new(filename.into().to_string_lossy().as_bytes()).unwrap();
+        let c_str = CString::new(filename.into().to_string_lossy().as_bytes())
+            .expect("lossy filename string should not contain an internal 0 byte");
         unsafe { ffi::IsPathFile(c_str.as_ptr()) }
     }
 
     /// Load directory filepaths
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `dir_path` contains an internal 0 byte.
     pub fn load_directory_files<A>(&self, dir_path: A) -> FilePathList
     where
         A: Into<OsString>,
     {
-        unsafe {
-            let c_str = CString::new(dir_path.into().to_string_lossy().as_bytes()).unwrap(); // .unwrap() is okay here because any nul bytes placed into the actual string should be cleared out by to_string_lossy.
-            FilePathList(ffi::LoadDirectoryFiles(c_str.as_ptr()))
-        }
+        let c_str = CString::new(dir_path.into().to_string_lossy().as_bytes())
+            .expect("lossy dir_path string should not contain an internal 0 byte");
+        FilePathList(unsafe { ffi::LoadDirectoryFiles(c_str.as_ptr()) })
     }
 
     /// Load directory filepaths with extension filtering and recursive directory scan
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `dir_c_str` contains an internal 0 byte
     pub fn load_directory_files_ex<A>(
         &self,
         dir_path: A,
-        filter: String,
+        mut filter: String,
         scan_sub_dirs: bool,
     ) -> FilePathList
     where
         A: Into<OsString>,
     {
-        unsafe {
-            let dir_c_str = CString::new(dir_path.into().to_string_lossy().as_bytes()).unwrap(); // .unwrap() is okay here because any nul bytes placed into the actual string should be cleared out by to_string_lossy.
-            let filter_c_str = CString::new(filter.replace("\0", "").as_bytes()).unwrap();
-            FilePathList(ffi::LoadDirectoryFilesEx(
-                dir_c_str.as_ptr(),
-                filter_c_str.as_ptr(),
-                scan_sub_dirs,
-            ))
+        let dir_c_str = CString::new(dir_path.into().to_string_lossy().as_bytes())
+            .expect("lossy dir_path string should not contain an internal 0 byte");
+        while let Some(pos) = filter.rfind('\0') {
+            filter.remove(pos);
         }
+        let filter_c_str =
+            CString::new(filter.as_bytes()).expect("removing all 0 bytes from the string guarantees there aren't any 0 bytes in the string");
+        FilePathList(unsafe {
+            ffi::LoadDirectoryFilesEx(dir_c_str.as_ptr(), filter_c_str.as_ptr(), scan_sub_dirs)
+        })
     }
 
     /// Check if a file has been dropped into window
     #[inline]
+    #[must_use]
     pub fn load_dropped_files(&self) -> DroppedFilePathList {
         unsafe { DroppedFilePathList(ffi::LoadDroppedFiles()) }
     }
@@ -268,8 +341,8 @@ impl RaylibHandle {
 
 #[cfg(test)]
 mod tests {
-    use std::mem::ManuallyDrop;
     use super::*;
+    use std::mem::ManuallyDrop;
 
     #[test]
     #[should_panic(expected = "file path array cannot be null")]
@@ -314,11 +387,11 @@ mod tests {
     #[test]
     fn test_len() {
         let mut paths = [
-            CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"orange\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"banana\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"mango\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"pineapple\0").unwrap().as_ptr().cast_mut(),
+            c"apple".as_ptr().cast_mut(),
+            c"orange".as_ptr().cast_mut(),
+            c"banana".as_ptr().cast_mut(),
+            c"mango".as_ptr().cast_mut(),
+            c"pineapple".as_ptr().cast_mut(),
         ];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
             capacity: 5,
@@ -343,11 +416,11 @@ mod tests {
     #[test]
     fn test_len_double_ended() {
         let mut paths = [
-            CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"orange\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"banana\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"mango\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"pineapple\0").unwrap().as_ptr().cast_mut(),
+            c"apple".as_ptr().cast_mut(),
+            c"orange".as_ptr().cast_mut(),
+            c"banana".as_ptr().cast_mut(),
+            c"mango".as_ptr().cast_mut(),
+            c"pineapple".as_ptr().cast_mut(),
         ];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
             capacity: 5,

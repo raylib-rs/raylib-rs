@@ -140,7 +140,7 @@ impl AutomationEventList {
 }
 
 impl<'a> IntoIterator for &'a AutomationEventList {
-    type Item = <AutomationEventIter<'a> as Iterator>::Item;
+    type Item = <Self::IntoIter as Iterator>::Item;
     type IntoIter = AutomationEventIter<'a>;
 
     #[inline]

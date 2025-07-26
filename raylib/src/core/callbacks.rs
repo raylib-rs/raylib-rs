@@ -29,8 +29,9 @@ unsafe extern "C" {
 
 mod sealed {
     use super::{
-        RustAudioStreamCallback, RustLoadFileDataCallback, RustLoadFileTextCallback,
-        RustSaveFileDataCallback, RustSaveFileTextCallback, RustTraceLogCallback,
+        AtomicFn, AtomicUsize, RustAudioStreamCallback, RustLoadFileDataCallback,
+        RustLoadFileTextCallback, RustSaveFileDataCallback, RustSaveFileTextCallback,
+        RustTraceLogCallback,
     };
     use std::num::NonZeroUsize;
 
@@ -57,6 +58,7 @@ mod sealed {
                 assert!(std::mem::size_of::<$Callback>() == std::mem::size_of::<NonZeroUsize>());
                 assert!(std::mem::align_of::<$Callback>() == std::mem::align_of::<NonZeroUsize>());
                 assert!(std::mem::size_of::<Option<$Callback>>() == std::mem::size_of::<$Callback>());
+                assert!(std::mem::size_of::<AtomicFn<$Callback>>() == std::mem::size_of::<AtomicUsize>());
             };
 
             unsafe impl AtomicFnExt for $Callback {

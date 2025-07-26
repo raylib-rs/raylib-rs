@@ -3,7 +3,7 @@
 //!
 //! See [`DataBuf`]
 
-#![warn(clippy::style, clippy::pedantic, clippy::perf)]
+#![warn(clippy::style, clippy::pedantic)]
 #![allow(
     clippy::missing_errors_doc,
     reason = "errors are documented at their defintion, not by the functions that use them"

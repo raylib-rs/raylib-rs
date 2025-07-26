@@ -96,7 +96,7 @@ impl From<&mut Camera3D> for *mut ffi::Camera3D {
 impl Camera3D {
     #[must_use]
     #[inline]
-    pub fn camera_type(&self) -> ffi::CameraProjection {
+    pub const fn camera_type(&self) -> ffi::CameraProjection {
         self.projection
     }
 
@@ -104,7 +104,12 @@ impl Camera3D {
     /// fovy is in degrees
     #[must_use]
     #[inline]
-    pub fn perspective(position: Vector3, target: Vector3, up: Vector3, fovy: f32) -> Camera3D {
+    pub const fn perspective(
+        position: Vector3,
+        target: Vector3,
+        up: Vector3,
+        fovy: f32,
+    ) -> Camera3D {
         Camera3D {
             position,
             target,
@@ -118,7 +123,12 @@ impl Camera3D {
     /// fovy is in degrees
     #[must_use]
     #[inline]
-    pub fn orthographic(position: Vector3, target: Vector3, up: Vector3, fovy: f32) -> Camera3D {
+    pub const fn orthographic(
+        position: Vector3,
+        target: Vector3,
+        up: Vector3,
+        fovy: f32,
+    ) -> Camera3D {
         let mut c = Self::perspective(position, target, up, fovy);
         c.projection = ffi::CameraProjection::CAMERA_ORTHOGRAPHIC;
         c
