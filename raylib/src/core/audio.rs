@@ -326,7 +326,7 @@ impl<'aud> Wave<'aud> {
     /// The resource must be unloaded manually to prevent leaking memory.
     #[inline]
     #[must_use]
-    pub unsafe fn inner(self) -> ffi::Wave {
+    pub const unsafe fn inner(self) -> ffi::Wave {
         let inner = self.0;
         std::mem::forget(self);
         inner
@@ -458,7 +458,7 @@ impl Sound<'_> {
     /// The resource must be unloaded manually to prevent leaking memory.
     #[inline]
     #[must_use]
-    pub unsafe fn inner(self) -> ffi::Sound {
+    pub const unsafe fn inner(self) -> ffi::Sound {
         let inner = self.0;
         std::mem::forget(self);
         inner
@@ -548,7 +548,7 @@ impl SoundAlias<'_, '_> {
     ///
     /// The resource must be unloaded manually to prevent leaking memory.
     #[must_use]
-    pub unsafe fn inner(self) -> ffi::Sound {
+    pub const unsafe fn inner(self) -> ffi::Sound {
         let inner = self.0;
         std::mem::forget(self);
         inner
@@ -726,7 +726,7 @@ impl AudioStream<'_> {
     ///
     /// The resource must be unloaded manually to prevent leaking memory.
     #[must_use]
-    pub unsafe fn inner(self) -> ffi::AudioStream {
+    pub const unsafe fn inner(self) -> ffi::AudioStream {
         let inner = self.0;
         std::mem::forget(self);
         inner

@@ -19,10 +19,19 @@ impl AutomationEventIter<'_> {
             events.is_aligned(),
             "automation event array must be aligned"
         );
-        let iter = unsafe { std::slice::from_raw_parts(events, count as usize) }.iter();
+        let iter = unsafe {
+            std::slice::from_raw_parts(
+                events,
+                count
+                    .try_into()
+                    .expect("slice should not exceed usize::MAX elements"),
+            )
+        }
+        .iter();
         Self { iter }
     }
-    fn func(e: &ffi::AutomationEvent) -> AutomationEvent {
+
+    const fn func(e: &ffi::AutomationEvent) -> AutomationEvent {
         // This relies on the fact that `ffi::AutomationEvent` is Copy `unload_automation_event` doesn't actually do anything.
         AutomationEvent(*e)
     }
@@ -82,21 +91,36 @@ impl AutomationEventList {
     pub const fn count(&self) -> u32 {
         self.0.count
     }
+
     /// The amount of automation events that can be held in this list.
     #[inline]
     #[must_use]
     pub const fn capacity(&self) -> u32 {
         self.0.capacity
     }
+
     /// The events held in this list.
+    ///
     /// NOTE: This will copy the values into a vector.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `self` contains more than [`usize::MAX`] events.
     #[must_use]
     pub fn events(&self) -> Vec<AutomationEvent> {
-        unsafe { std::slice::from_raw_parts(self.0.events, self.count() as usize) }
-            .iter()
-            .map(|f| AutomationEvent(*f))
-            .collect()
+        unsafe {
+            std::slice::from_raw_parts(
+                self.0.events,
+                self.count()
+                    .try_into()
+                    .expect("slice should not exceed usize::MAX elements"),
+            )
+        }
+        .iter()
+        .map(|f| AutomationEvent(*f))
+        .collect()
     }
+
     /// An iterator over the events held in this list.
     #[must_use]
     pub fn iter(&self) -> AutomationEventIter<'_> {
@@ -161,7 +185,7 @@ impl AutomationEvent {
     }
 }
 
-fn unload_automation_event(_s: ffi::AutomationEvent) {
+const fn unload_automation_event(_s: ffi::AutomationEvent) {
     // As far as I can tell, this is actually unloaded when UnloadAnimationEventList is called.
 }
 

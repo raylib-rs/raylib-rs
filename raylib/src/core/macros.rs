@@ -53,7 +53,7 @@ macro_rules! impl_wrapper {
             /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
             /// and copies must not be used after being unloaded to avoid use-after-free.
             #[must_use]
-            pub unsafe fn unwrap(self) -> $t {
+            pub const unsafe fn unwrap(self) -> $t {
                 let inner = self.$rawfield;
                 std::mem::forget(self);
                 inner
@@ -78,7 +78,7 @@ macro_rules! gen_from_raw_wrapper {
         impl$(<$lifetime>)? $name$(<$lifetime>)? {
             /// Returns the unwrapped raylib-sys object.
             #[must_use]
-            pub fn to_raw(self) -> $t {
+            pub const fn to_raw(self) -> $t {
                 let raw = self.$rawfield;
                 std::mem::forget(self);
                 raw
@@ -92,7 +92,7 @@ macro_rules! gen_from_raw_wrapper {
             /// If there are any aliases to `raw`, they must not be used after this function's return drops,
             /// and Rust's aliasing rules must be ensured by the caller.
             #[must_use]
-            pub unsafe fn from_raw(raw: $t) -> Self {
+            pub const unsafe fn from_raw(raw: $t) -> Self {
                 Self(raw)
             }
         }

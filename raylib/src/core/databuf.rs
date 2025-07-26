@@ -604,7 +604,8 @@ mod tests {
         }
 
         let mut times_dropped = 0;
-        let buf = DataBuf::alloc_from(DropTest(|| times_dropped += 1)).unwrap();
+        let buf = DataBuf::alloc_from(DropTest(|| times_dropped += 1))
+            .expect("should be able to allocate enough memory to store a closure");
         drop(buf);
         assert_eq!(
             times_dropped, 1,
@@ -618,7 +619,7 @@ mod tests {
         const EXPECT: [i32; 5] = [64, 264, -57, 653, -153];
         let bytes @ 1.. = (std::mem::size_of::<i32>() * EXPECT.len())
             .try_into()
-            .unwrap()
+            .expect("EXPECT should have a quantity of elements that can be expressed in a u32")
         else {
             unreachable!()
         };
@@ -640,7 +641,7 @@ mod tests {
         const EXPECT: ExpectTy = [6, -453, 364, 45632, -1233];
         let bytes @ 1.. = (std::mem::size_of::<i32>() * EXPECT.len())
             .try_into()
-            .unwrap()
+            .expect("EXPECT should have a quantity of elements that can be expressed in a u32")
         else {
             unreachable!()
         };
@@ -653,7 +654,12 @@ mod tests {
         };
         // SAFETY: `ptr` is unique, non-dangling, valid, and allocated by Raylib
         let buf = unsafe {
-            DataBuf::slice_from_raw(ptr, MaybeUninit::new(EXPECT.len().try_into().unwrap()))
+            DataBuf::slice_from_raw(
+                ptr,
+                MaybeUninit::new(EXPECT.len().try_into().expect(
+                    "EXPECT should have a quantity of elements that can be expressed in an i32",
+                )),
+            )
         }
         .expect("ptr should be convertible to DataBuf");
         assert_eq!(&*buf, &EXPECT);

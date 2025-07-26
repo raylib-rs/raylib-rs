@@ -1,19 +1,22 @@
 #![allow(non_camel_case_types)]
 
-use crate::{RaylibHandle, audio::AudioStream, ffi};
-pub use raylib_sys::TraceLogLevel;
+mod stream_processor_with_user_data_wrapper;
+
+use crate::{
+    RaylibHandle,
+    audio::{AudioStream, Music},
+    ffi::{self, TraceLogLevel},
+};
 use std::{
     borrow::Cow,
     convert::TryInto,
     ffi::{CStr, CString, c_char, c_int, c_void},
-    mem::{size_of, transmute},
+    marker::PhantomData,
     pin::Pin,
     ptr::null_mut,
     slice::from_raw_parts_mut,
     sync::atomic::{AtomicUsize, Ordering},
 };
-mod stream_processor_with_user_data_wrapper;
-use super::audio::Music;
 use stream_processor_with_user_data_wrapper::{
     AudioCallbackWithUserData, attach_audio_stream_processor_with_user_data,
     detach_audio_stream_processor_with_user_data,
@@ -24,6 +27,100 @@ unsafe extern "C" {
     fn SetTraceLogCallback(cb: Option<TraceLogCallback>);
 }
 
+mod sealed {
+    use super::{
+        RustAudioStreamCallback, RustLoadFileDataCallback, RustLoadFileTextCallback,
+        RustSaveFileDataCallback, RustSaveFileTextCallback, RustTraceLogCallback,
+    };
+    use std::num::NonZeroUsize;
+
+    /// # Safety
+    ///
+    /// `Self` and `NonZeroUsize` must be safe to convert between and call across threads.
+    pub unsafe trait AtomicFnExt: Sized + Send + Sync {
+        #[must_use]
+        fn into_nonzero(self) -> NonZeroUsize;
+
+        #[must_use]
+        fn from_nonzero(val: NonZeroUsize) -> Self;
+
+        #[must_use]
+        fn into_usize(val: Option<Self>) -> usize;
+
+        #[must_use]
+        fn from_usize(val: usize) -> Option<Self>;
+    }
+
+    macro_rules! impl_atomic_fn_ext {
+        ($(unsafe impl AtomicFnExt for $Callback:ident {})*) => {$(
+            const _: () = {
+                assert!(std::mem::size_of::<$Callback>() == std::mem::size_of::<NonZeroUsize>());
+                assert!(std::mem::align_of::<$Callback>() == std::mem::align_of::<NonZeroUsize>());
+                assert!(std::mem::size_of::<Option<$Callback>>() == std::mem::size_of::<$Callback>());
+            };
+
+            unsafe impl AtomicFnExt for $Callback {
+                #[inline(always)]
+                fn into_nonzero(self) -> NonZeroUsize {
+                    // SAFETY: Implementor must uphold trait safety contract
+                    unsafe { std::mem::transmute::<$Callback, NonZeroUsize>(self) }
+                }
+
+                #[inline(always)]
+                fn from_nonzero(val: NonZeroUsize) -> $Callback {
+                    // SAFETY: Implementor must uphold trait safety contract
+                    unsafe { std::mem::transmute::<NonZeroUsize, $Callback>(val) }
+                }
+
+                #[inline(always)]
+                fn into_usize(val: Option<$Callback>) -> usize {
+                    // SAFETY: Implementor must uphold trait safety contract
+                    unsafe { std::mem::transmute::<Option<$Callback>, usize>(val) }
+                }
+
+                #[inline(always)]
+                fn from_usize(val: usize) -> Option<$Callback> {
+                    // SAFETY: Implementor must uphold trait safety contract
+                    unsafe { std::mem::transmute::<usize, Option<$Callback>>(val) }
+                }
+            }
+        )*};
+    }
+
+    impl_atomic_fn_ext! {
+        unsafe impl AtomicFnExt for RustTraceLogCallback {}
+        unsafe impl AtomicFnExt for RustSaveFileDataCallback {}
+        unsafe impl AtomicFnExt for RustLoadFileDataCallback {}
+        unsafe impl AtomicFnExt for RustSaveFileTextCallback {}
+        unsafe impl AtomicFnExt for RustLoadFileTextCallback {}
+        unsafe impl AtomicFnExt for RustAudioStreamCallback {}
+    }
+}
+use sealed::AtomicFnExt;
+
+#[repr(transparent)]
+struct AtomicFn<F: AtomicFnExt>(AtomicUsize, PhantomData<F>);
+
+impl<F: AtomicFnExt> AtomicFn<F> {
+    /// Construct a null function pointer
+    #[inline]
+    pub const fn null() -> Self {
+        Self(AtomicUsize::new(0), PhantomData)
+    }
+
+    /// Stores a value into the atomic function pointer.
+    #[inline]
+    pub fn store(&self, val: Option<F>, order: Ordering) {
+        self.0.store(AtomicFnExt::into_usize(val), order);
+    }
+
+    /// Loads a value from the atomic function pointer.
+    #[inline]
+    pub fn load(&self, order: Ordering) -> Option<F> {
+        AtomicFnExt::from_usize(self.0.load(order))
+    }
+}
+
 type RustTraceLogCallback = fn(TraceLogLevel, &str);
 type RustSaveFileDataCallback = fn(&str, &[u8]) -> bool;
 type RustLoadFileDataCallback = fn(&str) -> Vec<u8>;
@@ -31,41 +128,37 @@ type RustSaveFileTextCallback = fn(&str, &str) -> bool;
 type RustLoadFileTextCallback = fn(&str) -> String;
 type RustAudioStreamCallback = fn(&[u8]);
 
-static TRACE_LOG_CALLBACK: AtomicUsize = AtomicUsize::new(0);
-static SAVE_FILE_DATA_CALLBACK: AtomicUsize = AtomicUsize::new(0);
-static LOAD_FILE_DATA_CALLBACK: AtomicUsize = AtomicUsize::new(0);
-static SAVE_FILE_TEXT_CALLBACK: AtomicUsize = AtomicUsize::new(0);
-static LOAD_FILE_TEXT_CALLBACK: AtomicUsize = AtomicUsize::new(0);
-static AUDIO_STREAM_CALLBACK: AtomicUsize = AtomicUsize::new(0);
+const _: () = {};
+
+static TRACE_LOG_CALLBACK: AtomicFn<RustTraceLogCallback> = AtomicFn::null();
+static SAVE_FILE_DATA_CALLBACK: AtomicFn<RustSaveFileDataCallback> = AtomicFn::null();
+static LOAD_FILE_DATA_CALLBACK: AtomicFn<RustLoadFileDataCallback> = AtomicFn::null();
+static SAVE_FILE_TEXT_CALLBACK: AtomicFn<RustSaveFileTextCallback> = AtomicFn::null();
+static LOAD_FILE_TEXT_CALLBACK: AtomicFn<RustLoadFileTextCallback> = AtomicFn::null();
+static AUDIO_STREAM_CALLBACK: AtomicFn<RustAudioStreamCallback> = AtomicFn::null();
 
 fn trace_log_callback() -> Option<RustTraceLogCallback> {
-    debug_assert!(size_of::<RustTraceLogCallback>() == size_of::<usize>());
-    unsafe { transmute(TRACE_LOG_CALLBACK.load(Ordering::Relaxed)) }
+    TRACE_LOG_CALLBACK.load(Ordering::Relaxed)
 }
 
 fn save_file_data_callback() -> Option<RustSaveFileDataCallback> {
-    debug_assert!(size_of::<RustSaveFileDataCallback>() == size_of::<usize>());
-    unsafe { transmute(SAVE_FILE_DATA_CALLBACK.load(Ordering::Relaxed)) }
+    SAVE_FILE_DATA_CALLBACK.load(Ordering::Relaxed)
 }
 
 fn load_file_data_callback() -> Option<RustLoadFileDataCallback> {
-    debug_assert!(size_of::<RustLoadFileDataCallback>() == size_of::<usize>());
-    unsafe { transmute(LOAD_FILE_DATA_CALLBACK.load(Ordering::Relaxed)) }
+    LOAD_FILE_DATA_CALLBACK.load(Ordering::Relaxed)
 }
 
 fn save_file_text_callback() -> Option<RustSaveFileTextCallback> {
-    debug_assert!(size_of::<RustSaveFileTextCallback>() == size_of::<usize>());
-    unsafe { transmute(SAVE_FILE_TEXT_CALLBACK.load(Ordering::Relaxed)) }
+    SAVE_FILE_TEXT_CALLBACK.load(Ordering::Relaxed)
 }
 
 fn load_file_text_callback() -> Option<RustLoadFileTextCallback> {
-    debug_assert!(size_of::<RustLoadFileTextCallback>() == size_of::<usize>());
-    unsafe { transmute(LOAD_FILE_TEXT_CALLBACK.load(Ordering::Relaxed)) }
+    LOAD_FILE_TEXT_CALLBACK.load(Ordering::Relaxed)
 }
 
 fn audio_stream_callback() -> Option<RustAudioStreamCallback> {
-    debug_assert!(size_of::<RustAudioStreamCallback>() == size_of::<usize>());
-    unsafe { transmute(AUDIO_STREAM_CALLBACK.load(Ordering::Relaxed)) }
+    AUDIO_STREAM_CALLBACK.load(Ordering::Relaxed)
 }
 
 /// # Safety
@@ -148,36 +241,44 @@ extern "C" fn custom_audio_stream_callback(a: *mut c_void, b: u32) {
     audio_stream(a);
 }
 #[derive(Debug)]
-pub struct SetLogError<'a>(&'a str);
+pub struct SetCallbackError(&'static str);
 
-impl std::fmt::Display for SetLogError<'_> {
+impl std::fmt::Display for SetCallbackError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("There is a {} callback already set.", self.0))
     }
 }
 
-impl std::error::Error for SetLogError<'_> {}
+impl std::error::Error for SetCallbackError {}
 
 macro_rules! safe_callback_set_func {
     ($cb:expr, $target_cb:expr, $rawsetter:expr, $ogfunc:expr, $ty:literal) => {
-        if $target_cb.load(Ordering::Acquire) == 0 {
-            $target_cb.store($cb as usize, Ordering::Release);
+        if $target_cb.load(Ordering::Acquire).is_none() {
+            $target_cb.store(Some($cb), Ordering::Release);
             unsafe { $rawsetter(Some($ogfunc)) };
             Ok(())
         } else {
-            Err(SetLogError($ty))
+            Err(SetCallbackError($ty))
         }
     };
 }
 
 /// Set custom trace log
-pub fn set_trace_log_callback<'a>(cb: fn(TraceLogLevel, &str)) -> Result<(), SetLogError<'a>> {
-    TRACE_LOG_CALLBACK.store(cb as usize, Ordering::Relaxed);
+///
+/// # Errors
+///
+/// This function does not error currently.
+pub fn set_trace_log_callback(cb: RustTraceLogCallback) -> Result<(), SetCallbackError> {
+    TRACE_LOG_CALLBACK.store(Some(cb), Ordering::Relaxed);
     unsafe { ffi::setLogCallbackWrapper() };
     Ok(())
 }
 /// Set custom file binary data saver
-pub fn set_save_file_data_callback<'a>(cb: fn(&str, &[u8]) -> bool) -> Result<(), SetLogError<'a>> {
+///
+/// # Errors
+///
+/// This function returns [`SetCallbackError`] if a custom `save_file_data` callback is already set.
+pub fn set_save_file_data_callback(cb: RustSaveFileDataCallback) -> Result<(), SetCallbackError> {
     safe_callback_set_func!(
         cb,
         SAVE_FILE_DATA_CALLBACK,
@@ -189,7 +290,11 @@ pub fn set_save_file_data_callback<'a>(cb: fn(&str, &[u8]) -> bool) -> Result<()
 /// Set custom file binary data loader
 ///
 /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
-pub fn set_load_file_data_callback<'b>(cb: fn(&str) -> Vec<u8>) -> Result<(), SetLogError<'b>> {
+///
+/// # Errors
+///
+/// This function returns [`SetCallbackError`] if a custom `load_file_data` callback is already set.
+pub fn set_load_file_data_callback(cb: RustLoadFileDataCallback) -> Result<(), SetCallbackError> {
     safe_callback_set_func!(
         cb,
         LOAD_FILE_DATA_CALLBACK,
@@ -199,7 +304,11 @@ pub fn set_load_file_data_callback<'b>(cb: fn(&str) -> Vec<u8>) -> Result<(), Se
     )
 }
 /// Set custom file text data saver
-pub fn set_save_file_text_callback<'a>(cb: fn(&str, &str) -> bool) -> Result<(), SetLogError<'a>> {
+///
+/// # Errors
+///
+/// This function returns [`SetCallbackError`] if a custom `save_file_text` callback is already set.
+pub fn set_save_file_text_callback(cb: RustSaveFileTextCallback) -> Result<(), SetCallbackError> {
     safe_callback_set_func!(
         cb,
         SAVE_FILE_TEXT_CALLBACK,
@@ -211,7 +320,11 @@ pub fn set_save_file_text_callback<'a>(cb: fn(&str, &str) -> bool) -> Result<(),
 /// Set custom file text data loader
 ///
 /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
-pub fn set_load_file_text_callback<'a>(cb: fn(&str) -> String) -> Result<(), SetLogError<'a>> {
+///
+/// # Errors
+///
+/// This function returns [`SetCallbackError`] if a custom `load_file_text` callback is already set.
+pub fn set_load_file_text_callback(cb: RustLoadFileTextCallback) -> Result<(), SetCallbackError> {
     safe_callback_set_func!(
         cb,
         LOAD_FILE_TEXT_CALLBACK,
@@ -240,7 +353,7 @@ impl<'a, F> AudioStreamProcessorCallback<'a, F>
 where
     F: FnMut(&mut [f32], u32),
 {
-    fn new(closure: &'a mut F, nb_channels_from_music: u32) -> Self {
+    const fn new(closure: &'a mut F, nb_channels_from_music: u32) -> Self {
         Self {
             rust_callback: closure,
             nb_channels: nb_channels_from_music,
@@ -248,7 +361,7 @@ where
         }
     }
 
-    fn get_as_user_data(&mut self) -> *mut ::std::os::raw::c_void {
+    const fn get_as_user_data(&mut self) -> *mut ::std::os::raw::c_void {
         std::ptr::from_mut(self).cast::<::std::os::raw::c_void>()
     }
 
@@ -259,6 +372,7 @@ where
         *mut ::std::os::raw::c_void,
         ::std::os::raw::c_uint,
     ) {
+        _ = self;
         Self::c_callback
     }
 
@@ -325,75 +439,106 @@ where
 }
 
 /// Audio thread callback to request new data
-pub fn set_audio_stream_callback(stream: AudioStream, cb: fn(&[u8])) -> Result<(), SetLogError> {
-    if AUDIO_STREAM_CALLBACK.load(Ordering::Acquire) == 0 {
-        AUDIO_STREAM_CALLBACK.store(cb as _, Ordering::Release);
+///
+/// # Errors
+///
+/// This function returns [`SetCallbackError`] if a custom `audio_stream` callback is already set.
+pub fn set_audio_stream_callback(
+    stream: AudioStream,
+    cb: RustAudioStreamCallback,
+) -> Result<(), SetCallbackError> {
+    if AUDIO_STREAM_CALLBACK.load(Ordering::Acquire).is_none() {
+        AUDIO_STREAM_CALLBACK.store(Some(cb), Ordering::Release);
         unsafe { ffi::SetAudioStreamCallback(stream.0, Some(custom_audio_stream_callback)) }
         Ok(())
     } else {
-        Err(SetLogError("audio stream"))
+        Err(SetCallbackError("audio stream"))
     }
 }
 
 impl RaylibHandle {
     /// Set custom trace log
-    #[deprecated = "Decoupled from RaylibHandle. Use [set_trace_log_callback](core::callbacks::set_trace_log_callback) instead."]
+    ///
+    /// # Errors
+    ///
+    /// This function returns [`SetCallbackError`] if a custom `trace_log` callback is already set.
+    #[deprecated = "Decoupled from RaylibHandle. Use [`set_trace_log_callback`](core::callbacks::set_trace_log_callback) instead."]
     pub fn set_trace_log_callback(
         &mut self,
-        cb: fn(TraceLogLevel, &str),
-    ) -> Result<(), SetLogError> {
+        cb: RustTraceLogCallback,
+    ) -> Result<(), SetCallbackError> {
         set_trace_log_callback(cb)
     }
     /// Set custom file binary data saver
-    #[deprecated = "Decoupled from RaylibHandle. Use [set_save_file_data_callback](core::callbacks::set_save_file_data_callback) instead."]
+    ///
+    /// # Errors
+    ///
+    /// This function returns [`SetCallbackError`] if a custom `save_file_data` callback is already set.
+    #[deprecated = "Decoupled from RaylibHandle. Use [`set_save_file_data_callback`](core::callbacks::set_save_file_data_callback) instead."]
     pub fn set_save_file_data_callback(
         &mut self,
-        cb: fn(&str, &[u8]) -> bool,
-    ) -> Result<(), SetLogError> {
+        cb: RustSaveFileDataCallback,
+    ) -> Result<(), SetCallbackError> {
         set_save_file_data_callback(cb)
     }
     /// Set custom file binary data loader
     ///
     /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
-    #[deprecated = "Decoupled from RaylibHandle. Use [set_load_file_data_callback](core::callbacks::set_load_file_data_callback) instead."]
-    pub fn set_load_file_data_callback<'b>(
+    ///
+    /// # Errors
+    ///
+    /// This function returns [`SetCallbackError`] if a custom `load_file_data` callback is already set.
+    #[deprecated = "Decoupled from RaylibHandle. Use [`set_load_file_data_callback`](core::callbacks::set_load_file_data_callback) instead."]
+    pub fn set_load_file_data_callback(
         &mut self,
-        cb: fn(&str) -> Vec<u8>,
-    ) -> Result<(), SetLogError> {
+        cb: RustLoadFileDataCallback,
+    ) -> Result<(), SetCallbackError> {
         set_load_file_data_callback(cb)
     }
     /// Set custom file text data saver
-    #[deprecated = "Decoupled from RaylibHandle. Use [set_save_file_text_callback](core::callbacks::set_save_file_text_callback) instead."]
+    ///
+    /// # Errors
+    ///
+    /// This function returns [`SetCallbackError`] if a custom `save_file_text` callback is already set.
+    #[deprecated = "Decoupled from RaylibHandle. Use [`set_save_file_text_callback`](core::callbacks::set_save_file_text_callback) instead."]
     pub fn set_save_file_text_callback(
         &mut self,
-        cb: fn(&str, &str) -> bool,
-    ) -> Result<(), SetLogError> {
+        cb: RustSaveFileTextCallback,
+    ) -> Result<(), SetCallbackError> {
         set_save_file_text_callback(cb)
     }
     /// Set custom file text data loader
     ///
     /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
-    #[deprecated = "Decoupled from RaylibHandle. Use [set_load_file_text_callback](core::callbacks::set_load_file_text_callback) instead."]
+    ///
+    /// # Errors
+    ///
+    /// This function returns [`SetCallbackError`] if a custom `load_file_text` callback is already set.
+    #[deprecated = "Decoupled from RaylibHandle. Use [`set_load_file_text_callback`](core::callbacks::set_load_file_text_callback) instead."]
     pub fn set_load_file_text_callback(
         &mut self,
-        cb: fn(&str) -> String,
-    ) -> Result<(), SetLogError> {
+        cb: RustLoadFileTextCallback,
+    ) -> Result<(), SetCallbackError> {
         set_load_file_text_callback(cb)
     }
 
     /// Audio thread callback to request new data
-    #[deprecated = "Decoupled from RaylibHandle. Use [set_audio_stream_callback](core::callbacks::set_audio_stream_callback) instead."]
+    ///
+    /// # Errors
+    ///
+    /// This function returns [`SetCallbackError`] if a custom `audio_stream` callback is already set.
+    #[deprecated = "Decoupled from RaylibHandle. Use [`set_audio_stream_callback`](core::callbacks::set_audio_stream_callback) instead."]
     pub fn set_audio_stream_callback(
         &mut self,
         stream: AudioStream,
-        cb: fn(&[u8]),
-    ) -> Result<(), SetLogError> {
-        if AUDIO_STREAM_CALLBACK.load(Ordering::Acquire) == 0 {
-            AUDIO_STREAM_CALLBACK.store(cb as _, Ordering::Release);
+        cb: RustAudioStreamCallback,
+    ) -> Result<(), SetCallbackError> {
+        if AUDIO_STREAM_CALLBACK.load(Ordering::Acquire).is_none() {
+            AUDIO_STREAM_CALLBACK.store(Some(cb), Ordering::Release);
             unsafe { ffi::SetAudioStreamCallback(stream.0, Some(custom_audio_stream_callback)) }
             Ok(())
         } else {
-            Err(SetLogError("audio stream"))
+            Err(SetCallbackError("audio stream"))
         }
     }
 }

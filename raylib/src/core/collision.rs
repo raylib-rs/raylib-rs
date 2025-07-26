@@ -42,14 +42,21 @@ pub fn check_collision_point_circle(
 }
 
 /// Check if point is within a polygon described by array of vertices
+///
+/// # Panics
+///
+/// This function will panic if `points` has a length greater than [`i32::MAX`] elements.
 #[inline]
 #[must_use]
 pub fn check_collision_point_poly(point: impl Into<ffi::Vector2>, points: &[Vector2]) -> bool {
     unsafe {
         ffi::CheckCollisionPointPoly(
             point.into(),
-            std::mem::transmute(points.as_ptr()),
-            points.len() as i32,
+            points.as_ptr().cast(),
+            points
+                .len()
+                .try_into()
+                .expect("points should not exceed i32::MAX elements"),
         )
     }
 }
@@ -95,14 +102,10 @@ pub fn check_collision_lines(
             end_pos1.into(),
             start_pos2.into(),
             end_pos2.into(),
-            &mut out,
+            &raw mut out,
         )
     };
-    if collision {
-        return Some(out.into());
-    } else {
-        return None;
-    }
+    collision.then(|| out.into())
 }
 
 /// Detects collision between two spheres.

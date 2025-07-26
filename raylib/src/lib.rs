@@ -20,7 +20,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 //!
 //! To get started, take a look at the [`init_window`] function. This initializes Raylib and shows a window, and returns a [`RaylibHandle`]. This handle is very important, because it is the way in which one accesses the vast majority of Raylib's functionality. This means that it must not go out of scope until the game is ready to exit. You will also receive a !Send and !Sync [`RaylibThread`] required for thread local functions.
 //!
-//! For more control over the game window, the [`init`] function will return a [`RaylibBuilder`] which allows for tweaking various settings such as VSync, anti-aliasing, fullscreen, and so on. Calling [`RaylibBuilder::build`] will then provide a [`RaylibHandle`].
+//! For more control over the game window, the [`init`] function will return a [`RaylibBuilder`] which allows for tweaking various settings such as Vsync, anti-aliasing, fullscreen, and so on. Calling [`RaylibBuilder::build`] will then provide a [`RaylibHandle`].
 //!
 //! Some useful constants can be found in the [`consts`] module, which is also re-exported in the [`prelude`] module. In most cases you will probably want to `use raylib::prelude::*;` to make your experience more smooth.
 //!
@@ -63,11 +63,31 @@ Permission is granted to anyone to use this software for any purpose, including 
     clippy::unwrap_used,
     reason = "temporary while cleaning up"
 )]
+#![forbid(clippy::correctness, clippy::perf)]
 #![warn(
     clippy::missing_safety_doc,
     // clippy::undocumented_unsafe_blocks, // TODO: Fixing safety would be a breaking change and deserves a separate PR
-    clippy::as_conversions,
-    clippy::multiple_unsafe_ops_per_block
+    clippy::multiple_unsafe_ops_per_block,
+    clippy::unnecessary_cast,
+    clippy::cast_lossless,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::fn_to_numeric_cast,
+    clippy::fn_to_numeric_cast_any,
+    clippy::fn_to_numeric_cast_with_truncation,
+    clippy::cast_nan_to_int,
+    clippy::char_lit_as_u8,
+    clippy::ref_as_ptr,
+    clippy::ptr_as_ptr,
+    clippy::as_ptr_cast_mut,
+    clippy::as_underscore,
+    clippy::borrow_as_ptr,
+    clippy::match_as_ref,
+    clippy::ptr_cast_constness,
+    clippy::cast_enum_truncation,
+    clippy::missing_const_for_fn,
 )]
 #![allow(dead_code)]
 pub mod consts;
