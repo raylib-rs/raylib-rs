@@ -4,13 +4,27 @@ use crate::consts::ShaderUniformDataType;
 use crate::core::math::Matrix;
 use crate::core::math::{Vector2, Vector3, Vector4};
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::{ffi, MintMatrix};
+use crate::{MintMatrix, ffi};
 use std::ffi::CString;
 use std::os::raw::c_void;
 
+/// Maximum number of shader locations supported
+/// (normally set by `config.h`, 32 by default)
+pub const RL_MAX_SHADER_LOCATIONS: usize = 32;
+
 fn no_drop<T>(_thing: T) {}
-make_thin_wrapper!(Shader, ffi::Shader, ffi::UnloadShader);
-make_thin_wrapper!(WeakShader, ffi::Shader, no_drop);
+make_thin_wrapper!(
+    /// Shader
+    Shader,
+    ffi::Shader,
+    ffi::UnloadShader
+);
+make_thin_wrapper!(
+    /// Unowned version of [`Shader`] that does not free the resource when dropped
+    WeakShader,
+    ffi::Shader,
+    no_drop
+);
 
 // #[cfg(feature = "nightly")]
 // impl !Send for Shader {}
@@ -18,42 +32,54 @@ make_thin_wrapper!(WeakShader, ffi::Shader, no_drop);
 // unsafe impl Sync for Shader {}
 
 impl RaylibHandle {
-    #[must_use]
     /// Loads a custom shader and binds default locations.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `vs_filename` or `fs_filename` contains an internal 0 byte.
+    #[must_use]
     pub fn load_shader(
         &mut self,
         _: &RaylibThread,
         vs_filename: Option<&str>,
         fs_filename: Option<&str>,
     ) -> Shader {
-        let c_vs_filename = vs_filename.map(|f| CString::new(f).unwrap());
-        let c_fs_filename = fs_filename.map(|f| CString::new(f).unwrap());
+        let vs_c_filename = vs_filename
+            .map(|f| CString::new(f).expect("vs_filename should not contain an internal 0 byte"));
+        let fs_c_filename = fs_filename
+            .map(|f| CString::new(f).expect("fs_filename should not contain an internal 0 byte"));
 
-        let vs = c_vs_filename
+        let vs = vs_c_filename
             .as_ref()
             .map_or_else(std::ptr::null, |s| s.as_ptr());
-        let fs = c_fs_filename
+        let fs = fs_c_filename
             .as_ref()
             .map_or_else(std::ptr::null, |s| s.as_ptr());
 
         Shader(unsafe { ffi::LoadShader(vs, fs) })
     }
 
-    #[must_use]
     /// Loads shader from code strings and binds default locations.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `vs_filename` or `fs_filename` contains an internal 0 byte.
+    #[must_use]
     pub fn load_shader_from_memory(
         &mut self,
         _: &RaylibThread,
         vs_code: Option<&str>,
         fs_code: Option<&str>,
     ) -> Shader {
-        let c_vs_code = vs_code.map(|f| CString::new(f).unwrap());
-        let c_fs_code = fs_code.map(|f| CString::new(f).unwrap());
+        let vs_c_code = vs_code
+            .map(|f| CString::new(f).expect("vs_code should not contain an internal 0 byte"));
+        let fs_c_code = fs_code
+            .map(|f| CString::new(f).expect("fs_code should not contain an internal 0 byte"));
 
-        let vs = c_vs_code
+        let vs = vs_c_code
             .as_ref()
             .map_or_else(std::ptr::null, |s| s.as_ptr());
-        let fs = c_fs_code
+        let fs = fs_c_code
             .as_ref()
             .map_or_else(std::ptr::null, |s| s.as_ptr());
 
@@ -89,124 +115,154 @@ impl RaylibHandle {
     pub fn get_matrix_projection(&self) -> Matrix {
         unsafe { ffi::rlGetMatrixProjection().into() }
     }
+    /// Get default shader. Modifying it modifies everything that uses that shader
     #[inline]
     #[must_use]
-    /// Get default shader. Modifying it modifies everything that uses that shader
     pub fn get_shader_default() -> WeakShader {
-        unsafe {
-            WeakShader(ffi::Shader {
-                id: ffi::rlGetShaderIdDefault(),
-                locs: ffi::rlGetShaderLocsDefault(),
-            })
-        }
+        WeakShader(ffi::Shader {
+            id: unsafe { ffi::rlGetShaderIdDefault() },
+            locs: unsafe { ffi::rlGetShaderLocsDefault() },
+        })
     }
 }
 
-pub trait ShaderV {
+/// Types that can be sent to the GPU as uniform values for shaders.
+///
+/// # Safety
+///
+/// The implementor must ensure that [`ShaderV::UNIFORM_TYPE`] accurately describes how
+/// `Self` should be interpreted by the GPU.
+pub unsafe trait ShaderV: Copy {
+    /// Enumerator describing the format [`ShaderV::value`]'s return can/should be interpreted by the GPU.
+    /// This involves the size, alignment, and information stored by the type.
     const UNIFORM_TYPE: ShaderUniformDataType;
-    unsafe fn value(&self) -> *const c_void;
-}
 
-impl ShaderV for f32 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_FLOAT;
+    /// Convert a reference to `self` into a void pointer that will have its data sent to the GPU.
+    fn value(&self) -> &c_void;
+}
+#[allow(clippy::enum_glob_use, reason = "variants are prefixed")]
+use ShaderUniformDataType::*;
+
+unsafe impl ShaderV for f32 {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_FLOAT;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const f32 as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*std::ptr::from_ref(self).cast() }
     }
 }
 
-impl ShaderV for Vector2 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC2;
+unsafe impl ShaderV for Vector2 {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_VEC2;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const Vector2 as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*std::ptr::from_ref(self).cast() }
     }
 }
 
-impl ShaderV for Vector3 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC3;
+unsafe impl ShaderV for Vector3 {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_VEC3;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const Vector3 as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*std::ptr::from_ref(self).cast() }
     }
 }
 
-impl ShaderV for Vector4 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC4;
+unsafe impl ShaderV for Vector4 {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_VEC4;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const Vector4 as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*std::ptr::from_ref(self).cast() }
     }
 }
 
-impl ShaderV for i32 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_INT;
+unsafe impl ShaderV for i32 {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_INT;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const i32 as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*std::ptr::from_ref(self).cast() }
     }
 }
 
-impl ShaderV for [i32; 2] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC2;
+unsafe impl ShaderV for [i32; 2] {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_IVEC2;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*self.as_ptr().cast() }
     }
 }
 
-impl ShaderV for [i32; 3] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC3;
+unsafe impl ShaderV for [i32; 3] {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_IVEC3;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*self.as_ptr().cast() }
     }
 }
 
-impl ShaderV for [i32; 4] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC4;
+unsafe impl ShaderV for [i32; 4] {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_IVEC4;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*self.as_ptr().cast() }
     }
 }
 
-impl ShaderV for [f32; 2] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC2;
+unsafe impl ShaderV for [f32; 2] {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_VEC2;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*self.as_ptr().cast() }
     }
 }
 
-impl ShaderV for [f32; 3] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC3;
+unsafe impl ShaderV for [f32; 3] {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_VEC3;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*self.as_ptr().cast() }
     }
 }
 
-impl ShaderV for [f32; 4] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC4;
+unsafe impl ShaderV for [f32; 4] {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_VEC4;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*self.as_ptr().cast() }
     }
 }
 
-impl ShaderV for &[i32] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_SAMPLER2D;
+unsafe impl ShaderV for &[i32] {
+    const UNIFORM_TYPE: ShaderUniformDataType = SHADER_UNIFORM_SAMPLER2D;
     #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
+    fn value(&self) -> &c_void {
+        // SAFETY: A reference cast to a pointer is still a reference
+        unsafe { &*self.as_ptr().cast() }
     }
 }
 
 impl Shader {
+    /// Convert `self` to its weak form, allowing it to be shared by multiple containers on the condition
+    /// that it is only unloaded once, manually.
+    ///
+    /// # Safety
+    ///
+    /// Must manually free memory by calling the proper unload function.
+    /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// and copies must not be used after being unloaded to avoid use-after-free.
     #[inline]
     #[must_use]
-    pub unsafe fn make_weak(self) -> WeakShader {
+    pub const unsafe fn make_weak(self) -> WeakShader {
         let m = WeakShader(self.0);
         std::mem::forget(self);
         m
@@ -226,22 +282,29 @@ impl Shader {
             ffi::SetShaderValue(
                 self.0,
                 uniform_loc,
-                value.value(),
-                (S::UNIFORM_TYPE as u32) as i32,
+                std::ptr::from_ref(value.value()),
+                S::UNIFORM_TYPE as i32,
             );
         }
     }
 
     /// Set shader uniform value vector
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `value` has a length greater than [`i32::MAX`].
     #[inline]
     pub fn set_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S]) {
         unsafe {
             ffi::SetShaderValueV(
                 self.0,
                 uniform_loc,
-                value.as_ptr() as *const ::std::os::raw::c_void,
-                (S::UNIFORM_TYPE as u32) as i32,
-                value.len() as i32,
+                value.as_ptr().cast(),
+                S::UNIFORM_TYPE as i32,
+                value
+                    .len()
+                    .try_into()
+                    .expect("value should not exceed i32::MAX elements"),
             );
         }
     }
@@ -270,67 +333,106 @@ impl Shader {
 impl RaylibShader for WeakShader {}
 impl RaylibShader for Shader {}
 
-pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
-    /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
+/// [`Shader`] accessors and helper methods.
+pub trait RaylibShader {
+    /// Shader locations array ([`RL_MAX_SHADER_LOCATIONS`])
     #[inline]
     #[must_use]
-    fn locs(&self) -> &[i32] {
-        unsafe { std::slice::from_raw_parts(self.as_ref().locs, 32) }
+    fn locs(&self) -> &[i32; RL_MAX_SHADER_LOCATIONS]
+    where
+        Self: AsRef<ffi::Shader>,
+    {
+        unsafe { &*self.as_ref().locs.cast() }
     }
 
-    /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
+    /// Shader locations array ([`RL_MAX_SHADER_LOCATIONS`])
     #[inline]
     #[must_use]
-    fn locs_mut(&mut self) -> &mut [i32] {
-        unsafe { std::slice::from_raw_parts_mut(self.as_mut().locs, 32) }
+    fn locs_mut(&mut self) -> &mut [i32; RL_MAX_SHADER_LOCATIONS]
+    where
+        Self: AsMut<ffi::Shader>,
+    {
+        unsafe { &mut *self.as_mut().locs.cast() }
     }
 
     /// Gets shader uniform location by name.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `uniform_name` contains an internal 0 byte.
     #[inline]
     #[must_use]
-    fn get_shader_location(&self, uniform_name: &str) -> i32 {
-        let c_uniform_name = CString::new(uniform_name).unwrap();
+    fn get_shader_location(&self, uniform_name: &str) -> i32
+    where
+        Self: AsRef<ffi::Shader>,
+    {
+        let c_uniform_name =
+            CString::new(uniform_name).expect("uniform_name should not contain an internal 0 byte");
         unsafe { ffi::GetShaderLocation(*self.as_ref(), c_uniform_name.as_ptr()) }
     }
 
     /// Gets shader attribute location by name.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `attribute_name` contains an internal 0 byte.
     #[inline]
     #[must_use]
-    fn get_shader_location_attribute(&self, attribute_name: &str) -> i32 {
-        let c_attribute_name = CString::new(attribute_name).unwrap();
+    fn get_shader_location_attribute(&self, attribute_name: &str) -> i32
+    where
+        Self: AsRef<ffi::Shader>,
+    {
+        let c_attribute_name = CString::new(attribute_name)
+            .expect("attribute_name should not contain an internal 0 byte");
         unsafe { ffi::GetShaderLocationAttrib(*self.as_ref(), c_attribute_name.as_ptr()) }
     }
 
     /// Sets shader uniform value
     #[inline]
-    fn set_shader_value<S: ShaderV>(&mut self, uniform_loc: i32, value: S) {
+    fn set_shader_value<S: ShaderV>(&mut self, uniform_loc: i32, value: S)
+    where
+        Self: AsMut<ffi::Shader>,
+    {
         unsafe {
             ffi::SetShaderValue(
                 *self.as_mut(),
                 uniform_loc,
                 value.value(),
-                (S::UNIFORM_TYPE as u32) as i32,
+                S::UNIFORM_TYPE as i32,
             );
         }
     }
 
     /// Set shader uniform value vector
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `value` has a length greater than [`i32::MAX`].
     #[inline]
-    fn set_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S]) {
+    fn set_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S])
+    where
+        Self: AsMut<ffi::Shader>,
+    {
         unsafe {
             ffi::SetShaderValueV(
                 *self.as_mut(),
                 uniform_loc,
-                value.as_ptr() as *const ::std::os::raw::c_void,
-                (S::UNIFORM_TYPE as u32) as i32,
-                value.len() as i32,
+                value.as_ptr().cast(),
+                S::UNIFORM_TYPE as i32,
+                value
+                    .len()
+                    .try_into()
+                    .expect("value should not exceed i32::MAX elements"),
             );
         }
     }
 
     /// Sets shader uniform value (matrix 4x4).
     #[inline]
-    fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<MintMatrix>) {
+    fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<MintMatrix>)
+    where
+        Self: AsMut<ffi::Shader>,
+    {
         unsafe {
             ffi::SetShaderValueMatrix(*self.as_mut(), uniform_loc, mat.into());
         }
@@ -338,7 +440,10 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
 
     /// Sets shader uniform value (matrix 4x4).
     #[inline]
-    fn set_shader_value_texture(&mut self, uniform_loc: i32, texture: impl AsRef<ffi::Texture2D>) {
+    fn set_shader_value_texture(&mut self, uniform_loc: i32, texture: impl AsRef<ffi::Texture2D>)
+    where
+        Self: AsMut<ffi::Shader>,
+    {
         unsafe {
             ffi::SetShaderValueTexture(*self.as_mut(), uniform_loc, *texture.as_ref());
         }
