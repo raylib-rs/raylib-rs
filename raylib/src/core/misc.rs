@@ -1,99 +1,131 @@
 //! Useful functions that don't fit anywhere else
 
-use crate::core::texture::Image;
-use crate::core::{RaylibHandle, RaylibThread};
-use crate::ffi;
-use std::ffi::CString;
-use std::ops::{Deref, DerefMut, Range};
-use std::usize;
+use crate::{
+    core::{RaylibHandle, RaylibThread, texture::Image},
+    ffi,
+};
+use std::{
+    ffi::CString,
+    ops::{Deref, DerefMut, Range},
+    ptr::NonNull,
+};
 
-/// Struct for holding the result of RaylibHandle::load_random_sequence.
-/// This is a thin wrapper for an array of i32. The reason it exists is because Raylib expects you
+/// Struct for holding the result of [`RaylibHandle::load_random_sequence`].
+/// This is a thin wrapper for an array of [`i32`]. The reason it exists is because Raylib expects you
 /// to unload the sequence it creates manually, and this struct does it for you.
-pub struct RandomSequence<'a>(&'a mut [i32]);
+pub struct RandomSequence(NonNull<[i32]>);
 
-impl<'a> Deref for RandomSequence<'a> {
+impl Deref for RandomSequence {
     type Target = [i32];
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
-        self.0
+        unsafe { self.0.as_ref() }
     }
 }
 
-impl<'a> DerefMut for RandomSequence<'a> {
+impl DerefMut for RandomSequence {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        unsafe { self.0.as_mut() }
     }
 }
 
-impl<'a> Drop for RandomSequence<'a> {
+impl Drop for RandomSequence {
     fn drop(&mut self) {
-        unsafe { ffi::UnloadRandomSequence(self.0.as_mut_ptr()) }
+        unsafe { ffi::UnloadRandomSequence(self.0.as_ptr().cast()) }
     }
 }
 
-impl<'a> IntoIterator for RandomSequence<'a> {
+impl IntoIterator for RandomSequence {
     type Item = i32;
+    type IntoIter = RandSeqIterator;
 
-    type IntoIter = RandSeqIterator<'a>;
-
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         RandSeqIterator(self, 0)
     }
 }
-pub struct RandSeqIterator<'a>(RandomSequence<'a>, usize);
+/// Iterator over [`RandomSequence`] elements.
+pub struct RandSeqIterator(RandomSequence, usize);
 
-impl<'a> Iterator for RandSeqIterator<'a> {
+impl Iterator for RandSeqIterator {
     type Item = i32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let ret = self.0.get(self.1);
-        self.1 += 1;
-        match ret {
-            Some(a) => Some(*a),
-            None => None,
-        }
+        self.1
+            .checked_add(1)
+            .filter(|n| *n < self.0.len())
+            .map(|n| self.0[std::mem::replace(&mut self.1, n)])
     }
 }
 
+impl ExactSizeIterator for RandSeqIterator {
+    fn len(&self) -> usize {
+        self.0.len() - self.1
+    }
+}
+
+impl std::iter::FusedIterator for RandSeqIterator {}
+
 /// Open URL with default system browser (if available)
+///
+/// # Example
 /// ```ignore
 /// use raylib::*;
 /// fn main() {
 ///     open_url("https://google.com");
 /// }
+/// ```
+///
+/// # Panics
+///
+/// This function will panic if `url` contains an internal 0 byte
 pub fn open_url(url: &str) {
-    let s = CString::new(url).expect("Not a string");
+    let s = CString::new(url).expect("url should not contain an internal 0 byte");
     unsafe {
         ffi::OpenURL(s.as_ptr());
     }
 }
 
 impl RaylibHandle {
+    /// Load random values sequence, no values repeated, min and max included
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if [`ffi::LoadRandomSequence`] errors or if `count` is greater than [`usize::MAX`].
+    // This function should definitely return `Option<RandomSequence>` and `num` should be a `RangeInclusive<i32>`
     #[must_use]
-    /// Load random values sequence, no values repeated
-    pub fn load_random_sequence<'a>(&self, num: Range<i32>, count: u32) -> RandomSequence<'a> {
-        unsafe {
-            let ptr = ffi::LoadRandomSequence(count, num.start, num.end.into());
-            RandomSequence(std::slice::from_raw_parts_mut(ptr, count as usize))
-        }
+    pub fn load_random_sequence(&self, num: Range<i32>, count: u32) -> RandomSequence {
+        let ptr = unsafe { ffi::LoadRandomSequence(count, num.start, num.end) };
+        RandomSequence(NonNull::slice_from_raw_parts(
+            NonNull::new(ptr).expect("error occurred in ffi::LoadRandomSequence"),
+            count
+                .try_into()
+                .expect("count should not exceed usize::MAX"),
+        ))
     }
+
+    /// Load pixels from the screen into a CPU image
     #[inline]
     #[must_use]
-    /// Load pixels from the screen into a CPU image
     pub fn load_image_from_screen(&self, _: &RaylibThread) -> Image {
         unsafe { Image(ffi::LoadImageFromScreen()) }
     }
 
     /// Takes a screenshot of current screen (saved a .png)
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte
     pub fn take_screenshot(&mut self, _: &RaylibThread, filename: &str) {
-        let c_filename = CString::new(filename).unwrap();
+        let c_filename =
+            CString::new(filename).expect("filename should not contain an internal 0 byte");
         unsafe {
             ffi::TakeScreenshot(c_filename.as_ptr());
         }
     }
-    #[inline]
-    #[must_use]
+
     /// Returns a random value between min and max (both included)
     /// ```ignore
     /// use raylib::*;
@@ -102,8 +134,10 @@ impl RaylibHandle {
     ///     let r = rl.get_random_value(0, 10);
     ///     println!("random value: {}", r);
     /// }
+    #[inline]
+    #[must_use]
     pub fn get_random_value<T: From<i32>>(&self, num: Range<i32>) -> T {
-        unsafe { (ffi::GetRandomValue(num.start, num.end.into()) as i32).into() }
+        unsafe { (ffi::GetRandomValue(num.start, num.end) as i32).into() }
     }
 
     /// Set the seed for random number generation
@@ -114,25 +148,25 @@ impl RaylibHandle {
     }
 }
 
-// lossy conversion to an f32
+/// Lossy conversion to an [`f32`]
 pub trait AsF32: Copy {
+    /// Convert `self` to [`f32`] using `as`.
     fn as_f32(self) -> f32;
 }
 
-macro_rules! as_f32 {
-    ($ty:ty) => {
-        impl AsF32 for $ty {
+macro_rules! impl_as_f32 {
+    ($($Ty:ty),* $(,)?) => {$(
+        impl AsF32 for $Ty {
+            #[allow(
+                clippy::cast_lossless,
+                clippy::cast_precision_loss,
+                reason = "AsF32 is meant to replicate the `as` keyword"
+            )]
             fn as_f32(self) -> f32 {
                 self as f32
             }
         }
-    };
+    )*};
 }
 
-as_f32!(u8);
-as_f32!(u16);
-as_f32!(u32);
-as_f32!(i8);
-as_f32!(i16);
-as_f32!(i32);
-as_f32!(f32);
+impl_as_f32!(u8, u16, u32, i8, i16, i32, f32);
