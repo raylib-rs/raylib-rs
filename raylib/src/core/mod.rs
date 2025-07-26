@@ -33,6 +33,9 @@ use crate::ffi;
 use std::ffi::CString;
 use std::marker::PhantomData;
 
+#[allow(clippy::enum_glob_use, reason = "variants are prefixed")]
+use crate::consts::ConfigFlags::*;
+
 // shamelessly stolen from imgui
 #[macro_export]
 macro_rules! rstr {
@@ -68,106 +71,102 @@ pub struct RaylibHandle(()); // inner field is private, preventing manual constr
 
 impl Drop for RaylibHandle {
     fn drop(&mut self) {
-        unsafe {
-            if ffi::IsWindowReady() {
+        if unsafe { ffi::IsWindowReady() } {
+            unsafe {
                 ffi::CloseWindow();
-                // NOTE(IOI_XD): If imgui is enabled, we don't call the destructor here because we're using a context that Rust expects to free, and the only other thing in that function is the free'ing of FontTexture...an action which causes a segfault.
-                // It then gets successfully replaced if rlImGuiReloadFonts is called, so we'll take it.
             }
+            // NOTE(IOI_XD): If imgui is enabled, we don't call the destructor here because we're using a context that Rust expects to free, and the only other thing in that function is the free'ing of FontTexture...an action which causes a segfault.
+            // It then gets successfully replaced if rlImGuiReloadFonts is called, so we'll take it.
         }
     }
 }
 
 /// A builder that allows more customization of the game window shown to the user before the `RaylibHandle` is created.
 #[derive(Debug, Default)]
-pub struct RaylibBuilder {
-    fullscreen_mode: bool,
-    window_resizable: bool,
-    window_undecorated: bool,
-    window_transparent: bool,
-    msaa_4x_hint: bool,
-    vsync_hint: bool,
+pub struct RaylibBuilder<'a> {
+    flags: u32,
     log_level: TraceLogLevel,
     width: i32,
     height: i32,
-    title: String,
+    title: &'a str,
 }
+
 #[inline]
 #[must_use]
 /// Creates a `RaylibBuilder` for choosing window options before initialization.
-pub fn init() -> RaylibBuilder {
+pub fn init<'a>() -> RaylibBuilder<'a> {
     RaylibBuilder {
         width: 640,
         height: 480,
-        title: "raylib-rs".to_string(),
+        title: "raylib-rs",
         ..Default::default()
     }
 }
 
-impl RaylibBuilder {
+impl<'a> RaylibBuilder<'a> {
     /// Sets the window to be fullscreen.
-    pub fn fullscreen(&mut self) -> &mut Self {
-        self.fullscreen_mode = true;
+    pub const fn fullscreen(&mut self) -> &mut Self {
+        self.flags |= FLAG_FULLSCREEN_MODE as u32;
         self
     }
 
     /// Set the builder's log level.
-    pub fn log_level(&mut self, level: TraceLogLevel) -> &mut Self {
+    pub const fn log_level(&mut self, level: TraceLogLevel) -> &mut Self {
         self.log_level = level;
         self
     }
     /// Sets the window to be resizable.
-    pub fn resizable(&mut self) -> &mut Self {
-        self.window_resizable = true;
+    pub const fn resizable(&mut self) -> &mut Self {
+        self.flags |= FLAG_WINDOW_RESIZABLE as u32;
         self
     }
 
     /// Sets the window to be undecorated (without a border).
-    pub fn undecorated(&mut self) -> &mut Self {
-        self.window_undecorated = true;
+    pub const fn undecorated(&mut self) -> &mut Self {
+        self.flags |= FLAG_WINDOW_UNDECORATED as u32;
         self
     }
 
     /// Sets the window to be transparent.
-    pub fn transparent(&mut self) -> &mut Self {
-        self.window_transparent = true;
+    pub const fn transparent(&mut self) -> &mut Self {
+        self.flags |= FLAG_WINDOW_TRANSPARENT as u32;
         self
     }
 
     /// Hints that 4x MSAA (anti-aliasing) should be enabled. The system's graphics drivers may override this setting.
-    pub fn msaa_4x(&mut self) -> &mut Self {
-        self.msaa_4x_hint = true;
+    pub const fn msaa_4x(&mut self) -> &mut Self {
+        self.flags |= FLAG_MSAA_4X_HINT as u32;
         self
     }
 
-    /// Hints that vertical sync (VSync) should be enabled. The system's graphics drivers may override this setting.
-    pub fn vsync(&mut self) -> &mut Self {
-        self.vsync_hint = true;
+    /// Hints that vertical sync (Vsync) should be enabled. The system's graphics drivers may override this setting.
+    pub const fn vsync(&mut self) -> &mut Self {
+        self.flags |= FLAG_VSYNC_HINT as u32;
         self
     }
 
     /// Sets the window's width.
-    pub fn width(&mut self, w: i32) -> &mut Self {
+    pub const fn width(&mut self, w: i32) -> &mut Self {
         self.width = w;
         self
     }
 
     /// Sets the window's height.
-    pub fn height(&mut self, h: i32) -> &mut Self {
+    pub const fn height(&mut self, h: i32) -> &mut Self {
         self.height = h;
         self
     }
 
     /// Sets the window's width and height.
-    pub fn size(&mut self, w: i32, h: i32) -> &mut Self {
+    pub const fn size(&mut self, w: i32, h: i32) -> &mut Self {
         self.width = w;
         self.height = h;
         self
     }
 
     /// Sets the window title.
-    pub fn title(&mut self, text: &str) -> &mut Self {
-        self.title = text.to_string();
+    pub const fn title(&mut self, text: &'a str) -> &mut Self {
+        self.title = text;
         self
     }
 
@@ -176,37 +175,17 @@ impl RaylibBuilder {
     /// # Panics
     ///
     /// Attempting to initialize Raylib more than once will result in a panic.
+    #[must_use]
     pub fn build(&self) -> (RaylibHandle, RaylibThread) {
-        use crate::consts::ConfigFlags::*;
-        let mut flags = 0u32;
-        if self.fullscreen_mode {
-            flags |= FLAG_FULLSCREEN_MODE as u32;
-        }
-        if self.window_resizable {
-            flags |= FLAG_WINDOW_RESIZABLE as u32;
-        }
-        if self.window_undecorated {
-            flags |= FLAG_WINDOW_UNDECORATED as u32;
-        }
-        if self.window_transparent {
-            flags |= FLAG_WINDOW_TRANSPARENT as u32;
-        }
-        if self.msaa_4x_hint {
-            flags |= FLAG_MSAA_4X_HINT as u32;
-        }
-        if self.vsync_hint {
-            flags |= FLAG_VSYNC_HINT as u32;
-        }
-
         unsafe {
-            ffi::SetConfigFlags(flags as u32);
+            ffi::SetConfigFlags(self.flags);
         }
 
         unsafe {
             ffi::SetTraceLogLevel(self.log_level as i32);
         }
 
-        let rl = init_window(self.width, self.height, &self.title);
+        let rl = init_window(self.width, self.height, self.title);
 
         (rl, RaylibThread(PhantomData))
     }
@@ -217,18 +196,21 @@ impl RaylibBuilder {
 /// # Panics
 ///
 /// Attempting to initialize Raylib more than once will result in a panic.
+///
+/// This function will panic if `title` contains an internal 0 byte.
 fn init_window(width: i32, height: i32, title: &str) -> RaylibHandle {
-    if unsafe { ffi::IsWindowReady() } {
-        panic!("Attempted to initialize raylib-rs more than once!");
-    } else {
-        unsafe {
-            let c_title = CString::new(title).unwrap();
-            ffi::InitWindow(width, height, c_title.as_ptr());
-        }
-        if !unsafe { ffi::IsWindowReady() } {
-            panic!("Attempting to create window failed!");
-        }
-
-        RaylibHandle(())
+    assert!(
+        !unsafe { ffi::IsWindowReady() },
+        "Attempted to initialize raylib-rs more than once!"
+    );
+    unsafe {
+        let c_title = CString::new(title).expect("title should not contain an internal 0 byte");
+        ffi::InitWindow(width, height, c_title.as_ptr());
     }
+    assert!(
+        unsafe { ffi::IsWindowReady() },
+        "Attempting to create window failed!",
+    );
+
+    RaylibHandle(())
 }
