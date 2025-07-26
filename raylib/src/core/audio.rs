@@ -41,6 +41,7 @@ make_thin_wrapper_lifetime!(
     ffi::UnloadAudioStream
 );
 
+/// Sample buffer for a [`Wave`].
 pub struct WaveSamples(*mut f32, usize);
 
 impl AsRef<[f32]> for WaveSamples {
@@ -837,4 +838,7 @@ impl<'bind> Sound<'bind> {
     }
 }
 
+/// Weak clone of a [`Sound`].
+///
+/// See [`Sound::alias`]
 pub struct SoundAlias<'snd, 'bind>(ffi::Sound, PhantomData<&'snd Sound<'bind>>);

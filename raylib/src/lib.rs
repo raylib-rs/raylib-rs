@@ -65,6 +65,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 )]
 #![forbid(clippy::correctness, clippy::perf)]
 #![warn(
+    missing_docs,
     clippy::missing_safety_doc,
     // clippy::undocumented_unsafe_blocks, // TODO: Fixing safety would be a breaking change and deserves a separate PR
     clippy::multiple_unsafe_ops_per_block,

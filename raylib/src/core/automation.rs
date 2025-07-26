@@ -6,6 +6,7 @@ use std::{
 
 use crate::{RaylibHandle, ffi};
 
+/// Iterator over [`AutomationEvent`]s. Returned by [`AutomationEventList::iter`].
 #[derive(Debug, Clone)]
 pub struct AutomationEventIter<'a> {
     iter: std::slice::Iter<'a, ffi::AutomationEvent>,

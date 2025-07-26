@@ -242,12 +242,14 @@ extern "C" fn custom_audio_stream_callback(a: *mut c_void, b: u32) {
     let a = unsafe { std::slice::from_raw_parts(a.cast::<u8>(), b as usize) };
     audio_stream(a);
 }
+
+/// Error caused by attempting to reassign a Raylib callback after it has been set.
 #[derive(Debug)]
 pub struct SetCallbackError(&'static str);
 
 impl std::fmt::Display for SetCallbackError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("There is a {} callback already set.", self.0))
+        write!(f, "there is a {} callback already set", self.0)
     }
 }
 
@@ -445,6 +447,10 @@ where
 /// # Errors
 ///
 /// This function returns [`SetCallbackError`] if a custom `audio_stream` callback is already set.
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "changing this could be a breaking change"
+)]
 pub fn set_audio_stream_callback(
     stream: AudioStream,
     cb: RustAudioStreamCallback,
@@ -530,6 +536,10 @@ impl RaylibHandle {
     ///
     /// This function returns [`SetCallbackError`] if a custom `audio_stream` callback is already set.
     #[deprecated = "Decoupled from RaylibHandle. Use [`set_audio_stream_callback`](core::callbacks::set_audio_stream_callback) instead."]
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "function is deprecated and therefore should not have changes to the interface"
+    )]
     pub fn set_audio_stream_callback(
         &mut self,
         stream: AudioStream,
