@@ -15,15 +15,18 @@ Permission is granted to anyone to use this software for any purpose, including 
 */
 
 use crate::misc::AsF32;
-use crate::{ffi, MintVec3};
+use crate::{MintVec3, ffi};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Range, Sub, SubAssign};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 pub use glam;
+/// Vector2, 2 components
 pub type Vector2 = glam::Vec2;
+/// Vector3, 3 components
 pub type Vector3 = glam::Vec3;
+/// Vector4, 4 components
 pub type Vector4 = glam::Vec4;
 // note(jest): Transform and Matrix do not use glam because of incompat struct alignment so they are manually implemented below
 
@@ -36,14 +39,14 @@ macro_rules! optional_serde_struct {
     };
 }
 
-/// A convenience function for linearly interpolating an `f32`.
+/// A convenience function for linearly interpolating an [`f32`].
 #[inline]
 #[must_use]
 pub const fn lerp(v0: f32, v1: f32, amount: f32) -> f32 {
     v0 + amount * (v1 - v0)
 }
 
-/// A convenience function for making a new `Quaternion`.
+/// A convenience function for making a new [`Quaternion`].
 #[inline]
 #[must_use]
 pub fn rquat<T1: AsF32, T2: AsF32, T3: AsF32, T4: AsF32>(x: T1, y: T2, z: T3, w: T4) -> Quaternion {
@@ -51,6 +54,7 @@ pub fn rquat<T1: AsF32, T2: AsF32, T3: AsF32, T4: AsF32>(x: T1, y: T2, z: T3, w:
 }
 
 optional_serde_struct!(
+    /// Quaternion, 4 components (Vector4 alias)
     pub struct Quaternion {
         x: f32,
         y: f32,
@@ -60,7 +64,7 @@ optional_serde_struct!(
 );
 
 impl Quaternion {
-    /// Returns a new `Quaternion` with specified components.
+    /// Returns a new [`Quaternion`] with specified components.
     #[inline]
     #[must_use]
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Quaternion {
@@ -290,9 +294,11 @@ impl Quaternion {
     pub fn length(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w).sqrt()
     }
+
+    /// Returns a normalized version of the current quaternion.
     #[inline]
     #[must_use]
-    /// Returns a normalized version of the current quaternion.
+    #[allow(clippy::similar_names)]
     pub fn normalized(&self) -> Quaternion {
         let mut length = self.length();
         if length == 0.0 {
@@ -421,6 +427,7 @@ impl From<(f32, f32, f32, f32)> for Quaternion {
 
 impl Mul for Quaternion {
     type Output = Quaternion;
+    #[allow(clippy::similar_names)]
     fn mul(self, q: Quaternion) -> Quaternion {
         let qax = self.x;
         let qay = self.y;
@@ -448,26 +455,43 @@ impl MulAssign for Quaternion {
 
 optional_serde_struct! {
     /// Matrix, 4x4 components, column major, OpenGL style, right-handed
+    #[allow(missing_docs)]
     pub struct Matrix {
         // Matrix first row (4 components)
+        /// row 1 column 1
         pub m0: f32,
+        /// row 1 column 2
         pub m4: f32,
+        /// row 1 column 3
         pub m8: f32,
+        /// row 1 column 4
         pub m12: f32,
         // Matrix second row (4 components)
+        /// row 2 column 1
         pub m1: f32,
+        /// row 2 column 2
         pub m5: f32,
+        /// row 2 column 3
         pub m9: f32,
+        /// row 2 column 4
         pub m13: f32,
         // Matrix third row (4 components)
+        /// row 3 column 1
         pub m2: f32,
+        /// row 3 column 2
         pub m6: f32,
+        /// row 3 column 3
         pub m10: f32,
+        /// row 3 column 4
         pub m14: f32,
         // Matrix fourth row (4 components)
+        /// row 4 column 1
         pub m3: f32,
+        /// row 4 column 2
         pub m7: f32,
+        /// row 4 column 3
         pub m11: f32,
+        /// row 4 column 4
         pub m15: f32,
     }
 }
@@ -494,72 +518,39 @@ impl Matrix {
     /// Returns the identity matrix.
     #[inline]
     #[must_use]
+    #[rustfmt::skip]
     pub const fn identity() -> Matrix {
         Matrix {
-            m0: 1.0,
-            m4: 0.0,
-            m8: 0.0,
-            m12: 0.0,
-            m1: 0.0,
-            m5: 1.0,
-            m9: 0.0,
-            m13: 0.0,
-            m2: 0.0,
-            m6: 0.0,
-            m10: 1.0,
-            m14: 0.0,
-            m3: 0.0,
-            m7: 0.0,
-            m11: 0.0,
-            m15: 1.0,
+            m0: 1.0, m4: 0.0, m8:  0.0, m12: 0.0,
+            m1: 0.0, m5: 1.0, m9:  0.0, m13: 0.0,
+            m2: 0.0, m6: 0.0, m10: 1.0, m14: 0.0,
+            m3: 0.0, m7: 0.0, m11: 0.0, m15: 1.0,
         }
     }
 
     /// Returns the zero matriz.
     #[inline]
     #[must_use]
+    #[rustfmt::skip]
     pub const fn zero() -> Matrix {
         Matrix {
-            m0: 0.0,
-            m4: 0.0,
-            m8: 0.0,
-            m12: 0.0,
-            m1: 0.0,
-            m5: 0.0,
-            m9: 0.0,
-            m13: 0.0,
-            m2: 0.0,
-            m6: 0.0,
-            m10: 0.0,
-            m14: 0.0,
-            m3: 0.0,
-            m7: 0.0,
-            m11: 0.0,
-            m15: 0.0,
+            m0: 0.0, m4: 0.0, m8:  0.0, m12: 0.0,
+            m1: 0.0, m5: 0.0, m9:  0.0, m13: 0.0,
+            m2: 0.0, m6: 0.0, m10: 0.0, m14: 0.0,
+            m3: 0.0, m7: 0.0, m11: 0.0, m15: 0.0,
         }
     }
 
     /// Returns a translation matrix.
     #[inline]
     #[must_use]
+    #[rustfmt::skip]
     pub const fn translate(x: f32, y: f32, z: f32) -> Matrix {
         Matrix {
-            m0: 1.0,
-            m4: 0.0,
-            m8: 0.0,
-            m12: x,
-            m1: 0.0,
-            m5: 1.0,
-            m9: 0.0,
-            m13: y,
-            m2: 0.0,
-            m6: 0.0,
-            m10: 1.0,
-            m14: z,
-            m3: 0.0,
-            m7: 0.0,
-            m11: 0.0,
-            m15: 1.0,
+            m0: 1.0, m4: 0.0, m8:  0.0, m12:   x,
+            m1: 0.0, m5: 1.0, m9:  0.0, m13:   y,
+            m2: 0.0, m6: 0.0, m10: 1.0, m14:   z,
+            m3: 0.0, m7: 0.0, m11: 0.0, m15: 1.0,
         }
     }
 
@@ -571,7 +562,7 @@ impl Matrix {
         let mut z = axis.z;
         let mut length = (x * x + y * y + z * z).sqrt();
 
-        if (length != 1.0) && (length != 0.0) {
+        if ((length - 1.0).abs() > f32::EPSILON) && (length != 0.0) {
             length = 1.0 / length;
             x *= length;
             y *= length;
@@ -605,8 +596,8 @@ impl Matrix {
         }
     }
 
-    #[must_use]
     /// Returns a translation matrix around the X axis.
+    #[must_use]
     pub fn rotate_x(angle: f32) -> Matrix {
         let mut result = Matrix::identity();
 
@@ -620,8 +611,8 @@ impl Matrix {
         result
     }
 
-    #[must_use]
     /// Returns a translation matrix around the Y axis.
+    #[must_use]
     pub fn rotate_y(angle: f32) -> Matrix {
         let mut result = Matrix::identity();
 
@@ -635,8 +626,8 @@ impl Matrix {
         result
     }
 
-    #[must_use]
     /// Returns a translation matrix around the Z axis.
+    #[must_use]
     pub fn rotate_z(angle: f32) -> Matrix {
         let mut result = Matrix::identity();
 
@@ -650,8 +641,9 @@ impl Matrix {
         result
     }
 
-    #[must_use]
     /// Returns xyz-rotation matrix (angles in radians)
+    #[must_use]
+    #[allow(clippy::similar_names)]
     pub fn rotate_xyz(ang: Vector3) -> Self {
         let mut result = Self::identity();
 
@@ -677,27 +669,16 @@ impl Matrix {
         result
     }
 
-    #[must_use]
     /// Returns a scaling matrix.
+    #[must_use]
     #[inline]
+    #[rustfmt::skip]
     pub const fn scale(x: f32, y: f32, z: f32) -> Matrix {
         Matrix {
-            m0: x,
-            m4: 0.0,
-            m8: 0.0,
-            m12: 0.0,
-            m1: 0.0,
-            m5: y,
-            m9: 0.0,
-            m13: 0.0,
-            m2: 0.0,
-            m6: 0.0,
-            m10: z,
-            m14: 0.0,
-            m3: 0.0,
-            m7: 0.0,
-            m11: 0.0,
-            m15: 1.0,
+            m0:   x, m4: 0.0, m8:  0.0, m12: 0.0,
+            m1: 0.0, m5:   y, m9:  0.0, m13: 0.0,
+            m2: 0.0, m6: 0.0, m10:   z, m14: 0.0,
+            m3: 0.0, m7: 0.0, m11: 0.0, m15: 1.0,
         }
     }
 
@@ -1078,6 +1059,7 @@ impl From<&Ray> for ffi::Ray {
 }
 
 impl Ray {
+    /// Construct a [`Ray`] from a start position and direction.
     #[must_use]
     #[inline]
     pub const fn new(position: Vector3, direction: Vector3) -> Self {
@@ -1088,10 +1070,11 @@ impl Ray {
     }
 }
 
+/// Rectangle, 4 components
 pub type Rectangle = ffi::Rectangle;
 
 optional_serde_struct! {
-    /// BoundingBox
+    /// [`BoundingBox`]
     pub struct BoundingBox {
         /// Minimum vertex box-corner
         pub min: Vector3,
@@ -1101,26 +1084,30 @@ optional_serde_struct! {
 }
 
 impl BoundingBox {
+    /// Construct a [`BoundingBox`] from its `min` and `max` points.
     #[must_use]
     #[inline]
-    pub fn new(min: Vector3, max: Vector3) -> BoundingBox {
+    pub const fn new(min: Vector3, max: Vector3) -> BoundingBox {
         BoundingBox { min, max }
     }
 }
 
 impl From<ffi::BoundingBox> for BoundingBox {
+    #[inline]
     fn from(r: ffi::BoundingBox) -> BoundingBox {
         unsafe { std::mem::transmute(r) }
     }
 }
 
 impl From<BoundingBox> for ffi::BoundingBox {
+    #[inline]
     fn from(v: BoundingBox) -> ffi::BoundingBox {
         unsafe { std::mem::transmute(v) }
     }
 }
 
 impl From<&BoundingBox> for ffi::BoundingBox {
+    #[inline]
     fn from(v: &BoundingBox) -> ffi::BoundingBox {
         unsafe { std::mem::transmute(*v) }
     }
@@ -1154,7 +1141,7 @@ impl BoundingBox {
 }
 
 optional_serde_struct! {
-    /// RayCollision, ray hit information
+    /// [`RayCollision`], ray hit information
     pub struct RayCollision {
         /// Did the ray hit something?
         pub hit: bool,
@@ -1168,18 +1155,21 @@ optional_serde_struct! {
 }
 
 impl From<ffi::RayCollision> for RayCollision {
+    #[inline]
     fn from(r: ffi::RayCollision) -> RayCollision {
         unsafe { std::mem::transmute(r) }
     }
 }
 
 impl From<RayCollision> for ffi::RayCollision {
+    #[inline]
     fn from(v: RayCollision) -> ffi::RayCollision {
         unsafe { std::mem::transmute(v) }
     }
 }
 
 impl From<&RayCollision> for ffi::RayCollision {
+    #[inline]
     fn from(v: &RayCollision) -> ffi::RayCollision {
         unsafe { std::mem::transmute(*v) }
     }
@@ -1221,6 +1211,10 @@ mod math_test {
     use crate::{ffi, math::Matrix};
 
     #[test]
+    #[allow(
+        clippy::float_cmp,
+        reason = "no math operations are being performed, only transmutation"
+    )]
     fn test_into() {
         let v2: ffi::Vector2 = (Vector2 { x: 1.0, y: 2.0 }).into();
         assert!(v2.x == 1.0 && v2.y == 2.0, "bad memory transmutation");

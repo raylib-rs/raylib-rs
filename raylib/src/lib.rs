@@ -66,6 +66,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 #![forbid(clippy::correctness, clippy::perf)]
 #![warn(
     missing_docs,
+    clippy::inline_always,
     clippy::missing_safety_doc,
     // clippy::undocumented_unsafe_blocks, // TODO: Fixing safety would be a breaking change and deserves a separate PR
     clippy::multiple_unsafe_ops_per_block,
@@ -104,11 +105,11 @@ pub mod ffi {
 
 pub use crate::core::collision::*;
 
-pub type MintVec2 = ffi::Vector2;
-pub type MintVec3 = ffi::Vector3;
-pub type MintVec4 = ffi::Vector4;
-pub type MintMatrix = ffi::Matrix;
-pub type MintQuat = ffi::Quaternion;
+pub use ffi::Matrix as MintMatrix;
+pub use ffi::Quaternion as MintQuat;
+pub use ffi::Vector2 as MintVec2;
+pub use ffi::Vector3 as MintVec3;
+pub use ffi::Vector4 as MintVec4;
 
 pub use crate::core::logging::*;
 pub use crate::core::misc::open_url;
