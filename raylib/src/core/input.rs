@@ -401,6 +401,9 @@ impl RaylibHandle {
     }
 }
 
+/// Safely convert [`i32`] to [`GamepadButton`].
+///
+/// Returns [`None`] if `button` is not a valid discriminant of [`GamepadButton`].
 #[must_use]
 pub const fn gamepad_button_from_i32(button: i32) -> Option<GamepadButton> {
     #[allow(clippy::enum_glob_use, reason = "variants are prefixed")]
@@ -428,6 +431,9 @@ pub const fn gamepad_button_from_i32(button: i32) -> Option<GamepadButton> {
     }
 }
 
+/// Safely convert [`i32`] to [`GamepadAxis`].
+///
+/// Returns [`None`] if `axis` is not a valid discriminant of [`GamepadAxis`].
 #[must_use]
 pub const fn gamepad_axis_from_i32(axis: i32) -> Option<GamepadAxis> {
     #[allow(clippy::enum_glob_use, reason = "variants are prefixed")]
@@ -443,6 +449,9 @@ pub const fn gamepad_axis_from_i32(axis: i32) -> Option<GamepadAxis> {
     }
 }
 
+/// Safely convert [`i32`] to a single [`Gesture`].
+///
+/// Returns [`None`] if `gesture` is not a valid discriminant of [`Gesture`].
 #[must_use]
 pub const fn gesture_from_i32(gesture: i32) -> Option<Gesture> {
     #[allow(clippy::enum_glob_use, reason = "variants are prefixed")]
@@ -463,6 +472,8 @@ pub const fn gesture_from_i32(gesture: i32) -> Option<Gesture> {
     }
 }
 
+/// Convert [`i32`] to a bitmask [`Gesture`].
+///
 /// Returns [`None`] if any flags fall outside the range of supported bits
 #[must_use]
 pub const fn gesture_bitflags_from_i32(gesture: i32) -> Option<Gesture> {
@@ -473,6 +484,9 @@ pub const fn gesture_bitflags_from_i32(gesture: i32) -> Option<Gesture> {
     }
 }
 
+/// Safely convert [`i32`] to a [`KeyboardKey`].
+///
+/// Returns [`None`] if `key` is not a valid discriminant of [`KeyboardKey`].
 #[allow(
     clippy::too_many_lines,
     reason = "that's just how many enum variants there are"
