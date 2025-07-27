@@ -1,5 +1,5 @@
 //! Contains code related to drawing. Types that can be set as a surface to draw will implement the [`RaylibDraw`] trait
-
+//!
 use crate::{
     core::{RaylibHandle, RaylibThread, texture::Texture2D, vr::VrStereoConfig},
     ffi,
@@ -25,7 +25,7 @@ impl RaylibHandle {
         // denies `Send`/`Sync` proves we are on the thread that initialized Raylib.
         unsafe {
             ffi::BeginDrawing();
-        };
+        }
 
         RaylibDrawHandle(self, PhantomData)
     }
@@ -39,7 +39,7 @@ impl RaylibHandle {
         // denies `Send`/`Sync` proves we are on the thread that initialized Raylib.
         unsafe {
             ffi::BeginDrawing();
-        };
+        }
         func(RaylibDrawHandle(self, PhantomData));
         // Uncomment the following if RaylibDrawHandle has been changed to no longer call EndDrawing() in its drop implementation:
         // unsafe {
@@ -177,7 +177,9 @@ pub unsafe trait RaylibTextureModeExt {
         framebuffer: &'b mut ffi::RenderTexture2D,
     ) -> RaylibTextureMode<'a, 'b, Self> {
         // SAFETY: Implementor must uphold the trait safety contract.
-        unsafe { ffi::BeginTextureMode(*framebuffer) }
+        unsafe {
+            ffi::BeginTextureMode(*framebuffer);
+        }
         RaylibTextureMode(self, PhantomData, PhantomData)
     }
 
@@ -189,7 +191,9 @@ pub unsafe trait RaylibTextureModeExt {
         func: impl FnOnce(RaylibTextureMode<'a, 'b, Self>),
     ) {
         // SAFETY: Implementor must uphold the trait safety contract.
-        unsafe { ffi::BeginTextureMode(*framebuffer) }
+        unsafe {
+            ffi::BeginTextureMode(*framebuffer);
+        }
         func(RaylibTextureMode(self, PhantomData, PhantomData));
         // Uncomment the following if RaylibTextureMode has been changed to no longer call EndTextureMode() in its drop implementation:
         // unsafe { ffi::EndTextureMode(); }
@@ -265,8 +269,10 @@ pub trait RaylibVRModeExt: RaylibDraw {
         _: &RaylibThread,
         vr_config: &'b mut VrStereoConfig,
     ) -> RaylibVRMode<'a, 'b, Self> {
-        // SAFETY: Implementors of RaylibDraw are required to ensure draw functions are safe to call for the duration of their lifetime.
-        unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
+        unsafe {
+            ffi::BeginVrStereoMode(*vr_config.as_ref());
+        }
         RaylibVRMode(self, PhantomData, PhantomData)
     }
 
@@ -276,8 +282,10 @@ pub trait RaylibVRModeExt: RaylibDraw {
         vr_config: &'b mut VrStereoConfig,
         func: impl FnOnce(RaylibVRMode<'a, 'b, Self>),
     ) {
-        // SAFETY: Implementors of RaylibDraw are required to ensure draw functions are safe to call for the duration of their lifetime.
-        unsafe { ffi::BeginVrStereoMode(*vr_config.as_ref()) }
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
+        unsafe {
+            ffi::BeginVrStereoMode(*vr_config.as_ref());
+        }
         func(RaylibVRMode(self, PhantomData, PhantomData));
         // Uncomment the following if RaylibVRMode has been changed to no longer call EndTextureMode() in its drop implementation:
         // unsafe { ffi::EndVrStereoMode(); }
@@ -285,6 +293,9 @@ pub trait RaylibVRModeExt: RaylibDraw {
 }
 
 impl<D: ?Sized + RaylibDraw> RaylibVRModeExt for D {}
+
+// SAFETY: RaylibVRModeExt implies RaylibDraw, which guarantees draw functions are safe to call for
+// the duration of its lifetime. RaylibVRMode does not perform any operation that would change this.
 unsafe impl<'a, T: ?Sized + RaylibVRModeExt + 'a> RaylibDraw for RaylibVRMode<'a, '_, T> {}
 
 // 2D Mode
@@ -296,15 +307,19 @@ unsafe impl<'a, T: ?Sized + RaylibVRModeExt + 'a> RaylibDraw for RaylibVRMode<'a
 /// # Guarantees
 ///
 /// [`RaylibMode2D`] guarantees [`ffi::BeginMode2D`] has been called this frame without the corresponding [`ffi::EndMode2D`] having been called yet.
-pub struct RaylibMode2D<'a, T: 'a>(&'a mut T);
+pub struct RaylibMode2D<'a, T: ?Sized + RaylibMode2DExt + 'a>(&'a mut T);
 
-impl<'a, T: 'a> Drop for RaylibMode2D<'a, T> {
+impl<'a, T: ?Sized + RaylibMode2DExt + 'a> Drop for RaylibMode2D<'a, T> {
+    #[inline]
     fn drop(&mut self) {
-        unsafe { ffi::EndMode2D() }
+        // SAFETY: RaylibMode2D guarantees BeginMode2D has been called this frame without the corresponding EndMode2D having been called yet.
+        unsafe {
+            ffi::EndMode2D();
+        }
     }
 }
 
-impl<'a, T: 'a> Deref for RaylibMode2D<'a, T>
+impl<'a, T: ?Sized + RaylibMode2DExt + 'a> Deref for RaylibMode2D<'a, T>
 where
     T: Deref<Target = RaylibHandle>,
 {
@@ -316,7 +331,7 @@ where
     }
 }
 
-impl<'a, T: 'a> DerefMut for RaylibMode2D<'a, T>
+impl<'a, T: ?Sized + RaylibMode2DExt + 'a> DerefMut for RaylibMode2D<'a, T>
 where
     T: DerefMut<Target = RaylibHandle>,
 {
@@ -327,10 +342,7 @@ where
 }
 
 /// Ability to begin drawing in 2D.
-pub trait RaylibMode2DExt
-where
-    Self: Sized,
-{
+pub trait RaylibMode2DExt: RaylibDraw {
     /// Begin 2D mode with custom camera (2D).
     ///
     /// Prefer using the closure version, [`RaylibMode2DExt::draw_mode2D`].
@@ -339,6 +351,7 @@ where
     #[inline]
     #[must_use]
     fn begin_mode2D(&mut self, camera: impl Into<ffi::Camera2D>) -> RaylibMode2D<'_, Self> {
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
         unsafe {
             ffi::BeginMode2D(camera.into());
         }
@@ -352,6 +365,7 @@ where
         camera: impl Into<ffi::Camera2D>,
         func: impl FnOnce(RaylibMode2D<'a, Self>),
     ) {
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
         unsafe {
             ffi::BeginMode2D(camera.into());
         }
@@ -363,21 +377,34 @@ where
     }
 }
 
-impl<D: RaylibDraw> RaylibMode2DExt for D {}
-unsafe impl<'a, T: 'a> RaylibDraw for RaylibMode2D<'a, T> {}
+impl<D: ?Sized + RaylibDraw> RaylibMode2DExt for D {}
+
+// SAFETY: RaylibMode2DExt implies RaylibDraw, which guarantees draw functions are safe to call for
+// the duration of its lifetime. RaylibMode2D does not perform any operation that would change this.
+unsafe impl<'a, T: ?Sized + RaylibMode2DExt + 'a> RaylibDraw for RaylibMode2D<'a, T> {}
 
 // 3D Mode
 
 /// Handle returned by [`begin_mode3D`](RaylibMode3DExt::begin_mode3D) to provide access to 3D drawing functions.
 ///
 /// Calls [`ffi::EndMode3D`] when dropped.
-pub struct RaylibMode3D<'a, T: 'a>(&'a mut T);
-impl<'a, T: 'a> Drop for RaylibMode3D<'a, T> {
+///
+/// # Guarantees
+///
+/// [`RaylibMode3D`] guarantees [`ffi::BeginMode3D`] has been called this frame without the corresponding [`ffi::EndMode3D`] having been called yet.
+pub struct RaylibMode3D<'a, T: ?Sized + RaylibMode3DExt + 'a>(&'a mut T);
+
+impl<'a, T: ?Sized + RaylibMode3DExt + 'a> Drop for RaylibMode3D<'a, T> {
+    #[inline]
     fn drop(&mut self) {
-        unsafe { ffi::EndMode3D() }
+        // SAFETY: RaylibMode3D guarantees BeginMode3D has been called this frame without the corresponding EndMode3D having been called yet.
+        unsafe {
+            ffi::EndMode3D();
+        }
     }
 }
-impl<'a, T: 'a> Deref for RaylibMode3D<'a, T>
+
+impl<'a, T: ?Sized + RaylibMode3DExt + 'a> Deref for RaylibMode3D<'a, T>
 where
     T: Deref<Target = RaylibHandle>,
 {
@@ -388,7 +415,8 @@ where
         self.0
     }
 }
-impl<'a, T: 'a> DerefMut for RaylibMode3D<'a, T>
+
+impl<'a, T: ?Sized + RaylibMode3DExt + 'a> DerefMut for RaylibMode3D<'a, T>
 where
     T: DerefMut<Target = RaylibHandle>,
 {
@@ -399,10 +427,7 @@ where
 }
 
 /// Ability to begin drawing in 3D.
-pub trait RaylibMode3DExt
-where
-    Self: Sized,
-{
+pub trait RaylibMode3DExt: RaylibDraw {
     /// Begin 3D mode with custom camera (3D).
     ///
     /// Prefer using the closure version, [`RaylibMode3DExt::draw_mode3D`].
@@ -411,6 +436,7 @@ where
     #[inline]
     #[must_use]
     fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<'_, Self> {
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
         unsafe {
             ffi::BeginMode3D(camera.into());
         }
@@ -424,6 +450,7 @@ where
         camera: impl Into<ffi::Camera3D>,
         func: impl FnOnce(RaylibMode3D<'a, Self>),
     ) {
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
         unsafe {
             ffi::BeginMode3D(camera.into());
         }
@@ -435,23 +462,42 @@ where
     }
 }
 
-impl<D: RaylibDraw> RaylibMode3DExt for D {}
-unsafe impl<'a, T: 'a> RaylibDraw for RaylibMode3D<'a, T> {}
-unsafe impl<'a, T: 'a> RaylibDraw3D for RaylibMode3D<'a, T> {}
+impl<D: ?Sized + RaylibDraw> RaylibMode3DExt for D {}
+
+// SAFETY: RaylibMode3DExt implies RaylibDraw, which guarantees draw functions are safe to call for
+// the duration of its lifetime. RaylibMode3D does not perform any operation that would change this.
+unsafe impl<'a, T: ?Sized + RaylibMode3DExt + 'a> RaylibDraw for RaylibMode3D<'a, T> {}
+
+// SAFETY: RaylibMode3DExt implies RaylibDraw, which guarantees draw functions are safe to call for
+// the duration of its lifetime. RaylibMode3D does not perform any operation that would change this.
+// Additionally, RaylibMode3D inherently guarantees 3D draw functions are safe to call in particular.
+unsafe impl<'a, T: ?Sized + RaylibMode3DExt + 'a> RaylibDraw3D for RaylibMode3D<'a, T> {}
 
 // shader Mode
 
 /// Handle returned by [`begin_shader_mode`](RaylibShaderModeExt::begin_shader_mode) to provide access to drawing functions.
 ///
 /// Calls [`ffi::EndShaderMode`] when dropped.
-pub struct RaylibShaderMode<'a, 'b, T: 'a>(&'a mut T, PhantomData<&'b mut Shader>);
+///
+/// # Guarantees
+///
+/// [`RaylibShaderMode`] guarantees [`ffi::BeginShaderMode`] has been called this frame without the corresponding [`ffi::EndShaderMode`] having been called yet.
+pub struct RaylibShaderMode<'a, 'b, T: ?Sized + RaylibShaderModeExt + 'a>(
+    &'a mut T,
+    PhantomData<&'b mut Shader>,
+);
 
-impl<'a, T: 'a> Drop for RaylibShaderMode<'a, '_, T> {
+impl<'a, T: ?Sized + RaylibShaderModeExt + 'a> Drop for RaylibShaderMode<'a, '_, T> {
+    #[inline]
     fn drop(&mut self) {
-        unsafe { ffi::EndShaderMode() }
+        // SAFETY: RaylibShaderMode guarantees BeginShaderMode has been called this frame without the corresponding EndShaderMode having been called yet.
+        unsafe {
+            ffi::EndShaderMode();
+        }
     }
 }
-impl<'a, T: 'a> Deref for RaylibShaderMode<'a, '_, T>
+
+impl<'a, T: ?Sized + RaylibShaderModeExt + 'a> Deref for RaylibShaderMode<'a, '_, T>
 where
     T: Deref<Target = RaylibHandle>,
 {
@@ -462,7 +508,8 @@ where
         self.0
     }
 }
-impl<'a, T: 'a> DerefMut for RaylibShaderMode<'a, '_, T>
+
+impl<'a, T: ?Sized + RaylibShaderModeExt + 'a> DerefMut for RaylibShaderMode<'a, '_, T>
 where
     T: DerefMut<Target = RaylibHandle>,
 {
@@ -473,10 +520,7 @@ where
 }
 
 /// Ability to begin drawing with a shader applied.
-pub trait RaylibShaderModeExt
-where
-    Self: Sized,
-{
+pub trait RaylibShaderModeExt: RaylibDraw {
     /// Begin custom shader drawing.
     ///
     /// Prefer using the closure version, [`RaylibShaderModeExt::draw_shader_mode`].
@@ -487,7 +531,10 @@ where
         &'a mut self,
         shader: &'b mut Shader,
     ) -> RaylibShaderMode<'a, 'b, Self> {
-        unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
+        unsafe {
+            ffi::BeginShaderMode(*shader.as_ref());
+        }
         RaylibShaderMode(self, PhantomData)
     }
 
@@ -497,29 +544,52 @@ where
         shader: &'b mut Shader,
         func: impl FnOnce(RaylibShaderMode<'a, 'b, Self>),
     ) {
-        unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
+        unsafe {
+            ffi::BeginShaderMode(*shader.as_ref());
+        }
         func(RaylibShaderMode(self, PhantomData));
         // Uncomment the following if RaylibShaderMode has been changed to no longer call EndShaderMode() in its drop implementation:
         // unsafe { ffi::EndShaderMode(); }
     }
 }
 
-impl<D: RaylibDraw> RaylibShaderModeExt for D {}
-unsafe impl<'a, T: 'a> RaylibDraw for RaylibShaderMode<'a, '_, T> {}
-unsafe impl<'a, T: 'a> RaylibDraw3D for RaylibShaderMode<'a, '_, T> {}
+impl<D: ?Sized + RaylibDraw> RaylibShaderModeExt for D {}
+
+// SAFETY: RaylibShaderModeExt implies RaylibDraw, which guarantees draw functions are safe to call for
+// the duration of its lifetime. RaylibShaderMode does not perform any operation that would change this.
+unsafe impl<'a, T: ?Sized + RaylibShaderModeExt + 'a> RaylibDraw for RaylibShaderMode<'a, '_, T> {}
+
+// SAFETY: RaylibShaderModeExt implies RaylibDraw, which guarantees draw functions are safe to call for
+// the duration of its lifetime. RaylibShaderMode does not perform any operation that would change this.
+// Implementing RaylibDraw3D guarantees 3D draw functions are also safe to call.
+unsafe impl<'a, T: ?Sized + RaylibShaderModeExt + RaylibDraw3D + 'a> RaylibDraw3D
+    for RaylibShaderMode<'a, '_, T>
+{
+}
 
 // Blend Mode
 
 /// Handle returned by [`begin_blend_mode`](RaylibBlendModeExt::begin_blend_mode) to provide access to drawing functions.
 ///
 /// Calls [`ffi::EndBlendMode`] when dropped.
-pub struct RaylibBlendMode<'a, T: 'a>(&'a mut T);
-impl<'a, T: 'a> Drop for RaylibBlendMode<'a, T> {
+///
+/// # Guarantees
+///
+/// [`RaylibBlendMode`] guarantees [`ffi::BeginBlendMode`] has been called this frame without the corresponding [`ffi::EndBlendMode`] having been called yet.
+pub struct RaylibBlendMode<'a, T: ?Sized + RaylibBlendModeExt + 'a>(&'a mut T);
+
+impl<'a, T: ?Sized + RaylibBlendModeExt + 'a> Drop for RaylibBlendMode<'a, T> {
+    #[inline]
     fn drop(&mut self) {
-        unsafe { ffi::EndBlendMode() }
+        // SAFETY: RaylibBlendMode guarantees BeginBlendMode has been called this frame without the corresponding EndBlendMode having been called yet.
+        unsafe {
+            ffi::EndBlendMode();
+        }
     }
 }
-impl<'a, T: 'a> Deref for RaylibBlendMode<'a, T>
+
+impl<'a, T: ?Sized + RaylibBlendModeExt + 'a> Deref for RaylibBlendMode<'a, T>
 where
     T: Deref<Target = RaylibHandle>,
 {
@@ -530,7 +600,8 @@ where
         self.0
     }
 }
-impl<'a, T: 'a> DerefMut for RaylibBlendMode<'a, T>
+
+impl<'a, T: ?Sized + RaylibBlendModeExt + 'a> DerefMut for RaylibBlendMode<'a, T>
 where
     T: DerefMut<Target = RaylibHandle>,
 {
@@ -541,10 +612,7 @@ where
 }
 
 /// Ability to begin drawing with a blend mode applied.
-pub trait RaylibBlendModeExt
-where
-    Self: Sized,
-{
+pub trait RaylibBlendModeExt: RaylibDraw {
     /// Begin blending mode (alpha, additive, multiplied, subtract, custom).
     ///
     /// Prefer using the closure version, [`RaylibBlendModeExt::draw_blend_mode`].
@@ -555,7 +623,10 @@ where
         &mut self,
         blend_mode: crate::consts::BlendMode,
     ) -> RaylibBlendMode<'_, Self> {
-        unsafe { ffi::BeginBlendMode(blend_mode as i32) }
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
+        unsafe {
+            ffi::BeginBlendMode(blend_mode as i32);
+        }
         RaylibBlendMode(self)
     }
 
@@ -565,29 +636,52 @@ where
         blend_mode: crate::consts::BlendMode,
         func: impl FnOnce(RaylibBlendMode<'a, Self>),
     ) {
-        unsafe { ffi::BeginBlendMode(blend_mode as i32) }
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
+        unsafe {
+            ffi::BeginBlendMode(blend_mode as i32);
+        }
         func(RaylibBlendMode(self));
         // Uncomment the following if RaylibBlendMode has been changed to no longer call EndBlendMode() in its drop implementation:
         // unsafe { ffi::EndBlendMode(); }
     }
 }
 
-impl<D: RaylibDraw> RaylibBlendModeExt for D {}
-unsafe impl<'a, T: 'a> RaylibDraw for RaylibBlendMode<'a, T> {}
-unsafe impl<'a, T: 'a> RaylibDraw3D for RaylibBlendMode<'a, T> {}
+impl<D: ?Sized + RaylibDraw> RaylibBlendModeExt for D {}
+
+// SAFETY: RaylibBlendModeExt implies RaylibDraw, which guarantees draw functions are safe to call for
+// the duration of its lifetime. RaylibBlendMode does not perform any operation that would change this.
+unsafe impl<'a, T: ?Sized + RaylibBlendModeExt + 'a> RaylibDraw for RaylibBlendMode<'a, T> {}
+
+// SAFETY: RaylibBlendModeExt implies RaylibDraw, which guarantees draw functions are safe to call for
+// the duration of its lifetime. RaylibBlendMode does not perform any operation that would change this.
+// Implementing RaylibDraw3D guarantees 3D draw functions are also safe to call.
+unsafe impl<'a, T: ?Sized + RaylibBlendModeExt + RaylibDraw3D + 'a> RaylibDraw3D
+    for RaylibBlendMode<'a, T>
+{
+}
 
 // Scissor Mode stuff
 
 /// Handle returned by [`begin_scissor_mode`](RaylibScissorModeExt::begin_scissor_mode) to provide access to drawing functions.
 ///
 /// Calls [`ffi::EndScissorMode`] when dropped.
-pub struct RaylibScissorMode<'a, T: 'a>(&'a mut T);
-impl<'a, T: 'a> Drop for RaylibScissorMode<'a, T> {
+///
+/// # Guarantees
+///
+/// [`RaylibScissorMode`] guarantees [`ffi::BeginScissorMode`] has been called this frame without the corresponding [`ffi::EndScissorMode`] having been called yet.
+pub struct RaylibScissorMode<'a, T: ?Sized + RaylibScissorModeExt + 'a>(&'a mut T);
+
+impl<'a, T: ?Sized + RaylibScissorModeExt + 'a> Drop for RaylibScissorMode<'a, T> {
+    #[inline]
     fn drop(&mut self) {
-        unsafe { ffi::EndScissorMode() }
+        // SAFETY: RaylibScissorMode guarantees BeginScissorMode has been called this frame without the corresponding EndScissorMode having been called yet.
+        unsafe {
+            ffi::EndScissorMode();
+        }
     }
 }
-impl<'a, T: 'a> Deref for RaylibScissorMode<'a, T>
+
+impl<'a, T: ?Sized + RaylibScissorModeExt + 'a> Deref for RaylibScissorMode<'a, T>
 where
     T: Deref<Target = RaylibHandle>,
 {
@@ -598,7 +692,8 @@ where
         self.0
     }
 }
-impl<'a, T: 'a> DerefMut for RaylibScissorMode<'a, T>
+
+impl<'a, T: ?Sized + RaylibScissorModeExt + 'a> DerefMut for RaylibScissorMode<'a, T>
 where
     T: DerefMut<Target = RaylibHandle>,
 {
@@ -609,10 +704,7 @@ where
 }
 
 /// Ability to begin drawing in scissor mode.
-pub trait RaylibScissorModeExt
-where
-    Self: Sized,
-{
+pub trait RaylibScissorModeExt: RaylibDraw {
     /// Begin scissor mode (define screen area for following drawing).
     ///
     /// Prefer using the closure version, [`RaylibScissorModeExt::draw_scissor_mode`].
@@ -626,7 +718,10 @@ where
         width: i32,
         height: i32,
     ) -> RaylibScissorMode<'_, Self> {
-        unsafe { ffi::BeginScissorMode(x, y, width, height) }
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
+        unsafe {
+            ffi::BeginScissorMode(x, y, width, height);
+        }
         RaylibScissorMode(self)
     }
 
@@ -639,16 +734,29 @@ where
         height: i32,
         func: impl FnOnce(RaylibScissorMode<'a, Self>),
     ) {
-        unsafe { ffi::BeginScissorMode(x, y, width, height) }
+        // SAFETY: Implementors of RaylibDraw guarantee that draw functions are safe to call for the duration of their lifetime.
+        unsafe {
+            ffi::BeginScissorMode(x, y, width, height);
+        }
         func(RaylibScissorMode(self));
         // Uncomment the following if RaylibScissorMode has been changed to no longer call EndScissorMode() in its drop implementation:
         // unsafe { ffi::EndScissorMode(); }
     }
 }
 
-impl<D: RaylibDraw> RaylibScissorModeExt for D {}
-unsafe impl<'a, T: 'a> RaylibDraw for RaylibScissorMode<'a, T> {}
-unsafe impl<'a, T: 'a + RaylibDraw3D> RaylibDraw3D for RaylibScissorMode<'a, T> {}
+impl<D: ?Sized + RaylibDraw> RaylibScissorModeExt for D {}
+
+// SAFETY: RaylibScissorModeExt implies RaylibDraw, which guarantees draw functions are safe to call for
+// the duration of its lifetime. RaylibScissorMode does not perform any operation that would change this.
+unsafe impl<'a, T: ?Sized + RaylibScissorModeExt + 'a> RaylibDraw for RaylibScissorMode<'a, T> {}
+
+// SAFETY: RaylibScissorModeExt implies RaylibDraw, which guarantees draw functions are safe to call for
+// the duration of its lifetime. RaylibScissorMode does not perform any operation that would change this.
+// Implementing RaylibDraw3D guarantees 3D draw functions are also safe to call.
+unsafe impl<'a, T: ?Sized + RaylibScissorModeExt + RaylibDraw3D + 'a> RaylibDraw3D
+    for RaylibScissorMode<'a, T>
+{
+}
 
 // Actual drawing functions
 
@@ -698,7 +806,9 @@ pub unsafe trait RaylibDraw {
         source: impl Into<ffi::Rectangle>,
     ) {
         // SAFETY: Implementor must uphold trait safety contract.
-        unsafe { ffi::SetShapesTexture(*texture.as_ref(), source.into()) }
+        unsafe {
+            ffi::SetShapesTexture(*texture.as_ref(), source.into());
+        }
     }
 
     // // Draw gui widget
@@ -1890,7 +2000,7 @@ pub unsafe trait RaylibDraw {
 /// Implementors must guarantee that their type can only exist if Raylib has been successfully initialized with a window,
 /// has successfully loaded any necessary GL libraries, the calling thread is the same one that initialized Raylib, and
 /// [`ffi::BeginMode3D`] has been called this frame without the corresponding [`ffi::EndMode3D`] having been called yet.
-pub unsafe trait RaylibDraw3D {
+pub unsafe trait RaylibDraw3D: RaylibDraw {
     /// Draw a point in 3D space, actually a small line
     #[allow(non_snake_case, reason = "consistent style")]
     #[inline]
@@ -2487,5 +2597,43 @@ pub unsafe trait RaylibDraw3D {
                 tint.into(),
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::prelude::*;
+    use std::mem::ManuallyDrop;
+
+    impl RaylibHandle {
+        fn rl_handle_reachable(&mut self) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn test0() {
+        let mut rl: ManuallyDrop<RaylibHandle> = ManuallyDrop::new(RaylibHandle(()));
+
+        let mut d: ManuallyDrop<RaylibDrawHandle> =
+            ManuallyDrop::new(RaylibDrawHandle(&mut rl, PhantomData));
+
+        let mut d: ManuallyDrop<RaylibMode2D<_>> = ManuallyDrop::new(RaylibMode2D(&mut *d));
+
+        let mut d: ManuallyDrop<RaylibShaderMode<_>> =
+            ManuallyDrop::new(RaylibShaderMode(&mut *d, PhantomData));
+
+        let mut d: ManuallyDrop<RaylibScissorMode<_>> =
+            ManuallyDrop::new(RaylibScissorMode(&mut *d));
+
+        let mut d: ManuallyDrop<RaylibBlendMode<_>> = ManuallyDrop::new(RaylibBlendMode(&mut *d));
+
+        let mut d: ManuallyDrop<RaylibMode3D<_>> = ManuallyDrop::new(RaylibMode3D(&mut *d));
+
+        assert!(
+            d.rl_handle_reachable(),
+            "drawing should not deny access to RaylibHandle"
+        );
     }
 }
