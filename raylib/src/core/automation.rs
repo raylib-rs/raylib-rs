@@ -79,6 +79,7 @@ impl ExactSizeIterator for AutomationEventIter<'_> {
 }
 
 make_thin_wrapper!(
+    /// An iterable collection of [`AutomationEvent`]s.
     AutomationEventList,
     ffi::AutomationEventList,
     ffi::UnloadAutomationEventList,
@@ -151,6 +152,7 @@ impl<'a> IntoIterator for &'a AutomationEventList {
 }
 
 make_thin_wrapper!(
+    /// Automation event
     AutomationEvent,
     ffi::AutomationEvent,
     unload_automation_event,

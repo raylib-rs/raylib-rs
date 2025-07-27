@@ -6,6 +6,7 @@ pub use ffi::CameraMode;
 pub use ffi::CameraProjection;
 pub use ffi::ConfigFlags;
 pub use ffi::CubemapLayout;
+pub use ffi::DEG2RAD;
 pub use ffi::GamepadAxis;
 pub use ffi::GamepadButton;
 pub use ffi::Gesture;
@@ -19,9 +20,10 @@ pub use ffi::ShaderUniformDataType;
 pub use ffi::TextureFilter;
 pub use ffi::TextureWrap;
 pub use ffi::TraceLogLevel;
-pub use ffi::DEG2RAD;
 // TODO Fix when rlgl bindings are in
+/// Maximum number of shader maps supported
 pub const MAX_MATERIAL_MAPS: u32 = 12;
+/// Maximum number of shader locations supported
 pub const MAX_SHADER_LOCATIONS: u32 = 32;
 pub use ffi::GuiCheckBoxProperty;
 pub use ffi::GuiColorPickerProperty;

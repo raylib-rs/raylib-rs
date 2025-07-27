@@ -120,8 +120,14 @@ impl ExactSizeIterator for FilePathIter<'_> {
     }
 }
 
-make_thin_wrapper!(FilePathList, ffi::FilePathList, ffi::UnloadDirectoryFiles);
 make_thin_wrapper!(
+    /// Iterable list of file paths.
+    FilePathList,
+    ffi::FilePathList,
+    ffi::UnloadDirectoryFiles
+);
+make_thin_wrapper!(
+    /// Iterable list of paths to files that were dropped.
     DroppedFilePathList,
     ffi::FilePathList,
     ffi::UnloadDroppedFiles
