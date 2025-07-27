@@ -50,12 +50,6 @@ fn allocation_array_size<T>(count: usize) -> Result<NonZeroU32, AllocationError>
     allocation_layout_size(Layout::array::<T>(count).map_err(|_| AllocationError::IntoUIntFailed)?)
 }
 
-/// Calculate the number of bytes needed to allocate a copy of `val`
-#[inline]
-fn allocation_val_size<T: ?Sized>(val: &T) -> Result<NonZeroU32, AllocationError> {
-    allocation_layout_size(Layout::for_value(val))
-}
-
 mod rl_managed {
     use super::ffi;
     use std::{mem::MaybeUninit, num::NonZeroU32, ptr::NonNull};

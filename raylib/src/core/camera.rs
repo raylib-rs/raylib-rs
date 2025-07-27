@@ -19,10 +19,10 @@ pub struct Camera2D {
     pub zoom: f32,
 }
 impl Camera2D {
+    /// Get camera 2d transform matrix
     #[must_use]
     #[inline]
-    #[allow(dead_code)]
-    fn get_camera_matrix_2d(camera: impl Into<ffi::Camera2D>) -> Matrix {
+    pub fn get_camera_matrix_2d(camera: impl Into<ffi::Camera2D>) -> Matrix {
         unsafe { ffi::GetCameraMatrix2D(camera.into()).into() }
     }
 }

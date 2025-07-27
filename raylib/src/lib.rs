@@ -66,6 +66,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 #![forbid(clippy::correctness, clippy::perf)]
 #![warn(
     missing_docs,
+    clippy::allow_attributes_without_reason,
     clippy::inline_always,
     clippy::missing_safety_doc,
     // clippy::undocumented_unsafe_blocks, // TODO: Fixing safety would be a breaking change and deserves a separate PR
@@ -76,6 +77,10 @@ Permission is granted to anyone to use this software for any purpose, including 
     clippy::cast_possible_wrap,
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,
+    clippy::cast_ptr_alignment,
+    clippy::cast_abs_to_unsigned,
+    clippy::cast_enum_constructor,
+    clippy::cast_slice_from_raw_parts,
     clippy::fn_to_numeric_cast,
     clippy::fn_to_numeric_cast_any,
     clippy::fn_to_numeric_cast_with_truncation,
@@ -91,7 +96,7 @@ Permission is granted to anyone to use this software for any purpose, including 
     clippy::cast_enum_truncation,
     clippy::missing_const_for_fn,
 )]
-#![allow(dead_code)]
+#![allow(dead_code, reason = "future use, and some features are incomplete")]
 pub mod consts;
 pub mod core;
 pub mod ease;

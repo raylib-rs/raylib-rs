@@ -388,7 +388,7 @@ impl<'aud> Wave<'aud> {
     /// Copies a wave to a new wave.
     #[inline]
     #[must_use]
-    pub(crate) fn copy(&self) -> Wave<'aud> {
+    pub fn copy(&self) -> Wave<'aud> {
         unsafe { Wave(ffi::WaveCopy(self.0), self.1) }
     }
 

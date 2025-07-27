@@ -61,7 +61,10 @@ macro_rules! impl_wrapper {
         }
 
         impl$(<$lifetime>)? Drop for $name$(<$lifetime>)? {
-            #[allow(unused_unsafe)]
+            #[allow(
+                unused_unsafe,
+                reason = "$dropfunc is not unsafe in every instance of this macro"
+            )]
             fn drop(&mut self) {
                 // SAFETY: `Self` does not implement `Clone`, and `unwrap` takes ownership of `self`.
                 // Taking `self` by mutable reference guarantees it has no aliases.
@@ -144,7 +147,10 @@ macro_rules! make_rslice {
 macro_rules! impl_rslice {
     ($name:ident, $t:ty, $dropfunc:expr, $rawfield:tt) => {
         impl Drop for $name {
-            #[allow(unused_unsafe)]
+            #[allow(
+                unused_unsafe,
+                reason = "$dropfunc is not unsafe in every instance of this macro"
+            )]
             fn drop(&mut self) {
                 let inner = unsafe { std::mem::ManuallyDrop::take(&mut self.0) };
                 unsafe { ($dropfunc)(std::boxed::Box::leak(inner).as_mut_ptr().cast()) };

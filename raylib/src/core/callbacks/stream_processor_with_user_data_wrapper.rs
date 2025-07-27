@@ -68,12 +68,11 @@ macro_rules! generate_functions {
 
           /// Function to set our context
           /// and returns the slot used to store the context.
-          #[allow(unpredictable_function_pointer_comparisons)]
           fn set_context(audio_callback: AudioCallbackWithUserData) -> usize {
               $(
                   {
                       let mut guard = [< CLOSURE_ $n >].lock().unwrap();
-                      if (*guard).callback == None {
+                      if (*guard).callback.is_none() {
                         *guard = audio_callback;
                         return $n;
                       }
@@ -83,12 +82,11 @@ macro_rules! generate_functions {
           }
 
           /// Function to clear our context given the slot of the context.
-          #[allow(unpredictable_function_pointer_comparisons)]
           fn clear_context(index: usize) {
               $(
                   if index == $n {
                       let mut guard = [< CLOSURE_ $n >].lock().unwrap();
-                      if (*guard).callback == None {
+                      if (*guard).callback.is_none() {
                           panic!(
                               "No callbacks registered under this number ({}).",
                               index

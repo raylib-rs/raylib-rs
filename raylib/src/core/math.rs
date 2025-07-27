@@ -298,7 +298,7 @@ impl Quaternion {
     /// Returns a normalized version of the current quaternion.
     #[inline]
     #[must_use]
-    #[allow(clippy::similar_names)]
+    #[allow(clippy::similar_names, reason = "consistency with Raylib definition")]
     pub fn normalized(&self) -> Quaternion {
         let mut length = self.length();
         if length == 0.0 {
@@ -427,7 +427,7 @@ impl From<(f32, f32, f32, f32)> for Quaternion {
 
 impl Mul for Quaternion {
     type Output = Quaternion;
-    #[allow(clippy::similar_names)]
+    #[allow(clippy::similar_names, reason = "consistency with Raylib definition")]
     fn mul(self, q: Quaternion) -> Quaternion {
         let qax = self.x;
         let qay = self.y;
@@ -455,7 +455,6 @@ impl MulAssign for Quaternion {
 
 optional_serde_struct! {
     /// Matrix, 4x4 components, column major, OpenGL style, right-handed
-    #[allow(missing_docs)]
     pub struct Matrix {
         // Matrix first row (4 components)
         /// row 1 column 1
@@ -643,7 +642,7 @@ impl Matrix {
 
     /// Returns xyz-rotation matrix (angles in radians)
     #[must_use]
-    #[allow(clippy::similar_names)]
+    #[allow(clippy::similar_names, reason = "consistency with Raylib definition")]
     pub fn rotate_xyz(ang: Vector3) -> Self {
         let mut result = Self::identity();
 

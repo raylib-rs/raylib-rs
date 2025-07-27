@@ -1,4 +1,4 @@
-#![allow(non_camel_case_types)]
+// #![allow(non_camel_case_types)]
 
 mod stream_processor_with_user_data_wrapper;
 
@@ -22,10 +22,10 @@ use stream_processor_with_user_data_wrapper::{
     detach_audio_stream_processor_with_user_data,
 };
 
-type TraceLogCallback = unsafe extern "C" fn(*mut i8, *const i8, ...);
-unsafe extern "C" {
-    fn SetTraceLogCallback(cb: Option<TraceLogCallback>);
-}
+// type TraceLogCallback = unsafe extern "C" fn(*mut i8, *const i8, ...);
+// unsafe extern "C" {
+//     fn SetTraceLogCallback(cb: Option<TraceLogCallback>);
+// }
 
 mod sealed {
     use super::{
@@ -39,12 +39,6 @@ mod sealed {
     ///
     /// `Self` and `NonZeroUsize` must be safe to convert between and call across threads.
     pub unsafe trait AtomicFnExt: Sized + Send + Sync {
-        #[must_use]
-        fn into_nonzero(self) -> NonZeroUsize;
-
-        #[must_use]
-        fn from_nonzero(val: NonZeroUsize) -> Self;
-
         #[must_use]
         fn into_usize(val: Option<Self>) -> usize;
 
@@ -62,18 +56,6 @@ mod sealed {
             };
 
             unsafe impl AtomicFnExt for $Callback {
-                #[inline(always)]
-                fn into_nonzero(self) -> NonZeroUsize {
-                    // SAFETY: Implementor must uphold trait safety contract
-                    unsafe { std::mem::transmute::<$Callback, NonZeroUsize>(self) }
-                }
-
-                #[inline(always)]
-                fn from_nonzero(val: NonZeroUsize) -> $Callback {
-                    // SAFETY: Implementor must uphold trait safety contract
-                    unsafe { std::mem::transmute::<NonZeroUsize, $Callback>(val) }
-                }
-
                 #[inline(always)]
                 fn into_usize(val: Option<$Callback>) -> usize {
                     // SAFETY: Implementor must uphold trait safety contract

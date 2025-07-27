@@ -249,7 +249,7 @@ where
     ///
     /// Prefer using the closure version, [`RaylibMode2DExt::draw_mode2D`].
     /// This version returns a handle that calls [`ffi::EndMode2D`] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, reason = "consistent style")]
     #[inline]
     #[must_use]
     fn begin_mode2D(&mut self, camera: impl Into<ffi::Camera2D>) -> RaylibMode2D<'_, Self> {
@@ -260,7 +260,7 @@ where
     }
 
     /// Begin 2D mode with custom camera (2D).
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, reason = "consistent style")]
     fn draw_mode2D<'a>(
         &'a mut self,
         camera: impl Into<ffi::Camera2D>,
@@ -315,7 +315,7 @@ where
     ///
     /// Prefer using the closure version, [`RaylibMode3DExt::draw_mode3D`].
     /// This version returns a handle that calls [`ffi::EndMode3D`] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, reason = "consistent style")]
     #[must_use]
     #[inline]
     fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<'_, Self> {
@@ -326,7 +326,7 @@ where
     }
 
     /// Begin 3D mode with custom camera (3D).
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, reason = "consistent style")]
     fn draw_mode3D<'a>(
         &'a mut self,
         camera: impl Into<ffi::Camera3D>,
@@ -825,7 +825,7 @@ pub unsafe trait RaylibDraw {
     }
 
     /// Draw ring
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
     #[inline]
     fn draw_ring(
         &mut self,
@@ -851,7 +851,7 @@ pub unsafe trait RaylibDraw {
     }
 
     /// Draw ring lines
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
     #[inline]
     fn draw_ring_lines(
         &mut self,
@@ -1341,7 +1341,7 @@ pub unsafe trait RaylibDraw {
     }
 
     /// Draw text using Font and pro parameters (rotation)
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
     #[inline]
     fn draw_text_pro(
         &mut self,
@@ -1704,7 +1704,7 @@ pub unsafe trait RaylibDraw {
 /// [`ffi::BeginMode3D`] has been called this frame without the corresponding [`ffi::EndMode3D`] having been called yet.
 pub unsafe trait RaylibDraw3D {
     /// Draw a point in 3D space, actually a small line
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, reason = "consistent style")]
     #[inline]
     fn draw_point3D(&mut self, position: impl Into<ffi::Vector3>, color: impl Into<ffi::Color>) {
         unsafe {
@@ -1713,7 +1713,7 @@ pub unsafe trait RaylibDraw3D {
     }
 
     /// Draw a color-filled triangle (vertex in counter-clockwise order!)
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, reason = "consistent style")]
     #[inline]
     fn draw_triangle3D(
         &mut self,
@@ -1728,7 +1728,7 @@ pub unsafe trait RaylibDraw3D {
     }
 
     /// Draw a triangle strip defined by points
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, reason = "consistent style")]
     #[inline]
     fn draw_triangle_strip3D(&mut self, points: &[Vector3], color: impl Into<ffi::Color>) {
         unsafe {
@@ -1744,7 +1744,7 @@ pub unsafe trait RaylibDraw3D {
     }
 
     /// Draws a line in 3D world space.
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, reason = "consistent style")]
     #[inline]
     fn draw_line3D(
         &mut self,
@@ -1758,7 +1758,7 @@ pub unsafe trait RaylibDraw3D {
     }
 
     /// Draws a circle in 3D world space.
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, reason = "consistent style")]
     #[inline]
     fn draw_circle3D(
         &mut self,
@@ -2202,7 +2202,7 @@ pub unsafe trait RaylibDraw3D {
     }
 
     /// Draw a billboard texture defined by source and rotation
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
     #[inline]
     fn draw_billboard_pro(
         &mut self,
