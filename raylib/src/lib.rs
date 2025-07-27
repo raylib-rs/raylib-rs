@@ -56,26 +56,50 @@ Permission is granted to anyone to use this software for any purpose, including 
 //! ```
 //#![cfg_attr(feature = "nightly", feature(auto_traits))]
 
-#![warn(
-    clippy::all,
-    clippy::pedantic,
-    clippy::style,
-    clippy::unwrap_used,
-    reason = "temporary while cleaning up"
-)]
 #![forbid(clippy::correctness, clippy::perf)]
 #![warn(
-    missing_docs,
-    clippy::allow_attributes_without_reason,
-    clippy::inline_always,
+    clippy::unwrap_used,
+    reason = "debugging is easier when you know what the unwrap represents"
+)]
+#![warn(
     clippy::missing_safety_doc,
-    // clippy::undocumented_unsafe_blocks, // TODO: Fixing safety would be a breaking change and deserves a separate PR
+    reason = "nobody can use your unsafe code soundly if you don't explain the requirements for soundness"
+)]
+#![warn(
+    clippy::undocumented_unsafe_blocks,
+    reason = "it is extremely difficult to verify soundness if you don't explain your assumptions"
+)]
+#![warn(
     clippy::multiple_unsafe_ops_per_block,
-    clippy::unnecessary_cast,
+    reason = "the safety requirements of two unsafe operations are rarely (though not never) covered by the same documentation"
+)]
+#![warn(
+    missing_docs,
+    reason = "users deserve to know what a public API does and how to use it"
+)]
+#![warn(
+    clippy::allow_attributes_without_reason,
+    reason = "making lints less restrictive should not be done without reason, and you will not always be there to explain it"
+)]
+#![warn(
+    clippy::inline_always,
+    reason = "sure, go ahead and tell the compiler you want stuff inlined. But don't go thinking inline is some magical
+            performance fountain that will somehow always be faster than not inlining. You told the compiler to inline it,
+            it decided it shouldn't. So you'd better have some DATA before you tell it to proceed *in spite of that*."
+)]
+#![warn(
+    clippy::missing_const_for_fn,
+    reason = "another function could be made const if this one was; or another function may *only* not be const because this one isn't"
+)]
+#![deny(
     clippy::cast_lossless,
     clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap,
     clippy::cast_precision_loss,
+    clippy::unnecessary_cast,
+    reason = r#"if this is intentional, indicate it with a reason (`#[allow(clippy::..., reason = "...")]`)"#
+)]
+#![deny(
+    clippy::cast_possible_wrap,
     clippy::cast_sign_loss,
     clippy::cast_ptr_alignment,
     clippy::cast_abs_to_unsigned,
@@ -85,16 +109,13 @@ Permission is granted to anyone to use this software for any purpose, including 
     clippy::fn_to_numeric_cast_any,
     clippy::fn_to_numeric_cast_with_truncation,
     clippy::cast_nan_to_int,
-    clippy::char_lit_as_u8,
     clippy::ref_as_ptr,
     clippy::ptr_as_ptr,
     clippy::as_ptr_cast_mut,
     clippy::as_underscore,
     clippy::borrow_as_ptr,
-    clippy::match_as_ref,
     clippy::ptr_cast_constness,
-    clippy::cast_enum_truncation,
-    clippy::missing_const_for_fn,
+    reason = r"do not mistake `as` for being lossless. it can fail, but it won't tell you, and you need to handle that"
 )]
 #![allow(dead_code, reason = "future use, and some features are incomplete")]
 pub mod consts;

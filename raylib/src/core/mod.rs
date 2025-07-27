@@ -1,3 +1,5 @@
+//! Raylib core features and functionality
+
 #[macro_use]
 mod macros;
 
@@ -7,7 +9,7 @@ pub mod callbacks;
 pub mod camera;
 pub mod collision;
 pub mod color {
-    #[allow(unused_imports)]
+    //! Color
     pub use crate::ffi::Color;
 }
 pub mod data;
@@ -36,6 +38,7 @@ use std::marker::PhantomData;
 #[allow(clippy::enum_glob_use, reason = "variants are prefixed")]
 use crate::consts::ConfigFlags::*;
 
+/// Construct a cstring as you would a Rust string
 // shamelessly stolen from imgui
 #[macro_export]
 macro_rules! rstr {

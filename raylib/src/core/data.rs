@@ -1,3 +1,5 @@
+//! Memory compression/decompression
+
 use crate::{databuf::DataBuf, error::CompressionError, ffi};
 use std::{
     ffi::{CString, c_char},

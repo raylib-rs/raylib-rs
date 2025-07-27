@@ -1,4 +1,4 @@
-// #![allow(non_camel_case_types)]
+//! Wrappers for callbacks
 
 mod stream_processor_with_user_data_wrapper;
 
@@ -22,10 +22,10 @@ use stream_processor_with_user_data_wrapper::{
     detach_audio_stream_processor_with_user_data,
 };
 
-// type TraceLogCallback = unsafe extern "C" fn(*mut i8, *const i8, ...);
-// unsafe extern "C" {
-//     fn SetTraceLogCallback(cb: Option<TraceLogCallback>);
-// }
+type TraceLogCallback = unsafe extern "C" fn(*mut i8, *const i8, ...);
+unsafe extern "C" {
+    fn SetTraceLogCallback(cb: Option<TraceLogCallback>);
+}
 
 mod sealed {
     use super::{
@@ -37,7 +37,7 @@ mod sealed {
 
     /// # Safety
     ///
-    /// `Self` and `NonZeroUsize` must be safe to convert between and call across threads.
+    /// `Self` and `usize` must be safe to convert between and call across threads.
     pub unsafe trait AtomicFnExt: Sized + Send + Sync {
         #[must_use]
         fn into_usize(val: Option<Self>) -> usize;
@@ -55,6 +55,7 @@ mod sealed {
                 assert!(std::mem::size_of::<AtomicFn<$Callback>>() == std::mem::size_of::<AtomicUsize>());
             };
 
+            // SAFETY: Asserted size and align, and $Callback is safe to use across threads
             unsafe impl AtomicFnExt for $Callback {
                 #[inline(always)]
                 fn into_usize(val: Option<$Callback>) -> usize {

@@ -3,7 +3,6 @@
 //!
 //! See [`DataBuf`]
 
-#![warn(clippy::style, clippy::pedantic)]
 #![allow(
     clippy::missing_errors_doc,
     reason = "errors are documented at their defintion, not by the functions that use them"
@@ -471,9 +470,8 @@ impl<T> DataBuf<[T]> {
                     "`count` should fit within usize"
                 );
             }
-            #[allow(clippy::cast_sign_loss, reason = "intentional")]
-            // SAFETY: Just checked that count is non-zero and positive.
-            let len = unsafe { NonZeroUsize::new_unchecked(count as usize) };
+            // SAFETY: Just checked that count is non-zero.
+            let len = unsafe { NonZeroUsize::new_unchecked(count.cast_unsigned() as usize) };
             // SAFETY: Caller must uphold `DataBuf` and `slice` safety contracts
             Some(unsafe { Self::slice_from_nonnull(buf, len) })
         } else {

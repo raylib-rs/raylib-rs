@@ -1,3 +1,5 @@
+//! Structs and functions for game-related math and linear algebra
+
 /* raylib-rs
    raymath.rs - Structs and functions for game-related math and linear algebra
 

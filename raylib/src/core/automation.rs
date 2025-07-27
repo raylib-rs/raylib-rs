@@ -1,3 +1,5 @@
+//! Raylib event automation
+
 use std::{
     ffi::CString,
     path::{Path, PathBuf},

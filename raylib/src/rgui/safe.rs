@@ -428,8 +428,9 @@ pub unsafe trait RaylibDrawGui {
         let buf = unsafe { std::slice::from_raw_parts(buffer.as_ptr(), cap) };
         if let Some(len) = buf.iter().position(|x| *x == b'\0') {
             // `len` is the position of the first `\0` byte in the String
+            let vec = unsafe { buffer.as_mut_vec() };
             unsafe {
-                buffer.as_mut_vec().set_len(len);
+                vec.set_len(len);
             }
         } else {
             // There is no null terminator, the best we can do is to not
@@ -670,8 +671,9 @@ pub unsafe trait RaylibDrawGui {
         let buf = unsafe { std::slice::from_raw_parts(text.as_ptr(), cap) };
         if let Some(len) = buf.iter().position(|x| *x == b'\0') {
             // `len` is the position of the first `\0` byte in the String
+            let vec = unsafe { text.as_mut_vec() };
             unsafe {
-                text.as_mut_vec().set_len(len);
+                vec.set_len(len);
             }
         } else {
             // There is no null terminator, the best we can do is to not
