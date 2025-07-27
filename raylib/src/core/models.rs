@@ -117,11 +117,12 @@ mod sealed {
         /// # Safety
         ///
         /// Must manually free memory by calling the proper unload function.
-        /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+        /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
         /// and copies must not be used after being unloaded to avoid use-after-free.
         #[must_use]
         unsafe fn make_weak(self) -> Self::Weak;
     }
+
     /// Convertible from weak version of `Self`
     pub trait FromWeak<T> {
         /// Converts weak to a "safe" version.
@@ -289,10 +290,10 @@ impl Model {
     /// # Safety
     ///
     /// Must manually free memory by calling the proper unload function.
-    /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
     /// and copies must not be used after being unloaded to avoid use-after-free.
-    #[must_use]
     #[inline]
+    #[must_use]
     pub const unsafe fn make_weak(self) -> WeakModel {
         let m = WeakModel(self.0);
         std::mem::forget(self);
@@ -338,6 +339,7 @@ pub trait RaylibModel {
             )
         }
     }
+
     /// Meshes array
     #[inline]
     #[must_use]
@@ -355,6 +357,7 @@ pub trait RaylibModel {
             )
         }
     }
+
     /// Materials array
     #[inline]
     #[must_use]
@@ -372,6 +375,7 @@ pub trait RaylibModel {
             )
         }
     }
+
     /// Materials array
     #[inline]
     #[must_use]
@@ -389,6 +393,7 @@ pub trait RaylibModel {
             )
         }
     }
+
     /// Bones information (skeleton)
     #[inline]
     #[must_use]
@@ -410,6 +415,7 @@ pub trait RaylibModel {
             )
         })
     }
+
     /// Bones information (skeleton)
     #[inline]
     #[must_use]
@@ -431,6 +437,7 @@ pub trait RaylibModel {
             )
         })
     }
+
     /// Bones base transformation (pose)
     #[inline]
     #[must_use]
@@ -443,6 +450,7 @@ pub trait RaylibModel {
         }
         Some(unsafe { &*(self.as_ref().bindPose.cast()) })
     }
+
     /// Bones base transformation (pose)
     #[inline]
     #[must_use]
@@ -455,6 +463,7 @@ pub trait RaylibModel {
         }
         Some(unsafe { &mut *(self.as_mut().bindPose.cast()) })
     }
+
     /// Check model animation skeleton match
     #[inline]
     #[must_use]
@@ -522,10 +531,10 @@ impl Mesh {
     /// # Safety
     ///
     /// Must manually free memory by calling the proper unload function.
-    /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
     /// and copies must not be used after being unloaded to avoid use-after-free.
-    #[must_use]
     #[inline]
+    #[must_use]
     pub const unsafe fn make_weak(self) -> WeakMesh {
         let m = WeakMesh(self.0);
         std::mem::forget(self);
@@ -545,6 +554,7 @@ pub trait RaylibMesh {
             ffi::UploadMesh(self.as_mut(), dynamic);
         }
     }
+
     /// Update mesh vertex data in GPU for a specific buffer index
     ///
     /// # Panics
@@ -567,6 +577,7 @@ pub trait RaylibMesh {
             );
         }
     }
+
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     ///
     /// # Panics
@@ -588,6 +599,7 @@ pub trait RaylibMesh {
             )
         }
     }
+
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     ///
     /// # Panics
@@ -609,6 +621,7 @@ pub trait RaylibMesh {
             )
         }
     }
+
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     ///
     /// # Panics
@@ -630,6 +643,7 @@ pub trait RaylibMesh {
             )
         }
     }
+
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     ///
     /// # Panics
@@ -651,6 +665,7 @@ pub trait RaylibMesh {
             )
         }
     }
+
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     ///
     /// # Panics
@@ -672,6 +687,7 @@ pub trait RaylibMesh {
             )
         }
     }
+
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     ///
     /// # Panics
@@ -693,6 +709,7 @@ pub trait RaylibMesh {
             )
         }
     }
+
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     ///
     /// # Panics
@@ -714,6 +731,7 @@ pub trait RaylibMesh {
             )
         }
     }
+
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     ///
     /// # Panics
@@ -735,6 +753,7 @@ pub trait RaylibMesh {
             )
         }
     }
+
     /// Vertex indices (in case vertex data comes indexed)
     ///
     /// # Panics
@@ -758,6 +777,7 @@ pub trait RaylibMesh {
             )
         }
     }
+
     /// Vertex indices (in case vertex data comes indexed)
     ///
     /// # Panics
@@ -927,10 +947,10 @@ impl Material {
     /// # Safety
     ///
     /// Must manually free memory by calling the proper unload function.
-    /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
     /// and copies must not be used after being unloaded to avoid use-after-free.
-    #[must_use]
     #[inline]
+    #[must_use]
     pub const unsafe fn make_weak(self) -> WeakMaterial {
         let m = WeakMaterial(self.0);
         std::mem::forget(self);
@@ -972,26 +992,28 @@ impl RaylibMaterial for Material {}
 /// [`Material`] accessors and helper methods.
 pub trait RaylibMaterial {
     /// Material shader
-    #[must_use]
     #[inline]
+    #[must_use]
     fn shader(&self) -> &crate::shaders::WeakShader
     where
         Self: AsRef<ffi::Material>,
     {
         unsafe { &*std::ptr::from_ref(&self.as_ref().shader).cast() }
     }
+
     /// Material shader
-    #[must_use]
     #[inline]
+    #[must_use]
     fn shader_mut(&mut self) -> &mut crate::shaders::WeakShader
     where
         Self: AsMut<ffi::Material>,
     {
         unsafe { &mut *std::ptr::from_mut(&mut self.as_mut().shader).cast() }
     }
+
     /// Material maps array ([`consts::MAX_MATERIAL_MAPS`])
-    #[must_use]
     #[inline]
+    #[must_use]
     fn maps(&self) -> &[MaterialMap]
     where
         Self: AsRef<ffi::Material>,
@@ -1003,9 +1025,10 @@ pub trait RaylibMaterial {
             )
         }
     }
-    #[must_use]
-    #[inline]
+
     /// Material maps array ([`consts::MAX_MATERIAL_MAPS`])
+    #[inline]
+    #[must_use]
     fn maps_mut(&mut self) -> &mut [MaterialMap]
     where
         Self: AsMut<ffi::Material>,
@@ -1132,6 +1155,7 @@ impl ExactSizeIterator for FramePoseIter<'_> {
         self.iter.len()
     }
 }
+
 /// Iterator over mutable frame pose references
 ///
 /// Returned by [`RaylibModelAnimation::frame_poses_iter`].
@@ -1224,7 +1248,7 @@ impl ModelAnimation {
     /// # Safety
     ///
     /// Must manually free memory by calling the proper unload function.
-    /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
     /// and copies must not be used after being unloaded to avoid use-after-free.
     #[inline]
     #[must_use]
@@ -1310,6 +1334,7 @@ pub trait RaylibModelAnimation {
         .map(|frame_pose| unsafe { std::slice::from_raw_parts(frame_pose, bone_count) })
         .collect()
     }
+
     /// Iterator over poses array by frame
     ///
     /// # Panics
@@ -1363,6 +1388,7 @@ pub trait RaylibModelAnimation {
         .map(|frame_pose| unsafe { std::slice::from_raw_parts_mut(frame_pose, bone_count) })
         .collect()
     }
+
     /// Iterator over poses array by frame
     ///
     /// # Panics
@@ -1395,6 +1421,7 @@ impl MaterialMap {
     pub const fn texture(&self) -> &crate::texture::WeakTexture2D {
         unsafe { &*std::ptr::from_ref(&self.0.texture).cast() }
     }
+
     /// Material map texture
     #[inline]
     #[must_use]
@@ -1408,6 +1435,7 @@ impl MaterialMap {
     pub const fn color(&self) -> &Color {
         unsafe { &*std::ptr::from_ref(&self.0.color).cast() }
     }
+
     /// Material map color
     #[inline]
     #[must_use]
@@ -1421,6 +1449,7 @@ impl MaterialMap {
     pub const fn value(&self) -> &f32 {
         unsafe { &*std::ptr::from_ref(&self.0.value).cast() }
     }
+
     /// Material map value
     #[inline]
     #[must_use]

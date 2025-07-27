@@ -13,47 +13,56 @@ impl RaylibHandle {
     pub fn gui_enable(&mut self) {
         unsafe { ffi::GuiEnable() }
     }
+
     /// Disable gui controls (global state)
     #[inline]
     pub fn gui_disable(&mut self) {
         unsafe { ffi::GuiDisable() }
     }
+
     /// Lock gui controls (global state)
     #[inline]
     pub fn gui_lock(&mut self) {
         unsafe { ffi::GuiLock() }
     }
+
     /// Unlock gui controls (global state)
     #[inline]
     pub fn gui_unlock(&mut self) {
         unsafe { ffi::GuiUnlock() }
     }
+
     /// Set gui controls alpha (global state), alpha goes from 0.0f to 1.0f
     #[inline]
     pub fn gui_fade(&mut self, color: Color, alpha: f32) -> Color {
         unsafe { ffi::Fade(color, alpha) }
     }
+
     /// Set gui state (global state)
     #[inline]
     pub fn gui_set_state(&mut self, state: crate::consts::GuiState) {
         unsafe { ffi::GuiSetState(state as i32) }
     }
+
     /// Get gui state (global state)
     #[inline]
     pub fn gui_get_state(&mut self) -> crate::consts::GuiState {
         let state = unsafe { ffi::GuiGetState() };
         unsafe { std::mem::transmute(state) }
     }
+
     /// Set gui custom font (global state)
     #[inline]
     pub fn gui_set_font(&mut self, font: impl AsRef<ffi::Font>) {
         unsafe { ffi::GuiSetFont(*font.as_ref()) }
     }
+
     /// Get gui custom font (global state)
     #[inline]
     pub fn gui_get_font(&mut self) -> WeakFont {
         unsafe { WeakFont(ffi::GuiGetFont()) }
     }
+
     /// Set one style property
     #[inline]
     pub fn gui_set_style(
@@ -74,6 +83,7 @@ impl RaylibHandle {
     ) -> i32 {
         unsafe { ffi::GuiGetStyle(control as i32, property.as_i32()) }
     }
+
     /// Load style file (.rgs)
     ///
     /// # Panics
@@ -85,6 +95,7 @@ impl RaylibHandle {
             CString::new(filename).expect("filename should not contain an internal 0 byte");
         unsafe { ffi::GuiLoadStyle(c_filename.as_ptr()) }
     }
+
     /// Load style default over global style
     #[inline]
     pub fn gui_load_style_default(&mut self) {
@@ -136,16 +147,19 @@ pub unsafe trait RaylibDrawGui {
     fn gui_enable(&mut self) {
         unsafe { ffi::GuiEnable() }
     }
+
     /// Disable gui controls (global state)
     #[inline]
     fn gui_disable(&mut self) {
         unsafe { ffi::GuiDisable() }
     }
+
     /// Lock gui controls (global state)
     #[inline]
     fn gui_lock(&mut self) {
         unsafe { ffi::GuiLock() }
     }
+
     /// Unlock gui controls (global state)
     #[inline]
     fn gui_unlock(&mut self) {
@@ -163,27 +177,32 @@ pub unsafe trait RaylibDrawGui {
     fn gui_fade(&mut self, color: Color, alpha: f32) -> Color {
         unsafe { ffi::Fade(color, alpha) }
     }
+
     /// Set gui state (global state)
     #[inline]
     fn gui_set_state(&mut self, state: crate::consts::GuiState) {
         unsafe { ffi::GuiSetState(state as i32) }
     }
+
     /// Get gui state (global state)
     #[inline]
     fn gui_get_state(&mut self) -> crate::consts::GuiState {
         let state = unsafe { ffi::GuiGetState() };
         unsafe { std::mem::transmute(state) }
     }
+
     /// Set gui custom font (global state)
     #[inline]
     fn gui_set_font(&mut self, font: impl AsRef<ffi::Font>) {
         unsafe { ffi::GuiSetFont(*font.as_ref()) }
     }
+
     /// Get gui custom font (global state)
     #[inline]
     fn gui_get_font(&mut self) -> WeakFont {
         unsafe { WeakFont(ffi::GuiGetFont()) }
     }
+
     /// Set one style property
     #[inline]
     fn gui_set_style(
@@ -207,6 +226,7 @@ pub unsafe trait RaylibDrawGui {
     fn gui_get_style(&self, control: crate::consts::GuiControl, property: impl GuiProperty) -> i32 {
         unsafe { ffi::GuiGetStyle(control as i32, property.as_i32()) }
     }
+
     /// Load style file (.rgs)
     #[inline]
     fn gui_load_style(&mut self, filename: &str) {
@@ -214,29 +234,34 @@ pub unsafe trait RaylibDrawGui {
             CString::new(filename).expect("filename should not contain an internal 0 byte");
         unsafe { ffi::GuiLoadStyle(c_filename.as_ptr()) }
     }
+
     /// Load style default over global style
     #[inline]
     fn gui_load_style_default(&mut self) {
         unsafe { ffi::GuiLoadStyleDefault() }
     }
+
     /// Window Box control, shows a window that can be closed
     #[inline]
     fn gui_window_box(&mut self, bounds: impl Into<ffi::Rectangle>, title: &str) -> bool {
         let c_filename = CString::new(title).expect("title should not contain an internal 0 byte");
         unsafe { ffi::GuiWindowBox(bounds.into(), c_filename.as_ptr()) > 0 }
     }
+
     /// Group Box control with text name
     #[inline]
     fn gui_group_box(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
         let c_filename = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiGroupBox(bounds.into(), c_filename.as_ptr()) > 0 }
     }
+
     /// Line separator control, could contain text
     #[inline]
     fn gui_line(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
         let c_filename = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiLine(bounds.into(), c_filename.as_ptr()) > 0 }
     }
+
     /// Panel control, useful to group controls
     #[inline]
     fn gui_panel(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
@@ -249,6 +274,7 @@ pub unsafe trait RaylibDrawGui {
         };
         unsafe { ffi::GuiPanel(bounds.into(), c_text) > 0 }
     }
+
     /// Scroll Panel control
     #[inline]
     fn gui_scroll_panel(
@@ -273,24 +299,28 @@ pub unsafe trait RaylibDrawGui {
         };
         (result > 0, view, scroll)
     }
+
     /// Label control, shows text
     #[inline]
     fn gui_label(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
         let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiLabel(bounds.into(), c_text.as_ptr()) > 0 }
     }
+
     /// Button control, returns true when clicked
     #[inline]
     fn gui_button(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
         let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiButton(bounds.into(), c_text.as_ptr()) > 0 }
     }
+
     /// Label button control, show true when clicked
     #[inline]
     fn gui_label_button(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
         let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiLabelButton(bounds.into(), c_text.as_ptr()) > 0 }
     }
+
     /// Toggle Button control, returns true when active
     #[inline]
     fn gui_toggle(
@@ -302,6 +332,7 @@ pub unsafe trait RaylibDrawGui {
         let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiToggle(bounds.into(), c_text.as_ptr(), active) > 0 }
     }
+
     /// Toggle Group control, returns active toggle index
     #[inline]
     fn gui_toggle_group(
@@ -313,6 +344,7 @@ pub unsafe trait RaylibDrawGui {
         let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiToggleGroup(bounds.into(), c_text.as_ptr(), active) }
     }
+
     /// Check Box control, returns true when active
     #[inline]
     fn gui_check_box(
@@ -324,6 +356,7 @@ pub unsafe trait RaylibDrawGui {
         let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiCheckBox(bounds.into(), c_text.as_ptr(), checked) > 0 }
     }
+
     /// Combo Box control, returns selected item index
     #[inline]
     fn gui_combo_box(
@@ -335,6 +368,7 @@ pub unsafe trait RaylibDrawGui {
         let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiComboBox(bounds.into(), c_text.as_ptr(), active) }
     }
+
     /// Dropdown Box control, returns selected item
     #[inline]
     fn gui_dropdown_box(
@@ -347,6 +381,7 @@ pub unsafe trait RaylibDrawGui {
         let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiDropdownBox(bounds.into(), c_text.as_ptr(), active, edit_mode) > 0 }
     }
+
     /// Spinner control, returns selected value
     #[inline]
     fn gui_spinner(
@@ -371,6 +406,7 @@ pub unsafe trait RaylibDrawGui {
             ) > 0
         }
     }
+
     /// Value Box control, updates input text with numbers
     #[inline]
     fn gui_value_box(
@@ -394,6 +430,7 @@ pub unsafe trait RaylibDrawGui {
             ) > 0
         }
     }
+
     /// Text Box control, updates input text
     /// Use at your own risk!!! The allocated vector MUST have enough space for edits.
     #[inline]
@@ -465,6 +502,7 @@ pub unsafe trait RaylibDrawGui {
             ) > 0
         }
     }
+
     /// Slider Bar control, returns selected value
     #[inline]
     fn gui_slider_bar(
@@ -491,6 +529,7 @@ pub unsafe trait RaylibDrawGui {
             ) > 0
         }
     }
+
     /// Progress Bar control, shows current progress value
     #[inline]
     fn gui_progress_bar(
@@ -517,6 +556,7 @@ pub unsafe trait RaylibDrawGui {
             ) > 0
         }
     }
+
     /// Status Bar control, shows info text
     #[inline]
     fn gui_status_bar(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
@@ -548,6 +588,7 @@ pub unsafe trait RaylibDrawGui {
             mouse_cell,
         )
     }
+
     /// List View control, returns selected list item index
     #[inline]
     fn gui_list_view(
@@ -560,6 +601,7 @@ pub unsafe trait RaylibDrawGui {
         let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiListView(bounds.into(), c_text.as_ptr(), scroll_index, active) }
     }
+
     /// List View with extended parameters
     #[inline]
     fn gui_list_view_ex(
@@ -596,6 +638,7 @@ pub unsafe trait RaylibDrawGui {
             )
         }
     }
+
     /// Message Box control, displays a message
     #[inline]
     fn gui_message_box(
@@ -619,6 +662,7 @@ pub unsafe trait RaylibDrawGui {
             )
         }
     }
+
     /// Text Input Box control, ask for text
     #[inline]
     #[allow(clippy::too_many_arguments, reason = "all are needed")]
@@ -694,6 +738,7 @@ pub unsafe trait RaylibDrawGui {
 
         unsafe { ffi::GuiColorPicker(bounds.into(), c_text.as_ptr(), &mut *color) }
     }
+
     /// Get text with icon id prepended
     ///
     /// NOTE: Useful to add icons by name id (enum) instead of

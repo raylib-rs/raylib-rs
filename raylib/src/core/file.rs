@@ -140,12 +140,14 @@ impl FilePathList {
     pub const fn count(&self) -> u32 {
         self.0.count
     }
+
     /// The amount of files that can be held in this list.
     #[inline]
     #[must_use]
     pub const fn capacity(&self) -> u32 {
         self.0.capacity
     }
+
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
     ///
@@ -164,6 +166,7 @@ impl FilePathList {
             })
             .collect()
     }
+
     /// An iterator over the paths held in this list.
     #[must_use]
     pub fn iter(&self) -> FilePathIter<'_> {
@@ -188,12 +191,14 @@ impl DroppedFilePathList {
     pub const fn count(&self) -> u32 {
         self.0.count
     }
+
     /// The amount of files that can be held in this list.
     #[inline]
     #[must_use]
     pub const fn capacity(&self) -> u32 {
         self.0.capacity
     }
+
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned [`Vec`] every time you call this.
     ///
@@ -211,6 +216,7 @@ impl DroppedFilePathList {
             })
             .collect()
     }
+
     /// An iterator over the paths held in this list.
     #[must_use]
     pub fn iter(&self) -> FilePathIter<'_> {
@@ -254,6 +260,7 @@ impl RaylibHandle {
             .expect("lossy file_ext string should not have an internal 0 byte");
         unsafe { ffi::IsFileExtension(file_name.as_ptr(), file_ext.as_ptr()) }
     }
+
     /// Get the directory of the running application.
     ///
     /// # Panics

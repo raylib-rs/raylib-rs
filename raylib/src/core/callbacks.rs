@@ -9,7 +9,6 @@ use crate::{
 };
 use std::{
     borrow::Cow,
-    convert::TryInto,
     ffi::{CStr, CString, c_char, c_int, c_void},
     marker::PhantomData,
     pin::Pin,
@@ -155,6 +154,7 @@ pub unsafe extern "C" fn custom_trace_log_callback(level: TraceLogLevel, text: *
         let text = if text.is_null() {
             Cow::Borrowed("(MESSAGE WAS NULL)")
         } else {
+            // SAFETY: Caller must uphold safety contract
             unsafe { CStr::from_ptr(text).to_string_lossy() }
         };
 
@@ -260,6 +260,7 @@ pub fn set_trace_log_callback(cb: RustTraceLogCallback) -> Result<(), SetCallbac
     unsafe { ffi::setLogCallbackWrapper() };
     Ok(())
 }
+
 /// Set custom file binary data saver
 ///
 /// # Errors
@@ -274,6 +275,7 @@ pub fn set_save_file_data_callback(cb: RustSaveFileDataCallback) -> Result<(), S
         "save file data"
     )
 }
+
 /// Set custom file binary data loader
 ///
 /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
@@ -290,6 +292,7 @@ pub fn set_load_file_data_callback(cb: RustLoadFileDataCallback) -> Result<(), S
         "load file data"
     )
 }
+
 /// Set custom file text data saver
 ///
 /// # Errors
@@ -304,6 +307,7 @@ pub fn set_save_file_text_callback(cb: RustSaveFileTextCallback) -> Result<(), S
         "load file data"
     )
 }
+
 /// Set custom file text data loader
 ///
 /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
@@ -432,7 +436,7 @@ where
 /// This function returns [`SetCallbackError`] if a custom `audio_stream` callback is already set.
 #[allow(
     clippy::needless_pass_by_value,
-    reason = "changing this could be a breaking change"
+    reason = "fixing this could be a breaking change"
 )]
 pub fn set_audio_stream_callback(
     stream: AudioStream,
@@ -460,6 +464,7 @@ impl RaylibHandle {
     ) -> Result<(), SetCallbackError> {
         set_trace_log_callback(cb)
     }
+
     /// Set custom file binary data saver
     ///
     /// # Errors
@@ -472,6 +477,7 @@ impl RaylibHandle {
     ) -> Result<(), SetCallbackError> {
         set_save_file_data_callback(cb)
     }
+
     /// Set custom file binary data loader
     ///
     /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
@@ -486,6 +492,7 @@ impl RaylibHandle {
     ) -> Result<(), SetCallbackError> {
         set_load_file_data_callback(cb)
     }
+
     /// Set custom file text data saver
     ///
     /// # Errors
@@ -498,6 +505,7 @@ impl RaylibHandle {
     ) -> Result<(), SetCallbackError> {
         set_save_file_text_callback(cb)
     }
+
     /// Set custom file text data loader
     ///
     /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.

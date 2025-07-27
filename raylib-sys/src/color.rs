@@ -160,9 +160,9 @@ impl PartialEq for Color {
 }
 impl Eq for Color {}
 
-#[rustfmt::skip]
 /// Some Basic Colors
 /// NOTE: Custom raylib color palette for amazing visuals on WHITE background
+#[rustfmt::skip]
 pub trait RaylibPalette {
     /** Light Gray                 */ const LIGHTGRAY:  Color = Color::new(200, 200, 200, 255);
     /** Gray                       */ const GRAY:       Color = Color::new(130, 130, 130, 255);
@@ -194,8 +194,8 @@ pub trait RaylibPalette {
 }
 impl RaylibPalette for Color {}
 
-#[rustfmt::skip]
 /// CSS Color constants
+#[rustfmt::skip]
 pub trait CSSPalette {
     /** #f0f8ffff */ const ALICEBLUE:            Color = Color::new(0xf0, 0xf8, 0xff, 0xff);
     /** #faebd7ff */ const ANTIQUEWHITE:         Color = Color::new(0xfa, 0xeb, 0xd7, 0xff);
@@ -349,8 +349,8 @@ pub trait CSSPalette {
 }
 impl CSSPalette for Color {}
 
-#[rustfmt::skip]
 /// Color constants
+#[rustfmt::skip]
 impl Color {
     pub const INDIANRED: Color = Color::new(205, 92, 92, 255);
     pub const LIGHTCORAL: Color = Color::new(240, 128, 128, 255);

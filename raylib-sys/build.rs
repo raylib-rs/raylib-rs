@@ -439,8 +439,8 @@ fn main() {
     gen_utils();
 }
 
-#[must_use]
 /// returns false if the directory does not exist
+#[must_use]
 fn is_directory_empty(path: &str) -> bool {
     match std::fs::read_dir(path) {
         Ok(mut dir) => dir.next().is_none(),

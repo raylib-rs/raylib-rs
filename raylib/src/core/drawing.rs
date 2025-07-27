@@ -22,6 +22,7 @@ impl RaylibHandle {
 
         RaylibDrawHandle(self)
     }
+
     /// Setup canvas (framebuffer) to start drawing.
     // Every FnMut is a FnOnce, but not every FnOnce is a FnMut. The closure may possibly execute multiple times throughout the program, but not multiple times in a single call to this method.
     // Taking a FnOnce instead of a FnMut when the function only needs to be called once in this method makes the method slightly more versatile/less needlessly restrictive for no actual cost.
@@ -316,8 +317,8 @@ where
     /// Prefer using the closure version, [`RaylibMode3DExt::draw_mode3D`].
     /// This version returns a handle that calls [`ffi::EndMode3D`] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
     #[allow(non_snake_case, reason = "consistent style")]
-    #[must_use]
     #[inline]
+    #[must_use]
     fn begin_mode3D(&mut self, camera: impl Into<ffi::Camera3D>) -> RaylibMode3D<'_, Self> {
         unsafe {
             ffi::BeginMode3D(camera.into());
@@ -383,8 +384,8 @@ where
     ///
     /// Prefer using the closure version, [`RaylibShaderModeExt::draw_shader_mode`].
     /// This version returns a handle that calls [`ffi::EndShaderMode`] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
-    #[must_use]
     #[inline]
+    #[must_use]
     fn begin_shader_mode<'a, 'b>(
         &'a mut self,
         shader: &'b mut Shader,
@@ -507,8 +508,8 @@ where
     ///
     /// Prefer using the closure version, [`RaylibScissorModeExt::draw_scissor_mode`].
     /// This version returns a handle that calls [`ffi::EndScissorMode`] at the end of the scope and is provided as a fallback incase you run into issues with closures(such as lifetime or performance reasons)
-    #[must_use]
     #[inline]
+    #[must_use]
     fn begin_scissor_mode(
         &mut self,
         x: i32,
@@ -693,6 +694,7 @@ pub unsafe trait RaylibDraw {
             ffi::DrawCircle(center_x, center_y, radius, color.into());
         }
     }
+
     /// Draw a piece of a circle
     #[inline]
     fn draw_circle_sector(
@@ -1012,6 +1014,7 @@ pub unsafe trait RaylibDraw {
             ffi::DrawRectangleLinesEx(rec.into(), line_thick, color.into());
         }
     }
+
     /// Draws rectangle with rounded edges.
     #[inline]
     fn draw_rectangle_rounded(
@@ -1060,6 +1063,7 @@ pub unsafe trait RaylibDraw {
             );
         }
     }
+
     /// Draws a triangle.
     #[inline]
     fn draw_triangle(
@@ -1316,6 +1320,7 @@ pub unsafe trait RaylibDraw {
             );
         }
     }
+
     /// Draws text using `font` and additional parameters.
     #[inline]
     fn draw_text_ex(
@@ -1424,6 +1429,7 @@ pub unsafe trait RaylibDraw {
             );
         }
     }
+
     /// Draw spline: Linear, minimum 2 points
     #[inline]
     fn draw_spline_linear(&mut self, points: &[Vector2], thick: f32, color: impl Into<ffi::Color>) {
@@ -1439,6 +1445,7 @@ pub unsafe trait RaylibDraw {
             );
         }
     }
+
     /// Draw spline: B-Spline, minimum 4 points
     #[inline]
     fn draw_spline_basis(&mut self, points: &[Vector2], thick: f32, color: impl Into<ffi::Color>) {
@@ -1454,6 +1461,7 @@ pub unsafe trait RaylibDraw {
             );
         }
     }
+
     /// Draw spline: Catmull-Rom, minimum 4 points
     #[inline]
     fn draw_spline_catmull_rom(

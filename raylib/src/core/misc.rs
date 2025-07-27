@@ -46,6 +46,7 @@ impl IntoIterator for RandomSequence {
         RandSeqIterator(self, 0)
     }
 }
+
 /// Iterator over [`RandomSequence`] elements.
 pub struct RandSeqIterator(RandomSequence, usize);
 

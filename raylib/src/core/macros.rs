@@ -52,7 +52,7 @@ macro_rules! impl_wrapper {
             /// # Safety
             ///
             /// Must manually free memory by calling the proper unload function.
-            /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+            /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
             /// and copies must not be used after being unloaded to avoid use-after-free.
             #[must_use]
             pub const unsafe fn unwrap(self) -> $t {
@@ -185,5 +185,19 @@ macro_rules! impl_rslice {
                 &mut self.$rawfield
             }
         }
+    };
+}
+
+/// Assert at compiletime that the size and offsets of each field in `$A` matches with the corresponding fields in `$B`.
+/// This macro should guarantee transmutation between safe and ffi versions of the same struct is valid.
+macro_rules! assert_layout_compat {
+    (
+        $A:ty { $($a_fields:ident),* $(,)? },
+        $B:ty { $($b_fields:ident),* $(,)? } $(,)?
+    ) => {
+        const _: () = {
+            assert!(::std::mem::size_of::<$A>() == ::std::mem::size_of::<$B>());
+            $(assert!(::std::mem::offset_of!($A, $a_fields) == ::std::mem::offset_of!($B, $b_fields));)*
+        };
     };
 }

@@ -103,8 +103,8 @@ impl RaylibHandle {
     }
 
     /// Gets internal modelview matrix.
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn get_matrix_modelview(&self) -> Matrix {
         unsafe { ffi::rlGetMatrixModelview().into() }
     }
@@ -115,6 +115,7 @@ impl RaylibHandle {
     pub fn get_matrix_projection(&self) -> Matrix {
         unsafe { ffi::rlGetMatrixProjection().into() }
     }
+
     /// Get default shader. Modifying it modifies everything that uses that shader
     #[inline]
     #[must_use]
@@ -258,7 +259,7 @@ impl Shader {
     /// # Safety
     ///
     /// Must manually free memory by calling the proper unload function.
-    /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
     /// and copies must not be used after being unloaded to avoid use-after-free.
     #[inline]
     #[must_use]

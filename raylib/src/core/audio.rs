@@ -1,14 +1,14 @@
 //! Contains code related to audio. [`RaylibAudio`] plays sounds and music.
 
 use crate::{
-    error::{AudioInitError, LoadSoundError},
+    error::{AudioInitError, ExportWaveError, LoadSoundError},
     ffi,
 };
-use std::ffi::{CStr, CString};
-use std::marker::PhantomData;
-use std::path::Path;
-
-use super::error::ExportWaveError;
+use std::{
+    ffi::{CStr, CString},
+    marker::PhantomData,
+    path::Path,
+};
 
 make_thin_wrapper_lifetime!(
     /// Wave, audio wave data
@@ -26,6 +26,7 @@ make_thin_wrapper_lifetime!(
     (ffi::UnloadSound),
     true
 );
+
 make_thin_wrapper_lifetime!(
     /// Music, audio stream, anything longer than ~10 seconds should be streamed
     Music,
@@ -33,6 +34,7 @@ make_thin_wrapper_lifetime!(
     RaylibAudio,
     ffi::UnloadMusicStream
 );
+
 make_thin_wrapper_lifetime!(
     /// AudioStream, custom audio stream
     AudioStream,
@@ -301,18 +303,21 @@ impl<'aud> Wave<'aud> {
     pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
+
     /// Frequency (samples per second)
     #[inline]
     #[must_use]
     pub const fn sample_rate(&self) -> u32 {
         self.0.sampleRate
     }
+
     /// Bit depth (bits per sample): 8, 16, 32 (24 not supported)
     #[inline]
     #[must_use]
     pub const fn sample_size(&self) -> u32 {
         self.0.sampleSize
     }
+
     /// Number of channels (1-mono, 2-stereo, ...)
     #[inline]
     #[must_use]
@@ -324,7 +329,9 @@ impl<'aud> Wave<'aud> {
     ///
     /// # Safety
     ///
-    /// The resource must be unloaded manually to prevent leaking memory.
+    /// Must manually free memory by calling the proper unload function.
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// and copies must not be used after being unloaded to avoid use-after-free.
     #[inline]
     #[must_use]
     pub const unsafe fn inner(self) -> ffi::Wave {
@@ -388,7 +395,7 @@ impl<'aud> Wave<'aud> {
     /// Copies a wave to a new wave.
     #[inline]
     #[must_use]
-    pub fn copy(&self) -> Wave<'aud> {
+    pub(crate) fn copy(&self) -> Wave<'aud> {
         unsafe { Wave(ffi::WaveCopy(self.0), self.1) }
     }
 
@@ -426,12 +433,14 @@ impl<'aud> Wave<'aud> {
 }
 
 impl AsRef<ffi::AudioStream> for Sound<'_> {
+    #[inline]
     fn as_ref(&self) -> &ffi::AudioStream {
         &self.0.stream
     }
 }
 
 impl AsMut<ffi::AudioStream> for Sound<'_> {
+    #[inline]
     fn as_mut(&mut self) -> &mut ffi::AudioStream {
         &mut self.0.stream
     }
@@ -442,6 +451,7 @@ impl Sound<'_> {
     #[inline]
     #[must_use]
     pub fn is_sound_valid(&self) -> bool {
+        // SAFETY: IsSoundValid has no preconditions and is trivially safe
         unsafe { ffi::IsSoundValid(self.0) }
     }
 
@@ -456,7 +466,9 @@ impl Sound<'_> {
     ///
     /// # Safety
     ///
-    /// The resource must be unloaded manually to prevent leaking memory.
+    /// Must manually free memory by calling the proper unload function.
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// and copies must not be used after being unloaded to avoid use-after-free.
     #[inline]
     #[must_use]
     pub const unsafe fn inner(self) -> ffi::Sound {
@@ -547,7 +559,10 @@ impl SoundAlias<'_, '_> {
     ///
     /// # Safety
     ///
-    /// The resource must be unloaded manually to prevent leaking memory.
+    /// Must manually free memory by calling the proper unload function.
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// and copies must not be used after being unloaded to avoid use-after-free.
+    #[inline]
     #[must_use]
     pub const unsafe fn inner(self) -> ffi::Sound {
         let inner = self.0;
@@ -598,7 +613,7 @@ impl SoundAlias<'_, '_> {
         unsafe { ffi::SetSoundPitch(self.0, pitch) }
     }
 
-    /// Set pan for a sound (0.5 is center)
+    /// Set pan for a sound (`0.5` is center)
     #[inline]
     pub fn set_pan(&self, pan: f32) {
         unsafe { ffi::SetSoundPan(self.0, pan) }
@@ -691,6 +706,7 @@ impl Music<'_> {
     #[inline]
     #[must_use]
     pub fn is_music_valid(&self) -> bool {
+        // SAFETY: IsMusicValid has no preconditions and is trivially safe
         unsafe { ffi::IsMusicValid(self.0) }
     }
 }
@@ -700,20 +716,24 @@ impl AudioStream<'_> {
     #[inline]
     #[must_use]
     pub fn is_audio_stream_valid(&self) -> bool {
+        // SAFETY: IsMusicValid has no preconditions and is trivially safe
         unsafe { ffi::IsAudioStreamValid(self.0) }
     }
+
     /// Frequency (samples per second)
     #[inline]
     #[must_use]
     pub const fn sample_rate(&self) -> u32 {
         self.0.sampleRate
     }
+
     /// Bit depth (bits per sample): 8, 16, 32 (24 not supported)
     #[inline]
     #[must_use]
     pub const fn sample_size(&self) -> u32 {
         self.0.sampleSize
     }
+
     /// Number of channels (1-mono, 2-stereo, ...)
     #[inline]
     #[must_use]
@@ -725,7 +745,9 @@ impl AudioStream<'_> {
     ///
     /// # Safety
     ///
-    /// The resource must be unloaded manually to prevent leaking memory.
+    /// Must manually free memory by calling the proper unload function.
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// and copies must not be used after being unloaded to avoid use-after-free.
     #[must_use]
     pub const unsafe fn inner(self) -> ffi::AudioStream {
         let inner = self.0;
@@ -824,7 +846,8 @@ impl AudioStream<'_> {
 
 impl<'bind> Sound<'bind> {
     /// Clone sound from existing sound data, clone does not own wave data
-    // NOTE: Wave data must be unallocated manually and will be shared across all clones
+    ///
+    /// NOTE: Wave data must be unallocated manually and will be shared across all clones
     ///
     /// # Errors
     ///

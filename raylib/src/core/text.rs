@@ -145,8 +145,8 @@ impl RaylibHandle {
     /// # Panics
     ///
     /// This method will panic if `text` contains an internal 0 byte.
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn get_codepoint_count(text: &str) -> i32 {
         let ptr = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GetCodepointCount(ptr.as_ptr()) }
@@ -253,6 +253,7 @@ impl RaylibHandle {
             Ok(Font(f))
         }
     }
+
     /// Load font data from a given memory buffer.
     /// `file_type` refers to the extension, e.g. ".ttf".
     /// You can pass [`Some`] to chars to get the desired characters, or None to get the whole set.
@@ -306,6 +307,7 @@ impl RaylibHandle {
         }
         Ok(Font(f))
     }
+
     /// Loads font data for further use (see also `Font::from_data`).
     /// Now supports .tiff
     ///
@@ -368,6 +370,7 @@ pub trait RaylibFont {
     {
         self.as_ref().baseSize
     }
+
     /// Texture atlas containing the glyphs
     #[inline]
     #[must_use]
@@ -377,6 +380,7 @@ pub trait RaylibFont {
     {
         unsafe { &*std::ptr::from_ref(&self.as_ref().texture).cast() }
     }
+
     /// Glyphs info data
     #[inline]
     #[must_use]
@@ -391,6 +395,7 @@ pub trait RaylibFont {
             .expect("glyphCount should not be negative");
         unsafe { std::slice::from_raw_parts(self.as_ref().glyphs.cast(), glyph_count) }
     }
+
     /// Glyphs info data
     #[inline]
     #[must_use]
@@ -476,7 +481,7 @@ impl Font {
     /// # Safety
     ///
     /// Must manually free memory by calling the proper unload function.
-    /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
     /// and copies must not be used after being unloaded to avoid use-after-free.
     #[inline]
     #[must_use]
@@ -485,6 +490,7 @@ impl Font {
         std::mem::forget(self);
         w
     }
+
     /// Returns a new [`Font`] using provided [`GlyphInfo`] data and parameters.
     fn from_data(
         chars: &[ffi::GlyphInfo],
@@ -585,6 +591,7 @@ impl RaylibHandle {
     pub fn get_font_default(&self) -> WeakFont {
         WeakFont(unsafe { ffi::GetFontDefault() })
     }
+
     /// Measures string width in pixels for default font.
     ///
     /// # Panics

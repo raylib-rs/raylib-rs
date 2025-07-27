@@ -1,18 +1,18 @@
 //! Raylib event automation
 
+use crate::{RaylibHandle, ffi};
 use std::{
     ffi::CString,
     path::{Path, PathBuf},
     ptr::null,
 };
 
-use crate::{RaylibHandle, ffi};
-
 /// Iterator over [`AutomationEvent`]s. Returned by [`AutomationEventList::iter`].
 #[derive(Debug, Clone)]
 pub struct AutomationEventIter<'a> {
     iter: std::slice::Iter<'a, ffi::AutomationEvent>,
 }
+
 impl AutomationEventIter<'_> {
     #[must_use]
     unsafe fn new(events: *mut ffi::AutomationEvent, count: u32) -> Self {
@@ -39,9 +39,11 @@ impl AutomationEventIter<'_> {
         AutomationEvent(*e)
     }
 }
+
 impl Iterator for AutomationEventIter<'_> {
     type Item = AutomationEvent;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(Self::func)
     }
@@ -56,23 +58,29 @@ impl Iterator for AutomationEventIter<'_> {
         self.len()
     }
 
+    #[inline]
     fn last(self) -> Option<Self::Item> {
         self.iter.last().map(Self::func)
     }
 
+    #[inline]
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
         self.iter.nth(n).map(Self::func)
     }
 }
+
 impl DoubleEndedIterator for AutomationEventIter<'_> {
+    #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.next_back().map(Self::func)
     }
 
+    #[inline]
     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
         self.iter.nth_back(n).map(Self::func)
     }
 }
+
 impl ExactSizeIterator for AutomationEventIter<'_> {
     #[inline]
     fn len(&self) -> usize {
@@ -133,9 +141,12 @@ impl AutomationEventList {
 
     /// Export automation events list as text file
     ///
+    /// Returns `true` on success
+    ///
     /// # Panics
     ///
     /// This method will panic if `file_name` contains an internal 0 byte.
+    #[must_use = "return indicates success or failure of the operation"]
     pub fn export(&self, file_name: impl AsRef<Path>) -> bool {
         let c_str = CString::new(file_name.as_ref().to_string_lossy().as_bytes())
             .expect("lossy filename should not contain an internal 0 byte");
@@ -168,12 +179,14 @@ impl AutomationEvent {
     pub const fn frame(&self) -> u32 {
         self.0.frame
     }
+
     /// Event type ([`AutomationEventType`])
     #[inline]
     #[must_use]
     pub const fn get_type(&self) -> u32 {
         self.0.type_
     }
+
     /// Event parameters (if required)
     #[inline]
     #[must_use]
@@ -190,6 +203,7 @@ impl AutomationEvent {
     }
 }
 
+#[inline(always)] // This is fine because the method is empty
 const fn unload_automation_event(_s: ffi::AutomationEvent) {
     // As far as I can tell, this is actually unloaded when UnloadAnimationEventList is called.
 }
@@ -202,15 +216,14 @@ impl RaylibHandle {
     /// This method will panic if `file_name` contains an internal 0 byte.
     #[must_use]
     pub fn load_automation_event_list(&self, file_name: Option<PathBuf>) -> AutomationEventList {
-        match file_name {
-            Some(a) => {
-                let c_str = CString::new(a.to_string_lossy().as_bytes())
-                    .expect("lossy filename should not contain an internal 0 byte");
-                AutomationEventList(unsafe { ffi::LoadAutomationEventList(c_str.as_ptr()) })
-            }
-            None => AutomationEventList(unsafe { ffi::LoadAutomationEventList(null()) }),
-        }
+        let c_file_name = file_name.map(|a| {
+            CString::new(a.to_string_lossy().as_bytes())
+                .expect("lossy filename should not contain an internal 0 byte")
+        });
+        let c_str = c_file_name.as_ref().map_or_else(null, |s| s.as_ptr());
+        AutomationEventList(unsafe { ffi::LoadAutomationEventList(c_str) })
     }
+
     /// Set automation event list to record to
     #[inline]
     pub fn set_automation_event_list(&self, l: &mut AutomationEventList) {
@@ -218,16 +231,19 @@ impl RaylibHandle {
             ffi::SetAutomationEventList(&raw mut l.0);
         }
     }
+
     /// Set automation event internal base frame to start recording
     #[inline]
     pub fn set_automation_event_base_frame(&self, b: i32) {
         unsafe { ffi::SetAutomationEventBaseFrame(b) };
     }
+
     /// Start recording automation events ([`AutomationEventList`] must be set)
     #[inline]
     pub fn start_automation_event_recording(&self) {
         unsafe { ffi::StartAutomationEventRecording() };
     }
+
     /// Stop recording automation events
     #[inline]
     pub fn stop_automation_event_recording(&self) {

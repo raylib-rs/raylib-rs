@@ -37,6 +37,7 @@ impl WindowState {
     pub const fn vsync_hint(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_VSYNC_HINT as u32) != 0
     }
+
     /// Set to try enabling V-Sync on GPU
     pub const fn set_vsync_hint(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -54,6 +55,7 @@ impl WindowState {
     pub const fn fullscreen_mode(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_FULLSCREEN_MODE as u32) != 0
     }
+
     /// Set to run program in fullscreen
     pub const fn set_fullscreen_mode(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -71,6 +73,7 @@ impl WindowState {
     pub const fn window_resizable(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_RESIZABLE as u32) != 0
     }
+
     /// Set to allow resizable window
     pub const fn set_window_resizable(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -88,6 +91,7 @@ impl WindowState {
     pub const fn window_undecorated(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_UNDECORATED as u32) != 0
     }
+
     /// Set to disable window decoration (frame and buttons)
     pub const fn set_window_undecorated(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -105,6 +109,7 @@ impl WindowState {
     pub const fn window_hidden(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_HIDDEN as u32) != 0
     }
+
     /// Set to hide window
     pub const fn set_window_hidden(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -122,6 +127,7 @@ impl WindowState {
     pub const fn window_minimized(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_MINIMIZED as u32) != 0
     }
+
     /// Set to minimize window (iconify)
     pub const fn set_window_minimized(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -139,6 +145,7 @@ impl WindowState {
     pub const fn window_maximized(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_MAXIMIZED as u32) != 0
     }
+
     /// Set to maximize window (expanded to monitor)
     pub const fn set_window_maximized(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -156,6 +163,7 @@ impl WindowState {
     pub const fn window_unfocused(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_UNFOCUSED as u32) != 0
     }
+
     /// Set to window non focused
     pub const fn set_window_unfocused(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -173,6 +181,7 @@ impl WindowState {
     pub const fn window_topmost(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_TOPMOST as u32) != 0
     }
+
     /// Set to window always on top
     pub const fn set_window_topmost(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -190,6 +199,7 @@ impl WindowState {
     pub const fn window_always_run(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_ALWAYS_RUN as u32) != 0
     }
+
     /// Set to allow windows running while minimized
     pub const fn set_window_always_run(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -207,6 +217,7 @@ impl WindowState {
     pub const fn window_transparent(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_TRANSPARENT as u32) != 0
     }
+
     /// Set to allow transparent framebuffer
     pub const fn set_window_transparent(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -224,6 +235,7 @@ impl WindowState {
     pub const fn window_highdpi(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_HIGHDPI as u32) != 0
     }
+
     /// Set to support high DPI
     pub const fn set_window_highdpi(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -241,6 +253,7 @@ impl WindowState {
     pub const fn msaa(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_MSAA_4X_HINT as u32) != 0
     }
+
     /// Set to try enabling MSAA 4X
     pub const fn set_msaa(&mut self, enabled: bool) -> &mut Self {
         if enabled {
@@ -258,6 +271,7 @@ impl WindowState {
     pub const fn interlaced_hint(&self) -> bool {
         self.0 & (ffi::ConfigFlags::FLAG_INTERLACED_HINT as u32) != 0
     }
+
     /// Set to try enabling interlaced video format (for V3D)
     pub const fn set_interlaced_hint(&mut self, enabled: bool) -> &mut Self {
         if enabled {

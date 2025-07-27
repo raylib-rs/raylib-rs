@@ -1,9 +1,9 @@
 //! Utility code for using Raylib [`Camera3D`] and [`Camera2D`]
 
-use crate::ffi;
-use crate::math::{Vector2, Vector3};
-
-use super::math::Matrix;
+use crate::{
+    ffi,
+    math::{Matrix, Vector2, Vector3},
+};
 
 /// [`Camera2D`], defines position/orientation in 2d space
 #[repr(C)]
@@ -18,29 +18,49 @@ pub struct Camera2D {
     /// Camera zoom (scaling), should be 1.0 by default
     pub zoom: f32,
 }
+
+assert_layout_compat!(
+    Camera2D {
+        offset,
+        target,
+        rotation,
+        zoom,
+    },
+    ffi::Camera2D {
+        offset,
+        target,
+        rotation,
+        zoom,
+    },
+);
+
 impl Camera2D {
     /// Get camera 2d transform matrix
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn get_camera_matrix_2d(camera: impl Into<ffi::Camera2D>) -> Matrix {
+        // SAFETY: GetCameraMatrix2D is a pure math function with no preconditions and is trivially safe
         unsafe { ffi::GetCameraMatrix2D(camera.into()).into() }
     }
 }
 
 impl From<ffi::Camera2D> for Camera2D {
     fn from(v: ffi::Camera2D) -> Self {
+        // SAFETY: Camera2D is repr(C) and has the same layout as ffi::Camera2D
         unsafe { std::mem::transmute(v) }
     }
 }
 
 impl From<Camera2D> for ffi::Camera2D {
     fn from(v: Camera2D) -> Self {
+        // SAFETY: Camera2D is repr(C) and has the same layout as ffi::Camera2D
         unsafe { std::mem::transmute(v) }
     }
 }
 
 impl From<&Camera2D> for ffi::Camera2D {
     fn from(v: &Camera2D) -> Self {
+        // SAFETY: Camera2D is repr(C) and has the same layout as ffi::Camera2D
         unsafe { std::mem::transmute(*v) }
     }
 }
@@ -60,50 +80,79 @@ pub struct Camera3D {
     /// Camera projection: [`ffi::CameraProjection::CAMERA_PERSPECTIVE`] or [`ffi::CameraProjection::CAMERA_ORTHOGRAPHIC`]
     pub projection: ffi::CameraProjection,
 }
+
 /// [`Camera`] type fallback, defaults to [`Camera3D`]
 pub type Camera = Camera3D;
 
+assert_layout_compat!(
+    Camera3D {
+        position,
+        target,
+        up,
+        fovy,
+        projection,
+    },
+    ffi::Camera3D {
+        position,
+        target,
+        up,
+        fovy,
+        projection,
+    },
+);
+
 impl From<ffi::Camera3D> for Camera3D {
+    #[inline]
     fn from(v: ffi::Camera3D) -> Camera3D {
+        // SAFETY: Camera3D is repr(C) and has the same layout as ffi::Camera3D
         unsafe { std::mem::transmute(v) }
     }
 }
 
 impl From<Camera3D> for ffi::Camera3D {
+    #[inline]
     fn from(v: Camera3D) -> Self {
+        // SAFETY: Camera3D is repr(C) and has the same layout as ffi::Camera3D
         unsafe { std::mem::transmute(v) }
     }
 }
 
 impl From<&Camera3D> for ffi::Camera3D {
+    #[inline]
     fn from(v: &Camera3D) -> Self {
+        // SAFETY: Camera3D is repr(C) and has the same layout as ffi::Camera3D
         unsafe { std::mem::transmute(*v) }
     }
 }
 
-impl From<&mut Camera3D> for ffi::Camera3D {
-    fn from(v: &mut Camera3D) -> Self {
-        unsafe { std::mem::transmute(*v) }
-    }
-}
+// impl From<&mut Camera3D> for ffi::Camera3D {
+//     #[inline]
+//     fn from(v: &mut Camera3D) -> Self {
+//         // SAFETY: Camera3D is repr(C) and has the same layout as ffi::Camera3D
+//         unsafe { std::mem::transmute(*v) }
+//     }
+// }
+
 impl From<&mut Camera3D> for *mut ffi::Camera3D {
+    #[inline]
     fn from(val: &mut Camera3D) -> Self {
+        // SAFETY: Camera3D is repr(C) and has the same layout as ffi::Camera3D
         std::ptr::from_mut(val).cast()
     }
 }
 
 impl Camera3D {
     /// The projection this camera uses.
-    #[must_use]
     #[inline]
+    #[must_use]
     pub const fn camera_type(&self) -> ffi::CameraProjection {
         self.projection
     }
 
     /// Create a perspective camera.
     /// `fovy` is in degrees
-    #[must_use]
     #[inline]
+    #[must_use]
     pub const fn perspective(
         position: Vector3,
         target: Vector3,
@@ -121,8 +170,8 @@ impl Camera3D {
 
     /// Create a orthographic camera.
     /// `fovy` is in degrees
-    #[must_use]
     #[inline]
+    #[must_use]
     pub const fn orthographic(
         position: Vector3,
         target: Vector3,
@@ -135,49 +184,56 @@ impl Camera3D {
     }
 
     /// Returns the cameras forward vector (normalized)
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn forward(&self) -> Vector3 {
+        // SAFETY: GetCameraForward is a pure math function with no preconditions and is trivially safe
         unsafe { ffi::GetCameraForward(std::ptr::from_ref(self).cast_mut().cast()).into() }
     }
 
     /// Returns the cameras up vector (normalized)
     ///
     /// Note: The up vector might not be perpendicular to the forward vector
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn up(&self) -> Vector3 {
+        // SAFETY: GetCameraUp is a pure math function with no preconditions and is trivially safe
         unsafe { ffi::GetCameraUp(std::ptr::from_ref(self).cast_mut().cast()).into() }
     }
 
     /// Returns the cameras right vector (normalized)
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn right(&self) -> Vector3 {
+        // SAFETY: GetCameraRight is a pure math function with no preconditions and is trivially safe
         unsafe { ffi::GetCameraRight(std::ptr::from_ref(self).cast_mut().cast()).into() }
     }
 
     /// Moves the camera in its forward direction
     #[inline]
     pub fn move_forward(&mut self, distance: f32, in_world_plane: bool) {
+        // SAFETY: CameraMoveForward is a math function with no preconditions and is trivially safe
         unsafe { ffi::CameraMoveForward(self.into(), distance, in_world_plane) }
     }
 
     /// Moves the camera in its up direction
     #[inline]
     pub fn move_up(&mut self, distance: f32) {
+        // SAFETY: CameraMoveUp is a math function with no preconditions and is trivially safe
         unsafe { ffi::CameraMoveUp(self.into(), distance) }
     }
 
     /// Moves the camera target in its current right direction
     #[inline]
     pub fn move_right(&mut self, distance: f32, in_world_plane: bool) {
+        // SAFETY: CameraMoveRight is a math function with no preconditions and is trivially safe
         unsafe { ffi::CameraMoveRight(self.into(), distance, in_world_plane) }
     }
 
     /// Moves the camera position closer/farther to/from the camera target
     #[inline]
     pub fn move_to_target(&mut self, delta: f32) {
+        // SAFETY: CameraMoveToTarget is a math function with no preconditions and is trivially safe
         unsafe { ffi::CameraMoveToTarget(self.into(), delta) }
     }
 
@@ -188,6 +244,7 @@ impl Camera3D {
     /// Note: `angle` must be provided in radians
     #[inline]
     pub fn yaw(&mut self, angle: f32, rotate_around_target: bool) {
+        // SAFETY: CameraYaw is a math function with no preconditions and is trivially safe
         unsafe { ffi::CameraYaw(self.into(), angle, rotate_around_target) }
     }
 
@@ -205,6 +262,7 @@ impl Camera3D {
         rotate_around_target: bool,
         rotate_up: bool,
     ) {
+        // SAFETY: CameraPitch is a math function with no preconditions and is trivially safe
         unsafe {
             ffi::CameraPitch(
                 self.into(),
@@ -222,20 +280,27 @@ impl Camera3D {
     /// Note: `angle` must be provided in radians
     #[inline]
     pub fn roll(&mut self, angle: f32) {
+        // SAFETY: CameraRoll is a math function with no preconditions and is trivially safe
         unsafe { ffi::CameraRoll(self.into(), angle) }
     }
 
     /// Returns the camera view matrix
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn view_matrix(&self) -> Matrix {
+        // SAFETY: GetCameraViewMatrix is a pure math function with no preconditions and is trivially safe.
+        // Casting `self` to mut is ok here because `GetCameraViewMatrix` doesn't actually mutate `self`,
+        // and appears to take a mutable pointer by mistake.
         unsafe { ffi::GetCameraViewMatrix(std::ptr::from_ref(self).cast_mut().cast()).into() }
     }
 
     /// Returns the camera projection matrix
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn projection_matrix(&self, aspect: f32) -> Matrix {
+        // SAFETY: GetCameraProjectionMatrix is a pure math function with no preconditions and is trivially safe.
+        // Casting `self` to mut is ok here because `GetCameraProjectionMatrix` doesn't actually mutate `self`,
+        // and appears to take a mutable pointer by mistake.
         unsafe {
             ffi::GetCameraProjectionMatrix(std::ptr::from_ref(self).cast_mut().cast(), aspect)
                 .into()
@@ -243,19 +308,29 @@ impl Camera3D {
     }
 
     /// Updates camera position for selected mode.
+    ///
+    /// # Safety
+    ///
+    /// This method accesses static memory without locking. The caller must ensure proper synchronization with Raylib.
     #[inline]
-    pub fn update_camera(&mut self, mode: ffi::CameraMode) {
+    pub unsafe fn update_camera(&mut self, mode: ffi::CameraMode) {
+        // SAFETY: Caller must uphold safety contract
         unsafe { ffi::UpdateCamera(self.into(), mode as i32) }
     }
 
     /// Update camera movement, movement/rotation values should be provided by user
+    ///
+    /// # Safety
+    ///
+    /// This method accesses static memory without locking. The caller must ensure proper synchronization with Raylib.
     #[inline]
-    pub fn update_camera_pro(
+    pub unsafe fn update_camera_pro(
         &mut self,
         movement: impl Into<ffi::Vector3>,
         rotation: impl Into<ffi::Vector3>,
         zoom: f32,
     ) {
+        // SAFETY: Caller must uphold safety contract
         unsafe { ffi::UpdateCameraPro(self.into(), movement.into(), rotation.into(), zoom) }
     }
 }

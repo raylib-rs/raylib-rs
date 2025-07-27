@@ -134,7 +134,7 @@ impl RenderTexture2D {
     /// # Safety
     ///
     /// Must manually free memory by calling the proper unload function.
-    /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
     /// and copies must not be used after being unloaded to avoid use-after-free.
     #[inline]
     #[must_use]
@@ -201,24 +201,28 @@ impl Image {
     pub const fn width(&self) -> i32 {
         self.0.width
     }
+
     /// Image base height
     #[inline]
     #[must_use]
     pub const fn height(&self) -> i32 {
         self.0.height
     }
+
     /// Mipmap levels, 1 by default
     #[inline]
     #[must_use]
     pub const fn mipmaps(&self) -> i32 {
         self.0.mipmaps
     }
+
     /// Image raw data
     #[inline]
     #[must_use]
     pub const fn data(&self) -> *const ::std::os::raw::c_void {
         self.0.data
     }
+
     /// Image raw data
     #[inline]
     #[must_use]
@@ -231,22 +235,26 @@ impl Image {
     pub fn blur_gaussian(&mut self, blur_size: i32) {
         unsafe { ffi::ImageBlurGaussian(&mut self.0, blur_size) }
     }
+
     /// Rotate image by input angle in degrees (-359 to 359)
     #[inline]
     pub fn rotate(&mut self, degrees: i32) {
         unsafe { ffi::ImageRotate(&mut self.0, degrees) }
     }
+
     /// Get image pixel color at (x, y) position
     #[inline]
     #[must_use]
     pub fn get_color(&self, x: i32, y: i32) -> Color {
         unsafe { ffi::GetImageColor(self.0, x, y) }
     }
+
     /// Draw circle outline within an image
     #[inline]
     pub fn draw_circle_lines(&mut self, center_x: i32, center_y: i32, radius: i32, color: Color) {
         unsafe { ffi::ImageDrawCircleLines(&mut self.0, center_x, center_y, radius, color) }
     }
+
     /// Draw circle outline within an image (Vector version)
     #[inline]
     pub fn draw_circle_lines_v(
@@ -266,8 +274,8 @@ impl Image {
     }
 
     /// Create an image from another image piece
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn from_image(&self, rec: impl Into<ffi::Rectangle>) -> Image {
         unsafe { Image(ffi::ImageFromImage(self.0, rec.into())) }
     }
@@ -278,6 +286,7 @@ impl Image {
     pub fn from_channel(&self, selected_channel: i32) -> Image {
         unsafe { Image(ffi::ImageFromChannel(self.0, selected_channel)) }
     }
+
     /// Exports image as a PNG file.
     ///
     /// # Panics
@@ -371,6 +380,7 @@ impl Image {
         }
         res
     }
+
     /// Extract color palette from image to maximum size
     ///
     /// # Panics
@@ -1005,6 +1015,7 @@ impl Image {
     pub fn gen_image_color(width: i32, height: i32, color: impl Into<ffi::Color>) -> Image {
         unsafe { Image(ffi::GenImageColor(width, height, color.into())) }
     }
+
     /// Generate image: perlin noise
     #[inline]
     #[must_use]
@@ -1065,8 +1076,8 @@ impl Image {
 
     /// Generate images an image linear gradient.
     /// `direction` in expected to be degrees [0..360]. 0 results in a vertical gradient
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn gen_image_gradient_linear(
         width: i32,
         height: i32,
@@ -1080,10 +1091,11 @@ impl Image {
             ))
         }
     }
+
     /// Generate images an image with a square gradient
     /// For best results, `density` should be `0.0..=1.0`
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn gen_image_gradient_square(
         width: i32,
         height: i32,
@@ -1323,10 +1335,10 @@ impl Texture2D {
     /// # Safety
     ///
     /// Must manually free memory by calling the proper unload function.
-    /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// Even if the return implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
     /// and copies must not be used after being unloaded to avoid use-after-free.
-    #[must_use]
     #[inline]
+    #[must_use]
     pub const unsafe fn make_weak(self) -> WeakTexture2D {
         let m = WeakTexture2D(self.0);
         std::mem::forget(self);
@@ -1644,6 +1656,7 @@ impl RaylibHandle {
     pub unsafe fn unload_texture(&mut self, _: &RaylibThread, texture: WeakTexture2D) {
         unsafe { ffi::UnloadTexture(texture.to_raw()) }
     }
+
     /// Unload `RenderTextures` from GPU memory (VRAM)
     ///
     /// Weak `RenderTextures` will leak memory if they are not unloaded

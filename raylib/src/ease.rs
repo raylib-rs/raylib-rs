@@ -120,16 +120,19 @@ impl Tween {
 pub fn linear_none(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+
 /// Ease: Linear In
 #[must_use]
 pub fn linear_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+
 /// Ease: Linear Out
 #[must_use]
 pub fn linear_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+
 /// Ease: Linear In Out
 #[must_use]
 pub fn linear_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
@@ -141,16 +144,19 @@ pub fn linear_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
 pub fn sine_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     -c * (t / d * (PI / 2.0)).cos() + c + b
 }
+
 /// Ease: Sine Out
 #[must_use]
 pub fn sine_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * (t / d * (PI / 2.0)).sin() + b
 }
+
 /// Ease: Sine In Out
 #[must_use]
 pub fn sine_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     -c / 2.0 * ((PI * t / d).cos() - 1.0) + b
 }
+
 /// Ease: Circular In
 #[must_use]
 pub fn circ_in(t: f32, b: f32, c: f32, d: f32) -> f32 {

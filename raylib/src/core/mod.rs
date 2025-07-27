@@ -94,9 +94,9 @@ pub struct RaylibBuilder<'a> {
     title: &'a str,
 }
 
+/// Creates a `RaylibBuilder` for choosing window options before initialization.
 #[inline]
 #[must_use]
-/// Creates a `RaylibBuilder` for choosing window options before initialization.
 pub fn init<'a>() -> RaylibBuilder<'a> {
     RaylibBuilder {
         width: 640,
@@ -118,6 +118,7 @@ impl<'a> RaylibBuilder<'a> {
         self.log_level = level;
         self
     }
+
     /// Sets the window to be resizable.
     pub const fn resizable(&mut self) -> &mut Self {
         self.flags |= FLAG_WINDOW_RESIZABLE as u32;
