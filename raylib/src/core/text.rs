@@ -1,10 +1,12 @@
 //! Text and Font related functions
-//! Text manipulation functions are super unsafe so use rust String functions
+//!
+//! Text manipulation functions are super unsafe, so use Rust's [`String`] functions
 
 use crate::core::math::Vector2;
 use crate::core::texture::{Image, Texture2D};
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::error::LoadFontError;
+use crate::databuf::DataBuf;
+use crate::error::{AllocationError, LoadFontError};
 use crate::ffi;
 use crate::ffi::Rectangle;
 
@@ -14,44 +16,51 @@ use std::mem::ManuallyDrop;
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
-    /// Font, font texture and GlyphInfo array data
+    /// Font, font texture and [`GlyphInfo`] array data
     Font,
     ffi::Font,
     ffi::UnloadFont
 );
-make_thin_wrapper!(WeakFont, ffi::Font, no_drop);
 make_thin_wrapper!(
-    /// GlyphInfo, font characters glyphs info
+    /// Unowned version of [`Font`] that does not free the resource when dropped
+    WeakFont,
+    ffi::Font,
+    no_drop
+);
+make_thin_wrapper!(
+    /// [`GlyphInfo`], font characters glyphs info
     GlyphInfo,
     ffi::GlyphInfo,
     no_drop
 );
 
+/// An owned slice of [`GlyphInfo`]s that will be freed by Raylib.
 #[repr(transparent)]
 #[derive(Debug)]
-pub struct RSliceGlyphInfo(pub(crate) std::mem::ManuallyDrop<std::boxed::Box<[GlyphInfo]>>);
+pub struct RSliceGlyphInfo(pub(crate) std::mem::ManuallyDrop<Box<[GlyphInfo]>>);
 
 impl Drop for RSliceGlyphInfo {
-    #[allow(unused_unsafe)]
     fn drop(&mut self) {
+        let inner = unsafe { std::mem::ManuallyDrop::take(&mut self.0) };
+        let len = inner.len();
         unsafe {
-            let inner = std::mem::ManuallyDrop::take(&mut self.0);
-            let len = inner.len();
             ffi::UnloadFontData(
-                std::boxed::Box::leak(inner).as_mut_ptr() as *mut _,
-                len as i32,
+                Box::leak(inner).as_mut_ptr().cast(),
+                len.try_into().expect("len should not exceed i32::MAX"),
             );
         }
     }
 }
 
-impl std::convert::AsRef<Box<[GlyphInfo]>> for RSliceGlyphInfo {
+impl AsRef<Box<[GlyphInfo]>> for RSliceGlyphInfo {
+    #[inline]
     fn as_ref(&self) -> &Box<[GlyphInfo]> {
         &self.0
     }
 }
 
-impl std::convert::AsMut<Box<[GlyphInfo]>> for RSliceGlyphInfo {
+impl AsMut<Box<[GlyphInfo]>> for RSliceGlyphInfo {
+    #[inline]
     fn as_mut(&mut self) -> &mut Box<[GlyphInfo]> {
         &mut self.0
     }
@@ -82,14 +91,16 @@ impl std::ops::DerefMut for RSliceGlyphInfo {
 // unsafe impl Sync for WeakFont {}
 
 impl AsRef<ffi::Texture2D> for Font {
+    #[inline]
     fn as_ref(&self) -> &ffi::Texture2D {
-        return &self.0.texture;
+        &self.0.texture
     }
 }
 
 impl AsRef<ffi::Texture2D> for WeakFont {
+    #[inline]
     fn as_ref(&self) -> &ffi::Texture2D {
-        return &self.0.texture;
+        &self.0.texture
     }
 }
 
@@ -106,39 +117,69 @@ impl Drop for Codepoints {
 const TOO_MANY_CODEPOINTS: &str = "fonts exceeding 2,147,483,647 characters are not supported; at most 1,112,064 characters can possibly be encoded in utf-8.";
 
 impl RaylibHandle {
-    #[must_use]
     /// Load all codepoints from a UTF-8 text string, codepoints count returned by parameter
-    pub(crate) fn load_codepoints(&mut self, text: &str) -> Codepoints {
-        let ptr = CString::new(text).unwrap();
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `text` contains an internal 0 byte, or if [`ffi::LoadCodepoints`] assigns a negative len.
+    #[must_use]
+    pub(crate) fn load_codepoints(text: &str) -> Codepoints {
+        let ptr = CString::new(text).expect("text should not contain an internal 0 byte");
         let mut len = 0;
-        let u = unsafe { ffi::LoadCodepoints(ptr.as_ptr(), &mut len) };
+        // SAFETY: `ptr` is a valid c-string, and `len` is non-null and safe to dereference for writing.
+        // `LoadCodepoints` is pure and does not require Raylib to be initialized.
+        let u = unsafe { ffi::LoadCodepoints(ptr.as_ptr(), &raw mut len) };
 
-        unsafe {
-            Codepoints(std::mem::ManuallyDrop::new(Box::from_raw(
-                std::slice::from_raw_parts_mut(u, len.try_into().expect("codepoint count should never be negative")),
-            )))
-        }
+        let data = unsafe {
+            std::slice::from_raw_parts_mut(
+                u,
+                len.try_into()
+                    .expect("codepoint count should never be negative"),
+            )
+        };
+        Codepoints(std::mem::ManuallyDrop::new(unsafe { Box::from_raw(data) }))
     }
 
+    /// Get total number of codepoints in a UTF-8 encoded string
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `text` contains an internal 0 byte.
     #[must_use]
     #[inline]
-    /// Get total number of codepoints in a UTF-8 encoded string
     pub fn get_codepoint_count(text: &str) -> i32 {
-        let ptr = CString::new(text).unwrap();
+        let ptr = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GetCodepointCount(ptr.as_ptr()) }
     }
 
     /// Unload font from GPU memory (VRAM)
+    ///
+    /// Weak fonts will leak memory if they are not unlaoded
+    ///
+    /// # Safety
+    ///
+    /// This method frees the resource associated with `font`.
+    /// The caller must ensure that `font` has not yet been unloaded, and that no copies
+    /// of `font` are accessed or unloaded after this method returns.
     #[inline]
-    pub fn unload_font(&mut self, font: WeakFont) {
-        unsafe { ffi::UnloadFont(font.0) };
+    pub unsafe fn unload_font(&mut self, font: WeakFont) {
+        unsafe { ffi::UnloadFont(font.to_raw()) };
     }
 
     /// Loads font from file into GPU memory (VRAM).
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadFontError::LoadFromFileFailed`] if [`ffi::LoadFont`] returns
+    /// a font whose glyphs are null or texture id is 0.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte.
     #[inline]
-    #[must_use]
     pub fn load_font(&mut self, _: &RaylibThread, filename: &str) -> Result<Font, LoadFontError> {
-        let c_filename = CString::new(filename).unwrap();
+        let c_filename =
+            CString::new(filename).expect("filename should not contain an internal 0 byte");
         let f = unsafe { ffi::LoadFont(c_filename.as_ptr()) };
         if f.glyphs.is_null() || f.texture.id == 0 {
             return Err(LoadFontError::LoadFromFileFailed {
@@ -149,9 +190,19 @@ impl RaylibHandle {
     }
 
     /// Loads font from file with extended parameters.
-    /// Supplying None for chars loads the entire character set.
+    ///
+    /// Supplying [`None`] for chars loads the entire character set.
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadFontError::LoadFromFileFailed`] if [`ffi::LoadFontEx`] returns
+    /// a font whose glyphs are null or texture id is 0.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte, or if the codepoints loaded from `chars`
+    /// exceed [`i32::MAX`] elements.
     #[inline]
-    #[must_use]
     pub fn load_font_ex(
         &mut self,
         _: &RaylibThread,
@@ -159,21 +210,20 @@ impl RaylibHandle {
         font_size: i32,
         chars: Option<&str>,
     ) -> Result<Font, LoadFontError> {
-        let c_filename = CString::new(filename).unwrap();
-        let f = unsafe {
-            match chars {
-                Some(c) => {
-                    let mut co = self.load_codepoints(c);
-                    ffi::LoadFontEx(
-                        c_filename.as_ptr(),
-                        font_size,
-                        co.0.as_mut_ptr(),
-                        co.0.len().try_into().expect(TOO_MANY_CODEPOINTS),
-                    )
-                }
-                None => ffi::LoadFontEx(c_filename.as_ptr(), font_size, std::ptr::null_mut(), 0),
+        let c_filename =
+            CString::new(filename).expect("filename should not contain an internal 0 byte");
+        let mut co;
+        let (co_ptr, co_len) = match chars {
+            Some(c) => {
+                co = Self::load_codepoints(c);
+                (
+                    co.0.as_mut_ptr(),
+                    co.0.len().try_into().expect(TOO_MANY_CODEPOINTS),
+                )
             }
+            None => (std::ptr::null_mut(), 0),
         };
+        let f = unsafe { ffi::LoadFontEx(c_filename.as_ptr(), font_size, co_ptr, co_len) };
         if f.glyphs.is_null() || f.texture.id == 0 {
             return Err(LoadFontError::LoadFromFileFailed {
                 path: filename.into(),
@@ -183,26 +233,40 @@ impl RaylibHandle {
     }
 
     /// Load font from Image (XNA style)
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadFontError::LoadFromImageFailed`] if [`ffi::LoadFontFromImage`] returns
+    /// a font whose glyphs are null or texture id is 0.
     #[inline]
-    #[must_use]
     pub fn load_font_from_image(
         &mut self,
         _: &RaylibThread,
         image: &Image,
         key: impl Into<ffi::Color>,
-        first_char: i32,
+        first_char: char,
     ) -> Result<Font, LoadFontError> {
-        let f = unsafe { ffi::LoadFontFromImage(image.0, key.into(), first_char) };
-        if f.glyphs.is_null() {
-            return Err(LoadFontError::LoadFromImageFailed);
+        let f = unsafe { ffi::LoadFontFromImage(image.0, key.into(), first_char as i32) };
+        if f.glyphs.is_null() || f.texture.id == 0 {
+            Err(LoadFontError::LoadFromImageFailed)
+        } else {
+            Ok(Font(f))
         }
-        Ok(Font(f))
     }
     /// Load font data from a given memory buffer.
     /// `file_type` refers to the extension, e.g. ".ttf".
-    /// You can pass Some(...) to chars to get the desired characters, or None to get the whole set.
+    /// You can pass [`Some`] to chars to get the desired characters, or None to get the whole set.
+    ///
+    /// # Errors
+    ///
+    /// This method returns [`LoadFontError::LoadFromMemoryFailed`] if [`ffi::LoadFontFromMemory`] returns
+    /// a font whose glyphs are null or texture id is 0.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte, or if either `file_data`
+    /// or the codepoints loaded from `chars` exceed [`i32::MAX`] elements.
     #[inline]
-    #[must_use]
     pub fn load_font_from_memory(
         &mut self,
         _: &RaylibThread,
@@ -211,29 +275,31 @@ impl RaylibHandle {
         font_size: i32,
         chars: Option<&str>,
     ) -> Result<Font, LoadFontError> {
-        let c_file_type = CString::new(file_type).unwrap();
-        let f = unsafe {
-            match chars {
-                Some(c) => {
-                    let mut co = self.load_codepoints(c);
-                    ffi::LoadFontFromMemory(
-                        c_file_type.as_ptr(),
-                        file_data.as_ptr(),
-                        file_data.len() as i32,
-                        font_size,
-                        co.0.as_mut_ptr(),
-                        co.0.len().try_into().expect(TOO_MANY_CODEPOINTS),
-                    )
-                }
-                None => ffi::LoadFontFromMemory(
-                    c_file_type.as_ptr(),
-                    file_data.as_ptr(),
-                    file_data.len() as i32,
-                    font_size,
-                    std::ptr::null_mut(),
-                    0,
-                ),
+        let c_file_type =
+            CString::new(file_type).expect("file_type should not contain an internal 0 byte");
+        let mut co;
+        let (co_ptr, co_len) = match chars {
+            Some(c) => {
+                co = Self::load_codepoints(c);
+                (
+                    co.0.as_mut_ptr(),
+                    co.0.len().try_into().expect(TOO_MANY_CODEPOINTS),
+                )
             }
+            None => (std::ptr::null_mut(), 0),
+        };
+        let f = unsafe {
+            ffi::LoadFontFromMemory(
+                c_file_type.as_ptr(),
+                file_data.as_ptr(),
+                file_data
+                    .len()
+                    .try_into()
+                    .expect("file_data should not exceed i32::MAX elements"),
+                font_size,
+                co_ptr,
+                co_len,
+            )
         };
         if f.glyphs.is_null() || f.texture.id == 0 {
             return Err(LoadFontError::LoadFromMemoryFailed);
@@ -242,6 +308,13 @@ impl RaylibHandle {
     }
     /// Loads font data for further use (see also `Font::from_data`).
     /// Now supports .tiff
+    ///
+    /// Returns [`None`] if [`ffi::LoadFontData`] returns null.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte, or if either `file_data`
+    /// or the codepoints loaded from `chars` exceed [`i32::MAX`] elements.
     #[inline]
     pub fn load_font_data(
         &mut self,
@@ -250,83 +323,96 @@ impl RaylibHandle {
         chars: Option<&str>,
         sdf: i32,
     ) -> Option<RSliceGlyphInfo> {
-        unsafe {
-            let ci_arr_ptr = match chars {
-                Some(c) => {
-                    let mut co = self.load_codepoints(c);
-                    ffi::LoadFontData(
-                        data.as_ptr(),
-                        data.len() as i32,
-                        font_size,
-                        co.0.as_mut_ptr(),
-                        co.0.len().try_into().expect(TOO_MANY_CODEPOINTS),
-                        sdf,
-                    )
-                }
-                None => ffi::LoadFontData(
-                    data.as_ptr(),
-                    data.len() as i32,
-                    font_size,
-                    std::ptr::null_mut(),
-                    0,
-                    sdf,
-                ),
-            };
-            let ci_size = if let Some(c) = chars { c.len() } else { 95 }; // raylib assumes 95 if none given
-            if ci_arr_ptr.is_null() {
-                None
-            } else {
-                Some(RSliceGlyphInfo(std::mem::ManuallyDrop::new(Box::from_raw(
-                    std::slice::from_raw_parts_mut(ci_arr_ptr as *mut _, ci_size),
-                ))))
+        let mut co;
+        let (co_ptr, co_len) = match chars {
+            Some(c) => {
+                co = Self::load_codepoints(c);
+                (
+                    co.0.as_mut_ptr(),
+                    co.0.len().try_into().expect(TOO_MANY_CODEPOINTS),
+                )
             }
-        }
+            None => (std::ptr::null_mut(), 0),
+        };
+        let ci_arr_ptr = unsafe {
+            ffi::LoadFontData(
+                data.as_ptr(),
+                data.len()
+                    .try_into()
+                    .expect("data should not exceed i32::MAX elements"),
+                font_size,
+                co_ptr,
+                co_len,
+                sdf,
+            )
+        };
+        let ci_size = chars.map_or(95, str::len); // raylib assumes 95 if none given
+        (!ci_arr_ptr.is_null()).then(|| {
+            let data = unsafe { std::slice::from_raw_parts_mut(ci_arr_ptr.cast(), ci_size) };
+            RSliceGlyphInfo(std::mem::ManuallyDrop::new(unsafe { Box::from_raw(data) }))
+        })
     }
 }
 
 impl RaylibFont for WeakFont {}
 impl RaylibFont for Font {}
 
-pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
+/// [`Font`] accessors and helper methods.
+pub trait RaylibFont {
     /// Base size (default chars height)
     #[inline]
     #[must_use]
-    fn base_size(&self) -> i32 {
+    fn base_size(&self) -> i32
+    where
+        Self: AsRef<ffi::Font>,
+    {
         self.as_ref().baseSize
     }
     /// Texture atlas containing the glyphs
     #[inline]
     #[must_use]
-    fn texture(&self) -> &Texture2D {
-        unsafe { std::mem::transmute(&self.as_ref().texture) }
+    fn texture(&self) -> &Texture2D
+    where
+        Self: AsRef<ffi::Font>,
+    {
+        unsafe { &*std::ptr::from_ref(&self.as_ref().texture).cast() }
     }
     /// Glyphs info data
     #[inline]
     #[must_use]
-    fn chars(&self) -> &[GlyphInfo] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().glyphs as *const GlyphInfo,
-                self.as_ref().glyphCount as usize,
-            )
-        }
+    fn chars(&self) -> &[GlyphInfo]
+    where
+        Self: AsRef<ffi::Font>,
+    {
+        let glyph_count = self
+            .as_ref()
+            .glyphCount
+            .try_into()
+            .expect("glyphCount should not be negative");
+        unsafe { std::slice::from_raw_parts(self.as_ref().glyphs.cast(), glyph_count) }
     }
     /// Glyphs info data
     #[inline]
     #[must_use]
-    fn chars_mut(&mut self) -> &mut [GlyphInfo] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().glyphs as *mut GlyphInfo,
-                self.as_ref().glyphCount as usize,
-            )
-        }
+    fn chars_mut(&mut self) -> &mut [GlyphInfo]
+    where
+        Self: AsMut<ffi::Font>,
+    {
+        let glyph_count = self
+            .as_mut()
+            .glyphCount
+            .try_into()
+            .expect("glyphCount should not be negative");
+        unsafe { std::slice::from_raw_parts_mut(self.as_mut().glyphs.cast(), glyph_count) }
     }
 
     /// Check if a font is valid
     #[inline]
     #[must_use]
-    fn is_font_valid(&self) -> bool {
+    fn is_font_valid(&self) -> bool
+    where
+        Self: AsRef<ffi::Font>,
+    {
         unsafe { ffi::IsFontValid(*self.as_ref()) }
     }
 
@@ -334,96 +420,121 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     #[must_use]
     fn export_font_as_code<A>(&self, filename: A) -> bool
     where
+        Self: AsRef<ffi::Font>,
         A: Into<OsString>,
     {
-        let c_str = CString::new(filename.into().to_string_lossy().as_bytes()).unwrap();
+        let c_str = CString::new(filename.into().to_string_lossy().as_bytes())
+            .expect("lossy filename string should not contain an internal 0 byte");
         unsafe { ffi::ExportFontAsCode(*self.as_ref(), c_str.as_ptr()) }
     }
 
     /// Get glyph font info data for a codepoint (unicode character), fallback to '?' if not found
     #[inline]
     #[must_use]
-    fn get_glyph_info(&self, codepoint: char) -> GlyphInfo {
+    fn get_glyph_info(&self, codepoint: char) -> GlyphInfo
+    where
+        Self: AsRef<ffi::Font>,
+    {
         unsafe { GlyphInfo(ffi::GetGlyphInfo(*self.as_ref(), codepoint as i32)) }
     }
 
     /// Gets index position for a unicode character on `font`.
     #[inline]
     #[must_use]
-    fn get_glyph_index(&self, codepoint: char) -> i32 {
+    fn get_glyph_index(&self, codepoint: char) -> i32
+    where
+        Self: AsRef<ffi::Font>,
+    {
         unsafe { ffi::GetGlyphIndex(*self.as_ref(), codepoint as i32) }
     }
 
     /// Get glyph rectangle in font atlas for a codepoint (unicode character), fallback to '?' if not found
     #[inline]
     #[must_use]
-    fn get_glyph_atlas_rec(&self, codepoint: char) -> Rectangle {
-        unsafe { ffi::GetGlyphAtlasRec(*self.as_ref(), codepoint as i32).into() }
+    fn get_glyph_atlas_rec(&self, codepoint: char) -> Rectangle
+    where
+        Self: AsRef<ffi::Font>,
+    {
+        unsafe { ffi::GetGlyphAtlasRec(*self.as_ref(), codepoint as i32) }
     }
 
     /// Measures string width in pixels for `font`.
     #[must_use]
-    fn measure_text(&self, text: &str, font_size: f32, spacing: f32) -> Vector2 {
-        let c_text = CString::new(text).unwrap();
+    fn measure_text(&self, text: &str, font_size: f32, spacing: f32) -> Vector2
+    where
+        Self: AsRef<ffi::Font>,
+    {
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::MeasureTextEx(*self.as_ref(), c_text.as_ptr(), font_size, spacing).into() }
     }
 }
 
 impl Font {
+    /// Convert `self` to its weak form, allowing it to be shared by multiple containers on the condition
+    /// that it is only unloaded once, manually.
+    ///
+    /// # Safety
+    ///
+    /// Must manually free memory by calling the proper unload function.
+    /// Even if `self` implements [`Copy`], exactly one instance should be unloaded to avoid double-free,
+    /// and copies must not be used after being unloaded to avoid use-after-free.
     #[inline]
     #[must_use]
-    pub fn make_weak(self) -> WeakFont {
+    pub const fn make_weak(self) -> WeakFont {
         let w = WeakFont(self.0);
         std::mem::forget(self);
-        return w;
+        w
     }
-    /// Returns a new `Font` using provided `GlyphInfo` data and parameters.
-    #[must_use]
+    /// Returns a new [`Font`] using provided [`GlyphInfo`] data and parameters.
     fn from_data(
         chars: &[ffi::GlyphInfo],
         base_size: i32,
         padding: i32,
         pack_method: i32,
     ) -> Result<Font, LoadFontError> {
-        let f = unsafe {
-            let mut f = std::mem::zeroed::<Font>();
-            f.baseSize = base_size;
-            f.set_chars(chars);
+        let mut f = unsafe { std::mem::zeroed::<Font>() };
+        f.baseSize = base_size;
+        f.set_chars(chars)
+            .expect("should be able to allocate memory for chars");
 
-            let atlas = ffi::GenImageFontAtlas(
+        let atlas = unsafe {
+            ffi::GenImageFontAtlas(
                 f.glyphs,
-                &mut f.0.recs,
+                &raw mut f.0.recs,
                 f.baseSize,
                 f.glyphCount,
                 padding,
                 pack_method,
-            );
-            f.texture = ffi::LoadTextureFromImage(atlas);
-            ffi::UnloadImage(atlas);
-            f
+            )
         };
+        f.texture = unsafe { ffi::LoadTextureFromImage(atlas) };
+        unsafe {
+            ffi::UnloadImage(atlas);
+        }
         if f.0.glyphs.is_null() || f.0.texture.id == 0 {
             return Err(LoadFontError::LoadFromImageFailed);
         }
         Ok(f)
     }
 
-    /// Sets the character data on the current Font.
-    fn set_chars(&mut self, chars: &[ffi::GlyphInfo]) {
-        unsafe {
-            self.glyphCount = chars.len() as i32;
-            let data_size = self.glyphCount as usize * std::mem::size_of::<ffi::GlyphInfo>();
-            let ci_arr_ptr = ffi::MemAlloc(data_size.try_into().unwrap()); // raylib frees this data in UnloadFont
-            std::ptr::copy(
-                chars.as_ptr(),
-                ci_arr_ptr as *mut ffi::GlyphInfo,
-                chars.len(),
-            );
-            self.glyphs = ci_arr_ptr as *mut ffi::GlyphInfo;
-        }
+    /// Sets the character data on the current [`Font`].
+    fn set_chars(&mut self, chars: &[ffi::GlyphInfo]) -> Result<(), AllocationError> {
+        let glyph_count = chars
+            .len()
+            .try_into()
+            .expect("chars should not exceed i32::MAX elements");
+        // raylib frees this data in UnloadFont
+        let glyphs = DataBuf::<[ffi::GlyphInfo]>::alloc_from_copy(chars)?
+            .into_inner()
+            .into_inner()
+            .as_ptr()
+            .cast();
+        self.glyphCount = glyph_count;
+        self.glyphs = glyphs;
+        Ok(())
     }
 
-    /// Sets the texture on the current Font, and takes ownership of `tex`.
+    /// Sets the texture on the current [`Font`], and takes ownership of `tex`.
     fn set_texture(&mut self, tex: Texture2D) {
         self.texture = tex.0;
         std::mem::forget(tex); // UnloadFont will also unload the texture
@@ -431,36 +542,40 @@ impl Font {
 }
 
 /// Generates image font atlas using `chars` info.
-/// Sets a pointer to an array of rectangles raylib allocated that MUST manually be freed.
-/// Good luck freeing it safely though ;)
+///
+/// # Panics
+///
+/// This function will panic if `chars` has a length greater than [`i32::MAX`],
+/// or if [`ffi::GenImageFontAtlas`] does not assign a value to `glyphRecs`.
 #[inline]
-#[must_use]
 pub fn gen_image_font_atlas(
     _: &RaylibThread,
     chars: &mut [ffi::GlyphInfo],
     font_size: i32,
     padding: i32,
     pack_method: i32,
-) -> (Image, Vec<ffi::Rectangle>) {
-    unsafe {
-        let mut ptr = std::ptr::null_mut();
+) -> (Image, DataBuf<[ffi::Rectangle]>) {
+    let mut ptr = std::ptr::null_mut();
+    let glyph_count = chars
+        .len()
+        .try_into()
+        .expect("chars must not exceed i32::MAX elements");
 
-        let img = Image(ffi::GenImageFontAtlas(
+    let img = Image(unsafe {
+        ffi::GenImageFontAtlas(
             chars.as_mut_ptr(),
-            &mut ptr,
+            &raw mut ptr,
+            glyph_count,
             font_size,
-            chars.len() as i32,
             padding,
             pack_method,
-        ));
+        )
+    });
 
-        let mut recs = Vec::with_capacity(chars.len());
-        #[allow(clippy::uninit_vec)]
-        recs.set_len(chars.len());
-        std::ptr::copy(ptr, recs.as_mut_ptr(), chars.len());
-        ffi::MemFree(ptr as *mut ::std::os::raw::c_void);
-        return (img, recs);
-    }
+    let recs = unsafe { DataBuf::slice_from_raw(ptr, std::mem::MaybeUninit::new(glyph_count)) }
+        .expect("ptr should not be null");
+
+    (img, recs)
 }
 
 impl RaylibHandle {
@@ -471,9 +586,13 @@ impl RaylibHandle {
         WeakFont(unsafe { ffi::GetFontDefault() })
     }
     /// Measures string width in pixels for default font.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `text` contains an internal 0 byte.
     #[must_use]
     pub fn measure_text(&self, text: &str, font_size: i32) -> i32 {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::MeasureText(c_text.as_ptr(), font_size) }
     }
 
