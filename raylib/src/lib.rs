@@ -75,6 +75,11 @@ Permission is granted to anyone to use this software for any purpose, including 
     reason = "the safety requirements of two unsafe operations are rarely (though not never) covered by the same documentation"
 )]
 #![warn(
+    clippy::unnecessary_safety_comment,
+    clippy::unnecessary_safety_doc,
+    reason = "safety docs on safe code can be confusing as to whether the operation is safe or not"
+)]
+#![warn(
     missing_docs,
     reason = "users deserve to know what a public API does and how to use it"
 )]
