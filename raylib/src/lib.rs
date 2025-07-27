@@ -37,7 +37,8 @@ Permission is granted to anyone to use this software for any purpose, including 
 //!
 //! The classic "Hello, world":
 //!
-//! ```ignore
+#![allow(clippy::needless_doctest_main, reason = "being used as an example")]
+//! ```no_run
 //! use raylib::prelude::*;
 //!
 //! fn main() {
