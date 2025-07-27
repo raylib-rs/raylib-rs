@@ -652,1936 +652,1840 @@ unsafe impl<'a, T: 'a + RaylibDraw3D> RaylibDraw3D for RaylibScissorMode<'a, T> 
 
 // Actual drawing functions
 
-/// Permits external implementation of [`RaylibDraw`].
-///
-/// Implementing this trait on your type will automatically impl the default
-/// definition of [`RaylibDraw`] for it.
+/// Types through which it is safe to call standard Raylib drawing functions.
 ///
 /// # Safety
 ///
-/// This trait implements [`RaylibDraw`] for your type. Implementors of
-/// [`RaylibDrawImpl`] must uphold the safety contract of [`RaylibDraw`].
+/// The default implementation of the draw functions provided by this trait (which generally should never be overridden)
+/// access global static memory without locking, perform calls with function pointers that may not have been loaded,
+/// and expect for there to be a window and buffer to target--all without any checks.
 ///
-/// # Example
-/// ```
-/// use raylib::prelude::*;
-///
-/// struct Foo<'a, D>(&'a mut D);
-///
-/// // SAFETY: `Foo` stores a mutable `RaylibDraw` reference without creating
-/// // unbalanced draw modes, proving it is safe to call draw functions.
-/// unsafe impl<D: RaylibDraw> RaylibDrawImpl for Foo<'_, D> {}
-///
-/// fn foo_draw(foo: &mut Foo<'_, impl RaylibDraw>) {
-///     foo.clear_background(Color::RAYWHITE);
-/// }
-///
-/// fn foo_draw_caller(d: &mut impl RaylibDraw) {
-///     foo_draw(&mut Foo(d));
-/// }
-/// ```
-pub unsafe trait RaylibDrawImpl {}
-
-/// Permits external implementation of [`RaylibDraw3D`].
-///
-/// Implementing this trait on your type will automatically impl the default
-/// definition of [`RaylibDraw3D`] for it.
-///
-/// # Safety
-///
-/// This trait implements [`RaylibDraw3D`] for your type. Implementors of
-/// [`RaylibDraw3DImpl`] must uphold the safety contract of [`RaylibDraw3D`].
-///
-/// # Example
-/// ```
-/// use raylib::prelude::*;
-///
-/// struct Bar<'a, D>(&'a mut D);
-///
-/// // SAFETY: `Bar` stores a mutable `RaylibDraw3D` reference without creating
-/// // unbalanced draw modes, proving it is safe to call draw functions.
-/// unsafe impl<D: RaylibDraw3D> RaylibDraw3DImpl for Bar<'_, D> {}
-///
-/// fn bar_draw(bar: &mut Bar<'_, impl RaylibDraw3D>) {
-///     bar.draw_point3D(Vector3::new(1.0, 5.0, -4.0), Color::RED);
-/// }
-///
-/// fn bar_draw_caller(d: &mut impl RaylibDraw3D) {
-///     bar_draw(&mut Bar(d));
-/// }
-/// ```
-pub unsafe trait RaylibDraw3DImpl {}
-
-mod sealed {
-    //! External impl of RaylibDraw/RaylibDraw3D is permitted, but redefinition is not.
-    use super::*;
-
-    // SAFETY: Implementors of `RaylibDrawImpl` must uphold `RaylibDraw`'s safety contract.
-    unsafe impl<D: ?Sized + RaylibDrawImpl> RaylibDraw for D {}
-
-    // SAFETY: Implementors of `RaylibDraw3DImpl` must uphold `RaylibDraw3D`'s safety contract.
-    unsafe impl<D: ?Sized + RaylibDraw3DImpl> RaylibDraw3D for D {}
-
-    /// Types through which it is safe to call standard Raylib drawing functions.
-    ///
-    /// # Safety
-    ///
-    /// The default implementation of the draw functions provided by this trait (which generally should never be overridden)
-    /// access global static memory without locking, perform calls with function pointers that may not have been loaded,
-    /// and expect for there to be a window and buffer to target--all without any checks.
-    ///
-    /// Implementors must guarantee that their type can only exist if Raylib has been successfully initialized with a window,
-    /// has successfully loaded any necessary GL libraries, the calling thread is the same one that initialized Raylib, and
-    /// [`ffi::BeginDrawing`] or [`ffi::BeginTextureMode`] has been called this frame without the corresponding
-    /// [`ffi::EndDrawing`]/[`ffi::EndTextureMode`] having been called yet.
-    pub unsafe trait RaylibDraw {
-        /// Sets background color (framebuffer clear `color.into()`).
-        #[inline]
-        fn clear_background(&mut self, color: impl Into<ffi::Color>) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::ClearBackground(color.into());
-            }
-        }
-
-        /// Get texture that is used for shapes drawing
-        #[inline]
-        #[must_use]
-        fn get_shapes_texture(&self) -> Texture2D {
-            // SAFETY: Implementor must uphold trait safety contract.
-            Texture2D(unsafe { ffi::GetShapesTexture() })
-        }
-
-        /// Get texture source rectangle that is used for shapes drawing
-        #[inline]
-        #[must_use]
-        fn get_shapes_texture_rectangle(&self) -> Rectangle {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe { ffi::GetShapesTextureRectangle() }
-        }
-
-        /// Define default texture used to draw shapes
-        #[inline]
-        fn set_shapes_texture(
-            &mut self,
-            texture: impl AsRef<ffi::Texture2D>,
-            source: impl Into<ffi::Rectangle>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe { ffi::SetShapesTexture(*texture.as_ref(), source.into()) }
-        }
-
-        // // Draw gui widget
-        // fn draw_gui<G: crate::rgui::GuiDraw>(&mut self, widget: G) -> crate::rgui::DrawResult {
-        //     widget.draw()
-        // }
-
-        // SHAPES
-        /// Draws a pixel.
-        #[inline]
-        fn draw_pixel(&mut self, x: i32, y: i32, color: impl Into<ffi::Color>) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawPixel(x, y, color.into());
-            }
-        }
-
-        /// Draws a pixel (Vector version).
-        #[inline]
-        fn draw_pixel_v(
-            &mut self,
-            position: impl Into<ffi::Vector2>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawPixelV(position.into(), color.into());
-            }
-        }
-
-        /// Draws a line.
-        #[inline]
-        fn draw_line(
-            &mut self,
-            start_pos_x: i32,
-            start_pos_y: i32,
-            end_pos_x: i32,
-            end_pos_y: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawLine(start_pos_x, start_pos_y, end_pos_x, end_pos_y, color.into());
-            }
-        }
-
-        /// Draws a line (Vector version).
-        #[inline]
-        fn draw_line_v(
-            &mut self,
-            start_pos: impl Into<ffi::Vector2>,
-            end_pos: impl Into<ffi::Vector2>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawLineV(start_pos.into(), end_pos.into(), color.into());
-            }
-        }
-
-        /// Draws a line with thickness.
-        #[inline]
-        fn draw_line_ex(
-            &mut self,
-            start_pos: impl Into<ffi::Vector2>,
-            end_pos: impl Into<ffi::Vector2>,
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawLineEx(start_pos.into(), end_pos.into(), thick, color.into());
-            }
-        }
-
-        /// Draws a line using cubic-bezier curves in-out.
-        #[inline]
-        fn draw_line_bezier(
-            &mut self,
-            start_pos: impl Into<ffi::Vector2>,
-            end_pos: impl Into<ffi::Vector2>,
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawLineBezier(start_pos.into(), end_pos.into(), thick, color.into());
-            }
-        }
-
-        /// Draw lines sequence
-        #[inline]
-        fn draw_line_strip(&mut self, points: &[Vector2], color: impl Into<ffi::Color>) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawLineStrip(
-                    points.as_ptr().cast(),
-                    points
-                        .len()
-                        .try_into()
-                        .expect("points should not exceed i32::MAX elements"),
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draws a color-filled circle.
-        #[inline]
-        fn draw_circle(
-            &mut self,
-            center_x: i32,
-            center_y: i32,
-            radius: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCircle(center_x, center_y, radius, color.into());
-            }
-        }
-
-        /// Draw a piece of a circle
-        #[inline]
-        fn draw_circle_sector(
-            &mut self,
-            center: impl Into<ffi::Vector2>,
-            radius: f32,
-            start_angle: f32,
-            end_angle: f32,
-            segments: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCircleSector(
-                    center.into(),
-                    radius,
-                    start_angle,
-                    end_angle,
-                    segments,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw circle sector outline
-        #[inline]
-        fn draw_circle_sector_lines(
-            &mut self,
-            center: impl Into<ffi::Vector2>,
-            radius: f32,
-            start_angle: f32,
-            end_angle: f32,
-            segments: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCircleSectorLines(
-                    center.into(),
-                    radius,
-                    start_angle,
-                    end_angle,
-                    segments,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draws a gradient-filled circle.
-        #[inline]
-        fn draw_circle_gradient(
-            &mut self,
-            center_x: i32,
-            center_y: i32,
-            radius: f32,
-            color1: impl Into<ffi::Color>,
-            color2: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCircleGradient(center_x, center_y, radius, color1.into(), color2.into());
-            }
-        }
-
-        /// Draws a color-filled circle (Vector version).
-        #[inline]
-        fn draw_circle_v(
-            &mut self,
-            center: impl Into<ffi::Vector2>,
-            radius: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCircleV(center.into(), radius, color.into());
-            }
-        }
-
-        /// Draws circle outline.
-        #[inline]
-        fn draw_circle_lines(
-            &mut self,
-            center_x: i32,
-            center_y: i32,
-            radius: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCircleLines(center_x, center_y, radius, color.into());
-            }
-        }
-
-        /// Draws circle outline. (Vector Version)
-        #[inline]
-        fn draw_circle_lines_v(
-            &mut self,
-            center: impl Into<ffi::Vector2>,
-            radius: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCircleLinesV(center.into(), radius, color.into());
-            }
-        }
-
-        /// Draws ellipse.
-        #[inline]
-        fn draw_ellipse(
-            &mut self,
-            center_x: i32,
-            center_y: i32,
-            radius_h: f32,
-            radius_v: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawEllipse(center_x, center_y, radius_h, radius_v, color.into());
-            }
-        }
-
-        /// Draws ellipse.
-        #[inline]
-        fn draw_ellipse_lines(
-            &mut self,
-            center_x: i32,
-            center_y: i32,
-            radius_h: f32,
-            radius_v: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawEllipseLines(center_x, center_y, radius_h, radius_v, color.into());
-            }
-        }
-
-        /// Draw ring
-        #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
-        #[inline]
-        fn draw_ring(
-            &mut self,
-            center: impl Into<ffi::Vector2>,
-            inner_radius: f32,
-            outer_radius: f32,
-            start_angle: f32,
-            end_angle: f32,
-            segments: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRing(
-                    center.into(),
-                    inner_radius,
-                    outer_radius,
-                    start_angle,
-                    end_angle,
-                    segments,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw ring lines
-        #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
-        #[inline]
-        fn draw_ring_lines(
-            &mut self,
-            center: impl Into<ffi::Vector2>,
-            inner_radius: f32,
-            outer_radius: f32,
-            start_angle: f32,
-            end_angle: f32,
-            segments: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRingLines(
-                    center.into(),
-                    inner_radius,
-                    outer_radius,
-                    start_angle,
-                    end_angle,
-                    segments,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draws a color-filled rectangle.
-        #[inline]
-        fn draw_rectangle(
-            &mut self,
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangle(x, y, width, height, color.into());
-            }
-        }
-
-        /// Draws a color-filled rectangle (Vector version).
-        #[inline]
-        fn draw_rectangle_v(
-            &mut self,
-            position: impl Into<ffi::Vector2>,
-            size: impl Into<ffi::Vector2>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangleV(position.into(), size.into(), color.into());
-            }
-        }
-
-        /// Draws a color-filled rectangle from `rec`.
-        #[inline]
-        fn draw_rectangle_rec(
-            &mut self,
-            rec: impl Into<ffi::Rectangle>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangleRec(rec.into(), color.into());
-            }
-        }
-
-        /// Draws a color-filled rectangle with pro parameters.
-        #[inline]
-        fn draw_rectangle_pro(
-            &mut self,
-            rec: impl Into<ffi::Rectangle>,
-            origin: impl Into<ffi::Vector2>,
-            rotation: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectanglePro(rec.into(), origin.into(), rotation, color.into());
-            }
-        }
-
-        /// Draws a vertical-gradient-filled rectangle.
-        ///
-        /// **NOTE**: Gradient goes from bottom (`color1`) to top (`color2`).
-        #[inline]
-        fn draw_rectangle_gradient_v(
-            &mut self,
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-            color1: impl Into<ffi::Color>,
-            color2: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangleGradientV(x, y, width, height, color1.into(), color2.into());
-            }
-        }
-
-        /// Draws a horizontal-gradient-filled rectangle.
-        ///
-        /// **NOTE**: Gradient goes from bottom (`color1`) to top (`color2`).
-        #[inline]
-        fn draw_rectangle_gradient_h(
-            &mut self,
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-            color1: impl Into<ffi::Color>,
-            color2: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangleGradientH(x, y, width, height, color1.into(), color2.into());
-            }
-        }
-
-        /// Draws a gradient-filled rectangle with custom vertex colors.
-        ///
-        /// **NOTE**: Colors refer to corners, starting at top-left corner and going counter-clockwise.
-        #[inline]
-        fn draw_rectangle_gradient_ex(
-            &mut self,
-            rec: impl Into<ffi::Rectangle>,
-            col1: impl Into<ffi::Color>,
-            col2: impl Into<ffi::Color>,
-            col3: impl Into<ffi::Color>,
-            col4: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangleGradientEx(
-                    rec.into(),
-                    col1.into(),
-                    col2.into(),
-                    col3.into(),
-                    col4.into(),
-                );
-            }
-        }
-
-        /// Draws rectangle outline.
-        #[inline]
-        fn draw_rectangle_lines(
-            &mut self,
-            x: i32,
-            y: i32,
-            width: i32,
-            height: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangleLines(x, y, width, height, color.into());
-            }
-        }
-
-        /// Draws rectangle outline with extended parameters.
-        #[inline]
-        fn draw_rectangle_lines_ex(
-            &mut self,
-            rec: impl Into<ffi::Rectangle>,
-            line_thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangleLinesEx(rec.into(), line_thick, color.into());
-            }
-        }
-
-        /// Draws rectangle with rounded edges.
-        #[inline]
-        fn draw_rectangle_rounded(
-            &mut self,
-            rec: impl Into<ffi::Rectangle>,
-            roundness: f32,
-            segments: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangleRounded(rec.into(), roundness, segments, color.into());
-            }
-        }
-
-        /// Draws rectangle outline with rounded edges included.
-        #[inline]
-        fn draw_rectangle_rounded_lines(
-            &mut self,
-            rec: impl Into<ffi::Rectangle>,
-            roundness: f32,
-            segments: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangleRoundedLines(rec.into(), roundness, segments, color.into());
-            }
-        }
-
-        /// Draw rectangle with rounded edges outline
-        #[inline]
-        fn draw_rectangle_rounded_lines_ex(
-            &mut self,
-            rec: impl Into<ffi::Rectangle>,
-            roundness: f32,
-            segments: i32,
-            line_thickness: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRectangleRoundedLinesEx(
-                    rec.into(),
-                    roundness,
-                    segments,
-                    line_thickness,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draws a triangle.
-        #[inline]
-        fn draw_triangle(
-            &mut self,
-            v1: impl Into<ffi::Vector2>,
-            v2: impl Into<ffi::Vector2>,
-            v3: impl Into<ffi::Vector2>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTriangle(v1.into(), v2.into(), v3.into(), color.into());
-            }
-        }
-
-        /// Draws a triangle using lines.
-        #[inline]
-        fn draw_triangle_lines(
-            &mut self,
-            v1: impl Into<ffi::Vector2>,
-            v2: impl Into<ffi::Vector2>,
-            v3: impl Into<ffi::Vector2>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTriangleLines(v1.into(), v2.into(), v3.into(), color.into());
-            }
-        }
-
-        /// Draw a triangle fan defined by points.
-        #[inline]
-        fn draw_triangle_fan(&mut self, points: &[Vector2], color: impl Into<ffi::Color>) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTriangleFan(
-                    points.as_ptr().cast(),
-                    points
-                        .len()
-                        .try_into()
-                        .expect("points should not exceed i32::MAX elements"),
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw a triangle strip defined by points
-        #[inline]
-        fn draw_triangle_strip(&mut self, points: &[Vector2], color: impl Into<ffi::Color>) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTriangleStrip(
-                    points.as_ptr().cast(),
-                    points
-                        .len()
-                        .try_into()
-                        .expect("points should not exceed i32::MAX elements"),
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draws a regular polygon of n sides (Vector version).
-        #[inline]
-        fn draw_poly(
-            &mut self,
-            center: impl Into<ffi::Vector2>,
-            sides: i32,
-            radius: f32,
-            rotation: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawPoly(center.into(), sides, radius, rotation, color.into());
-            }
-        }
-
-        /// Draws a regular polygon of n sides (Vector version).
-        #[inline]
-        fn draw_poly_lines(
-            &mut self,
-            center: impl Into<ffi::Vector2>,
-            sides: i32,
-            radius: f32,
-            rotation: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawPolyLines(center.into(), sides, radius, rotation, color.into());
-            }
-        }
-
-        /// Draws a `texture` using specified position and `tint` color.
-        #[inline]
-        fn draw_texture(
-            &mut self,
-            texture: impl AsRef<ffi::Texture2D>,
-            x: i32,
-            y: i32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTexture(*texture.as_ref(), x, y, tint.into());
-            }
-        }
-
-        /// Draws a `texture` using specified `position` vector and `tint` color.
-        #[inline]
-        fn draw_texture_v(
-            &mut self,
-            texture: impl AsRef<ffi::Texture2D>,
-            position: impl Into<ffi::Vector2>,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTextureV(*texture.as_ref(), position.into(), tint.into());
-            }
-        }
-
-        /// Draws a `texture` with extended parameters.
-        #[inline]
-        fn draw_texture_ex(
-            &mut self,
-            texture: impl AsRef<ffi::Texture2D>,
-            position: impl Into<ffi::Vector2>,
-            rotation: f32,
-            scale: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTextureEx(
-                    *texture.as_ref(),
-                    position.into(),
-                    rotation,
-                    scale,
-                    tint.into(),
-                );
-            }
-        }
-
-        /// Draws from a region of `texture` defined by the `source_rec` rectangle.
-        #[inline]
-        fn draw_texture_rec(
-            &mut self,
-            texture: impl AsRef<ffi::Texture2D>,
-            source_rec: impl Into<ffi::Rectangle>,
-            position: impl Into<ffi::Vector2>,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTextureRec(
-                    *texture.as_ref(),
-                    source_rec.into(),
-                    position.into(),
-                    tint.into(),
-                );
-            }
-        }
-
-        /// Draw from a region of `texture` defined by the `source_rec` rectangle with pro parameters.
-        #[inline]
-        fn draw_texture_pro(
-            &mut self,
-            texture: impl AsRef<ffi::Texture2D>,
-            source_rec: impl Into<ffi::Rectangle>,
-            dest_rec: impl Into<ffi::Rectangle>,
-            origin: impl Into<ffi::Vector2>,
-            rotation: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTexturePro(
-                    *texture.as_ref(),
-                    source_rec.into(),
-                    dest_rec.into(),
-                    origin.into(),
-                    rotation,
-                    tint.into(),
-                );
-            }
-        }
-
-        /// Draws a texture (or part of it) that stretches or shrinks nicely
-        #[inline]
-        fn draw_texture_n_patch(
-            &mut self,
-            texture: impl AsRef<ffi::Texture2D>,
-            n_patch_info: impl Into<ffi::NPatchInfo>,
-            dest_rec: impl Into<ffi::Rectangle>,
-            origin: impl Into<ffi::Vector2>,
-            rotation: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTextureNPatch(
-                    *texture.as_ref(),
-                    n_patch_info.into(),
-                    dest_rec.into(),
-                    origin.into(),
-                    rotation,
-                    tint.into(),
-                );
-            }
-        }
-
-        /// Shows current FPS.
-        #[inline]
-        fn draw_fps(&mut self, x: i32, y: i32) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawFPS(x, y);
-            }
-        }
-
-        /// Draws text (using default font).
-        /// This does not support UTF-8. Use `[RaylibDrawHandle::draw_text_codepoints]` for that.
-        #[inline]
-        fn draw_text(
-            &mut self,
-            text: &str,
-            x: i32,
-            y: i32,
-            font_size: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
-
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawText(c_text.as_ptr(), x, y, font_size, color.into());
-            }
-        }
-
-        /// Draws text (using default font) with support for UTF-8.
-        /// If you do not need UTF-8, use `[RaylibDrawHandle::draw_text]`.
-        fn draw_text_codepoints(
-            &mut self,
-            font: impl AsRef<ffi::Font>,
-            text: &str,
-            position: impl Into<ffi::Vector2>,
-            font_size: f32,
-            spacing: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
-            let mut len = 0;
-            // SAFETY: Implementor must uphold trait safety contract.
-            let u = unsafe { ffi::LoadCodepoints(c_text.as_ptr(), &raw mut len) };
-
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTextCodepoints(
-                    *font.as_ref(),
-                    u,
-                    text.len()
-                        .try_into()
-                        .expect("text should not exceed i32::MAX elements"),
-                    position.into(),
-                    font_size,
-                    spacing,
-                    tint.into(),
-                );
-            }
-        }
-
-        /// Draws text using `font` and additional parameters.
-        #[inline]
-        fn draw_text_ex(
-            &mut self,
-            font: impl AsRef<ffi::Font>,
-            text: &str,
-            position: impl Into<ffi::Vector2>,
-            font_size: f32,
-            spacing: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTextEx(
-                    *font.as_ref(),
-                    c_text.as_ptr(),
-                    position.into(),
-                    font_size,
-                    spacing,
-                    tint.into(),
-                );
-            }
-        }
-
-        /// Draw text using Font and pro parameters (rotation)
-        #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
-        #[inline]
-        fn draw_text_pro(
-            &mut self,
-            font: impl AsRef<ffi::Font>,
-            text: &str,
-            position: impl Into<ffi::Vector2>,
-            origin: impl Into<ffi::Vector2>,
-            rotation: f32,
-            font_size: f32,
-            spacing: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTextPro(
-                    *font.as_ref(),
-                    c_text.as_ptr(),
-                    position.into(),
-                    origin.into(),
-                    rotation,
-                    font_size,
-                    spacing,
-                    tint.into(),
-                );
-            }
-        }
-
-        /// Draw one character (codepoint)
-        #[inline]
-        fn draw_text_codepoint(
-            &mut self,
-            font: impl AsRef<ffi::Font>,
-            codepoint: i32,
-            position: impl Into<ffi::Vector2>,
-            scale: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTextCodepoint(
-                    *font.as_ref(),
-                    codepoint,
-                    position.into(),
-                    scale,
-                    tint.into(),
-                );
-            }
-        }
-
-        /// Enable waiting for events when the handle is dropped, no automatic event polling
-        #[inline]
-        fn enable_event_waiting(&self) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe { ffi::EnableEventWaiting() }
-        }
-
-        /// Disable waiting for events when the handle is dropped, no automatic event polling
-        #[inline]
-        fn disable_event_waiting(&self) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe { ffi::DisableEventWaiting() }
-        }
-
-        /// Draw a polygon outline of n sides with extended parameters
-        #[inline]
-        fn draw_poly_lines_ex(
-            &mut self,
-            center: impl Into<ffi::Vector2>,
-            sides: i32,
-            radius: f32,
-            rotation: f32,
-            line_thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawPolyLinesEx(
-                    center.into(),
-                    sides,
-                    radius,
-                    rotation,
-                    line_thick,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw spline: Linear, minimum 2 points
-        #[inline]
-        fn draw_spline_linear(
-            &mut self,
-            points: &[Vector2],
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSplineLinear(
-                    points.as_ptr().cast(),
-                    points
-                        .len()
-                        .try_into()
-                        .expect("points should not exceed i32::MAX elements"),
-                    thick,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw spline: B-Spline, minimum 4 points
-        #[inline]
-        fn draw_spline_basis(
-            &mut self,
-            points: &[Vector2],
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSplineBasis(
-                    points.as_ptr().cast(),
-                    points
-                        .len()
-                        .try_into()
-                        .expect("points should not exceed i32::MAX elements"),
-                    thick,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw spline: Catmull-Rom, minimum 4 points
-        #[inline]
-        fn draw_spline_catmull_rom(
-            &mut self,
-            points: &[Vector2],
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSplineCatmullRom(
-                    points.as_ptr().cast(),
-                    points
-                        .len()
-                        .try_into()
-                        .expect("points should not exceed i32::MAX elements"),
-                    thick,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw spline: Quadratic Bezier, minimum 3 points (1 control point): [p1, c2, p3, c4...]
-        #[inline]
-        fn draw_spline_bezier_quadratic(
-            &mut self,
-            points: &[Vector2],
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSplineBezierQuadratic(
-                    points.as_ptr().cast(),
-                    points
-                        .len()
-                        .try_into()
-                        .expect("points should not exceed i32::MAX elements"),
-                    thick,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw spline: Cubic Bezier, minimum 4 points (2 control points): [p1, c2, c3, p4, c5, c6...]
-        #[inline]
-        fn draw_spline_bezier_cubic(
-            &mut self,
-            points: &[Vector2],
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSplineBezierCubic(
-                    points.as_ptr().cast(),
-                    points
-                        .len()
-                        .try_into()
-                        .expect("points should not exceed i32::MAX elements"),
-                    thick,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw spline segment: Linear, 2 points
-        #[inline]
-        fn draw_spline_segment_linear(
-            &mut self,
-            p1: impl Into<ffi::Vector2>,
-            p2: impl Into<ffi::Vector2>,
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe { ffi::DrawSplineSegmentLinear(p1.into(), p2.into(), thick, color.into()) }
-        }
-
-        /// Draw spline segment: B-Spline, 4 points
-        #[inline]
-        fn draw_spline_segment_basis(
-            &mut self,
-            p1: impl Into<ffi::Vector2>,
-            p2: impl Into<ffi::Vector2>,
-            p3: impl Into<ffi::Vector2>,
-            p4: impl Into<ffi::Vector2>,
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSplineSegmentBasis(
-                    p1.into(),
-                    p2.into(),
-                    p3.into(),
-                    p4.into(),
-                    thick,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw spline segment: Catmull-Rom, 4 points
-        #[inline]
-        fn draw_spline_segment_catmull_rom(
-            &mut self,
-            p1: impl Into<ffi::Vector2>,
-            p2: impl Into<ffi::Vector2>,
-            p3: impl Into<ffi::Vector2>,
-            p4: impl Into<ffi::Vector2>,
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSplineSegmentCatmullRom(
-                    p1.into(),
-                    p2.into(),
-                    p3.into(),
-                    p4.into(),
-                    thick,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw spline segment: Quadratic Bezier, 2 points, 1 control point
-        #[inline]
-        fn draw_spline_segment_bezier_quadratic(
-            &mut self,
-            p1: impl Into<ffi::Vector2>,
-            c2: impl Into<ffi::Vector2>,
-            p3: impl Into<ffi::Vector2>,
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSplineSegmentBezierQuadratic(
-                    p1.into(),
-                    c2.into(),
-                    p3.into(),
-                    thick,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Draw spline segment: Cubic Bezier, 2 points, 2 control points
-        #[inline]
-        fn draw_spline_segment_bezier_cubic(
-            &mut self,
-            p1: impl Into<ffi::Vector2>,
-            c2: impl Into<ffi::Vector2>,
-            c3: impl Into<ffi::Vector2>,
-            p4: impl Into<ffi::Vector2>,
-            thick: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSplineSegmentBezierCubic(
-                    p1.into(),
-                    c2.into(),
-                    c3.into(),
-                    p4.into(),
-                    thick,
-                    color.into(),
-                );
-            }
-        }
-
-        /// Get (evaluate) spline point: Linear
-        #[inline]
-        #[must_use]
-        fn get_spline_point_linear(
-            &mut self,
-            start_pos: impl Into<ffi::Vector2>,
-            end_pos: impl Into<ffi::Vector2>,
-            t: f32,
-        ) -> Vector2 {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe { ffi::GetSplinePointLinear(start_pos.into(), end_pos.into(), t).into() }
-        }
-
-        /// Get (evaluate) spline point: B-Spline
-        #[inline]
-        #[must_use]
-        fn get_spline_point_basis(
-            &mut self,
-            p1: impl Into<ffi::Vector2>,
-            p2: impl Into<ffi::Vector2>,
-            p3: impl Into<ffi::Vector2>,
-            p4: impl Into<ffi::Vector2>,
-            t: f32,
-        ) -> Vector2 {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::GetSplinePointBasis(p1.into(), p2.into(), p3.into(), p4.into(), t).into()
-            }
-        }
-
-        /// Get (evaluate) spline point: Catmull-Rom
-        #[inline]
-        #[must_use]
-        fn get_spline_point_catmull_rom(
-            &mut self,
-            p1: impl Into<ffi::Vector2>,
-            p2: impl Into<ffi::Vector2>,
-            p3: impl Into<ffi::Vector2>,
-            p4: impl Into<ffi::Vector2>,
-            t: f32,
-        ) -> Vector2 {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::GetSplinePointCatmullRom(p1.into(), p2.into(), p3.into(), p4.into(), t).into()
-            }
-        }
-
-        /// Get (evaluate) spline point: Quadratic Bezier
-        #[inline]
-        #[must_use]
-        fn get_spline_point_bezier_quad(
-            &mut self,
-            p1: impl Into<ffi::Vector2>,
-            c2: impl Into<ffi::Vector2>,
-            p3: impl Into<ffi::Vector2>,
-            t: f32,
-        ) -> Vector2 {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe { ffi::GetSplinePointBezierQuad(p1.into(), c2.into(), p3.into(), t).into() }
-        }
-
-        /// Get (evaluate) spline point: Cubic Bezier
-        #[inline]
-        #[must_use]
-        fn get_spline_point_bezier_cubic(
-            &mut self,
-            p1: impl Into<ffi::Vector2>,
-            c2: impl Into<ffi::Vector2>,
-            c3: impl Into<ffi::Vector2>,
-            p4: impl Into<ffi::Vector2>,
-            t: f32,
-        ) -> Vector2 {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::GetSplinePointBezierCubic(p1.into(), c2.into(), c3.into(), p4.into(), t).into()
-            }
+/// Implementors must guarantee that their type can only exist if Raylib has been successfully initialized with a window,
+/// has successfully loaded any necessary GL libraries, the calling thread is the same one that initialized Raylib, and
+/// [`ffi::BeginDrawing`] or [`ffi::BeginTextureMode`] has been called this frame without the corresponding
+/// [`ffi::EndDrawing`]/[`ffi::EndTextureMode`] having been called yet.
+pub unsafe trait RaylibDraw {
+    /// Sets background color (framebuffer clear `color.into()`).
+    #[inline]
+    fn clear_background(&mut self, color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::ClearBackground(color.into());
         }
     }
 
-    /// Types through which it is safe to call 3D Raylib drawing functions.
+    /// Get texture that is used for shapes drawing
+    #[inline]
+    #[must_use]
+    fn get_shapes_texture(&self) -> Texture2D {
+        // SAFETY: Implementor must uphold trait safety contract.
+        Texture2D(unsafe { ffi::GetShapesTexture() })
+    }
+
+    /// Get texture source rectangle that is used for shapes drawing
+    #[inline]
+    #[must_use]
+    fn get_shapes_texture_rectangle(&self) -> Rectangle {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe { ffi::GetShapesTextureRectangle() }
+    }
+
+    /// Define default texture used to draw shapes
+    #[inline]
+    fn set_shapes_texture(
+        &mut self,
+        texture: impl AsRef<ffi::Texture2D>,
+        source: impl Into<ffi::Rectangle>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe { ffi::SetShapesTexture(*texture.as_ref(), source.into()) }
+    }
+
+    // // Draw gui widget
+    // fn draw_gui<G: crate::rgui::GuiDraw>(&mut self, widget: G) -> crate::rgui::DrawResult {
+    //     widget.draw()
+    // }
+
+    // SHAPES
+    /// Draws a pixel.
+    #[inline]
+    fn draw_pixel(&mut self, x: i32, y: i32, color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawPixel(x, y, color.into());
+        }
+    }
+
+    /// Draws a pixel (Vector version).
+    #[inline]
+    fn draw_pixel_v(&mut self, position: impl Into<ffi::Vector2>, color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawPixelV(position.into(), color.into());
+        }
+    }
+
+    /// Draws a line.
+    #[inline]
+    fn draw_line(
+        &mut self,
+        start_pos_x: i32,
+        start_pos_y: i32,
+        end_pos_x: i32,
+        end_pos_y: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawLine(start_pos_x, start_pos_y, end_pos_x, end_pos_y, color.into());
+        }
+    }
+
+    /// Draws a line (Vector version).
+    #[inline]
+    fn draw_line_v(
+        &mut self,
+        start_pos: impl Into<ffi::Vector2>,
+        end_pos: impl Into<ffi::Vector2>,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawLineV(start_pos.into(), end_pos.into(), color.into());
+        }
+    }
+
+    /// Draws a line with thickness.
+    #[inline]
+    fn draw_line_ex(
+        &mut self,
+        start_pos: impl Into<ffi::Vector2>,
+        end_pos: impl Into<ffi::Vector2>,
+        thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawLineEx(start_pos.into(), end_pos.into(), thick, color.into());
+        }
+    }
+
+    /// Draws a line using cubic-bezier curves in-out.
+    #[inline]
+    fn draw_line_bezier(
+        &mut self,
+        start_pos: impl Into<ffi::Vector2>,
+        end_pos: impl Into<ffi::Vector2>,
+        thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawLineBezier(start_pos.into(), end_pos.into(), thick, color.into());
+        }
+    }
+
+    /// Draw lines sequence
+    #[inline]
+    fn draw_line_strip(&mut self, points: &[Vector2], color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawLineStrip(
+                points.as_ptr().cast(),
+                points
+                    .len()
+                    .try_into()
+                    .expect("points should not exceed i32::MAX elements"),
+                color.into(),
+            );
+        }
+    }
+
+    /// Draws a color-filled circle.
+    #[inline]
+    fn draw_circle(
+        &mut self,
+        center_x: i32,
+        center_y: i32,
+        radius: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCircle(center_x, center_y, radius, color.into());
+        }
+    }
+
+    /// Draw a piece of a circle
+    #[inline]
+    fn draw_circle_sector(
+        &mut self,
+        center: impl Into<ffi::Vector2>,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        segments: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCircleSector(
+                center.into(),
+                radius,
+                start_angle,
+                end_angle,
+                segments,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draw circle sector outline
+    #[inline]
+    fn draw_circle_sector_lines(
+        &mut self,
+        center: impl Into<ffi::Vector2>,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        segments: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCircleSectorLines(
+                center.into(),
+                radius,
+                start_angle,
+                end_angle,
+                segments,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draws a gradient-filled circle.
+    #[inline]
+    fn draw_circle_gradient(
+        &mut self,
+        center_x: i32,
+        center_y: i32,
+        radius: f32,
+        color1: impl Into<ffi::Color>,
+        color2: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCircleGradient(center_x, center_y, radius, color1.into(), color2.into());
+        }
+    }
+
+    /// Draws a color-filled circle (Vector version).
+    #[inline]
+    fn draw_circle_v(
+        &mut self,
+        center: impl Into<ffi::Vector2>,
+        radius: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCircleV(center.into(), radius, color.into());
+        }
+    }
+
+    /// Draws circle outline.
+    #[inline]
+    fn draw_circle_lines(
+        &mut self,
+        center_x: i32,
+        center_y: i32,
+        radius: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCircleLines(center_x, center_y, radius, color.into());
+        }
+    }
+
+    /// Draws circle outline. (Vector Version)
+    #[inline]
+    fn draw_circle_lines_v(
+        &mut self,
+        center: impl Into<ffi::Vector2>,
+        radius: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCircleLinesV(center.into(), radius, color.into());
+        }
+    }
+
+    /// Draws ellipse.
+    #[inline]
+    fn draw_ellipse(
+        &mut self,
+        center_x: i32,
+        center_y: i32,
+        radius_h: f32,
+        radius_v: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawEllipse(center_x, center_y, radius_h, radius_v, color.into());
+        }
+    }
+
+    /// Draws ellipse.
+    #[inline]
+    fn draw_ellipse_lines(
+        &mut self,
+        center_x: i32,
+        center_y: i32,
+        radius_h: f32,
+        radius_v: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawEllipseLines(center_x, center_y, radius_h, radius_v, color.into());
+        }
+    }
+
+    /// Draw ring
+    #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
+    #[inline]
+    fn draw_ring(
+        &mut self,
+        center: impl Into<ffi::Vector2>,
+        inner_radius: f32,
+        outer_radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        segments: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRing(
+                center.into(),
+                inner_radius,
+                outer_radius,
+                start_angle,
+                end_angle,
+                segments,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draw ring lines
+    #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
+    #[inline]
+    fn draw_ring_lines(
+        &mut self,
+        center: impl Into<ffi::Vector2>,
+        inner_radius: f32,
+        outer_radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        segments: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRingLines(
+                center.into(),
+                inner_radius,
+                outer_radius,
+                start_angle,
+                end_angle,
+                segments,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draws a color-filled rectangle.
+    #[inline]
+    fn draw_rectangle(
+        &mut self,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangle(x, y, width, height, color.into());
+        }
+    }
+
+    /// Draws a color-filled rectangle (Vector version).
+    #[inline]
+    fn draw_rectangle_v(
+        &mut self,
+        position: impl Into<ffi::Vector2>,
+        size: impl Into<ffi::Vector2>,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangleV(position.into(), size.into(), color.into());
+        }
+    }
+
+    /// Draws a color-filled rectangle from `rec`.
+    #[inline]
+    fn draw_rectangle_rec(&mut self, rec: impl Into<ffi::Rectangle>, color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangleRec(rec.into(), color.into());
+        }
+    }
+
+    /// Draws a color-filled rectangle with pro parameters.
+    #[inline]
+    fn draw_rectangle_pro(
+        &mut self,
+        rec: impl Into<ffi::Rectangle>,
+        origin: impl Into<ffi::Vector2>,
+        rotation: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectanglePro(rec.into(), origin.into(), rotation, color.into());
+        }
+    }
+
+    /// Draws a vertical-gradient-filled rectangle.
     ///
-    /// # Safety
+    /// **NOTE**: Gradient goes from bottom (`color1`) to top (`color2`).
+    #[inline]
+    fn draw_rectangle_gradient_v(
+        &mut self,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        color1: impl Into<ffi::Color>,
+        color2: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangleGradientV(x, y, width, height, color1.into(), color2.into());
+        }
+    }
+
+    /// Draws a horizontal-gradient-filled rectangle.
     ///
-    /// The default implementation of the draw functions provided by this trait (which generally should never be overridden)
-    /// access global static memory without locking, perform calls with function pointers that may not have been loaded,
-    /// and expect for there to be a window, buffer, & projection matrix to target--all without any checks.
+    /// **NOTE**: Gradient goes from bottom (`color1`) to top (`color2`).
+    #[inline]
+    fn draw_rectangle_gradient_h(
+        &mut self,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        color1: impl Into<ffi::Color>,
+        color2: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangleGradientH(x, y, width, height, color1.into(), color2.into());
+        }
+    }
+
+    /// Draws a gradient-filled rectangle with custom vertex colors.
     ///
-    /// Implementors must guarantee that their type can only exist if Raylib has been successfully initialized with a window,
-    /// has successfully loaded any necessary GL libraries, the calling thread is the same one that initialized Raylib, and
-    /// [`ffi::BeginMode3D`] has been called this frame without the corresponding [`ffi::EndMode3D`] having been called yet.
-    pub unsafe trait RaylibDraw3D {
-        /// Draw a point in 3D space, actually a small line
-        #[allow(non_snake_case, reason = "consistent style")]
-        #[inline]
-        fn draw_point3D(
-            &mut self,
-            position: impl Into<ffi::Vector3>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawPoint3D(position.into(), color.into());
-            }
+    /// **NOTE**: Colors refer to corners, starting at top-left corner and going counter-clockwise.
+    #[inline]
+    fn draw_rectangle_gradient_ex(
+        &mut self,
+        rec: impl Into<ffi::Rectangle>,
+        col1: impl Into<ffi::Color>,
+        col2: impl Into<ffi::Color>,
+        col3: impl Into<ffi::Color>,
+        col4: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangleGradientEx(
+                rec.into(),
+                col1.into(),
+                col2.into(),
+                col3.into(),
+                col4.into(),
+            );
         }
+    }
 
-        /// Draw a color-filled triangle (vertex in counter-clockwise order!)
-        #[allow(non_snake_case, reason = "consistent style")]
-        #[inline]
-        fn draw_triangle3D(
-            &mut self,
-            v1: impl Into<ffi::Vector3>,
-            v2: impl Into<ffi::Vector3>,
-            v3: impl Into<ffi::Vector3>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTriangle3D(v1.into(), v2.into(), v3.into(), color.into());
-            }
+    /// Draws rectangle outline.
+    #[inline]
+    fn draw_rectangle_lines(
+        &mut self,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangleLines(x, y, width, height, color.into());
         }
+    }
 
-        /// Draw a triangle strip defined by points
-        #[allow(non_snake_case, reason = "consistent style")]
-        #[inline]
-        fn draw_triangle_strip3D(&mut self, points: &[Vector3], color: impl Into<ffi::Color>) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawTriangleStrip3D(
-                    points.as_ptr().cast(),
-                    points
-                        .len()
-                        .try_into()
-                        .expect("points should not exceed i32::MAX elements"),
-                    color.into(),
-                );
-            }
+    /// Draws rectangle outline with extended parameters.
+    #[inline]
+    fn draw_rectangle_lines_ex(
+        &mut self,
+        rec: impl Into<ffi::Rectangle>,
+        line_thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangleLinesEx(rec.into(), line_thick, color.into());
         }
+    }
 
-        /// Draws a line in 3D world space.
-        #[allow(non_snake_case, reason = "consistent style")]
-        #[inline]
-        fn draw_line3D(
-            &mut self,
-            start_pos: impl Into<ffi::Vector3>,
-            end_pos: impl Into<ffi::Vector3>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawLine3D(start_pos.into(), end_pos.into(), color.into());
-            }
+    /// Draws rectangle with rounded edges.
+    #[inline]
+    fn draw_rectangle_rounded(
+        &mut self,
+        rec: impl Into<ffi::Rectangle>,
+        roundness: f32,
+        segments: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangleRounded(rec.into(), roundness, segments, color.into());
         }
+    }
 
-        /// Draws a circle in 3D world space.
-        #[allow(non_snake_case, reason = "consistent style")]
-        #[inline]
-        fn draw_circle3D(
-            &mut self,
-            center: impl Into<ffi::Vector3>,
-            radius: f32,
-            rotation_axis: impl Into<ffi::Vector3>,
-            rotation_angle: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCircle3D(
-                    center.into(),
-                    radius,
-                    rotation_axis.into(),
-                    rotation_angle,
-                    color.into(),
-                );
-            }
+    /// Draws rectangle outline with rounded edges included.
+    #[inline]
+    fn draw_rectangle_rounded_lines(
+        &mut self,
+        rec: impl Into<ffi::Rectangle>,
+        roundness: f32,
+        segments: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangleRoundedLines(rec.into(), roundness, segments, color.into());
         }
+    }
 
-        /// Draws a cube.
-        #[inline]
-        fn draw_cube(
-            &mut self,
-            position: impl Into<ffi::Vector3>,
-            width: f32,
-            height: f32,
-            length: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCube(position.into(), width, height, length, color.into());
-            }
+    /// Draw rectangle with rounded edges outline
+    #[inline]
+    fn draw_rectangle_rounded_lines_ex(
+        &mut self,
+        rec: impl Into<ffi::Rectangle>,
+        roundness: f32,
+        segments: i32,
+        line_thickness: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRectangleRoundedLinesEx(
+                rec.into(),
+                roundness,
+                segments,
+                line_thickness,
+                color.into(),
+            );
         }
+    }
 
-        /// Draws a cube (Vector version).
-        #[inline]
-        fn draw_cube_v(
-            &mut self,
-            position: impl Into<ffi::Vector3>,
-            size: impl Into<ffi::Vector3>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCubeV(position.into(), size.into(), color.into());
-            }
+    /// Draws a triangle.
+    #[inline]
+    fn draw_triangle(
+        &mut self,
+        v1: impl Into<ffi::Vector2>,
+        v2: impl Into<ffi::Vector2>,
+        v3: impl Into<ffi::Vector2>,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTriangle(v1.into(), v2.into(), v3.into(), color.into());
         }
+    }
 
-        /// Draws a cube in wireframe.
-        #[inline]
-        fn draw_cube_wires(
-            &mut self,
-            position: impl Into<ffi::Vector3>,
-            width: f32,
-            height: f32,
-            length: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCubeWires(position.into(), width, height, length, color.into());
-            }
+    /// Draws a triangle using lines.
+    #[inline]
+    fn draw_triangle_lines(
+        &mut self,
+        v1: impl Into<ffi::Vector2>,
+        v2: impl Into<ffi::Vector2>,
+        v3: impl Into<ffi::Vector2>,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTriangleLines(v1.into(), v2.into(), v3.into(), color.into());
         }
+    }
 
-        /// Draws a cube in wireframe. (Vector Version)
-        #[inline]
-        fn draw_cube_wires_v(
-            &mut self,
-            position: impl Into<ffi::Vector3>,
-            size: impl Into<ffi::Vector3>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCubeWiresV(position.into(), size.into(), color.into());
-            }
+    /// Draw a triangle fan defined by points.
+    #[inline]
+    fn draw_triangle_fan(&mut self, points: &[Vector2], color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTriangleFan(
+                points.as_ptr().cast(),
+                points
+                    .len()
+                    .try_into()
+                    .expect("points should not exceed i32::MAX elements"),
+                color.into(),
+            );
         }
+    }
 
-        /// Draw a 3d mesh with material and transform
-        #[inline]
-        fn draw_mesh(
-            &mut self,
-            mesh: impl AsRef<ffi::Mesh>,
-            material: WeakMaterial,
-            transform: impl Into<ffi::Matrix>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe { ffi::DrawMesh(*mesh.as_ref(), material.0, transform.into()) }
+    /// Draw a triangle strip defined by points
+    #[inline]
+    fn draw_triangle_strip(&mut self, points: &[Vector2], color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTriangleStrip(
+                points.as_ptr().cast(),
+                points
+                    .len()
+                    .try_into()
+                    .expect("points should not exceed i32::MAX elements"),
+                color.into(),
+            );
         }
+    }
 
-        /// Draw multiple mesh instances with material and different transforms
-        #[inline]
-        fn draw_mesh_instanced(
-            &mut self,
-            mesh: impl AsRef<ffi::Mesh>,
-            material: WeakMaterial,
-            transforms: &[Matrix],
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawMeshInstanced(
-                    *mesh.as_ref(),
-                    material.0,
-                    transforms.as_ptr().cast(),
-                    transforms
-                        .len()
-                        .try_into()
-                        .expect("transforms should not exceed i32::MAX elements"),
-                );
-            }
+    /// Draws a regular polygon of n sides (Vector version).
+    #[inline]
+    fn draw_poly(
+        &mut self,
+        center: impl Into<ffi::Vector2>,
+        sides: i32,
+        radius: f32,
+        rotation: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawPoly(center.into(), sides, radius, rotation, color.into());
         }
+    }
 
-        /// Draws a sphere.
-        #[inline]
-        fn draw_sphere(
-            &mut self,
-            center_pos: impl Into<ffi::Vector3>,
-            radius: f32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSphere(center_pos.into(), radius, color.into());
-            }
+    /// Draws a regular polygon of n sides (Vector version).
+    #[inline]
+    fn draw_poly_lines(
+        &mut self,
+        center: impl Into<ffi::Vector2>,
+        sides: i32,
+        radius: f32,
+        rotation: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawPolyLines(center.into(), sides, radius, rotation, color.into());
         }
+    }
 
-        /// Draws a sphere with extended parameters.
-        #[inline]
-        fn draw_sphere_ex(
-            &mut self,
-            center_pos: impl Into<ffi::Vector3>,
-            radius: f32,
-            rings: i32,
-            slices: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSphereEx(center_pos.into(), radius, rings, slices, color.into());
-            }
+    /// Draws a `texture` using specified position and `tint` color.
+    #[inline]
+    fn draw_texture(
+        &mut self,
+        texture: impl AsRef<ffi::Texture2D>,
+        x: i32,
+        y: i32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTexture(*texture.as_ref(), x, y, tint.into());
         }
+    }
 
-        /// Draws a sphere in wireframe.
-        #[inline]
-        fn draw_sphere_wires(
-            &mut self,
-            center_pos: impl Into<ffi::Vector3>,
-            radius: f32,
-            rings: i32,
-            slices: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawSphereWires(center_pos.into(), radius, rings, slices, color.into());
-            }
+    /// Draws a `texture` using specified `position` vector and `tint` color.
+    #[inline]
+    fn draw_texture_v(
+        &mut self,
+        texture: impl AsRef<ffi::Texture2D>,
+        position: impl Into<ffi::Vector2>,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTextureV(*texture.as_ref(), position.into(), tint.into());
         }
+    }
 
-        /// Draws a cylinder.
-        #[inline]
-        fn draw_cylinder(
-            &mut self,
-            position: impl Into<ffi::Vector3>,
-            radius_top: f32,
-            radius_bottom: f32,
-            height: f32,
-            slices: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCylinder(
-                    position.into(),
-                    radius_top,
-                    radius_bottom,
-                    height,
-                    slices,
-                    color.into(),
-                );
-            }
+    /// Draws a `texture` with extended parameters.
+    #[inline]
+    fn draw_texture_ex(
+        &mut self,
+        texture: impl AsRef<ffi::Texture2D>,
+        position: impl Into<ffi::Vector2>,
+        rotation: f32,
+        scale: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTextureEx(
+                *texture.as_ref(),
+                position.into(),
+                rotation,
+                scale,
+                tint.into(),
+            );
         }
+    }
 
-        /// Draws a cylinder with extended parameters.
-        #[inline]
-        fn draw_cylinder_ex(
-            &mut self,
-            start_position: impl Into<ffi::Vector3>,
-            end_position: impl Into<ffi::Vector3>,
-            radius_start: f32,
-            radius_end: f32,
-            slices: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCylinderEx(
-                    start_position.into(),
-                    end_position.into(),
-                    radius_start,
-                    radius_end,
-                    slices,
-                    color.into(),
-                );
-            }
+    /// Draws from a region of `texture` defined by the `source_rec` rectangle.
+    #[inline]
+    fn draw_texture_rec(
+        &mut self,
+        texture: impl AsRef<ffi::Texture2D>,
+        source_rec: impl Into<ffi::Rectangle>,
+        position: impl Into<ffi::Vector2>,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTextureRec(
+                *texture.as_ref(),
+                source_rec.into(),
+                position.into(),
+                tint.into(),
+            );
         }
+    }
 
-        /// Draws a cylinder in wireframe.
-        #[inline]
-        fn draw_cylinder_wires(
-            &mut self,
-            position: impl Into<ffi::Vector3>,
-            radius_top: f32,
-            radius_bottom: f32,
-            height: f32,
-            slices: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCylinderWires(
-                    position.into(),
-                    radius_top,
-                    radius_bottom,
-                    height,
-                    slices,
-                    color.into(),
-                );
-            }
+    /// Draw from a region of `texture` defined by the `source_rec` rectangle with pro parameters.
+    #[inline]
+    fn draw_texture_pro(
+        &mut self,
+        texture: impl AsRef<ffi::Texture2D>,
+        source_rec: impl Into<ffi::Rectangle>,
+        dest_rec: impl Into<ffi::Rectangle>,
+        origin: impl Into<ffi::Vector2>,
+        rotation: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTexturePro(
+                *texture.as_ref(),
+                source_rec.into(),
+                dest_rec.into(),
+                origin.into(),
+                rotation,
+                tint.into(),
+            );
         }
+    }
 
-        /// Draws a cylinder in wireframe with extended parameters.
-        #[inline]
-        fn draw_cylinder_wires_ex(
-            &mut self,
-            start_position: impl Into<ffi::Vector3>,
-            end_position: impl Into<ffi::Vector3>,
-            radius_start: f32,
-            radius_end: f32,
-            slices: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCylinderWiresEx(
-                    start_position.into(),
-                    end_position.into(),
-                    radius_start,
-                    radius_end,
-                    slices,
-                    color.into(),
-                );
-            }
+    /// Draws a texture (or part of it) that stretches or shrinks nicely
+    #[inline]
+    fn draw_texture_n_patch(
+        &mut self,
+        texture: impl AsRef<ffi::Texture2D>,
+        n_patch_info: impl Into<ffi::NPatchInfo>,
+        dest_rec: impl Into<ffi::Rectangle>,
+        origin: impl Into<ffi::Vector2>,
+        rotation: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTextureNPatch(
+                *texture.as_ref(),
+                n_patch_info.into(),
+                dest_rec.into(),
+                origin.into(),
+                rotation,
+                tint.into(),
+            );
         }
+    }
 
-        /// Draw capsule with the center of its sphere caps at startPos and endPos
-        #[inline]
-        fn draw_capsule(
-            &mut self,
-            start_pos: impl Into<ffi::Vector3>,
-            end_pos: impl Into<ffi::Vector3>,
-            radius: f32,
-            slices: i32,
-            rings: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCapsule(
-                    start_pos.into(),
-                    end_pos.into(),
-                    radius,
-                    slices,
-                    rings,
-                    color.into(),
-                );
-            }
+    /// Shows current FPS.
+    #[inline]
+    fn draw_fps(&mut self, x: i32, y: i32) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawFPS(x, y);
         }
+    }
 
-        ///Draw capsule wireframe with the center of its sphere caps at startPos and endPos
-        #[inline]
-        fn draw_capsule_wires(
-            &mut self,
-            start_pos: impl Into<ffi::Vector3>,
-            end_pos: impl Into<ffi::Vector3>,
-            radius: f32,
-            slices: i32,
-            rings: i32,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawCapsuleWires(
-                    start_pos.into(),
-                    end_pos.into(),
-                    radius,
-                    slices,
-                    rings,
-                    color.into(),
-                );
-            }
+    /// Draws text (using default font).
+    /// This does not support UTF-8. Use `[RaylibDrawHandle::draw_text_codepoints]` for that.
+    #[inline]
+    fn draw_text(
+        &mut self,
+        text: &str,
+        x: i32,
+        y: i32,
+        font_size: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
+
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawText(c_text.as_ptr(), x, y, font_size, color.into());
         }
+    }
 
-        /// Draws an X/Z plane.
-        #[inline]
-        fn draw_plane(
-            &mut self,
-            center_pos: impl Into<ffi::Vector3>,
-            size: impl Into<ffi::Vector2>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawPlane(center_pos.into(), size.into(), color.into());
-            }
+    /// Draws text (using default font) with support for UTF-8.
+    /// If you do not need UTF-8, use `[RaylibDrawHandle::draw_text]`.
+    fn draw_text_codepoints(
+        &mut self,
+        font: impl AsRef<ffi::Font>,
+        text: &str,
+        position: impl Into<ffi::Vector2>,
+        font_size: f32,
+        spacing: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
+        let mut len = 0;
+        // SAFETY: Implementor must uphold trait safety contract.
+        let u = unsafe { ffi::LoadCodepoints(c_text.as_ptr(), &raw mut len) };
+
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTextCodepoints(
+                *font.as_ref(),
+                u,
+                text.len()
+                    .try_into()
+                    .expect("text should not exceed i32::MAX elements"),
+                position.into(),
+                font_size,
+                spacing,
+                tint.into(),
+            );
         }
+    }
 
-        /// Draws a ray line.
-        #[inline]
-        fn draw_ray(&mut self, ray: impl Into<ffi::Ray>, color: impl Into<ffi::Color>) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawRay(ray.into(), color.into());
-            }
+    /// Draws text using `font` and additional parameters.
+    #[inline]
+    fn draw_text_ex(
+        &mut self,
+        font: impl AsRef<ffi::Font>,
+        text: &str,
+        position: impl Into<ffi::Vector2>,
+        font_size: f32,
+        spacing: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTextEx(
+                *font.as_ref(),
+                c_text.as_ptr(),
+                position.into(),
+                font_size,
+                spacing,
+                tint.into(),
+            );
         }
+    }
 
-        /// Draws a grid (centered at (0, 0, 0)).
-        #[inline]
-        fn draw_grid(&mut self, slices: i32, spacing: f32) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawGrid(slices, spacing);
-            }
+    /// Draw text using Font and pro parameters (rotation)
+    #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
+    #[inline]
+    fn draw_text_pro(
+        &mut self,
+        font: impl AsRef<ffi::Font>,
+        text: &str,
+        position: impl Into<ffi::Vector2>,
+        origin: impl Into<ffi::Vector2>,
+        rotation: f32,
+        font_size: f32,
+        spacing: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTextPro(
+                *font.as_ref(),
+                c_text.as_ptr(),
+                position.into(),
+                origin.into(),
+                rotation,
+                font_size,
+                spacing,
+                tint.into(),
+            );
         }
+    }
 
-        /// Draws a model (with texture if set).
-        #[inline]
-        fn draw_model(
-            &mut self,
-            model: impl AsRef<ffi::Model>,
-            position: impl Into<ffi::Vector3>,
-            scale: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawModel(*model.as_ref(), position.into(), scale, tint.into());
-            }
+    /// Draw one character (codepoint)
+    #[inline]
+    fn draw_text_codepoint(
+        &mut self,
+        font: impl AsRef<ffi::Font>,
+        codepoint: i32,
+        position: impl Into<ffi::Vector2>,
+        scale: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTextCodepoint(
+                *font.as_ref(),
+                codepoint,
+                position.into(),
+                scale,
+                tint.into(),
+            );
         }
+    }
 
-        /// Draws a model with extended parameters.
-        #[inline]
-        fn draw_model_ex(
-            &mut self,
-            model: impl AsRef<ffi::Model>,
-            position: impl Into<ffi::Vector3>,
-            rotation_axis: impl Into<ffi::Vector3>,
-            rotation_angle: f32,
-            scale: impl Into<ffi::Vector3>,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawModelEx(
-                    *model.as_ref(),
-                    position.into(),
-                    rotation_axis.into(),
-                    rotation_angle,
-                    scale.into(),
-                    tint.into(),
-                );
-            }
+    /// Enable waiting for events when the handle is dropped, no automatic event polling
+    #[inline]
+    fn enable_event_waiting(&self) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe { ffi::EnableEventWaiting() }
+    }
+
+    /// Disable waiting for events when the handle is dropped, no automatic event polling
+    #[inline]
+    fn disable_event_waiting(&self) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe { ffi::DisableEventWaiting() }
+    }
+
+    /// Draw a polygon outline of n sides with extended parameters
+    #[inline]
+    fn draw_poly_lines_ex(
+        &mut self,
+        center: impl Into<ffi::Vector2>,
+        sides: i32,
+        radius: f32,
+        rotation: f32,
+        line_thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawPolyLinesEx(
+                center.into(),
+                sides,
+                radius,
+                rotation,
+                line_thick,
+                color.into(),
+            );
         }
+    }
 
-        /// Draws a model with wires (with texture if set).
-        #[inline]
-        fn draw_model_wires(
-            &mut self,
-            model: impl AsRef<ffi::Model>,
-            position: impl Into<ffi::Vector3>,
-            scale: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawModelWires(*model.as_ref(), position.into(), scale, tint.into());
-            }
+    /// Draw spline: Linear, minimum 2 points
+    #[inline]
+    fn draw_spline_linear(&mut self, points: &[Vector2], thick: f32, color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSplineLinear(
+                points.as_ptr().cast(),
+                points
+                    .len()
+                    .try_into()
+                    .expect("points should not exceed i32::MAX elements"),
+                thick,
+                color.into(),
+            );
         }
+    }
 
-        /// Draws a model with wires.
-        #[inline]
-        fn draw_model_wires_ex(
-            &mut self,
-            model: impl AsRef<ffi::Model>,
-            position: impl Into<ffi::Vector3>,
-            rotation_axis: impl Into<ffi::Vector3>,
-            rotation_angle: f32,
-            scale: impl Into<ffi::Vector3>,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawModelWiresEx(
-                    *model.as_ref(),
-                    position.into(),
-                    rotation_axis.into(),
-                    rotation_angle,
-                    scale.into(),
-                    tint.into(),
-                );
-            }
+    /// Draw spline: B-Spline, minimum 4 points
+    #[inline]
+    fn draw_spline_basis(&mut self, points: &[Vector2], thick: f32, color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSplineBasis(
+                points.as_ptr().cast(),
+                points
+                    .len()
+                    .try_into()
+                    .expect("points should not exceed i32::MAX elements"),
+                thick,
+                color.into(),
+            );
         }
+    }
 
-        /// Draws a bounding box (wires).
-        #[inline]
-        fn draw_bounding_box(
-            &mut self,
-            bbox: impl Into<ffi::BoundingBox>,
-            color: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawBoundingBox(bbox.into(), color.into());
-            }
+    /// Draw spline: Catmull-Rom, minimum 4 points
+    #[inline]
+    fn draw_spline_catmull_rom(
+        &mut self,
+        points: &[Vector2],
+        thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSplineCatmullRom(
+                points.as_ptr().cast(),
+                points
+                    .len()
+                    .try_into()
+                    .expect("points should not exceed i32::MAX elements"),
+                thick,
+                color.into(),
+            );
         }
+    }
 
-        /// Draws a billboard texture.
-        #[inline]
-        fn draw_billboard(
-            &mut self,
-            camera: impl Into<ffi::Camera3D>,
-            texture: &Texture2D,
-            center: impl Into<ffi::Vector3>,
-            size: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawBillboard(camera.into(), texture.0, center.into(), size, tint.into());
-            }
+    /// Draw spline: Quadratic Bezier, minimum 3 points (1 control point): [p1, c2, p3, c4...]
+    #[inline]
+    fn draw_spline_bezier_quadratic(
+        &mut self,
+        points: &[Vector2],
+        thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSplineBezierQuadratic(
+                points.as_ptr().cast(),
+                points
+                    .len()
+                    .try_into()
+                    .expect("points should not exceed i32::MAX elements"),
+                thick,
+                color.into(),
+            );
         }
+    }
 
-        /// Draws a billboard texture defined by `source_rec`.
-        #[inline]
-        fn draw_billboard_rec(
-            &mut self,
-            camera: impl Into<ffi::Camera3D>,
-            texture: &Texture2D,
-            source_rec: impl Into<ffi::Rectangle>,
-            center: impl Into<ffi::Vector3>,
-            size: impl Into<ffi::Vector2>,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawBillboardRec(
-                    camera.into(),
-                    texture.0,
-                    source_rec.into(),
-                    center.into(),
-                    size.into(),
-                    tint.into(),
-                );
-            }
+    /// Draw spline: Cubic Bezier, minimum 4 points (2 control points): [p1, c2, c3, p4, c5, c6...]
+    #[inline]
+    fn draw_spline_bezier_cubic(
+        &mut self,
+        points: &[Vector2],
+        thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSplineBezierCubic(
+                points.as_ptr().cast(),
+                points
+                    .len()
+                    .try_into()
+                    .expect("points should not exceed i32::MAX elements"),
+                thick,
+                color.into(),
+            );
         }
+    }
 
-        /// Draw a billboard texture defined by source and rotation
-        #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
-        #[inline]
-        fn draw_billboard_pro(
-            &mut self,
-            camera: impl Into<ffi::Camera>,
-            texture: impl Into<ffi::Texture2D>,
-            source: impl Into<ffi::Rectangle>,
-            position: impl Into<ffi::Vector3>,
-            up: impl Into<ffi::Vector3>,
-            size: impl Into<ffi::Vector2>,
-            origin: impl Into<ffi::Vector2>,
-            rotation: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawBillboardPro(
-                    camera.into(),
-                    texture.into(),
-                    source.into(),
-                    position.into(),
-                    up.into(),
-                    size.into(),
-                    origin.into(),
-                    rotation,
-                    tint.into(),
-                );
-            }
+    /// Draw spline segment: Linear, 2 points
+    #[inline]
+    fn draw_spline_segment_linear(
+        &mut self,
+        p1: impl Into<ffi::Vector2>,
+        p2: impl Into<ffi::Vector2>,
+        thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe { ffi::DrawSplineSegmentLinear(p1.into(), p2.into(), thick, color.into()) }
+    }
+
+    /// Draw spline segment: B-Spline, 4 points
+    #[inline]
+    fn draw_spline_segment_basis(
+        &mut self,
+        p1: impl Into<ffi::Vector2>,
+        p2: impl Into<ffi::Vector2>,
+        p3: impl Into<ffi::Vector2>,
+        p4: impl Into<ffi::Vector2>,
+        thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSplineSegmentBasis(
+                p1.into(),
+                p2.into(),
+                p3.into(),
+                p4.into(),
+                thick,
+                color.into(),
+            );
         }
+    }
 
-        /// Draw a model as points
-        #[inline]
-        fn draw_model_points(
-            &mut self,
-            model: impl Into<ffi::Model>,
-            position: impl Into<ffi::Vector3>,
-            scale: f32,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawModelPoints(model.into(), position.into(), scale, tint.into());
-            }
+    /// Draw spline segment: Catmull-Rom, 4 points
+    #[inline]
+    fn draw_spline_segment_catmull_rom(
+        &mut self,
+        p1: impl Into<ffi::Vector2>,
+        p2: impl Into<ffi::Vector2>,
+        p3: impl Into<ffi::Vector2>,
+        p4: impl Into<ffi::Vector2>,
+        thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSplineSegmentCatmullRom(
+                p1.into(),
+                p2.into(),
+                p3.into(),
+                p4.into(),
+                thick,
+                color.into(),
+            );
         }
+    }
 
-        /// Draw a model as points with extended parameters
-        #[inline]
-        fn draw_model_points_ex(
-            &mut self,
-            model: impl Into<ffi::Model>,
-            position: impl Into<ffi::Vector3>,
-            rotation_axis: impl Into<ffi::Vector3>,
-            angle: f32,
-            scale: impl Into<ffi::Vector3>,
-            tint: impl Into<ffi::Color>,
-        ) {
-            // SAFETY: Implementor must uphold trait safety contract.
-            unsafe {
-                ffi::DrawModelPointsEx(
-                    model.into(),
-                    position.into(),
-                    rotation_axis.into(),
-                    angle,
-                    scale.into(),
-                    tint.into(),
-                );
-            }
+    /// Draw spline segment: Quadratic Bezier, 2 points, 1 control point
+    #[inline]
+    fn draw_spline_segment_bezier_quadratic(
+        &mut self,
+        p1: impl Into<ffi::Vector2>,
+        c2: impl Into<ffi::Vector2>,
+        p3: impl Into<ffi::Vector2>,
+        thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSplineSegmentBezierQuadratic(
+                p1.into(),
+                c2.into(),
+                p3.into(),
+                thick,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draw spline segment: Cubic Bezier, 2 points, 2 control points
+    #[inline]
+    fn draw_spline_segment_bezier_cubic(
+        &mut self,
+        p1: impl Into<ffi::Vector2>,
+        c2: impl Into<ffi::Vector2>,
+        c3: impl Into<ffi::Vector2>,
+        p4: impl Into<ffi::Vector2>,
+        thick: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSplineSegmentBezierCubic(
+                p1.into(),
+                c2.into(),
+                c3.into(),
+                p4.into(),
+                thick,
+                color.into(),
+            );
+        }
+    }
+
+    /// Get (evaluate) spline point: Linear
+    #[inline]
+    #[must_use]
+    fn get_spline_point_linear(
+        &mut self,
+        start_pos: impl Into<ffi::Vector2>,
+        end_pos: impl Into<ffi::Vector2>,
+        t: f32,
+    ) -> Vector2 {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe { ffi::GetSplinePointLinear(start_pos.into(), end_pos.into(), t).into() }
+    }
+
+    /// Get (evaluate) spline point: B-Spline
+    #[inline]
+    #[must_use]
+    fn get_spline_point_basis(
+        &mut self,
+        p1: impl Into<ffi::Vector2>,
+        p2: impl Into<ffi::Vector2>,
+        p3: impl Into<ffi::Vector2>,
+        p4: impl Into<ffi::Vector2>,
+        t: f32,
+    ) -> Vector2 {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe { ffi::GetSplinePointBasis(p1.into(), p2.into(), p3.into(), p4.into(), t).into() }
+    }
+
+    /// Get (evaluate) spline point: Catmull-Rom
+    #[inline]
+    #[must_use]
+    fn get_spline_point_catmull_rom(
+        &mut self,
+        p1: impl Into<ffi::Vector2>,
+        p2: impl Into<ffi::Vector2>,
+        p3: impl Into<ffi::Vector2>,
+        p4: impl Into<ffi::Vector2>,
+        t: f32,
+    ) -> Vector2 {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::GetSplinePointCatmullRom(p1.into(), p2.into(), p3.into(), p4.into(), t).into()
+        }
+    }
+
+    /// Get (evaluate) spline point: Quadratic Bezier
+    #[inline]
+    #[must_use]
+    fn get_spline_point_bezier_quad(
+        &mut self,
+        p1: impl Into<ffi::Vector2>,
+        c2: impl Into<ffi::Vector2>,
+        p3: impl Into<ffi::Vector2>,
+        t: f32,
+    ) -> Vector2 {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe { ffi::GetSplinePointBezierQuad(p1.into(), c2.into(), p3.into(), t).into() }
+    }
+
+    /// Get (evaluate) spline point: Cubic Bezier
+    #[inline]
+    #[must_use]
+    fn get_spline_point_bezier_cubic(
+        &mut self,
+        p1: impl Into<ffi::Vector2>,
+        c2: impl Into<ffi::Vector2>,
+        c3: impl Into<ffi::Vector2>,
+        p4: impl Into<ffi::Vector2>,
+        t: f32,
+    ) -> Vector2 {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::GetSplinePointBezierCubic(p1.into(), c2.into(), c3.into(), p4.into(), t).into()
         }
     }
 }
-pub use sealed::{RaylibDraw, RaylibDraw3D};
+
+/// Types through which it is safe to call 3D Raylib drawing functions.
+///
+/// # Safety
+///
+/// The default implementation of the draw functions provided by this trait (which generally should never be overridden)
+/// access global static memory without locking, perform calls with function pointers that may not have been loaded,
+/// and expect for there to be a window, buffer, & projection matrix to target--all without any checks.
+///
+/// Implementors must guarantee that their type can only exist if Raylib has been successfully initialized with a window,
+/// has successfully loaded any necessary GL libraries, the calling thread is the same one that initialized Raylib, and
+/// [`ffi::BeginMode3D`] has been called this frame without the corresponding [`ffi::EndMode3D`] having been called yet.
+pub unsafe trait RaylibDraw3D {
+    /// Draw a point in 3D space, actually a small line
+    #[allow(non_snake_case, reason = "consistent style")]
+    #[inline]
+    fn draw_point3D(&mut self, position: impl Into<ffi::Vector3>, color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawPoint3D(position.into(), color.into());
+        }
+    }
+
+    /// Draw a color-filled triangle (vertex in counter-clockwise order!)
+    #[allow(non_snake_case, reason = "consistent style")]
+    #[inline]
+    fn draw_triangle3D(
+        &mut self,
+        v1: impl Into<ffi::Vector3>,
+        v2: impl Into<ffi::Vector3>,
+        v3: impl Into<ffi::Vector3>,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTriangle3D(v1.into(), v2.into(), v3.into(), color.into());
+        }
+    }
+
+    /// Draw a triangle strip defined by points
+    #[allow(non_snake_case, reason = "consistent style")]
+    #[inline]
+    fn draw_triangle_strip3D(&mut self, points: &[Vector3], color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawTriangleStrip3D(
+                points.as_ptr().cast(),
+                points
+                    .len()
+                    .try_into()
+                    .expect("points should not exceed i32::MAX elements"),
+                color.into(),
+            );
+        }
+    }
+
+    /// Draws a line in 3D world space.
+    #[allow(non_snake_case, reason = "consistent style")]
+    #[inline]
+    fn draw_line3D(
+        &mut self,
+        start_pos: impl Into<ffi::Vector3>,
+        end_pos: impl Into<ffi::Vector3>,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawLine3D(start_pos.into(), end_pos.into(), color.into());
+        }
+    }
+
+    /// Draws a circle in 3D world space.
+    #[allow(non_snake_case, reason = "consistent style")]
+    #[inline]
+    fn draw_circle3D(
+        &mut self,
+        center: impl Into<ffi::Vector3>,
+        radius: f32,
+        rotation_axis: impl Into<ffi::Vector3>,
+        rotation_angle: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCircle3D(
+                center.into(),
+                radius,
+                rotation_axis.into(),
+                rotation_angle,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draws a cube.
+    #[inline]
+    fn draw_cube(
+        &mut self,
+        position: impl Into<ffi::Vector3>,
+        width: f32,
+        height: f32,
+        length: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCube(position.into(), width, height, length, color.into());
+        }
+    }
+
+    /// Draws a cube (Vector version).
+    #[inline]
+    fn draw_cube_v(
+        &mut self,
+        position: impl Into<ffi::Vector3>,
+        size: impl Into<ffi::Vector3>,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCubeV(position.into(), size.into(), color.into());
+        }
+    }
+
+    /// Draws a cube in wireframe.
+    #[inline]
+    fn draw_cube_wires(
+        &mut self,
+        position: impl Into<ffi::Vector3>,
+        width: f32,
+        height: f32,
+        length: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCubeWires(position.into(), width, height, length, color.into());
+        }
+    }
+
+    /// Draws a cube in wireframe. (Vector Version)
+    #[inline]
+    fn draw_cube_wires_v(
+        &mut self,
+        position: impl Into<ffi::Vector3>,
+        size: impl Into<ffi::Vector3>,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCubeWiresV(position.into(), size.into(), color.into());
+        }
+    }
+
+    /// Draw a 3d mesh with material and transform
+    #[inline]
+    fn draw_mesh(
+        &mut self,
+        mesh: impl AsRef<ffi::Mesh>,
+        material: WeakMaterial,
+        transform: impl Into<ffi::Matrix>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe { ffi::DrawMesh(*mesh.as_ref(), material.0, transform.into()) }
+    }
+
+    /// Draw multiple mesh instances with material and different transforms
+    #[inline]
+    fn draw_mesh_instanced(
+        &mut self,
+        mesh: impl AsRef<ffi::Mesh>,
+        material: WeakMaterial,
+        transforms: &[Matrix],
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawMeshInstanced(
+                *mesh.as_ref(),
+                material.0,
+                transforms.as_ptr().cast(),
+                transforms
+                    .len()
+                    .try_into()
+                    .expect("transforms should not exceed i32::MAX elements"),
+            );
+        }
+    }
+
+    /// Draws a sphere.
+    #[inline]
+    fn draw_sphere(
+        &mut self,
+        center_pos: impl Into<ffi::Vector3>,
+        radius: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSphere(center_pos.into(), radius, color.into());
+        }
+    }
+
+    /// Draws a sphere with extended parameters.
+    #[inline]
+    fn draw_sphere_ex(
+        &mut self,
+        center_pos: impl Into<ffi::Vector3>,
+        radius: f32,
+        rings: i32,
+        slices: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSphereEx(center_pos.into(), radius, rings, slices, color.into());
+        }
+    }
+
+    /// Draws a sphere in wireframe.
+    #[inline]
+    fn draw_sphere_wires(
+        &mut self,
+        center_pos: impl Into<ffi::Vector3>,
+        radius: f32,
+        rings: i32,
+        slices: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawSphereWires(center_pos.into(), radius, rings, slices, color.into());
+        }
+    }
+
+    /// Draws a cylinder.
+    #[inline]
+    fn draw_cylinder(
+        &mut self,
+        position: impl Into<ffi::Vector3>,
+        radius_top: f32,
+        radius_bottom: f32,
+        height: f32,
+        slices: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCylinder(
+                position.into(),
+                radius_top,
+                radius_bottom,
+                height,
+                slices,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draws a cylinder with extended parameters.
+    #[inline]
+    fn draw_cylinder_ex(
+        &mut self,
+        start_position: impl Into<ffi::Vector3>,
+        end_position: impl Into<ffi::Vector3>,
+        radius_start: f32,
+        radius_end: f32,
+        slices: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCylinderEx(
+                start_position.into(),
+                end_position.into(),
+                radius_start,
+                radius_end,
+                slices,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draws a cylinder in wireframe.
+    #[inline]
+    fn draw_cylinder_wires(
+        &mut self,
+        position: impl Into<ffi::Vector3>,
+        radius_top: f32,
+        radius_bottom: f32,
+        height: f32,
+        slices: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCylinderWires(
+                position.into(),
+                radius_top,
+                radius_bottom,
+                height,
+                slices,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draws a cylinder in wireframe with extended parameters.
+    #[inline]
+    fn draw_cylinder_wires_ex(
+        &mut self,
+        start_position: impl Into<ffi::Vector3>,
+        end_position: impl Into<ffi::Vector3>,
+        radius_start: f32,
+        radius_end: f32,
+        slices: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCylinderWiresEx(
+                start_position.into(),
+                end_position.into(),
+                radius_start,
+                radius_end,
+                slices,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draw capsule with the center of its sphere caps at startPos and endPos
+    #[inline]
+    fn draw_capsule(
+        &mut self,
+        start_pos: impl Into<ffi::Vector3>,
+        end_pos: impl Into<ffi::Vector3>,
+        radius: f32,
+        slices: i32,
+        rings: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCapsule(
+                start_pos.into(),
+                end_pos.into(),
+                radius,
+                slices,
+                rings,
+                color.into(),
+            );
+        }
+    }
+
+    ///Draw capsule wireframe with the center of its sphere caps at startPos and endPos
+    #[inline]
+    fn draw_capsule_wires(
+        &mut self,
+        start_pos: impl Into<ffi::Vector3>,
+        end_pos: impl Into<ffi::Vector3>,
+        radius: f32,
+        slices: i32,
+        rings: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawCapsuleWires(
+                start_pos.into(),
+                end_pos.into(),
+                radius,
+                slices,
+                rings,
+                color.into(),
+            );
+        }
+    }
+
+    /// Draws an X/Z plane.
+    #[inline]
+    fn draw_plane(
+        &mut self,
+        center_pos: impl Into<ffi::Vector3>,
+        size: impl Into<ffi::Vector2>,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawPlane(center_pos.into(), size.into(), color.into());
+        }
+    }
+
+    /// Draws a ray line.
+    #[inline]
+    fn draw_ray(&mut self, ray: impl Into<ffi::Ray>, color: impl Into<ffi::Color>) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawRay(ray.into(), color.into());
+        }
+    }
+
+    /// Draws a grid (centered at (0, 0, 0)).
+    #[inline]
+    fn draw_grid(&mut self, slices: i32, spacing: f32) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawGrid(slices, spacing);
+        }
+    }
+
+    /// Draws a model (with texture if set).
+    #[inline]
+    fn draw_model(
+        &mut self,
+        model: impl AsRef<ffi::Model>,
+        position: impl Into<ffi::Vector3>,
+        scale: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawModel(*model.as_ref(), position.into(), scale, tint.into());
+        }
+    }
+
+    /// Draws a model with extended parameters.
+    #[inline]
+    fn draw_model_ex(
+        &mut self,
+        model: impl AsRef<ffi::Model>,
+        position: impl Into<ffi::Vector3>,
+        rotation_axis: impl Into<ffi::Vector3>,
+        rotation_angle: f32,
+        scale: impl Into<ffi::Vector3>,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawModelEx(
+                *model.as_ref(),
+                position.into(),
+                rotation_axis.into(),
+                rotation_angle,
+                scale.into(),
+                tint.into(),
+            );
+        }
+    }
+
+    /// Draws a model with wires (with texture if set).
+    #[inline]
+    fn draw_model_wires(
+        &mut self,
+        model: impl AsRef<ffi::Model>,
+        position: impl Into<ffi::Vector3>,
+        scale: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawModelWires(*model.as_ref(), position.into(), scale, tint.into());
+        }
+    }
+
+    /// Draws a model with wires.
+    #[inline]
+    fn draw_model_wires_ex(
+        &mut self,
+        model: impl AsRef<ffi::Model>,
+        position: impl Into<ffi::Vector3>,
+        rotation_axis: impl Into<ffi::Vector3>,
+        rotation_angle: f32,
+        scale: impl Into<ffi::Vector3>,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawModelWiresEx(
+                *model.as_ref(),
+                position.into(),
+                rotation_axis.into(),
+                rotation_angle,
+                scale.into(),
+                tint.into(),
+            );
+        }
+    }
+
+    /// Draws a bounding box (wires).
+    #[inline]
+    fn draw_bounding_box(
+        &mut self,
+        bbox: impl Into<ffi::BoundingBox>,
+        color: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawBoundingBox(bbox.into(), color.into());
+        }
+    }
+
+    /// Draws a billboard texture.
+    #[inline]
+    fn draw_billboard(
+        &mut self,
+        camera: impl Into<ffi::Camera3D>,
+        texture: &Texture2D,
+        center: impl Into<ffi::Vector3>,
+        size: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawBillboard(camera.into(), texture.0, center.into(), size, tint.into());
+        }
+    }
+
+    /// Draws a billboard texture defined by `source_rec`.
+    #[inline]
+    fn draw_billboard_rec(
+        &mut self,
+        camera: impl Into<ffi::Camera3D>,
+        texture: &Texture2D,
+        source_rec: impl Into<ffi::Rectangle>,
+        center: impl Into<ffi::Vector3>,
+        size: impl Into<ffi::Vector2>,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawBillboardRec(
+                camera.into(),
+                texture.0,
+                source_rec.into(),
+                center.into(),
+                size.into(),
+                tint.into(),
+            );
+        }
+    }
+
+    /// Draw a billboard texture defined by source and rotation
+    #[allow(clippy::too_many_arguments, reason = "consistency with Raylib")]
+    #[inline]
+    fn draw_billboard_pro(
+        &mut self,
+        camera: impl Into<ffi::Camera>,
+        texture: impl Into<ffi::Texture2D>,
+        source: impl Into<ffi::Rectangle>,
+        position: impl Into<ffi::Vector3>,
+        up: impl Into<ffi::Vector3>,
+        size: impl Into<ffi::Vector2>,
+        origin: impl Into<ffi::Vector2>,
+        rotation: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawBillboardPro(
+                camera.into(),
+                texture.into(),
+                source.into(),
+                position.into(),
+                up.into(),
+                size.into(),
+                origin.into(),
+                rotation,
+                tint.into(),
+            );
+        }
+    }
+
+    /// Draw a model as points
+    #[inline]
+    fn draw_model_points(
+        &mut self,
+        model: impl Into<ffi::Model>,
+        position: impl Into<ffi::Vector3>,
+        scale: f32,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawModelPoints(model.into(), position.into(), scale, tint.into());
+        }
+    }
+
+    /// Draw a model as points with extended parameters
+    #[inline]
+    fn draw_model_points_ex(
+        &mut self,
+        model: impl Into<ffi::Model>,
+        position: impl Into<ffi::Vector3>,
+        rotation_axis: impl Into<ffi::Vector3>,
+        angle: f32,
+        scale: impl Into<ffi::Vector3>,
+        tint: impl Into<ffi::Color>,
+    ) {
+        // SAFETY: Implementor must uphold trait safety contract.
+        unsafe {
+            ffi::DrawModelPointsEx(
+                model.into(),
+                position.into(),
+                rotation_axis.into(),
+                angle,
+                scale.into(),
+                tint.into(),
+            );
+        }
+    }
+}
