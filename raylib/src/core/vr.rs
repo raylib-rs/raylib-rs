@@ -3,13 +3,13 @@ use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi;
 
 make_thin_wrapper!(
-    /// VrStereoConfig, VR stereo rendering configuration for simulator
+    /// [`VrStereoConfig`], VR stereo rendering configuration for simulator
     VrStereoConfig,
     ffi::VrStereoConfig,
     ffi::UnloadVrStereoConfig
 );
 
-/// VrDeviceInfo, Head-Mounted-Display device parameters
+/// [`VrDeviceInfo`], Head-Mounted-Display device parameters
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct VrDeviceInfo {
@@ -39,25 +39,15 @@ impl From<ffi::VrDeviceInfo> for VrDeviceInfo {
     }
 }
 
-impl Into<ffi::VrDeviceInfo> for VrDeviceInfo {
-    fn into(self) -> ffi::VrDeviceInfo {
-        unsafe { std::mem::transmute(self) }
+impl From<VrDeviceInfo> for ffi::VrDeviceInfo {
+    fn from(v: VrDeviceInfo) -> Self {
+        unsafe { std::mem::transmute(v) }
     }
 }
 
-impl Into<ffi::VrDeviceInfo> for &VrDeviceInfo {
-    fn into(self) -> ffi::VrDeviceInfo {
-        ffi::VrDeviceInfo {
-            hResolution: self.h_resolution,  // Horizontal resolution in pixels
-            vResolution: self.v_resolution,   // Vertical resolution in pixels
-            hScreenSize: self.h_screen_size, // Horizontal size in meters
-            vScreenSize: self.v_screen_size, // Vertical size in meters
-            eyeToScreenDistance: self.eye_to_screen_distance, // Distance between eye and display in meters
-            lensSeparationDistance: self.lens_separation_distance, // Lens separation distance in meters
-            interpupillaryDistance: self.interpupillary_distance, // IPD (distance between pupils) in meters
-            lensDistortionValues: self.lens_distortion_values, // Lens distortion constant parameters
-            chromaAbCorrection: self.chroma_ab_correction, // Chromatic aberration correction parameters
-        }
+impl From<&VrDeviceInfo> for ffi::VrDeviceInfo {
+    fn from(v: &VrDeviceInfo) -> Self {
+        unsafe { std::mem::transmute(*v) }
     }
 }
 
