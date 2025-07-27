@@ -20,6 +20,15 @@ Permission is granted to anyone to use this software for any purpose, including 
 //!
 //! [`Tween`]: struct.Tween.html
 
+#![allow(
+    clippy::many_single_char_names,
+    clippy::float_cmp,
+    clippy::needless_return,
+    clippy::redundant_else,
+    clippy::unreadable_literal,
+    reason = "consistency with original definition, from which this was translated nearly 1:1"
+)]
+
 use std::f32::consts::PI;
 
 /// The type alias used for all easing functions.
@@ -49,13 +58,14 @@ impl Tween {
     }
 
     /// Resets the tween to the beginning.
-    pub fn reset(&mut self) {
+    pub const fn reset(&mut self) {
         self.current_time = 0.0;
         self.completed = false;
     }
 
     /// Returns true if the tween has completed.
-    pub fn has_completed(&self) -> bool {
+    #[must_use]
+    pub const fn has_completed(&self) -> bool {
         self.completed
     }
 
@@ -81,59 +91,82 @@ impl Tween {
     }
 
     /// Returns the current time position of the tween.
-    pub fn current_time(&self) -> f32 {
+    #[must_use]
+    pub const fn current_time(&self) -> f32 {
         self.current_time
     }
 
     /// Returns the starting value of the tween.
-    pub fn start_value(&self) -> f32 {
+    #[must_use]
+    pub const fn start_value(&self) -> f32 {
         self.start_value
     }
 
     /// Returns the ending value of the tween.
-    pub fn end_value(&self) -> f32 {
+    #[must_use]
+    pub const fn end_value(&self) -> f32 {
         self.end_value
     }
 
     /// Returns the duration of the tween.
-    pub fn duration(&self) -> f32 {
+    #[must_use]
+    pub const fn duration(&self) -> f32 {
         self.duration
     }
 }
 
+/// Ease: Linear
+#[must_use]
 pub fn linear_none(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+/// Ease: Linear In
+#[must_use]
 pub fn linear_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+/// Ease: Linear Out
+#[must_use]
 pub fn linear_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+/// Ease: Linear In Out
+#[must_use]
 pub fn linear_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
 
+/// Ease: Sine In
+#[must_use]
 pub fn sine_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     -c * (t / d * (PI / 2.0)).cos() + c + b
 }
+/// Ease: Sine Out
+#[must_use]
 pub fn sine_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * (t / d * (PI / 2.0)).sin() + b
 }
+/// Ease: Sine In Out
+#[must_use]
 pub fn sine_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     -c / 2.0 * ((PI * t / d).cos() - 1.0) + b
 }
-
+/// Ease: Circular In
+#[must_use]
 pub fn circ_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     -c * ((1.0 - td * td).sqrt() - 1.0) + b
 }
 
+/// Ease: Circular Out
+#[must_use]
 pub fn circ_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d - 1.0;
     c * (1.0 - td * td).sqrt() + b
 }
 
+/// Ease: Circular In Out
+#[must_use]
 pub fn circ_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
     if td < 1.0 {
@@ -144,16 +177,22 @@ pub fn circ_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Cubic In
+#[must_use]
 pub fn cubic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     c * td * td * td + b
 }
 
+/// Ease: Cubic Out
+#[must_use]
 pub fn cubic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d - 1.0;
     c * (td * td * td + 1.0) + b
 }
 
+/// Ease: Cubic In Out
+#[must_use]
 pub fn cubic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
     if td < 1.0 {
@@ -164,16 +203,22 @@ pub fn cubic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Quadratic In
+#[must_use]
 pub fn quad_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     c * td * td + b
 }
 
+/// Ease: Quadratic Out
+#[must_use]
 pub fn quad_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     -c * td * (td - 2.0) + b
 }
 
+/// Ease: Quadratic In Out
+#[must_use]
 pub fn quad_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / (d / 2.0);
     if td < 1.0 {
@@ -183,6 +228,8 @@ pub fn quad_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Exponential In
+#[must_use]
 pub fn expo_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == 0.0 {
         b
@@ -191,6 +238,8 @@ pub fn expo_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Exponential Out
+#[must_use]
 pub fn expo_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == d {
         b + c
@@ -199,6 +248,8 @@ pub fn expo_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Exponential In Out
+#[must_use]
 pub fn expo_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == 0.0 {
         return b;
@@ -214,18 +265,24 @@ pub fn expo_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Back In
+#[must_use]
 pub fn back_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let s = 1.70158f32;
     let postfix = t / d;
     c * postfix * postfix * ((s + 1.0) * postfix - s) + b
 }
 
+/// Ease: Back Out
+#[must_use]
 pub fn back_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let s = 1.70158f32;
     let td = t / d - 1.0;
     c * (td * td * ((s + 1.0) * td + s) + 1.0) + b
 }
 
+/// Ease: Back In Out
+#[must_use]
 pub fn back_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut s = 1.70158f32;
     let td = t / (d / 2.0);
@@ -239,6 +296,8 @@ pub fn back_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Bounce Out
+#[must_use]
 pub fn bounce_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / d;
     if td < (1.0 / 2.75) {
@@ -255,10 +314,14 @@ pub fn bounce_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Bounce In
+#[must_use]
 pub fn bounce_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c - bounce_out(d - t, 0.0, c, d) + b
 }
 
+/// Ease: Bounce In Out
+#[must_use]
 pub fn bounce_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t < (d / 2.0) {
         (bounce_in(t * 2.0, 0.0, c, d) * 0.5) + b
@@ -267,6 +330,8 @@ pub fn bounce_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Elastic In
+#[must_use]
 pub fn elastic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / d;
 
@@ -284,6 +349,8 @@ pub fn elastic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Elastic Out
+#[must_use]
 pub fn elastic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
 
@@ -299,6 +366,8 @@ pub fn elastic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Ease: Elastic In Out
+#[must_use]
 pub fn elastic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
 

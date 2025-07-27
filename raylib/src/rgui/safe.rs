@@ -28,10 +28,10 @@ impl RaylibHandle {
     pub fn gui_unlock(&mut self) {
         unsafe { ffi::GuiUnlock() }
     }
-    // Set gui controls alpha (global state), alpha goes from 0.0f to 1.0f
+    /// Set gui controls alpha (global state), alpha goes from 0.0f to 1.0f
     #[inline]
     pub fn gui_fade(&mut self, color: Color, alpha: f32) -> Color {
-        unsafe { ffi::Fade(color.into(), alpha).into() }
+        unsafe { ffi::Fade(color, alpha) }
     }
     /// Set gui state (global state)
     #[inline]
@@ -41,7 +41,8 @@ impl RaylibHandle {
     /// Get gui state (global state)
     #[inline]
     pub fn gui_get_state(&mut self) -> crate::consts::GuiState {
-        unsafe { std::mem::transmute(ffi::GuiGetState()) }
+        let state = unsafe { ffi::GuiGetState() };
+        unsafe { std::mem::transmute(state) }
     }
     /// Set gui custom font (global state)
     #[inline]
@@ -74,9 +75,14 @@ impl RaylibHandle {
         unsafe { ffi::GuiGetStyle(control as i32, property.as_i32()) }
     }
     /// Load style file (.rgs)
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `filename` contains an internal 0 byte.
     #[inline]
     pub fn gui_load_style(&mut self, filename: &str) {
-        let c_filename = CString::new(filename).unwrap();
+        let c_filename =
+            CString::new(filename).expect("filename should not contain an internal 0 byte");
         unsafe { ffi::GuiLoadStyle(c_filename.as_ptr()) }
     }
     /// Load style default over global style
@@ -98,18 +104,33 @@ impl RaylibHandle {
     }
 
     /// Set tooltip string
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if `tooltip` contains an internal 0 byte.
     #[inline]
     pub fn gui_set_tooltip(&mut self, tooltip: &str) {
-        let c_text = CString::new(tooltip).unwrap();
+        let c_text = CString::new(tooltip).expect("tooltip should not contain an internal 0 byte");
         unsafe {
             ffi::GuiSetTooltip(c_text.as_ptr());
         }
     }
 }
 
-impl<D: RaylibDraw> RaylibDrawGui for D {}
+unsafe impl<D: RaylibDraw> RaylibDrawGui for D {}
 
-pub trait RaylibDrawGui {
+/// Types through which it is safe to call Raylib GUI drawing functions.
+///
+/// # Safety
+///
+/// The default implementation of the draw functions provided by this trait (which generally should never be overridden)
+/// access global static memory without locking, perform calls with function pointers that may not have been loaded,
+/// and expect for there to be a window, buffer, & projection matrix to target--all without any checks.
+///
+/// Implementors must guarantee that their type can only exist if Raylib has been successfully initialized with a window,
+/// has successfully loaded any necessary GL libraries, the calling thread is the same one that initialized Raylib, and
+/// [`ffi::BeginDrawing`] has been called this frame without the corresponding [`ffi::EndDrawing`] having been called yet.
+pub unsafe trait RaylibDrawGui {
     /// Enable gui controls (global state)
     #[inline]
     fn gui_enable(&mut self) {
@@ -137,10 +158,10 @@ pub trait RaylibDrawGui {
         unsafe { ffi::GuiIsLocked() }
     }
 
-    // Set gui controls alpha (global state), alpha goes from 0.0f to 1.0f
+    /// Set gui controls alpha (global state), alpha goes from 0.0 to 1.0
     #[inline]
     fn gui_fade(&mut self, color: Color, alpha: f32) -> Color {
-        unsafe { ffi::Fade(color.into(), alpha).into() }
+        unsafe { ffi::Fade(color, alpha) }
     }
     /// Set gui state (global state)
     #[inline]
@@ -150,7 +171,8 @@ pub trait RaylibDrawGui {
     /// Get gui state (global state)
     #[inline]
     fn gui_get_state(&mut self) -> crate::consts::GuiState {
-        unsafe { std::mem::transmute(ffi::GuiGetState()) }
+        let state = unsafe { ffi::GuiGetState() };
+        unsafe { std::mem::transmute(state) }
     }
     /// Set gui custom font (global state)
     #[inline]
@@ -188,7 +210,8 @@ pub trait RaylibDrawGui {
     /// Load style file (.rgs)
     #[inline]
     fn gui_load_style(&mut self, filename: &str) {
-        let c_filename = CString::new(filename).unwrap();
+        let c_filename =
+            CString::new(filename).expect("filename should not contain an internal 0 byte");
         unsafe { ffi::GuiLoadStyle(c_filename.as_ptr()) }
     }
     /// Load style default over global style
@@ -199,19 +222,19 @@ pub trait RaylibDrawGui {
     /// Window Box control, shows a window that can be closed
     #[inline]
     fn gui_window_box(&mut self, bounds: impl Into<ffi::Rectangle>, title: &str) -> bool {
-        let c_filename = CString::new(title).unwrap();
+        let c_filename = CString::new(title).expect("title should not contain an internal 0 byte");
         unsafe { ffi::GuiWindowBox(bounds.into(), c_filename.as_ptr()) > 0 }
     }
     /// Group Box control with text name
     #[inline]
     fn gui_group_box(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
-        let c_filename = CString::new(text).unwrap();
+        let c_filename = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiGroupBox(bounds.into(), c_filename.as_ptr()) > 0 }
     }
     /// Line separator control, could contain text
     #[inline]
     fn gui_line(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
-        let c_filename = CString::new(text).unwrap();
+        let c_filename = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiLine(bounds.into(), c_filename.as_ptr()) > 0 }
     }
     /// Panel control, useful to group controls
@@ -221,7 +244,7 @@ pub trait RaylibDrawGui {
         let c_text = if text.is_empty() {
             std::ptr::null()
         } else {
-            cstr = CString::new(text).unwrap();
+            cstr = CString::new(text).expect("text should not contain an internal 0 byte");
             cstr.as_ptr()
         };
         unsafe { ffi::GuiPanel(bounds.into(), c_text) > 0 }
@@ -238,7 +261,7 @@ pub trait RaylibDrawGui {
     ) -> (bool, Rectangle, Vector2) {
         let mut scroll = scroll.into();
         let mut view = view.into();
-        let c_filename = CString::new(text).unwrap();
+        let c_filename = CString::new(text).expect("text should not contain an internal 0 byte");
         let result = unsafe {
             ffi::GuiScrollPanel(
                 bounds.into(),
@@ -248,24 +271,24 @@ pub trait RaylibDrawGui {
                 &mut view,
             )
         };
-        (result > 0, view.into(), scroll.into())
+        (result > 0, view, scroll)
     }
     /// Label control, shows text
     #[inline]
     fn gui_label(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiLabel(bounds.into(), c_text.as_ptr()) > 0 }
     }
     /// Button control, returns true when clicked
     #[inline]
     fn gui_button(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiButton(bounds.into(), c_text.as_ptr()) > 0 }
     }
     /// Label button control, show true when clicked
     #[inline]
     fn gui_label_button(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiLabelButton(bounds.into(), c_text.as_ptr()) > 0 }
     }
     /// Toggle Button control, returns true when active
@@ -276,7 +299,7 @@ pub trait RaylibDrawGui {
         text: &str,
         active: &mut bool,
     ) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiToggle(bounds.into(), c_text.as_ptr(), active) > 0 }
     }
     /// Toggle Group control, returns active toggle index
@@ -287,7 +310,7 @@ pub trait RaylibDrawGui {
         text: &str,
         active: &mut i32,
     ) -> i32 {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiToggleGroup(bounds.into(), c_text.as_ptr(), active) }
     }
     /// Check Box control, returns true when active
@@ -298,7 +321,7 @@ pub trait RaylibDrawGui {
         text: &str,
         checked: &mut bool,
     ) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiCheckBox(bounds.into(), c_text.as_ptr(), checked) > 0 }
     }
     /// Combo Box control, returns selected item index
@@ -309,7 +332,7 @@ pub trait RaylibDrawGui {
         text: &str,
         active: &mut i32,
     ) -> i32 {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiComboBox(bounds.into(), c_text.as_ptr(), active) }
     }
     /// Dropdown Box control, returns selected item
@@ -321,7 +344,7 @@ pub trait RaylibDrawGui {
         active: &mut i32,
         edit_mode: bool,
     ) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiDropdownBox(bounds.into(), c_text.as_ptr(), active, edit_mode) > 0 }
     }
     /// Spinner control, returns selected value
@@ -335,7 +358,7 @@ pub trait RaylibDrawGui {
         max_value: i32,
         edit_mode: bool,
     ) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe {
             ffi::GuiSpinner(
                 bounds.into(),
@@ -359,7 +382,7 @@ pub trait RaylibDrawGui {
         max_value: i32,
         edit_mode: bool,
     ) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe {
             ffi::GuiValueBox(
                 bounds.into(),
@@ -384,7 +407,14 @@ pub trait RaylibDrawGui {
         buffer.push('\0');
         let (ptr, capacity) = (buffer.as_mut_ptr(), buffer.capacity());
         let res = unsafe {
-            ffi::GuiTextBox(bounds.into(), ptr as *mut i8, capacity as i32, edit_mode) > 0
+            ffi::GuiTextBox(
+                bounds.into(),
+                ptr.cast(),
+                capacity
+                    .try_into()
+                    .expect("capacity should not exceed i32::MAX"),
+                edit_mode,
+            ) > 0
         };
         let cap = buffer.capacity();
 
@@ -419,8 +449,10 @@ pub trait RaylibDrawGui {
         min_value: f32,
         max_value: f32,
     ) -> bool {
-        let c_text_left = CString::new(text_left).unwrap();
-        let c_text_right = CString::new(text_right).unwrap();
+        let c_text_left =
+            CString::new(text_left).expect("text_left should not contain an internal 0 byte");
+        let c_text_right =
+            CString::new(text_right).expect("text_right should not contain an internal 0 byte");
         unsafe {
             ffi::GuiSlider(
                 bounds.into(),
@@ -443,8 +475,10 @@ pub trait RaylibDrawGui {
         min_value: f32,
         max_value: f32,
     ) -> bool {
-        let c_text_left = CString::new(text_left).unwrap();
-        let c_text_right = CString::new(text_right).unwrap();
+        let c_text_left =
+            CString::new(text_left).expect("text_left should not contain an internal 0 byte");
+        let c_text_right =
+            CString::new(text_right).expect("text_right should not contain an internal 0 byte");
         unsafe {
             ffi::GuiSliderBar(
                 bounds.into(),
@@ -467,8 +501,10 @@ pub trait RaylibDrawGui {
         min_value: f32,
         max_value: f32,
     ) -> bool {
-        let c_text_left = CString::new(text_left).unwrap();
-        let c_text_right = CString::new(text_right).unwrap();
+        let c_text_left =
+            CString::new(text_left).expect("text_left should not contain an internal 0 byte");
+        let c_text_right =
+            CString::new(text_right).expect("text_right should not contain an internal 0 byte");
         unsafe {
             ffi::GuiProgressBar(
                 bounds.into(),
@@ -483,7 +519,7 @@ pub trait RaylibDrawGui {
     /// Status Bar control, shows info text
     #[inline]
     fn gui_status_bar(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiStatusBar(bounds.into(), c_text.as_ptr()) > 0 }
     }
 
@@ -496,7 +532,7 @@ pub trait RaylibDrawGui {
         spacing: f32,
         subdivs: i32,
     ) -> (bool, Vector2) {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         let mut mouse_cell = MintVec2 { x: 0.0, y: 0.0 };
         (
             unsafe {
@@ -508,7 +544,7 @@ pub trait RaylibDrawGui {
                     &mut mouse_cell,
                 ) > 0
             },
-            mouse_cell.into(),
+            mouse_cell,
         )
     }
     /// List View control, returns selected list item index
@@ -520,7 +556,7 @@ pub trait RaylibDrawGui {
         scroll_index: &mut i32,
         active: &mut i32,
     ) -> i32 {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
         unsafe { ffi::GuiListView(bounds.into(), c_text.as_ptr(), scroll_index, active) }
     }
     /// List View with extended parameters
@@ -535,7 +571,11 @@ pub trait RaylibDrawGui {
     ) -> i32 {
         // We need to keep track of all CStr buffers.
         let buffer: Box<[Box<CStr>]> = text
-            .map(|s| CString::new(s.as_ref()).unwrap().into_boxed_c_str())
+            .map(|s| {
+                CString::new(s.as_ref())
+                    .expect("text should not contain an internal 0 byte")
+                    .into_boxed_c_str()
+            })
             .collect();
 
         let mut text_params: Box<[*const c_char]> =
@@ -545,7 +585,10 @@ pub trait RaylibDrawGui {
             ffi::GuiListViewEx(
                 bounds.into(),
                 text_params.as_mut_ptr(),
-                text_params.len() as i32,
+                text_params
+                    .len()
+                    .try_into()
+                    .expect("text_params should not exceed i32::MAX elements"),
                 focus,
                 scroll_index,
                 active,
@@ -561,9 +604,11 @@ pub trait RaylibDrawGui {
         message: &str,
         buttons: &str,
     ) -> i32 {
-        let c_text = CString::new(text).unwrap();
-        let c_message = CString::new(message).unwrap();
-        let c_buttons = CString::new(buttons).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
+        let c_message =
+            CString::new(message).expect("message should not contain an internal 0 byte");
+        let c_buttons =
+            CString::new(buttons).expect("buttons should not contain an internal 0 byte");
         unsafe {
             ffi::GuiMessageBox(
                 bounds.into(),
@@ -575,6 +620,7 @@ pub trait RaylibDrawGui {
     }
     /// Text Input Box control, ask for text
     #[inline]
+    #[allow(clippy::too_many_arguments, reason = "all are needed")]
     fn gui_text_input_box(
         &mut self,
         bounds: impl Into<ffi::Rectangle>,
@@ -585,22 +631,30 @@ pub trait RaylibDrawGui {
         text_max_size: i32,
         secret_view_active: &mut bool,
     ) -> i32 {
-        text.reserve(text_max_size as usize);
+        text.reserve(
+            text_max_size
+                .try_into()
+                .expect("text_max_size should not be negative"),
+        );
         // NOTE: method of dealing with null terminated strings copied from imgui(input_widget.rs:289, build func)
         text.push('\0');
         let (ptr, capacity) = (text.as_mut_ptr(), text.capacity());
 
-        let c_title = CString::new(title).unwrap();
-        let c_message = CString::new(message).unwrap();
-        let c_buttons = CString::new(buttons).unwrap();
+        let c_title = CString::new(title).expect("title should not contain an internal 0 byte");
+        let c_message =
+            CString::new(message).expect("message should not contain an internal 0 byte");
+        let c_buttons =
+            CString::new(buttons).expect("buttons should not contain an internal 0 byte");
         let btn_index = unsafe {
             ffi::GuiTextInputBox(
                 bounds.into(),
                 c_title.as_ptr(),
                 c_message.as_ptr(),
                 c_buttons.as_ptr(),
-                ptr as *mut i8,
-                capacity as i32,
+                ptr.cast(),
+                capacity
+                    .try_into()
+                    .expect("capacity should not exceed i32::MAX"),
                 secret_view_active,
             )
         };
@@ -634,17 +688,18 @@ pub trait RaylibDrawGui {
         text: &str,
         color: &mut Color,
     ) -> i32 {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
 
-        let result = unsafe { ffi::GuiColorPicker(bounds.into(), c_text.as_ptr(), &mut *color) };
-        return result;
+        unsafe { ffi::GuiColorPicker(bounds.into(), c_text.as_ptr(), &mut *color) }
     }
-    // Get text with icon id prepended
-    // NOTE: Useful to add icons by name id (enum) instead of
-    // a number that can change between ricon versions
+    /// Get text with icon id prepended
+    ///
+    /// NOTE: Useful to add icons by name id (enum) instead of
+    /// a number that can change between ricon versions
     #[inline]
     fn gui_icon_text(&mut self, icon_id: crate::consts::GuiIconName, text: &str) -> String {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
+        // GuiIconText returns a pointer to a static buffer that can be copied to an owned string, which will not leak memory.
         let buffer = unsafe { ffi::GuiIconText(icon_id as i32, c_text.as_ptr()) };
         if buffer.is_null() {
             let ptr = c_text.as_ptr();
@@ -655,9 +710,7 @@ pub trait RaylibDrawGui {
         }
         let c_str = unsafe { CStr::from_ptr(buffer) };
         let str_slice = c_str.to_str().unwrap_or("");
-        let str_buf = str_slice.to_owned();
-        // THERE IS NO WAY THIS DOESN"T LEEK MEMORY. TODO figure out a way to free this buffer.
-        str_buf
+        str_slice.to_owned()
     }
 
     /// Color Bar Alpha control
@@ -669,7 +722,7 @@ pub trait RaylibDrawGui {
         text: &str,
         alpha: &mut f32,
     ) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
 
         unsafe { ffi::GuiColorBarAlpha(bounds.into(), c_text.as_ptr(), alpha) > 0 }
     }
@@ -682,7 +735,7 @@ pub trait RaylibDrawGui {
         text: &str,
         active: &mut i32,
     ) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
 
         unsafe { ffi::GuiToggleSlider(bounds.into(), c_text.as_ptr(), active) > 0 }
     }
@@ -690,7 +743,7 @@ pub trait RaylibDrawGui {
     /// Dummy control for placeholders
     #[inline]
     fn gui_dummy_rec(&mut self, bounds: impl Into<ffi::Rectangle>, text: &str) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
 
         unsafe { ffi::GuiDummyRec(bounds.into(), c_text.as_ptr()) > 0 }
     }
@@ -703,17 +756,23 @@ pub trait RaylibDrawGui {
         text: &str,
         value: &mut f32,
     ) -> bool {
-        let c_text = CString::new(text).unwrap();
+        let c_text = CString::new(text).expect("text should not contain an internal 0 byte");
 
         unsafe { ffi::GuiColorBarHue(bounds.into(), c_text.as_ptr(), value) > 0 }
     }
 }
 
+/// Lossy conversion to [`i32`]
 #[diagnostic::on_unimplemented(
     message = "{Self} is not a gui property, or does not implement the GuiProperty trait.",
     note = "As of Raylib 5.5, raygui functions that once took \"property enum as i32\" now just take the enum."
 )]
 pub trait GuiProperty {
+    /// Convert to [`i32`] using the `as` keyword
+    #[allow(
+        clippy::wrong_self_convention,
+        reason = "the 'as_' prefix in this case refers to the `as` keyword"
+    )]
     fn as_i32(self) -> i32;
 }
 
