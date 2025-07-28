@@ -139,6 +139,7 @@ The `raygui.h` file has to have this ifdef modified to point to where `raylib.h`
 - In C, `LoadDroppedFiles` returns a pointer to an array of strings owned by raylib. Again, for safety and also ease of use, this binding copies said array into a `Vec<String>` which is returned to the caller.
 - I've tried to make linking automatic, though I've only tested on Windows 10, Ubuntu, and MacOS 15. Other platforms may have other considerations.
 - OpenGL 3.3, 2.1, and ES 2.0 may be forced via adding `["opengl_33"]`, `["opengl_21"]` or `["opengl_es_20]` to the `features` array in your Cargo.toml dependency definition.
+- DRM build to render graphics in a tty can be enabled by adding `["drm", "opengl_es_20"]` to `features`. Note that `drm` should usually be used together with `opengl_es_20`.
 
 # Testing
 

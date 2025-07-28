@@ -169,6 +169,7 @@ fn build_with_cmake(src_path: &str) {
             }
         }
         Platform::Web => conf.define("PLATFORM", "Web"),
+        Platform::DRM => conf.define("PLATFORM", "DRM"),
         Platform::RPI => conf.define("PLATFORM", "Raspberry Pi"),
         Platform::Android => {
             // get required env variables
@@ -256,6 +257,7 @@ fn gen_bindings() {
 
     let plat = match platform {
         Platform::Desktop => "-DPLATFORM_DESKTOP",
+        Platform::DRM => "-DPLATFORM_DRM",
         Platform::RPI => "-DPLATFORM_RPI",
         Platform::Android => "-DPLATFORM_ANDROID",
         Platform::Web => "-DPLATFORM_WEB",
@@ -349,7 +351,7 @@ fn link(platform: Platform, platform_os: PlatformOS) {
         }
         PlatformOS::Linux => {
             // X11 linking
-            #[cfg(all(not(feature = "wayland"), target_os = "android"))]
+            #[cfg(not(any(feature = "wayland", target_os = "android", feature = "drm")))]
             {
                 println!("cargo:rustc-link-search=/usr/local/lib");
                 println!("cargo:rustc-link-lib=X11");
@@ -375,6 +377,10 @@ fn link(platform: Platform, platform_os: PlatformOS) {
     }
     if platform == Platform::Web {
         println!("cargo:rustc-link-lib=glfw");
+    } else if platform == Platform::DRM {
+        println!("cargo:rustc-link-lib=EGL");
+        println!("cargo:rustc-link-lib=drm");
+        println!("cargo:rustc-link-lib=gbm");
     } else if platform == Platform::RPI {
         println!("cargo:rustc-link-search=/opt/vc/lib");
         println!("cargo:rustc-link-lib=bcm_host");
@@ -449,10 +455,12 @@ fn is_directory_empty(path: &str) -> bool {
 }
 
 fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
-    let platform = if target.contains("wasm") {
-        Platform::Web
-    } else if target.contains("armv7-unknown-linux") {
+    let platform = if cfg!(feature = "drm") {
+        Platform::DRM
+    } else if cfg!(feature = "legacy_rpi") {
         Platform::RPI
+    } else if target.contains("wasm") {
+        Platform::Web
     } else if target.contains("android") {
         Platform::Android
     } else {
@@ -483,7 +491,7 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
                 _ => panic!("Unknown platform {}", uname()),
             }
         }
-    } else if matches!(platform, Platform::RPI | Platform::Android) {
+    } else if matches!(platform, Platform::DRM | Platform::RPI | Platform::Android) {
         let un: &str = &uname();
         if un == "Linux" {
             PlatformOS::Linux
@@ -514,7 +522,8 @@ enum Platform {
     Web,
     Desktop,
     Android,
-    RPI, // raspberry pi
+    DRM,
+    RPI, // legacy raspberry pi
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
