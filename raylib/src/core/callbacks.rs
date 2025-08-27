@@ -157,6 +157,7 @@ macro_rules! safe_callback_set_func {
 /// Set custom trace log
 pub fn set_trace_log_callback<'a>(cb: fn(TraceLogLevel, &str)) -> Result<(), SetLogError<'a>> {
     TRACE_LOG_CALLBACK.store(cb as usize, Ordering::Relaxed);
+    #[cfg(not(feature = "nobuild"))]
     unsafe { ffi::setLogCallbackWrapper() };
     Ok(())
 }

@@ -4,7 +4,9 @@ mod macros;
 pub mod audio;
 pub mod automation;
 pub mod callbacks;
+#[cfg(not(feature = "nobuild"))]
 pub mod camera;
+
 pub mod collision;
 pub mod color {
     #[allow(unused_imports)]

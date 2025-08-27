@@ -81,6 +81,9 @@ fn build_with_cmake(src_path: &str) {
     // CMake uses different lib directories on different systems.
     // I do not know how CMake determines what directory to use,
     // so we will check a few possibilities and use whichever is present.
+    if is_directory_empty(src_path) {
+        panic!("raylib source does not exist in: `raylib-sys/raylib`. Please copy it in");
+    }
     fn join_cmake_lib_directory(path: PathBuf) -> PathBuf {
         let possible_cmake_lib_directories = ["lib", "lib64", "lib32"];
         for lib_directory in &possible_cmake_lib_directories {
@@ -274,8 +277,17 @@ fn gen_bindings() {
         .collect(),
     );
 
+    let header;
+    #[cfg(feature = "nobuild")]
+    {
+        header = "binding/nobuild.h"
+    }
+    #[cfg(not(feature = "nobuild"))]
+    {
+        header = "binding/binding.h"
+    }
     let mut builder = bindgen::Builder::default()
-        .header("binding/binding.h")
+        .header(header)
         .rustified_enum(".+")
         .derive_partialeq(true)
         .derive_default(true)
@@ -336,7 +348,9 @@ fn gen_utils() {
 }
 
 #[cfg(feature = "nobuild")]
-fn link(_platform: Platform, _platform_os: PlatformOS) {}
+fn link(_platform: Platform, _platform_os: PlatformOS) {
+    println!("cargo:rustc-link-lib=dylib=raylib");
+}
 
 #[cfg(not(feature = "nobuild"))]
 fn link(platform: Platform, platform_os: PlatformOS) {
@@ -387,8 +401,17 @@ fn link(platform: Platform, platform_os: PlatformOS) {
 }
 
 fn main() {
+    let header;
+    #[cfg(feature = "nobuild")]
+    {
+        header = "/usr/include/raylib.h"
+    }
+    #[cfg(not(feature = "nobuild"))]
+    {
+        header = "binding/binding.h"
+    }
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=./binding/binding.h");
+    println!("cargo:rerun-if-changed={header}");
     //for cross compiling on switch arm
     //https://users.rust-lang.org/t/cross-compiling-arm/96456/10
     if std::env::var("CROSS_SYSROOT").is_ok() {
@@ -424,19 +447,19 @@ fn main() {
     let (platform, platform_os) = platform_from_target(&target);
 
     let raylib_src = "./raylib";
-    if is_directory_empty(raylib_src) {
-        panic!("raylib source does not exist in: `raylib-sys/raylib`. Please copy it in");
-    }
     build_with_cmake(raylib_src);
 
     gen_bindings();
 
     link(platform, platform_os);
 
-    #[cfg(feature = "raygui")]
-    gen_rgui();
+    #[cfg(feature = "raygui")] {
+        gen_rgui();
+    }
 
-    gen_utils();
+    #[cfg(not(feature = "nobuild"))] {
+        gen_utils();
+    }
 }
 
 #[must_use]
