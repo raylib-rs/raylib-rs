@@ -34,6 +34,18 @@ pub enum LoadSoundError {
     MusicNull,
 }
 
+/// Errors that can occur when pushing new audio data into a `Sound` or `AudioStream`.
+/// **Notes** (iann): if raylib upstream discussion introduces any of these checks, we might simplify these to avoid any redundancy i think
+/// 1. `SampleSizeMismatch` is raylib-rs only, raylib does not do sampleSize matching checks.
+/// 2. `TooManyFrames` comes from the WARNING behavior in raylib `UpdateAudioStreamInLockedState`: https://github.com/raysan5/raylib/blob/master/src/raudio.c#L2662
+#[derive(Error, Debug)]
+pub enum UpdateAudioStreamError {
+    #[error("update data format must match sound: expected {expected} bits, got {provided} bits")]
+    SampleSizeMismatch { expected: usize, provided: usize },
+    #[error("Attempting to write too many frames to buffer: provided {provided}, max {max}")]
+    TooManyFrames { max: usize, provided: usize },
+}
+
 #[derive(Error, Debug)]
 pub enum AllocationError {
     /// [`MemAlloc`](crate::ffi::MemAlloc) returned null.
