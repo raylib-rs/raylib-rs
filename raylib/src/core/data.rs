@@ -109,7 +109,7 @@ pub fn encode_data_base64(data: &[u8]) -> Vec<c_char> {
 pub fn decode_data_base64(data: &[u8]) -> Vec<u8> {
     let mut output_size = 0;
 
-    let bytes = unsafe { ffi::DecodeDataBase64(data.as_ptr(), &mut output_size) };
+    let bytes = unsafe { ffi::DecodeDataBase64(data.as_ptr().cast(), &mut output_size) };
 
     let s = unsafe { std::slice::from_raw_parts(bytes, output_size as usize) };
     if s.contains(&0) {
