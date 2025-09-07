@@ -67,6 +67,14 @@ pub enum CompressionError {
 }
 
 #[derive(Error, Debug)]
+pub enum Base64Error {
+    #[error("could not decode base64 data")]
+    DecodeFailed,
+    #[error("could not encode base64 data")]
+    EncodeFailed,
+}
+
+#[derive(Error, Debug)]
 pub enum LoadModelError {
     #[error("could not load model\npath: {path:?}")]
     LoadFromFileFailed { path: String },

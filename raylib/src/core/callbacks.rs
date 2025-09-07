@@ -112,7 +112,6 @@ extern "C" fn custom_load_file_data_callback(path: *const c_char, size: *mut c_i
     }
 }
 
-// raylib 6.0 fixed const-correctness: the text parameter is now `*const c_char`.
 extern "C" fn custom_save_file_text_callback(a: *const c_char, b: *const c_char) -> bool {
     let save_file_text = save_file_text_callback().unwrap();
     let a = unsafe { CStr::from_ptr(a) };
@@ -315,7 +314,7 @@ impl RaylibHandle {
     /// Set custom trace log
     #[deprecated = "Decoupled from RaylibHandle. Use [set_trace_log_callback](core::callbacks::set_trace_log_callback) instead."]
     pub fn set_trace_log_callback(
-        &mut self,
+        &'_ mut self,
         cb: fn(TraceLogLevel, &str),
     ) -> Result<(), SetLogError<'_>> {
         set_trace_log_callback(cb)
@@ -323,7 +322,7 @@ impl RaylibHandle {
     /// Set custom file binary data saver
     #[deprecated = "Decoupled from RaylibHandle. Use [set_save_file_data_callback](core::callbacks::set_save_file_data_callback) instead."]
     pub fn set_save_file_data_callback(
-        &mut self,
+        &'_ mut self,
         cb: fn(&str, &[u8]) -> bool,
     ) -> Result<(), SetLogError<'_>> {
         set_save_file_data_callback(cb)
@@ -332,8 +331,8 @@ impl RaylibHandle {
     ///
     /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
     #[deprecated = "Decoupled from RaylibHandle. Use [set_load_file_data_callback](core::callbacks::set_load_file_data_callback) instead."]
-    pub fn set_load_file_data_callback(
-        &mut self,
+    pub fn set_load_file_data_callback<'b>(
+        &'_ mut self,
         cb: fn(&str) -> Vec<u8>,
     ) -> Result<(), SetLogError<'_>> {
         set_load_file_data_callback(cb)
@@ -341,7 +340,7 @@ impl RaylibHandle {
     /// Set custom file text data saver
     #[deprecated = "Decoupled from RaylibHandle. Use [set_save_file_text_callback](core::callbacks::set_save_file_text_callback) instead."]
     pub fn set_save_file_text_callback(
-        &mut self,
+        &'_ mut self,
         cb: fn(&str, &str) -> bool,
     ) -> Result<(), SetLogError<'_>> {
         set_save_file_text_callback(cb)
@@ -351,7 +350,7 @@ impl RaylibHandle {
     /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
     #[deprecated = "Decoupled from RaylibHandle. Use [set_load_file_text_callback](core::callbacks::set_load_file_text_callback) instead."]
     pub fn set_load_file_text_callback(
-        &mut self,
+        &'_ mut self,
         cb: fn(&str) -> String,
     ) -> Result<(), SetLogError<'_>> {
         set_load_file_text_callback(cb)
@@ -360,7 +359,7 @@ impl RaylibHandle {
     /// Audio thread callback to request new data
     #[deprecated = "Decoupled from RaylibHandle. Use [set_audio_stream_callback](core::callbacks::set_audio_stream_callback) instead."]
     pub fn set_audio_stream_callback(
-        &mut self,
+        &'_ mut self,
         stream: AudioStream,
         cb: fn(&[u8]),
     ) -> Result<(), SetLogError<'_>> {
