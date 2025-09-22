@@ -207,6 +207,8 @@ fn build_with_cmake(src_path: &str) {
             let android_arch_abi = match target.as_str() {
                 "aarch64-linux-android" => "arm64-v8a",
                 "armv7-linux-androideabi" => "armeabi-v7a",
+                "x86_64-linux-android" => "x86_64",
+                "i686-linux-android" => "x86",
                 _ => panic!("Unsupported target triple for Android"),
             };
             // we'll set as many variables as possible according to:
