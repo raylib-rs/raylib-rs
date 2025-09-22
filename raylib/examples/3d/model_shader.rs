@@ -1,6 +1,7 @@
 use raylib::prelude::*;
 use structopt::StructOpt;
 
+#[path = "../options.rs"]
 mod options;
 
 fn main() {
@@ -18,17 +19,27 @@ fn main() {
     rl.set_target_fps(60);
 
     // Load shader
-    let shader = rl.load_shader(&thread, None, Some("static/model_shader/grayscale.fs"));
+    let shader = rl.load_shader(
+        &thread,
+        None,
+        Some("./raylib/examples/static/model_shader/grayscale.fs"),
+    );
 
     // Load model
     let mut model = rl
-        .load_model(&thread, "static/model_shader/watermill.obj")
+        .load_model(
+            &thread,
+            "./raylib/examples/static/model_shader/watermill.obj",
+        )
         .unwrap();
 
     // Load texture and generate mipmaps
     let texture = unsafe {
         let mut t = rl
-            .load_texture(&thread, "static/model_shader/watermill_diffuse.png")
+            .load_texture(
+                &thread,
+                "./raylib/examples/static/model_shader/watermill_diffuse.png",
+            )
             .unwrap();
         t.gen_texture_mipmaps();
         t.unwrap()

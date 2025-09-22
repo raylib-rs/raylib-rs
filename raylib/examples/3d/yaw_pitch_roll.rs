@@ -2,6 +2,7 @@ extern crate raylib;
 use raylib::prelude::*;
 use structopt::StructOpt;
 
+#[path = "../options.rs"]
 mod options;
 
 fn main() {
@@ -12,21 +13,31 @@ fn main() {
     let (screen_width, _) = (opt.width, opt.height);
     let ray_white = Color::new(255, 255, 255, 255);
 
-    let tex_angle_gauge = rl.load_texture(&thread, "static/angle_gauge.png").unwrap();
-    let tex_background = rl.load_texture(&thread, "static/background.png").unwrap();
-    let tex_pitch = rl.load_texture(&thread, "static/pitch.png").unwrap();
-    let tex_plane = rl.load_texture(&thread, "static/plane.png").unwrap();
+    let tex_angle_gauge = rl
+        .load_texture(&thread, "./raylib/examples/static/angle_gauge.png")
+        .unwrap();
+    let tex_background = rl
+        .load_texture(&thread, "./raylib/examples/static/background.png")
+        .unwrap();
+    let tex_pitch = rl
+        .load_texture(&thread, "./raylib/examples/static/pitch.png")
+        .unwrap();
+    let tex_plane = rl
+        .load_texture(&thread, "./raylib/examples/static/plane.png")
+        .unwrap();
 
     let mut framebuffer = rl.load_render_texture(&thread, 192, 192).unwrap();
 
-    let mut model = rl.load_model(&thread, "static/plane.obj").unwrap();
+    let mut model = rl
+        .load_model(&thread, "./raylib/examples/static/plane.obj")
+        .unwrap();
     {
         let materials = model.materials_mut();
         let mat = &mut materials[0];
         let mats = mat.maps_mut();
         let texture = unsafe {
             let mut t = rl
-                .load_texture(&thread, "static/plane_diffuse.png")
+                .load_texture(&thread, "./raylib/examples/static/plane_diffuse.png")
                 .unwrap();
             t.gen_texture_mipmaps();
             t.unwrap()

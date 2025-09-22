@@ -1,7 +1,7 @@
 use raylib::prelude::*;
 use ringbuf::{
-    traits::{Consumer, Observer, RingBuffer},
     HeapRb,
+    traits::{Consumer, Observer, RingBuffer},
 };
 use std::{
     cell::RefCell,
@@ -11,11 +11,7 @@ use std::{
 
 fn main() {
     // get file name
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        panic!("usage {} <music file>", args[0]);
-    }
-    let filename = args[1].as_str();
+    let filename = "./raylib/examples/static/coin_16bit.wav";
 
     // open window
     let (mut rl, thread) = raylib::init()

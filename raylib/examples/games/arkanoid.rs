@@ -2,6 +2,7 @@ extern crate raylib;
 use raylib::prelude::*;
 use structopt::StructOpt;
 
+#[path = "../options.rs"]
 mod options;
 
 const PLAYER_MAX_LIFE: i32 = 5;

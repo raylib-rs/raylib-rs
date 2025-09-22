@@ -1,7 +1,7 @@
-use raylib::prelude::*;
-use raylib::prelude::glam::vec2;
-use raylib::prelude::{MouseButton::MOUSE_BUTTON_LEFT, KeyboardKey::KEY_SPACE};
 use raylib::error::UpdateAudioStreamError;
+use raylib::prelude::glam::vec2;
+use raylib::prelude::*;
+use raylib::prelude::{KeyboardKey::KEY_SPACE, MouseButton::MOUSE_BUTTON_LEFT};
 
 const MAX_SAMPLES: usize = 512;
 const MAX_SAMPLES_PER_UPDATE: usize = 4096;
@@ -109,7 +109,9 @@ fn main() {
 
 fn sound_update_test(raylib_audio: &RaylibAudio) -> Sound {
     // This .wav acts as a placeholder for us to inject test data using Sound::update. currently `UpdateSound` in raylib's raudio.c has no examples
-    let mut wave = raylib_audio.new_wave("static/coin_16bit.wav").unwrap();
+    let mut wave = raylib_audio
+        .new_wave("./raylib/examples/static/coin_16bit.wav")
+        .unwrap();
     wave.format(SAMPLE_RATE as i32, 16, 1); // wave file should already be 16 bit but just for emphasis here
     println!(
         "wave: sampleSize = {}, sampleRate = {}, channels = {}",
@@ -124,15 +126,21 @@ fn sound_update_test(raylib_audio: &RaylibAudio) -> Sound {
     // 2. We load the 32-bit up scale data -> no error
     let mut sound_data_16bit: [i16; MAX_SAMPLES] = [0; MAX_SAMPLES];
     for i in 0..MAX_SAMPLES {
-        sound_data_16bit[i] = ((2.0 * std::f32::consts::PI * i as f32 * freq / SAMPLE_RATE as f32).sin() * 32000.0) as i16;
+        sound_data_16bit[i] = ((2.0 * std::f32::consts::PI * i as f32 * freq / SAMPLE_RATE as f32)
+            .sin()
+            * 32000.0) as i16;
     }
     let update_result_16bit = sound.update(&sound_data_16bit);
     println!("update(&sound_data_16bit) returned: {update_result_16bit:?}");
-    assert!(matches!(update_result_16bit, Err(UpdateAudioStreamError::SampleSizeMismatch { .. })));
+    assert!(matches!(
+        update_result_16bit,
+        Err(UpdateAudioStreamError::SampleSizeMismatch { .. })
+    ));
 
     let mut sound_data_32bit: [f32; MAX_SAMPLES] = [0f32; MAX_SAMPLES];
     for i in 0..MAX_SAMPLES {
-        sound_data_32bit[i] = (2.0 * std::f32::consts::PI * i as f32 * freq / SAMPLE_RATE as f32).sin() * 32000.0;
+        sound_data_32bit[i] =
+            (2.0 * std::f32::consts::PI * i as f32 * freq / SAMPLE_RATE as f32).sin() * 32000.0;
     }
     let _ = sound.update(&sound_data_32bit);
     sound

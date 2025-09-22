@@ -2,6 +2,7 @@ extern crate raylib;
 use raylib::prelude::*;
 use structopt::StructOpt;
 
+#[path = "../options.rs"]
 mod options;
 
 fn main() {
@@ -11,7 +12,7 @@ fn main() {
     let _rust_orange = Color::new(222, 165, 132, 255);
     let _ray_white = Color::new(255, 255, 255, 255);
 
-    rl.set_target_fps(60);
+    rl.set_target_fps(5);
     while !rl.window_should_close() {
         let pressed_key = rl.get_key_pressed();
         rl.draw(&thread, |mut d| {

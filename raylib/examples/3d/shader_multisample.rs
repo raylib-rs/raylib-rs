@@ -7,7 +7,7 @@ pub fn main() {
     let im_blue = Image::gen_image_color(800, 450, Color::new(0, 0, 255, 255));
     let tex_blue = rl.load_texture_from_image(&thread, &im_blue).unwrap();
 
-    let mut shader = rl.load_shader(&thread, None, Some("static/shader/color_mix.fs"));
+    let mut shader = rl.load_shader(&thread, None, Some("./raylib/examples/static/shader/color_mix.fs"));
 
     // Get an additional sampler2D location to be enabled on drawing
     let tex_blue_loc = shader.get_shader_location("texture1");

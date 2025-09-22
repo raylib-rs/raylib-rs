@@ -66,7 +66,7 @@ pub fn main() {
         "amazing!",
     ];
 
-    let colorPickerValue = Color::RED;
+    let mut colorPickerValue = Color::RED;
 
     let mut sliderValue = 50.0;
     let mut sliderBarValue = 60.0;
@@ -324,7 +324,7 @@ pub fn main() {
         d.gui_color_picker(
             Rectangle::new(320.0, 185.0, 196.0, 192.0),
             "",
-            &colorPickerValue,
+            &mut colorPickerValue,
         );
 
         //d.gui_disable();

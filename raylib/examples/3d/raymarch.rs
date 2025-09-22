@@ -2,9 +2,10 @@ extern crate raylib;
 use raylib::prelude::*;
 use structopt::StructOpt;
 
+#[path = "../options.rs"]
 mod options;
 
-const SHADER: &str = include_str!("./raylib/examples/static/raymarching.fs");
+const SHADER: &str = include_str!("../static/raymarching.fs");
 
 pub fn main() {
     let opt = options::Opt::from_args();

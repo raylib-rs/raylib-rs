@@ -2,6 +2,7 @@
 use raylib::prelude::*;
 use structopt::StructOpt;
 
+#[path = "../options.rs"]
 mod options;
 
 const MAX_BUILDINGS: usize = 100;

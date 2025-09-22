@@ -16,6 +16,9 @@ autoexamples = false
 raylib-sys = { version = "5.7.0", path = "../raylib-sys", default-features = false }
 serde = { version = "1.0.125", features = ["derive"], optional = true }
 serde_json = { version = "1.0.64", optional = true }
+imgui = { version = "0.12.0", optional = true }
+imgui-sys = { version = "0.12.0", optional = true }
+ringbuf = { version = "0.4.7", optional = true }
 
 glam = { version = "0.30", features = ["mint"] }
 
@@ -33,6 +36,8 @@ rand = "0.9"
 default = ["raylib-sys/default"]
 nightly = []
 serde = ["dep:serde", "raylib-sys/serde", "glam/serde"]
+imgui = ["dep:imgui", "dep:imgui-sys"]
+ringbuf = ["dep:ringbuf"]
 
 raygui = ["raylib-sys/raygui"]
 # ----- Copy and paste these from `raylib-sys` for easier maintance
@@ -134,3 +139,93 @@ SUPPORT_FONT_TEXTURE = ["raylib-sys/SUPPORT_FONT_TEXTURE"]
 
 [package.metadata.docs.rs]
 features = ["nobuild"]
+
+
+[[example]]
+name = "logo"
+path = "examples/2d/logo.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "camera2D"
+path = "examples/2d/camera2D.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "texture"
+path = "examples/2d/texture.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "3d_camera_first_person"
+path = "examples/3d/3d_camera_first_person.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "yaw_pitch_roll"
+path = "examples/3d/yaw_pitch_roll.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "model_shader"
+path = "examples/3d/model_shader.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "shader_multisample"
+path = "examples/3d/shader_multisample.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "raymarch"
+path = "examples/3d/raymarch.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "audio_raw_stream"
+path = "examples/audio/audio_raw_stream.rs"
+doc-scrape-examples = true
+
+
+[[example]]
+name = "music_effects"
+path = "examples/audio/music_effects.rs"
+doc-scrape-examples = true
+required-features = ["ringbuf"]
+
+[[example]]
+name = "font"
+path = "examples/gui/font.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "input"
+path = "examples/gui/input.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "imgui"
+path = "examples/gui/imgui.rs"
+doc-scrape-examples = true
+required-features = ["imgui"]
+
+[[example]]
+name = "rgui"
+path = "examples/gui/rgui.rs"
+required-features = ["raygui"]
+doc-scrape-examples = true
+
+[[example]]
+name = "extensions"
+path = "examples/misc/extensions.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "drop"
+path = "examples/misc/drop.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "arkanoid"
+path = "examples/games/arkanoid.rs"
+doc-scrape-examples = true

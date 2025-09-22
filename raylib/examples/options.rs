@@ -1,6 +1,8 @@
 // #[macro_use]
 // extern crate structopt;
 
+use std::path::Path;
+
 pub use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]

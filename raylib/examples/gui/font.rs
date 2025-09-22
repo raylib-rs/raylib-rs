@@ -9,7 +9,7 @@ fn main() {
     let (mut rl, thread) = raylib::init().size(w, h).title("Logo").build();
     rl.set_target_fps(60);
     let font = rl
-        .load_font(&thread, "static/alagard.png")
+        .load_font(&thread, "./raylib/examples/static/alagard.png")
         .expect("couldn't load font");
     while !rl.window_should_close() {
         rl.draw(&thread, |mut d| {
