@@ -66,6 +66,9 @@ path = "./drop.rs"
 name = "texture"
 path = "./texture.rs"
 
+[[bin]]
+name = "textured_cube"
+path = "./textured_cube.rs"
 
 [[bin]]
 name = "yaw_pitch_roll"
