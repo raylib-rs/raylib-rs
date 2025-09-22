@@ -113,7 +113,7 @@ extern "C" fn custom_load_file_data_callback(path: *const c_char, size: *mut c_i
     }
 }
 
-extern "C" fn custom_save_file_text_callback(a: *const c_char, b: *const c_char) -> bool {
+extern "C" fn custom_save_file_text_callback(a: *const c_char, b: *mut c_char) -> bool {
     let save_file_text = save_file_text_callback().unwrap();
     let a = unsafe { CStr::from_ptr(a) };
     let b = unsafe { CStr::from_ptr(b) };
@@ -161,7 +161,9 @@ macro_rules! safe_callback_set_func {
 pub fn set_trace_log_callback<'a>(cb: fn(TraceLogLevel, &str)) -> Result<(), SetLogError<'a>> {
     TRACE_LOG_CALLBACK.store(cb as usize, Ordering::Relaxed);
     #[cfg(not(feature = "nobuild"))]
-    unsafe { ffi::setLogCallbackWrapper() };
+    unsafe {
+        ffi::setLogCallbackWrapper()
+    };
     Ok(())
 }
 /// Set custom file binary data saver
