@@ -12,6 +12,7 @@ use std::{
     slice::from_raw_parts_mut,
     sync::atomic::{AtomicUsize, Ordering},
 };
+pub mod audio_stream_callback;
 mod stream_processor_with_user_data_wrapper;
 use super::audio::Music;
 use stream_processor_with_user_data_wrapper::*;
@@ -126,6 +127,8 @@ extern "C" fn custom_load_file_text_callback(a: *const c_char) -> *mut c_char {
     oh.as_ptr() as *mut c_char
 }
 
+//TODO: before any merge find out what the status of the deprecated functions are and how to best finalize removing them
+#[deprecated = "use [set_audio_stream_callback](core::callbacks::audio_stream::set_audio_stream_callback) and its trampoline instead."]
 extern "C" fn custom_audio_stream_callback(a: *mut c_void, b: u32) {
     let audio_stream = audio_stream_callback().unwrap();
     let a = unsafe { std::slice::from_raw_parts(a as *mut u8, b as usize) };
@@ -297,17 +300,6 @@ where
     ));
     assert!(stream_processor_callback.callback_index.is_some());
     Box::into_pin(stream_processor_callback)
-}
-
-/// Audio thread callback to request new data
-pub fn set_audio_stream_callback(stream: AudioStream, cb: fn(&[u8])) -> Result<(), SetLogError> {
-    if AUDIO_STREAM_CALLBACK.load(Ordering::Acquire) == 0 {
-        AUDIO_STREAM_CALLBACK.store(cb as _, Ordering::Release);
-        unsafe { ffi::SetAudioStreamCallback(stream.0, Some(custom_audio_stream_callback)) }
-        Ok(())
-    } else {
-        Err(SetLogError("audio stream"))
-    }
 }
 
 impl RaylibHandle {

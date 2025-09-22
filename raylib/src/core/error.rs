@@ -44,6 +44,8 @@ pub enum UpdateAudioStreamError {
     SampleSizeMismatch { expected: usize, provided: usize },
     #[error("Attempting to write too many frames to buffer: provided {provided}, max {max}")]
     TooManyFrames { max: usize, provided: usize },
+    #[error("AudioStream's callback slot is already in use; call unset_audio_stream_callback() to clear it")]
+    CallbackSlotBusy
 }
 
 #[derive(Error, Debug)]
