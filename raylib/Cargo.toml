@@ -167,6 +167,11 @@ path = "examples/3d/yaw_pitch_roll.rs"
 doc-scrape-examples = true
 
 [[example]]
+name = "textured_cube"
+path = "examples/3d/textured_cube.rs"
+doc-scrape-examples = true
+
+[[example]]
 name = "model_shader"
 path = "examples/3d/model_shader.rs"
 doc-scrape-examples = true
@@ -192,6 +197,11 @@ name = "music_effects"
 path = "examples/audio/music_effects.rs"
 doc-scrape-examples = true
 required-features = ["ringbuf"]
+
+[[example]]
+name = "audio_raw_stream_callback"
+path = "examples/audio/audio_raw_stream_callback.rs"
+doc-scrape-examples = true
 
 [[example]]
 name = "font"
@@ -228,4 +238,24 @@ doc-scrape-examples = true
 [[example]]
 name = "arkanoid"
 path = "examples/games/arkanoid.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "asteroids"
+path = "examples/games/asteroids.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "floppy"
+path = "examples/games/floppy.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "snake"
+path = "examples/games/snake.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "roguelike"
+path = "examples/games/roguelike.rs"
 doc-scrape-examples = true

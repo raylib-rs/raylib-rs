@@ -3,6 +3,7 @@ extern crate raylib;
 use raylib::prelude::*;
 use structopt::StructOpt;
 
+#[path = "../options.rs"]
 mod options;
 
 struct Game {

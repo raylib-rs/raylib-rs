@@ -99,7 +99,9 @@ fn main() {
         Vector3::new(0.0, 1.0, 0.0),
         60.0,
     );
-    let cube_tilemap = rl.load_texture(&thread, "static/grass_block.png").unwrap();
+    let cube_tilemap = rl
+        .load_texture(&thread, "./raylib/examples/static/grass_block.png")
+        .unwrap();
     let cube_mesh = gen_block_mesh(&thread);
     let mut cube_model = unsafe {
         rl.load_model_from_mesh(&thread, cube_mesh.make_weak())
