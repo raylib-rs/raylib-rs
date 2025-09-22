@@ -66,6 +66,9 @@ path = "./drop.rs"
 name = "texture"
 path = "./texture.rs"
 
+[[bin]]
+name = "textured_cube"
+path = "./textured_cube.rs"
 
 [[bin]]
 name = "yaw_pitch_roll"
@@ -116,3 +119,7 @@ path = "snake.rs"
 [[bin]]
 name = "audio_raw_stream"
 path = "./audio_raw_stream.rs"
+
+[[bin]]
+name = "audio_raw_stream_callback"
+path = "./audio_raw_stream_callback.rs"

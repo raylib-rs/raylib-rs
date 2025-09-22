@@ -44,6 +44,8 @@ pub enum UpdateAudioStreamError {
     SampleSizeMismatch { expected: usize, provided: usize },
     #[error("Attempting to write too many frames to buffer: provided {provided}, max {max}")]
     TooManyFrames { max: usize, provided: usize },
+    #[error("AudioStream's callback slot is already in use; call unset_audio_stream_callback() to clear it")]
+    CallbackSlotBusy
 }
 
 #[derive(Error, Debug)]
@@ -58,6 +60,34 @@ pub enum AllocationError {
     /// Attempted to pass 0 to [`MemAlloc`](crate::ffi::MemAlloc).
     #[error("requested zero bytes of memory")]
     ZeroBytes,
+}
+
+#[derive(Error, Debug)]
+pub enum InvalidMeshError {
+    #[error("mesh should have 3 indices/vertices for each triangle")]
+    TrianglePointMiscount,
+    #[error("indices should be within the number of vertices")]
+    IndexOutOfBounds,
+    #[error("mesh with indices should not exceed u16::MAX vertices")]
+    VertexUnindexible(std::num::TryFromIntError),
+    #[error("mesh should have one texcoord per vertex")]
+    TexcoordsMiscount,
+    #[error("mesh with texcoords2 should have one per vertex")]
+    Texcoords2Miscount,
+    #[error("mesh with normals should have one per vertex")]
+    NormalsMiscount,
+    #[error("mesh with tangents should have one per vertex")]
+    TangentsMiscount,
+    #[error("mesh with colors should have one per vertex")]
+    ColorsMiscount,
+}
+
+#[derive(Error, Debug)]
+pub enum GenMeshError {
+    #[error("provided mesh data does not correspond to a valid mesh")]
+    InvalidMesh(#[from] InvalidMeshError),
+    #[error("could not allocate memory for the mesh data")]
+    Allocation(#[from] AllocationError),
 }
 
 #[derive(Error, Debug)]
@@ -104,7 +134,9 @@ pub enum LoadMaterialError {
 
 #[derive(Error, Debug)]
 pub enum LoadFontError {
-    #[error("error loading font; check if the file exists and if it's the right type\npath: {path:?}")]
+    #[error(
+        "error loading font; check if the file exists and if it's the right type\npath: {path:?}"
+    )]
     LoadFromFileFailed { path: String },
     #[error("error loading font from image")]
     LoadFromImageFailed,
