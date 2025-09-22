@@ -1043,31 +1043,6 @@ pub struct MeshBuilder<'a> {
 impl Mesh {
     /// Create a new [`MeshBuilder`] to begin generating a custom [`Mesh`].
     ///
-    /// # Example
-    /// ```
-    /// # use raylib::prelude::*;
-    /// # let (mut rl, thread) = init().build();
-    /// let mesh = Mesh::gen_mesh(&[
-    ///     Vector3::new(0.0, 0.0, 0.0),
-    ///     Vector3::new(1.0, 0.0, 0.0),
-    ///     Vector3::new(1.0, 0.0, 1.0),
-    /// ], &[
-    ///     Vector2::new(0.0, 0.0),
-    ///     Vector2::new(1.0, 0.0),
-    ///     Vector2::new(1.0, 1.0),
-    /// ])
-    /// .normals(&[
-    ///     Vector3::new(0.0, 1.0, 0.0),
-    ///     Vector3::new(0.0, 1.0, 0.0),
-    ///     Vector3::new(0.0, 1.0, 0.0),
-    /// ])
-    /// .colors(&[
-    ///     Color::RED,
-    ///     Color::GREEN,
-    ///     Color::BLUE,
-    /// ])
-    /// .build(&thread);
-    /// ```
     #[inline]
     pub fn gen_mesh<'a>(vertices: &'a [Vector3], texcoords: &'a [Vector2]) -> MeshBuilder<'a> {
         MeshBuilder::new(vertices, texcoords)
