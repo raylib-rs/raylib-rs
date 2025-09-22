@@ -106,11 +106,7 @@ impl RaylibHandle {
 
         unsafe {
             Codepoints(std::mem::ManuallyDrop::new(Box::from_raw(
-                std::slice::from_raw_parts_mut(
-                    u,
-                    len.try_into()
-                        .expect("codepoint count should never be negative"),
-                ),
+                std::slice::from_raw_parts_mut(u, len.try_into().expect("codepoint count should never be negative")),
             )))
         }
     }
@@ -244,9 +240,10 @@ impl RaylibHandle {
         font_size: i32,
         chars: Option<&str>,
         sdf: i32,
-    ) -> Option<GlyphInfo> {
+    ) -> Option<RSliceGlyphInfo> {
+        let mut glyph_count_out: i32 = 0;
         unsafe {
-            let glyph_info = match chars {
+            let ci_arr_ptr = match chars {
                 Some(c) => {
                     let mut co = self.load_codepoints(c);
                     ffi::LoadFontData(
@@ -256,6 +253,7 @@ impl RaylibHandle {
                         co.0.as_mut_ptr(),
                         co.0.len().try_into().expect(TOO_MANY_CODEPOINTS),
                         sdf,
+                        &mut glyph_count_out,
                     )
                 }
                 None => ffi::LoadFontData(
@@ -265,13 +263,17 @@ impl RaylibHandle {
                     std::ptr::null_mut(),
                     0,
                     sdf,
+                    &mut glyph_count_out,
                 ),
             };
-            if glyph_info.is_null() {
-                return None;
+            let ci_size = if let Some(c) = chars { c.len() } else { 95 }; // raylib assumes 95 if none given
+            if ci_arr_ptr.is_null() {
+                None
+            } else {
+                Some(RSliceGlyphInfo(std::mem::ManuallyDrop::new(Box::from_raw(
+                    std::slice::from_raw_parts_mut(ci_arr_ptr as *mut _, ci_size),
+                ))))
             }
-
-            return Some(GlyphInfo::from_raw(*glyph_info));
         }
     }
 }

@@ -1,10 +1,10 @@
-use crate::error::Base64Error;
 use crate::{databuf::DataBuf, error::CompressionError, ffi};
 use std::{
-    ffi::{CStr, CString, c_char},
+    ffi::{CString, c_char},
     mem::MaybeUninit,
     path::Path,
 };
+use crate::error::Base64Error;
 
 /// Compress data (DEFLATE algorithm)
 /// ```rust
@@ -83,9 +83,7 @@ pub fn export_data_as_code(data: &[u8], file_name: impl AsRef<Path>) -> bool {
 /// Encode data to Base64 string
 pub fn encode_data_base64(data: &[u8]) -> Result<DataBuf<[u8]>, Base64Error> {
     let mut output_size = MaybeUninit::<i32>::uninit();
-    let bytes = unsafe {
-        ffi::EncodeDataBase64(data.as_ptr(), data.len() as i32, output_size.as_mut_ptr())
-    };
+    let bytes = unsafe { ffi::EncodeDataBase64(data.as_ptr(), data.len() as i32, output_size.as_mut_ptr()) };
     unsafe { DataBuf::slice_from_raw(bytes as *mut u8, output_size) }
         .ok_or(Base64Error::EncodeFailed)
 }
@@ -100,8 +98,7 @@ pub fn decode_data_base64(data: &[u8]) -> Result<DataBuf<[u8]>, Base64Error> {
     let mut c_str = Vec::with_capacity(null_trimmed_data.len() + 1);
     c_str.extend_from_slice(null_trimmed_data);
     c_str.push(0);
-
-    let bytes =
-        unsafe { ffi::DecodeDataBase64(c_str.as_ptr() as *const u8, output_size.as_mut_ptr()) };
-    unsafe { DataBuf::slice_from_raw(bytes, output_size) }.ok_or(Base64Error::DecodeFailed)
+    let bytes = unsafe { ffi::DecodeDataBase64(c_str.as_ptr() as *const c_char, output_size.as_mut_ptr()) };
+    unsafe { DataBuf::slice_from_raw(bytes, output_size) }
+        .ok_or(Base64Error::DecodeFailed)
 }
