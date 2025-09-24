@@ -69,7 +69,8 @@ fn gen_block_mesh(thread: &RaylibThread) -> Mesh {
         .iter()
         .map(|(_, _, u)| tilemap_pos_to_uv(u[0], u[1]))
         .collect::<Vec<_>>();
-    Mesh::gen_mesh(&vertices, &texcoords)
+    Mesh::init_mesh(&vertices)
+        .texcoords(&texcoords)
         .normals(&normals)
         .build(thread)
         .unwrap()
