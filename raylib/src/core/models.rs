@@ -1424,10 +1424,9 @@ pub struct MeshBuilder<'a> {
 impl Mesh {
     /// Create a new [`MeshBuilder`] to begin generating a custom [`Mesh`].
     ///
-    /// # Example
+    /// # Example (only run the cpu side stuff to avoid GLFW context etc)
     /// ```
     /// # use raylib::prelude::*;
-    /// # let (mut rl, thread) = init().build();
     /// let mesh = Mesh::init_mesh(&[
     ///     Vector3::new(0.0, 0.0, 0.0),
     ///     Vector3::new(1.0, 0.0, 0.0),
@@ -1448,7 +1447,7 @@ impl Mesh {
     ///     Color::GREEN,
     ///     Color::BLUE,
     /// ])
-    /// .build(&thread);
+    /// .build_cpu();
     /// ```
     #[inline]
     pub fn init_mesh<'a>(vertices: &'a [Vector3]) -> MeshBuilder<'a> {
@@ -1628,8 +1627,8 @@ impl<'a> MeshBuilder<'a> {
         }
     }
 
-    /// Complete and upload the [`Mesh`].
-    pub fn build(self, _thread: &RaylibThread) -> Result<Mesh, GenMeshError> {
+    /// Complete the [`Mesh`]
+    pub fn build_cpu(self) -> Result<Mesh, GenMeshError> {
         let (vertex_count, triangle_count) = self.validate_mesh_for_build()?;
         let raw_mesh = ffi::Mesh {
             vertexCount: vertex_count.try_into().unwrap(),
@@ -1643,10 +1642,23 @@ impl<'a> MeshBuilder<'a> {
             indices: slice_to_rl_ptr(self.indices)?,
             ..Default::default()
         };
-        // SAFETY: Borrowing `RaylibThread` guarantees this is the thread the resourece was created from,
-        // and raw_mesh has no duplicates because it was just created.
-        let mut mesh = unsafe { Mesh::from_raw(raw_mesh) };
+        //NOTE:
+        // - raw mesh is constructed entirely CPU-side only
+        // - i.e. for GL2.2~3.3 vaoId = 0 and all vboId = 0, so no GL objects exist yet
+        // - thus UnloadMesh will only free CPU arrays (DataBuf allocated stuff, no GL/gpu stuff)
+        // - Therefore this doesn't depend on the raylib init thread from my understanding:
+        let mesh = unsafe { Mesh::from_raw(raw_mesh) };
+
+        Ok(mesh)
+    }
+    /// upload the [`Mesh`].
+    pub fn build(self, _thread: &RaylibThread) -> Result<Mesh, GenMeshError> {
+        let mut mesh = self.build_cpu()?;
+        // SAFETY: Borrowing `RaylibThread` guarantees this is the thread the resource was created from,
+        // and raw_mesh has no duplicates because it was just created. once its uploaded, we need thread for the following GL context
         // SAFETY: mesh.vertices and mesh.texcoords are valid, initialized, unique, and safe to dereference.
+        //TODO: iann, BEFORE MERGE: figure out how to test the texcoords requirement at upload time for even GL2.2~3.3
+        // opengl 1.1 thus does not require texcoords from my understanding...
         unsafe {
             mesh.upload(false);
         }
