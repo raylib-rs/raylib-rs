@@ -1,5 +1,6 @@
 //! 3D Model, Mesh, and Animation
 
+use crate::MintVec3;
 use crate::core::databuf::DataBuf;
 use crate::core::math::BoundingBox;
 use crate::core::math::Matrix;
@@ -8,7 +9,6 @@ use crate::core::math::{Vector2, Vector3, Vector4};
 use crate::core::texture::Image;
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi::Color;
-use crate::MintVec3;
 use crate::{
     consts,
     error::{
@@ -16,6 +16,9 @@ use crate::{
         LoadModelError, SetMaterialError,
     },
     ffi,
+};
+use raylib_sys::rlShaderLocationIndex::{
+    RL_SHADER_LOC_VERTEX_COLOR, RL_SHADER_LOC_VERTEX_POSITION, RL_SHADER_LOC_VERTEX_TEXCOORD01,
 };
 use std::ffi::CString;
 use std::os::raw::c_void;
@@ -107,6 +110,7 @@ impl RaylibHandle {
                 path: filename.into(),
             });
         }
+        // TODO: perhaps add mesh validation here too?
         // TODO check if null pointer checks are necessary.
         Ok(Model(m))
     }
@@ -118,6 +122,7 @@ impl RaylibHandle {
         _: &RaylibThread,
         mesh: WeakMesh,
     ) -> Result<Model, LoadModelError> {
+        validate_mesh_invariants(mesh.as_ref())?;
         let m = unsafe { ffi::LoadModelFromMesh(mesh.0) };
 
         if m.meshes.is_null() || m.materials.is_null() {
@@ -402,9 +407,27 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     unsafe fn upload(&mut self, dynamic: bool) {
         unsafe { ffi::UploadMesh(self.as_mut(), dynamic) };
     }
+    #[inline]
+    fn try_upload_valid(
+        &mut self,
+        dynamic: bool,
+        _t: &RaylibThread,
+    ) -> Result<(), InvalidMeshError> {
+        validate_mesh_invariants(self.as_ref())?;
+        unsafe { self.upload(dynamic) };
+        Ok(())
+    }
+    /// check if mesh has been uploaded yet (only for non opengl1.1 contexts)
+    #[inline]
+    fn uploaded(&self) -> bool {
+        self.as_ref().vaoId != 0
+    }
     /// Update mesh vertex data in GPU for a specific buffer index
     #[inline]
-    unsafe fn update_buffer<A>(&mut self, index: i32, data: &[u8], offset: i32) {
+    unsafe fn update_mesh_vertex_buffer(&mut self, index: i32, data: &[u8], offset: i32) {
+        if data.is_empty() {
+            return;
+        }
         unsafe {
             ffi::UpdateMeshBuffer(
                 *self.as_ref(),
@@ -415,6 +438,41 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
             )
         };
     }
+    #[inline]
+    fn update_position_buffer(&mut self, _: &RaylibThread) {
+        let vertices = self.vertices();
+        unsafe {
+            let bytes = std::slice::from_raw_parts(
+                vertices.as_ptr() as *const u8,
+                vertices.len() * std::mem::size_of::<Vector3>(),
+            );
+            self.update_mesh_vertex_buffer(RL_SHADER_LOC_VERTEX_POSITION as i32, bytes, 0);
+        }
+    }
+    #[inline]
+     fn update_texcoord01_buffer(&mut self, _: &RaylibThread) {
+        if let Some(texcoords) = self.texcoords() {
+            unsafe {
+                let bytes = std::slice::from_raw_parts(
+                    texcoords.as_ptr() as *const u8,
+                    texcoords.len() * std::mem::size_of::<Vector2>(),
+                );
+                self.update_mesh_vertex_buffer(RL_SHADER_LOC_VERTEX_TEXCOORD01 as i32, bytes, 0);
+            }
+        }
+    }
+    #[inline]
+     fn update_color_buffer(&mut self, _: &RaylibThread) {
+        if let Some(colors) = self.colors() {
+            unsafe {
+                let bytes = std::slice::from_raw_parts(
+                    colors.as_ptr() as *const u8,
+                    colors.len() * std::mem::size_of::<Color>(),
+                );
+                self.update_mesh_vertex_buffer(RL_SHADER_LOC_VERTEX_COLOR as i32, bytes, 0);
+            }
+        }
+    }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
     #[must_use]
@@ -424,7 +482,10 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
             return &[];
         }
         let vertices_ptr = self.as_ref().vertices as *const Vector3;
-        assert!(!vertices_ptr.is_null()); //TODO: there is an error for this, needs discussion
+        //TODO: there is a potential error for this? needs discussion.
+        // currenlty should not be possible during GEN (validated), BUILD (validated),
+        // only potential is maybe LOAD? but wont pass upload validation...
+        // assert!(!vertices_ptr.is_null());
         unsafe { std::slice::from_raw_parts(vertices_ptr, self.as_ref().vertexCount as usize) }
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
@@ -436,7 +497,10 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
             return &mut [];
         }
         let vertices_ptr = self.as_mut().vertices as *mut Vector3;
-        assert!(!vertices_ptr.is_null());
+        //TODO: there is a potential error for this? needs discussion.
+        // currenlty should not be possible during GEN (validated), BUILD (validated),
+        // only potential is maybe LOAD? but wont pass upload validation...
+        // assert!(!vertices_ptr.is_null());
         unsafe { std::slice::from_raw_parts_mut(vertices_ptr, self.as_ref().vertexCount as usize) }
     }
     /// Texture Coordinates (UV (or ST) - 2 components per vertex) (shader-location = 1)
@@ -455,15 +519,12 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
             std::slice::from_raw_parts_mut(texcoords, self.as_ref().vertexCount as usize)
         })
     }
-    fn ensure_texcoords(&mut self) -> Result<&mut [Vector2], AllocationError> {
+    fn init_texcoords_mut(&mut self) -> Result<&mut [Vector2], AllocationError> {
         if self.as_ref().texcoords.is_null() {
             let vertex_count = self.as_ref().vertexCount as usize;
             let default_texcoords =
                 slice_to_rl_ptr::<Vector2, Vector2>(Some(&vec![Vector2::default(); vertex_count]))?;
             self.as_mut().texcoords = default_texcoords.cast();
-        }
-        unsafe {
-            self.upload(false);
         }
         Ok(self.texcoords_mut().expect("texcoords must be set"))
     }
@@ -531,7 +592,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
             std::slice::from_raw_parts_mut(colors, self.as_ref().vertexCount as usize)
         })
     }
-    fn ensure_colors(&mut self) -> Result<&mut [Color], AllocationError> {
+    fn init_colors_mut(&mut self) -> Result<&mut [Color], AllocationError> {
         if self.as_ref().colors.is_null() {
             let vertex_count = self.as_ref().vertexCount as usize;
             let default_colors =
@@ -895,6 +956,12 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         from_valid_mesh(raw_mesh)
     }
 
+    //TODO: not sure if this is neccessary yet, remove if unused by time of merge
+    #[inline]
+    fn validate_invariants(&self) -> Result<(), InvalidMeshError> {
+        validate_mesh_invariants(self.as_ref())
+    }
+
     /// Computes mesh bounding box limits.
     #[inline]
     #[must_use]
@@ -932,11 +999,12 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
 
 #[inline]
 fn from_valid_mesh(raw: ffi::Mesh) -> Result<Mesh, GenMeshError> {
-    validate_mesh_for_generation(&raw)?;
+    validate_mesh_invariants(&raw)?;
     Ok(Mesh(raw))
 }
+
 #[inline]
-fn validate_mesh_for_generation(mesh: &ffi::Mesh) -> Result<(), InvalidMeshError> {
+fn validate_mesh_invariants(mesh: &ffi::Mesh) -> Result<(), InvalidMeshError> {
     let (vertex_count, triangle_count) = validate_vertex_and_triangle_count(mesh)?;
     if vertex_count > 0 && mesh.vertices.is_null() {
         return Err(InvalidMeshError::VerticesPointerNull);
@@ -948,6 +1016,9 @@ fn validate_mesh_for_generation(mesh: &ffi::Mesh) -> Result<(), InvalidMeshError
             return Err(InvalidMeshError::TriangleCountInconsistent);
         }
     } else {
+        if vertex_count == 0 && triangle_count > 0 {
+            return Err(InvalidMeshError::TriangleCountInconsistent);
+        }
         triangle_count
             .checked_mul(3)
             .ok_or(InvalidMeshError::TriangleCountInconsistent)?;
@@ -1447,7 +1518,7 @@ impl Mesh {
     ///     Color::GREEN,
     ///     Color::BLUE,
     /// ])
-    /// .build_cpu();
+    /// .build_raw();
     /// ```
     #[inline]
     pub fn init_mesh<'a>(vertices: &'a [Vector3]) -> MeshBuilder<'a> {
@@ -1628,7 +1699,7 @@ impl<'a> MeshBuilder<'a> {
     }
 
     /// Complete the [`Mesh`]
-    pub fn build_cpu(self) -> Result<Mesh, GenMeshError> {
+    pub fn build_raw(self) -> Result<Mesh, GenMeshError> {
         let (vertex_count, triangle_count) = self.validate_mesh_for_build()?;
         let raw_mesh = ffi::Mesh {
             vertexCount: vertex_count.try_into().unwrap(),
@@ -1648,19 +1719,17 @@ impl<'a> MeshBuilder<'a> {
         // - thus UnloadMesh will only free CPU arrays (DataBuf allocated stuff, no GL/gpu stuff)
         // - Therefore this doesn't depend on the raylib init thread from my understanding:
         let mesh = unsafe { Mesh::from_raw(raw_mesh) };
-
         Ok(mesh)
     }
     /// upload the [`Mesh`].
-    pub fn build(self, _thread: &RaylibThread) -> Result<Mesh, GenMeshError> {
-        let mut mesh = self.build_cpu()?;
+    pub fn build(self, _: &RaylibThread) -> Result<Mesh, GenMeshError> {
+        let mut mesh = self.build_raw()?;
         // SAFETY: Borrowing `RaylibThread` guarantees this is the thread the resource was created from,
         // and raw_mesh has no duplicates because it was just created. once its uploaded, we need thread for the following GL context
         // SAFETY: mesh.vertices and mesh.texcoords are valid, initialized, unique, and safe to dereference.
-        //TODO: iann, BEFORE MERGE: figure out how to test the texcoords requirement at upload time for even GL2.2~3.3
-        // opengl 1.1 thus does not require texcoords from my understanding...
         unsafe {
-            mesh.upload(false);
+            //fast validation occured already, so no need to use the upload validator path
+            mesh.upload(false)
         }
         Ok(mesh)
     }

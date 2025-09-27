@@ -118,6 +118,8 @@ pub enum LoadModelError {
     LoadFromFileFailed { path: String },
     #[error("could not load model from mesh")]
     LoadFromMeshFailed,
+    #[error("could not load model from mesh: {0}")]
+    InvalidMesh(#[from] InvalidMeshError),
 }
 
 #[derive(Error, Debug)]
