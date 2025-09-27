@@ -3,10 +3,11 @@
 use crate::MintVec2;
 use crate::core::ffi::{Color, Rectangle};
 use crate::core::{RaylibHandle, RaylibThread};
+use crate::databuf::DataBuf;
 use crate::ffi;
 use std::convert::TryInto;
 use std::ffi::CString;
-use std::mem::ManuallyDrop;
+use std::mem::{ManuallyDrop, MaybeUninit};
 use std::ptr::null_mut;
 
 use super::error::{InvalidImageError, LoadTextureError, UpdateTextureError};
@@ -833,7 +834,10 @@ impl Image {
 
     /// Export image to memory buffer.
     #[must_use]
-    pub fn export_image_to_memory(&self, file_type: &str) -> Result<&[u8], InvalidImageError> {
+    pub fn export_image_to_memory(
+        &self,
+        file_type: &str,
+    ) -> Result<DataBuf<[u8]>, InvalidImageError> {
         if self.width == 0 {
             return Err(InvalidImageError::ZeroWidth);
         }
@@ -845,15 +849,15 @@ impl Image {
         }
 
         let c_filetype = CString::new(file_type).unwrap();
-        let data_size: &mut i32 = &mut 0;
-        let data = unsafe { ffi::ExportImageToMemory(self.0, c_filetype.as_ptr(), data_size) };
+        let mut data_size = MaybeUninit::uninit();
+        let data = unsafe {
+            // ExportImageToMemory returns null if the code for converting to a file type never goes off.
+            ffi::ExportImageToMemory(self.0, c_filetype.as_ptr(), data_size.as_mut_ptr())
+        };
 
-        // The actual function returns null if the code for converting to a file type never goes off.
-        if data == null_mut() {
-            return Err(InvalidImageError::UnsupportedFormat);
-        }
-
-        Ok(unsafe { std::slice::from_raw_parts(data as *const u8, *data_size as usize) })
+        // SAFETY: DataBuf::slice_from_raw returns None if the data ptr is null.
+        let buf = unsafe { DataBuf::slice_from_raw(data, data_size.into()) };
+        buf.ok_or(InvalidImageError::UnsupportedFormat)
     }
 
     /// Apply custom square convolution kernel to image
