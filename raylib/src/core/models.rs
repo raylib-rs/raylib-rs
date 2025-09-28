@@ -17,11 +17,9 @@ use crate::{
     },
     ffi,
 };
-use raylib_sys::rlShaderLocationIndex::{
-    RL_SHADER_LOC_VERTEX_COLOR, RL_SHADER_LOC_VERTEX_POSITION, RL_SHADER_LOC_VERTEX_TEXCOORD01,
-};
 use std::ffi::CString;
 use std::os::raw::c_void;
+use raylib_sys::{RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR, RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD};
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
@@ -446,18 +444,18 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
                 vertices.as_ptr() as *const u8,
                 vertices.len() * std::mem::size_of::<Vector3>(),
             );
-            self.update_mesh_vertex_buffer(RL_SHADER_LOC_VERTEX_POSITION as i32, bytes, 0);
+            self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION as i32, bytes, 0);
         }
     }
     #[inline]
-     fn update_texcoord01_buffer(&mut self, _: &RaylibThread) {
+     fn update_texcoord_buffer(&mut self, _: &RaylibThread) {
         if let Some(texcoords) = self.texcoords() {
             unsafe {
                 let bytes = std::slice::from_raw_parts(
                     texcoords.as_ptr() as *const u8,
                     texcoords.len() * std::mem::size_of::<Vector2>(),
                 );
-                self.update_mesh_vertex_buffer(RL_SHADER_LOC_VERTEX_TEXCOORD01 as i32, bytes, 0);
+                self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD as i32, bytes, 0);
             }
         }
     }
@@ -469,7 +467,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
                     colors.as_ptr() as *const u8,
                     colors.len() * std::mem::size_of::<Color>(),
                 );
-                self.update_mesh_vertex_buffer(RL_SHADER_LOC_VERTEX_COLOR as i32, bytes, 0);
+                self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR as i32, bytes, 0);
             }
         }
     }
