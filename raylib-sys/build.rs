@@ -292,6 +292,7 @@ fn gen_bindings() {
     }
     let mut builder = bindgen::Builder::default()
         .header(header)
+        .use_core()
         .rustified_enum(".+")
         .derive_partialeq(true)
         .derive_default(true)

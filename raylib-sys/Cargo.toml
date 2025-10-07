@@ -23,7 +23,8 @@ bindgen = "0.71"
 [features]
 # default features follow the cmake version: https://github.com/raysan5/raylib/wiki/CMake-Build-Options
 # NOTE: some are critical, e.g: SUPPORT_STANDARD_FILEIO should always be turned on because many things like `LoadShader()` uses it to read text
-default = [
+default = ["std", "default_cmake_build_options"]
+default_cmake_build_options = [
   "GLFW_BUILD_X11",
   "USE_AUDIO",
   "SUPPORT_MODULE_RSHAPES",
@@ -71,6 +72,7 @@ default = [
   "SUPPORT_STANDARD_FILEIO",
   "SUPPORT_TRACELOG",
 ]
+std = []
 serde = ["dep:serde", "mint/serde"]
 raygui = []
 # Do not autogenerate bindings, instead read an existing one specified by env RAYLIB_BINDGEN_LOCATION
