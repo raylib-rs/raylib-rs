@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod core_test {
-
     use crate::tests::*;
     use raylib::camera::*;
     use raylib::math::*;
@@ -105,5 +104,30 @@ mod core_test {
         rl.disable_cursor();
         rl.enable_cursor();
         rl.enable_cursor();
+    }
+
+    #[test]
+    #[ignore] // todo: Updating MSAA and Interlaced Hint fails after window is already initialized. test_window_ops also crashes (on macOS) after raylib -> glfw -> objc platform code
+    fn test_get_window_state() {
+        let mut handle = TEST_HANDLE.write().unwrap();
+        let rl = handle.as_mut().unwrap();
+
+        assert!(!rl.get_window_state().msaa());
+
+        let with_interlaced_hint = rl.get_window_state().set_interlaced_hint(true);
+        rl.set_window_state(with_interlaced_hint);
+        rl.set_window_state(with_interlaced_hint);
+        assert!(rl.get_window_state().interlaced_hint());
+
+        let with_msaa = rl.get_window_state().set_msaa(true);
+        rl.set_window_state(with_msaa);
+        rl.set_window_state(with_msaa);
+        assert!(rl.get_window_state().msaa());
+        assert!(rl.get_window_state().interlaced_hint());
+
+        let without_msaa = rl.get_window_state().set_msaa(false);
+        rl.set_window_state(without_msaa);
+        rl.set_window_state(without_msaa);
+        assert!(!rl.get_window_state().msaa());
     }
 }
