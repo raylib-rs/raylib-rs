@@ -30,6 +30,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_VSYNC_HINT as i32) != 0
     }
     /// Set to try enabling V-Sync on GPU
+    #[must_use]
     pub const fn set_vsync_hint(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -46,6 +47,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_FULLSCREEN_MODE as i32) != 0
     }
     /// Set to run program in fullscreen
+    #[must_use]
     pub const fn set_fullscreen_mode(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -62,6 +64,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_RESIZABLE as i32) != 0
     }
     /// Set to allow resizable window
+    #[must_use]
     pub const fn set_window_resizable(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -78,6 +81,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_UNDECORATED as i32) != 0
     }
     /// Set to disable window decoration (frame and buttons)
+    #[must_use]
     pub const fn set_window_undecorated(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -94,6 +98,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_HIDDEN as i32) != 0
     }
     /// Set to hide window
+    #[must_use]
     pub const fn set_window_hidden(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -110,6 +115,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_MINIMIZED as i32) != 0
     }
     /// Set to minimize window (iconify)
+    #[must_use]
     pub const fn set_window_minimized(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -126,6 +132,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_MAXIMIZED as i32) != 0
     }
     /// Set to maximize window (expanded to monitor)
+    #[must_use]
     pub const fn set_window_maximized(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -142,6 +149,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_UNFOCUSED as i32) != 0
     }
     /// Set to window non focused
+    #[must_use]
     pub const fn set_window_unfocused(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -158,6 +166,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_TOPMOST as i32) != 0
     }
     /// Set to window always on top
+    #[must_use]
     pub const fn set_window_topmost(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -174,6 +183,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_ALWAYS_RUN as i32) != 0
     }
     /// Set to allow windows running while minimized
+    #[must_use]
     pub const fn set_window_always_run(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -190,6 +200,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_TRANSPARENT as i32) != 0
     }
     /// Set to allow transparent framebuffer
+    #[must_use]
     pub const fn set_window_transparent(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -206,6 +217,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_WINDOW_HIGHDPI as i32) != 0
     }
     /// Set to support HighDPI
+    #[must_use]
     pub const fn set_window_highdpi(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -222,6 +234,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_MSAA_4X_HINT as i32) != 0
     }
     /// Set to try enabling MSAA 4X
+    #[must_use]
     pub const fn set_msaa(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
@@ -238,6 +251,7 @@ impl WindowState {
         self.0 & (ffi::ConfigFlags::FLAG_INTERLACED_HINT as i32) != 0
     }
     /// Set to try enabling interlaced video format (for V3D)
+    #[must_use]
     pub const fn set_interlaced_hint(mut self, enabled: bool) -> Self {
         if enabled {
             // set the bit
