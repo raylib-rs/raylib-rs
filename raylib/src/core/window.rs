@@ -667,50 +667,49 @@ impl RaylibHandle {
     /// Get the window config state
     #[must_use]
     pub fn get_window_state(&self) -> WindowState {
-        let state = WindowState::default();
+        let mut state = WindowState::default();
         unsafe {
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_VSYNC_HINT as u32) {
-                state.set_vsync_hint(true);
+                state = state.set_vsync_hint(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_FULLSCREEN_MODE as u32) {
-                state.set_fullscreen_mode(true);
+                state = state.set_fullscreen_mode(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_WINDOW_RESIZABLE as u32) {
-                state.set_window_resizable(true);
+                state = state.set_window_resizable(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_WINDOW_UNDECORATED as u32) {
-                state.set_window_undecorated(true);
+                state = state.set_window_undecorated(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_WINDOW_HIDDEN as u32) {
-                state.set_window_hidden(true);
+                state = state.set_window_hidden(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_WINDOW_MINIMIZED as u32) {
-                state.set_window_minimized(true);
+                state = state.set_window_minimized(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_WINDOW_MAXIMIZED as u32) {
-                state.set_window_maximized(true);
+                state = state.set_window_maximized(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_WINDOW_UNFOCUSED as u32) {
-                state.set_window_unfocused(true);
+                state = state.set_window_unfocused(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_WINDOW_TOPMOST as u32) {
-                state.set_window_topmost(true);
+                state = state.set_window_topmost(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_WINDOW_ALWAYS_RUN as u32) {
-                state.set_window_always_run(true);
+                state = state.set_window_always_run(true);
             }
-
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_WINDOW_TRANSPARENT as u32) {
-                state.set_window_transparent(true);
+                state = state.set_window_transparent(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_WINDOW_HIGHDPI as u32) {
-                state.set_window_highdpi(true);
+                state = state.set_window_highdpi(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_MSAA_4X_HINT as u32) {
-                state.set_msaa(true);
+                state = state.set_msaa(true);
             }
             if ffi::IsWindowState(ffi::ConfigFlags::FLAG_INTERLACED_HINT as u32) {
-                state.set_interlaced_hint(true);
+                state = state.set_interlaced_hint(true);
             }
         }
         state
