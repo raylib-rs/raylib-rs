@@ -120,14 +120,16 @@ impl RaylibHandle {
         _: &RaylibThread,
         mesh: WeakMesh,
     ) -> Result<Model, LoadModelError> {
-        validate_mesh_invariants(mesh.as_ref())?;
         let m = unsafe { ffi::LoadModelFromMesh(mesh.0) };
 
         if m.meshes.is_null() || m.materials.is_null() {
             return Err(LoadModelError::LoadFromMeshFailed);
         }
+        let model = Model(m);
+        validate_mesh_invariants(unsafe { &*m.meshes })?;
+        // validate_mesh_invariants(model.meshes().get(0).unwrap())?;
 
-        Ok(Model(m))
+        Ok(model)
     }
 
     #[must_use]
@@ -1008,12 +1010,7 @@ fn validate_mesh_invariants(mesh: &ffi::Mesh) -> Result<(), InvalidMeshError> {
         return Err(InvalidMeshError::VerticesPointerNull);
     }
 
-    if mesh.indices.is_null() {
-        let unindexed_triangle_count = triangle_count_from_unindexed(vertex_count)?;
-        if triangle_count != unindexed_triangle_count {
-            return Err(InvalidMeshError::TriangleCountInconsistent);
-        }
-    } else {
+    if !mesh.indices.is_null() {
         if vertex_count == 0 && triangle_count > 0 {
             return Err(InvalidMeshError::TriangleCountInconsistent);
         }
@@ -1033,15 +1030,6 @@ fn validate_vertex_and_triangle_count(
         return Err(InvalidMeshError::NegativeCount); //TODO: not sure how this could happen...
     }
     Ok((mesh.vertexCount as usize, mesh.triangleCount as usize))
-}
-
-#[inline]
-fn triangle_count_from_unindexed(vertex_count: usize) -> Result<usize, InvalidMeshError> {
-    if vertex_count % 3 != 0 {
-        Err(InvalidMeshError::TriangleNotMultipleOf3)
-    } else {
-        Ok(vertex_count / 3)
-    }
 }
 
 impl Material {
