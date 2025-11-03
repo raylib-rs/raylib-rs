@@ -122,13 +122,12 @@ impl RaylibHandle {
     ) -> Result<Model, LoadModelError> {
         let m = unsafe { ffi::LoadModelFromMesh(mesh.0) };
 
-        if m.meshes.is_null() || m.materials.is_null() {
+        if m.meshes.is_null() || m.materials.is_null() || m.meshCount != 1  {
             return Err(LoadModelError::LoadFromMeshFailed);
         }
         let model = Model(m);
-        validate_mesh_invariants(unsafe { &*m.meshes })?;
-        // validate_mesh_invariants(model.meshes().get(0).unwrap())?;
-
+        let model_mesh = model.meshes().first().ok_or(LoadModelError::LoadFromMeshFailed)?;
+        validate_mesh_invariants(model_mesh.as_ref())?;
         Ok(model)
     }
 
@@ -417,12 +416,12 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         unsafe { self.upload(dynamic) };
         Ok(())
     }
-    /// check if mesh has been uploaded yet (only for non opengl1.1 contexts)
-    #[inline]
-    fn uploaded(&self) -> bool {
-        self.as_ref().vaoId != 0
-    }
     /// Update mesh vertex data in GPU for a specific buffer index
+    /// # Safety
+    /// - The mesh **must** have been uploaded on a backend that supports VBO/VAO (e.g. non OPENGL_11 versions)
+    /// - violating preconditions typically crashes on OPENGL_11, which is for now "intentional" to surface incorrect usage
+    /// - thus all callers are `unsafe`
+    /// TODO: find a non-misleading way to make this and UploadMesh *informative* no-ops under OPENGL_11 -> remove all the `unsafe`s
     #[inline]
     unsafe fn update_mesh_vertex_buffer(&mut self, index: i32, data: &[u8], offset: i32) {
         if data.is_empty() {
@@ -439,38 +438,32 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         };
     }
     #[inline]
-    fn update_position_buffer(&mut self, _: &RaylibThread) {
+    unsafe fn update_position_buffer(&mut self, _: &RaylibThread) {
         let vertices = self.vertices();
-        unsafe {
-            let bytes = std::slice::from_raw_parts(
-                vertices.as_ptr() as *const u8,
-                vertices.len() * std::mem::size_of::<Vector3>(),
-            );
-            self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION as i32, bytes, 0);
-        }
+        let bytes = std::slice::from_raw_parts(
+            vertices.as_ptr() as *const u8,
+            vertices.len() * std::mem::size_of::<Vector3>(),
+        );
+        self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION as i32, bytes, 0);
     }
     #[inline]
-     fn update_texcoord_buffer(&mut self, _: &RaylibThread) {
+    unsafe fn update_texcoord_buffer(&mut self, _: &RaylibThread) {
         if let Some(texcoords) = self.texcoords() {
-            unsafe {
-                let bytes = std::slice::from_raw_parts(
-                    texcoords.as_ptr() as *const u8,
-                    texcoords.len() * std::mem::size_of::<Vector2>(),
-                );
-                self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD as i32, bytes, 0);
-            }
+            let bytes = std::slice::from_raw_parts(
+                texcoords.as_ptr() as *const u8,
+                texcoords.len() * std::mem::size_of::<Vector2>(),
+            );
+            self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD as i32, bytes, 0);
         }
     }
     #[inline]
-     fn update_color_buffer(&mut self, _: &RaylibThread) {
+    unsafe fn update_color_buffer(&mut self, _: &RaylibThread) {
         if let Some(colors) = self.colors() {
-            unsafe {
-                let bytes = std::slice::from_raw_parts(
-                    colors.as_ptr() as *const u8,
-                    colors.len() * std::mem::size_of::<Color>(),
-                );
-                self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR as i32, bytes, 0);
-            }
+            let bytes = std::slice::from_raw_parts(
+                colors.as_ptr() as *const u8,
+                colors.len() * std::mem::size_of::<Color>(),
+            );
+            self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR as i32, bytes, 0);
         }
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
@@ -497,10 +490,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
             return &mut [];
         }
         let vertices_ptr = self.as_mut().vertices as *mut Vector3;
-        //TODO: there is a potential error for this? needs discussion.
-        // currenlty should not be possible during GEN (validated), BUILD (validated),
-        // only potential is maybe LOAD? but wont pass upload validation...
-        // assert!(!vertices_ptr.is_null());
+        //TODO: same concern as vertices()
         unsafe { std::slice::from_raw_parts_mut(vertices_ptr, self.as_ref().vertexCount as usize) }
     }
     /// Texture Coordinates (UV (or ST) - 2 components per vertex) (shader-location = 1)
@@ -956,7 +946,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         from_valid_mesh(raw_mesh)
     }
 
-    //TODO: not sure if this is neccessary yet, remove if unused by time of merge
+    //TODO: user side validation? not sure if this is neccessary yet, remove if unused by time of merge
     #[inline]
     fn validate_invariants(&self) -> Result<(), InvalidMeshError> {
         validate_mesh_invariants(self.as_ref())
@@ -1005,31 +995,23 @@ fn from_valid_mesh(raw: ffi::Mesh) -> Result<Mesh, GenMeshError> {
 
 #[inline]
 fn validate_mesh_invariants(mesh: &ffi::Mesh) -> Result<(), InvalidMeshError> {
-    let (vertex_count, triangle_count) = validate_vertex_and_triangle_count(mesh)?;
-    if vertex_count > 0 && mesh.vertices.is_null() {
+    if mesh.vertexCount < 0 || mesh.triangleCount < 0 {
+        return Err(InvalidMeshError::NegativeCount); //TODO: not sure how this could happen...
+    }
+    if mesh.vertexCount > 0 && mesh.vertices.is_null() {
         return Err(InvalidMeshError::VerticesPointerNull);
     }
-
+    // unindexed meshes are fine to have inconsistent triangle counts, opengl will just toss unused vertices
     if !mesh.indices.is_null() {
-        if vertex_count == 0 && triangle_count > 0 {
+        if mesh.vertexCount == 0 && mesh.triangleCount > 0 {
             return Err(InvalidMeshError::TriangleCountInconsistent);
         }
-        triangle_count
+        mesh.triangleCount
             .checked_mul(3)
             .ok_or(InvalidMeshError::TriangleCountInconsistent)?;
     }
 
     Ok(())
-}
-
-#[inline]
-fn validate_vertex_and_triangle_count(
-    mesh: &ffi::Mesh,
-) -> Result<(usize, usize), InvalidMeshError> {
-    if mesh.vertexCount < 0 || mesh.triangleCount < 0 {
-        return Err(InvalidMeshError::NegativeCount); //TODO: not sure how this could happen...
-    }
-    Ok((mesh.vertexCount as usize, mesh.triangleCount as usize))
 }
 
 impl Material {
