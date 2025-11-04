@@ -108,9 +108,12 @@ impl RaylibHandle {
                 path: filename.into(),
             });
         }
-        // TODO: perhaps add mesh validation here too?
-        // TODO check if null pointer checks are necessary.
-        Ok(Model(m))
+        let model = Model(m);
+        for mesh in model.meshes().iter() {
+            validate_mesh_invariants(mesh.as_ref())
+                .map_err(|_| LoadModelError::LoadFromFileFailed { path: filename.into() })?;
+        }
+        Ok(model)
     }
 
     #[must_use]
@@ -123,6 +126,22 @@ impl RaylibHandle {
         let m = unsafe { ffi::LoadModelFromMesh(mesh.0) };
 
         if m.meshes.is_null() || m.materials.is_null() || m.meshCount != 1  {
+            return Err(LoadModelError::LoadFromMeshFailed);
+        }
+        let model = Model(m);
+        let model_mesh = model.meshes().first().ok_or(LoadModelError::LoadFromMeshFailed)?;
+        validate_mesh_invariants(model_mesh.as_ref())?;
+        Ok(model)
+    }
+
+    pub fn load_model_from_mesh_gnarly(
+        &mut self,
+        _: &RaylibThread,
+        mesh: Mesh,
+    ) -> Result<Model, LoadModelError> {
+        let m = unsafe { ffi::LoadModelFromMesh(mesh.make_weak().0) };
+
+        if m.meshes.is_null() || m.materials.is_null() || m.meshCount != 1 {
             return Err(LoadModelError::LoadFromMeshFailed);
         }
         let model = Model(m);
@@ -609,7 +628,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
     #[inline]
     fn is_indexed(&self) -> bool {
-        self.indices().is_some()
+        !self.as_ref().indices.is_null()
     }
 
     #[inline]
@@ -633,7 +652,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
 
     #[inline]
     fn triangle_count(&self) -> usize {
-        self.as_ref().triangleCount as usize
+        self.triangles().len()
     }
     /// Generate polygonal mesh
     #[inline]
@@ -1568,6 +1587,17 @@ impl<'a> MeshBuilder<'a> {
         self.texcoords = Some(texcoords);
         self
     }
+    #[inline]
+    pub fn gnarly_texcoords<I>(mut self, texcoords: I) -> Self
+    where I: Into<Option<&'a [Vector2]>>
+    {
+        assert!(
+            self.texcoords.is_none(),
+            "texcoords() should be called no more than once on the same MeshBuilder",
+        );
+        self.texcoords = texcoords.into();
+        self
+    }
 
     /// Give the mesh custom secondary texture coordinates.
     ///
@@ -1620,6 +1650,17 @@ impl<'a> MeshBuilder<'a> {
         self.colors = Some(colors);
         self
     }
+    #[inline]
+    pub fn gnarly_colors<I>(mut self, colors: I) -> Self
+    where I: Into<Option<&'a [Color]>>
+    {
+        assert!(
+            self.colors.is_none(),
+            "colors() should be called no more than once on the same MeshBuilder",
+        );
+        self.colors = colors.into();
+        self
+    }
 
     /// Give the mesh custom triangle indices.
     ///
@@ -1631,6 +1672,17 @@ impl<'a> MeshBuilder<'a> {
             "indices() should be called no more than once on the same MeshBuilder",
         );
         self.indices = Some(indices);
+        self
+    }
+    #[inline]
+    pub fn gnarly_indices<I>(mut self, indices: I) -> Self
+    where I: Into<Option<&'a [u16]>>
+    {
+        assert!(
+            self.indices.is_none(),
+            "indices() should be called no more than once on the same MeshBuilder",
+        );
+        self.indices = indices.into();
         self
     }
 
