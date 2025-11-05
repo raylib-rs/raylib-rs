@@ -2121,13 +2121,13 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_model_points(
         &mut self,
-        model: impl Into<ffi::Model>,
+        model: impl AsRef<ffi::Model>,
         position: impl Into<MintVec3>,
         scale: f32,
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::DrawModelPoints(model.into(), position.into(), scale, tint.into());
+            ffi::DrawModelPoints(*model.as_ref(), position.into(), scale, tint.into());
         }
     }
 
@@ -2135,7 +2135,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_model_points_ex(
         &mut self,
-        model: impl Into<ffi::Model>,
+        model: impl AsRef<ffi::Model>,
         position: impl Into<MintVec3>,
         rotation_axis: impl Into<MintVec3>,
         angle: f32,
@@ -2144,7 +2144,7 @@ pub trait RaylibDraw3D {
     ) {
         unsafe {
             ffi::DrawModelPointsEx(
-                model.into(),
+                *model.as_ref(),
                 position.into(),
                 rotation_axis.into(),
                 angle,
