@@ -485,32 +485,41 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
             self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR as i32, bytes, 0);
         }
     }
+    /// Vertex count - topologically derived for bounds safety in mesh attribute slice construction/access
+    #[inline]
+    fn vertex_count(&self) -> usize {
+        // TODO: likely introduce caching some vertex_count to avoid triangle elements O(n) or whatever operation redundancy
+        let mut max_index: Option<usize> = None;
+        for [a, b, c] in self.triangles() {
+            let m = a.max(b).max(c);
+            max_index = Some(max_index.map_or(m, |prev| prev.max(m)));
+        }
+        match max_index {
+            Some(m) => m + 1,
+            None => 0,
+        }
+    }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
     #[must_use]
     fn vertices(&self) -> &[Vector3] {
-        let vertex_count = self.as_ref().vertexCount as usize;
+        let vertex_count = self.vertex_count();
         if vertex_count == 0 {
             return &[];
         }
         let vertices_ptr = self.as_ref().vertices as *const Vector3;
-        //TODO: there is a potential error for this? needs discussion.
-        // currenlty should not be possible during GEN (validated), BUILD (validated),
-        // only potential is maybe LOAD? but wont pass upload validation...
-        // assert!(!vertices_ptr.is_null());
-        unsafe { std::slice::from_raw_parts(vertices_ptr, self.as_ref().vertexCount as usize) }
+        unsafe { std::slice::from_raw_parts(vertices_ptr, vertex_count) }
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
     #[must_use]
     fn vertices_mut(&mut self) -> &mut [Vector3] {
-        let vertex_count = self.as_ref().vertexCount as usize;
+        let vertex_count = self.vertex_count();
         if vertex_count == 0 {
             return &mut [];
         }
         let vertices_ptr = self.as_mut().vertices as *mut Vector3;
-        //TODO: same concern as vertices()
-        unsafe { std::slice::from_raw_parts_mut(vertices_ptr, self.as_ref().vertexCount as usize) }
+        unsafe { std::slice::from_raw_parts_mut(vertices_ptr, vertex_count) }
     }
     /// Texture Coordinates (UV (or ST) - 2 components per vertex) (shader-location = 1)
     #[inline]
@@ -590,7 +599,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     fn colors(&self) -> Option<&[Color]> {
         let colors = self.as_ref().colors as *const Color;
         (!colors.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts(colors, self.as_ref().vertexCount as usize)
+            std::slice::from_raw_parts(colors, self.vertex_count())
         })
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
@@ -598,17 +607,36 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     fn colors_mut(&mut self) -> Option<&mut [Color]> {
         let colors = self.as_mut().colors as *mut Color;
         (!colors.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts_mut(colors, self.as_ref().vertexCount as usize)
+            std::slice::from_raw_parts_mut(colors, self.vertex_count())
         })
     }
     fn init_colors_mut(&mut self) -> Result<&mut [Color], AllocationError> {
         if self.as_ref().colors.is_null() {
-            let vertex_count = self.as_ref().vertexCount as usize;
             let default_colors =
-                slice_to_rl_ptr::<Color, Color>(Some(&vec![Color::WHITE; vertex_count]))?;
+                slice_to_rl_ptr::<Color, Color>(Some(&vec![Color::WHITE; self.vertex_count()]))?;
             self.as_mut().colors = default_colors.cast();
         }
         Ok(self.colors_mut().expect("colors must be set"))
+    }
+    #[inline]
+    fn set_colors(&mut self, colors: Option<&[Color]>) -> Result<(), AllocationError> {
+        let vertex_count = self.vertex_count();
+        match colors {
+            Some(src) => {
+                assert_eq!(src.len(), vertex_count, "Color length ({}) must match vertex count ({})", src.len(), vertex_count);
+                if let Some(dst) = self.colors_mut() {
+                    dst.copy_from_slice(src);
+                } else {
+                    let colors_ptr = slice_to_rl_ptr::<Color, Color>(Some(src))?;
+                    self.as_mut().colors = colors_ptr.cast();
+                }
+            }
+            None => {
+                if !self.as_ref().colors.is_null() { unsafe { ffi::MemFree(self.as_ref().colors as *mut c_void) }; } //TODO: uhhhhh, really?
+                self.as_mut().colors = std::ptr::null_mut();
+            }
+        }
+        Ok(())
     }
     /// Vertex indices (in case vertex data comes indexed)
     #[inline]
@@ -638,9 +666,8 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
                 grouping: TriangleGrouping::Indexed(indices.chunks_exact(3)),
             }
         } else {
-            let vertex_count = self.vertices().len();
-            //TODO: are partial triangles even possible at this point?
-            let clamped = vertex_count - (vertex_count % 3);
+            let raw_vertex_count = self.as_ref().vertexCount as usize;
+            let clamped = raw_vertex_count - (raw_vertex_count % 3);
             Triangles {
                 grouping: TriangleGrouping::Unindexed {
                     next: 0,
@@ -1020,7 +1047,6 @@ fn validate_mesh_invariants(mesh: &ffi::Mesh) -> Result<(), InvalidMeshError> {
     if mesh.vertexCount > 0 && mesh.vertices.is_null() {
         return Err(InvalidMeshError::VerticesPointerNull);
     }
-    // unindexed meshes are fine to have inconsistent triangle counts, opengl will just toss unused vertices
     if !mesh.indices.is_null() {
         if mesh.vertexCount == 0 && mesh.triangleCount > 0 {
             return Err(InvalidMeshError::TriangleCountInconsistent);
