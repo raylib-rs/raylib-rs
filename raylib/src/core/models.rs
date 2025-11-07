@@ -485,7 +485,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     fn vertex_count(&self) -> usize {
         if let Some(indices) = self.indices() {
-            /// NOTE: if caching initial vertex count (for resize), potentially cache stuff here as well
+            // NOTE: if caching initial vertex count (for resize), potentially cache stuff here as well
             indices.iter().max().map(|&m| (m + 1) as usize).unwrap_or(0)
         } else {
             (self.as_ref().triangleCount as usize) * 3
