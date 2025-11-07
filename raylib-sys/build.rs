@@ -315,6 +315,28 @@ fn gen_bindings() {
         // odd workaround for booleans being broken
         builder = builder.clang_arg("-D__STDC__");
     }
+    //TODO: sync these with cmake to avoid differences in binding GL version and cmake GL version
+    #[cfg(feature = "opengl_11")]
+    {
+        builder = builder.clang_arg("-DGRAPHICS_API_OPENGL_11");
+        println!("cargo:warning=bindgen: using GRAPHICS_API_OPENGL_11");
+    }
+    #[cfg(feature = "opengl_21")]
+    {
+        builder = builder.clang_arg("-DGRAPHICS_API_OPENGL_21");
+    }
+    #[cfg(feature = "opengl_33")]
+    {
+        builder = builder.clang_arg("-DGRAPHICS_API_OPENGL_33");
+    }
+    #[cfg(feature = "opengl_es_20")]
+    {
+        builder = builder.clang_arg("-DGRAPHICS_API_OPENGL_ES2");
+    }
+    #[cfg(feature = "opengl_es_30")]
+    {
+        builder = builder.clang_arg("-DGRAPHICS_API_OPENGL_ES3");
+    }
 
     if platform == Platform::Web {
         builder = builder

@@ -69,7 +69,8 @@ fn gen_block_mesh(thread: &RaylibThread) -> Mesh {
         .iter()
         .map(|(_, _, u)| tilemap_pos_to_uv(u[0], u[1]))
         .collect::<Vec<_>>();
-    Mesh::gen_mesh(&vertices, &texcoords)
+    Mesh::init_mesh(&vertices)
+        .texcoords(&texcoords)
         .normals(&normals)
         .build(thread)
         .unwrap()
@@ -102,7 +103,7 @@ fn main() {
     let cube_tilemap = rl.load_texture(&thread, "static/grass_block.png").unwrap();
     let cube_mesh = gen_block_mesh(&thread);
     let mut cube_model = unsafe {
-        rl.load_model_from_mesh(&thread, cube_mesh.make_weak())
+        rl.load_model_from_mesh(&thread, cube_mesh)
             .unwrap()
     };
     cube_model.materials_mut()[0]

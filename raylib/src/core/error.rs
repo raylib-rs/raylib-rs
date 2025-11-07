@@ -65,25 +65,38 @@ pub enum AllocationError {
 #[derive(Error, Debug)]
 pub enum InvalidMeshError {
     #[error("mesh should have 3 indices/vertices for each triangle")]
-    TrianglePointMiscount,
+    TriangleNotMultipleOf3,
     #[error("indices should be within the number of vertices")]
     IndexOutOfBounds,
     #[error("mesh with indices should not exceed u16::MAX vertices")]
-    VertexUnindexible(std::num::TryFromIntError),
-    #[error("mesh should have one texcoord per vertex")]
-    TexcoordsMiscount,
-    #[error("mesh with texcoords2 should have one per vertex")]
-    Texcoords2Miscount,
-    #[error("mesh with normals should have one per vertex")]
-    NormalsMiscount,
-    #[error("mesh with tangents should have one per vertex")]
-    TangentsMiscount,
-    #[error("mesh with colors should have one per vertex")]
-    ColorsMiscount,
+    VertexCountOverflow(#[from] std::num::TryFromIntError),
+
+    #[error("number of texcoords should match vertexCount")]
+    TexcoordCountMismatch,
+    #[error("number of texcoords2 should match vertexCount")]
+    Texcoord2CountMismatch,
+    #[error("number of normals should match vertexCount")]
+    NormalCountMismatch,
+    #[error("number of tangents should match vertexCount")]
+    TangentCountMismatch,
+    #[error("number of colors should match vertexCount")]
+    ColorCountMismatch,
+
+    #[error("vertexCount or triangleCount is negative")]
+    NegativeCount,
+    #[error("mesh has vertexCount > 0 but vertices pointer is null")]
+    VerticesPointerNull,
+    #[error("triangleCount is inconsistent with vertices/indices")]
+    TriangleCountInconsistent,
+    #[error("cannot grow vertexCount {from} to {to}; beyond initial maximum vertices: {maximum}")]
+    IllegalExpansion { from: usize, to: usize, maximum: usize },
+
+    #[error("vertexCount is inconsistent with triangles/indices")]
+    VertexCountInsufficient
 }
 
 #[derive(Error, Debug)]
-pub enum GenMeshError {
+pub enum GenMeshError { //TODO: make Gen mesh error and BuildMeshError different? confusing names..
     #[error("provided mesh data does not correspond to a valid mesh")]
     InvalidMesh(#[from] InvalidMeshError),
     #[error("could not allocate memory for the mesh data")]
@@ -110,7 +123,14 @@ pub enum LoadModelError {
     LoadFromFileFailed { path: String },
     #[error("could not load model from mesh")]
     LoadFromMeshFailed,
-}
+    #[error("could not load model from mesh: {0}")]
+    InvalidMesh(#[from] InvalidMeshError),
+    #[error("invalid mesh found while loading model from file\npath: {path:?}\nreason: {source}")]
+    InvalidMeshFromFile {
+        path: String,
+        #[source]
+        source: InvalidMeshError,
+    },}
 
 #[derive(Error, Debug)]
 pub enum LoadModelAnimError {

@@ -34,7 +34,7 @@ mod model_test {
         let mut handle = TEST_HANDLE.write().unwrap();
         let rl = handle.as_mut().unwrap();
 
-        let mesh = unsafe { Mesh::gen_mesh_cube(&thread, 1.0, 1.0, 1.0).make_weak() };
+        let mesh = Mesh::try_gen_mesh_cube(&thread, 1.0, 1.0, 1.0).unwrap();
         let model = rl.load_model_from_mesh(&thread, mesh).unwrap();
 
         let zero = Vector3::ZERO;
