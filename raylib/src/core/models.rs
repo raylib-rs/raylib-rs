@@ -19,7 +19,11 @@ use crate::{
 };
 use std::ffi::CString;
 use std::os::raw::c_void;
-use raylib_sys::{RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR, RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD};
+use raylib_sys::{
+    RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION,
+    RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD,
+    RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR,
+};
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
@@ -102,16 +106,19 @@ impl RaylibHandle {
     ) -> Result<Model, LoadModelError> {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadModel(c_filename.as_ptr()) };
-        if m.meshes.is_null() && m.materials.is_null() && m.bones.is_null() && m.bindPose.is_null()
-        {
+        if m.meshes.is_null() && m.materials.is_null() && m.bones.is_null() && m.bindPose.is_null() {
             return Err(LoadModelError::LoadFromFileFailed {
                 path: filename.into(),
             });
         }
         let model = Model(m);
         for mesh in model.meshes().iter() {
-            validate_mesh_invariants(mesh.as_ref())
-                .map_err(|_| LoadModelError::LoadFromFileFailed { path: filename.into() })?;
+            validate_mesh_invariants(mesh.as_ref()).map_err(|source| {
+                LoadModelError::InvalidMeshFromFile {
+                    path: filename.into(),
+                    source,
+                }
+            })?;
         }
         Ok(model)
     }
@@ -134,7 +141,7 @@ impl RaylibHandle {
         Ok(model)
     }
 
-    pub fn load_model_from_mesh_gnarly(
+    pub fn load_model_from_owned_mesh(
         &mut self,
         _: &RaylibThread,
         mesh: Mesh,
@@ -442,7 +449,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// - thus all callers are `unsafe`
     /// TODO: find a non-misleading way to make this and UploadMesh *informative* no-ops under OPENGL_11 -> remove all the `unsafe`s
     #[inline]
-    unsafe fn update_mesh_vertex_buffer(&mut self, index: i32, data: &[u8], offset: i32) {
+    unsafe fn update_buffer(&mut self, index: i32, data: &[u8], offset: i32) {
         if data.is_empty() {
             return;
         }
@@ -459,45 +466,53 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     unsafe fn update_position_buffer(&mut self, _: &RaylibThread) {
         let vertices = self.vertices();
-        let bytes = std::slice::from_raw_parts(
+        let bytes = unsafe { std::slice::from_raw_parts(
             vertices.as_ptr() as *const u8,
             vertices.len() * std::mem::size_of::<Vector3>(),
-        );
-        self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION as i32, bytes, 0);
+        ) };
+        unsafe { self.update_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION as i32, bytes, 0); }
     }
     #[inline]
     unsafe fn update_texcoord_buffer(&mut self, _: &RaylibThread) {
         if let Some(texcoords) = self.texcoords() {
-            let bytes = std::slice::from_raw_parts(
+            let bytes = unsafe { std::slice::from_raw_parts(
                 texcoords.as_ptr() as *const u8,
                 texcoords.len() * std::mem::size_of::<Vector2>(),
-            );
-            self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD as i32, bytes, 0);
+            ) };
+            unsafe { self.update_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD as i32, bytes, 0); }
         }
     }
     #[inline]
     unsafe fn update_color_buffer(&mut self, _: &RaylibThread) {
         if let Some(colors) = self.colors() {
-            let bytes = std::slice::from_raw_parts(
+            let bytes = unsafe { std::slice::from_raw_parts(
                 colors.as_ptr() as *const u8,
                 colors.len() * std::mem::size_of::<Color>(),
-            );
-            self.update_mesh_vertex_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR as i32, bytes, 0);
+            ) };
+            unsafe { self.update_buffer(RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR as i32, bytes, 0); }
         }
     }
     /// Vertex count - topologically derived for bounds safety in mesh attribute slice construction/access
     #[inline]
     fn vertex_count(&self) -> usize {
-        // TODO: likely introduce caching some vertex_count to avoid triangle elements O(n) or whatever operation redundancy
-        let mut max_index: Option<usize> = None;
-        for [a, b, c] in self.triangles() {
-            let m = a.max(b).max(c);
-            max_index = Some(max_index.map_or(m, |prev| prev.max(m)));
+        if let Some(indices) = self.indices() {
+            indices.iter().max().map(|&m| (m + 1) as usize).unwrap_or(0)
+        } else {
+            (self.as_ref().triangleCount as usize) * 3
         }
-        match max_index {
-            Some(m) => m + 1,
-            None => 0,
+    }
+    /// Safely update the vertex count - validates the mesh after updating to ensure consistency with
+    /// triangle count and index buffer.
+    #[inline]
+    fn resize_vertices(&mut self, count: usize) -> Result<(), InvalidMeshError> {
+        self.as_mut().vertexCount = count.try_into()?;
+
+        if !self.is_indexed() {
+            self.as_mut().triangleCount = (count / 3).try_into()
+                .map_err(|_| InvalidMeshError::TriangleCountInconsistent)?;
         }
+
+        validate_mesh_invariants(self.as_ref())
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
@@ -521,12 +536,13 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         let vertices_ptr = self.as_mut().vertices as *mut Vector3;
         unsafe { std::slice::from_raw_parts_mut(vertices_ptr, vertex_count) }
     }
+
     /// Texture Coordinates (UV (or ST) - 2 components per vertex) (shader-location = 1)
     #[inline]
     fn texcoords(&self) -> Option<&[Vector2]> {
         let texcoords = self.as_ref().texcoords as *const Vector2;
         (!texcoords.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts(texcoords, self.as_ref().vertexCount as usize)
+            std::slice::from_raw_parts(texcoords, self.vertex_count())
         })
     }
     /// Texture Coordinates (UV (or ST) - 2 components per vertex) (shader-location = 1)
@@ -534,64 +550,31 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     fn texcoords_mut(&mut self) -> Option<&mut [Vector2]> {
         let texcoords = self.as_mut().texcoords as *mut Vector2;
         (!texcoords.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts_mut(texcoords, self.as_ref().vertexCount as usize)
+            std::slice::from_raw_parts_mut(texcoords, self.vertex_count())
         })
     }
     fn init_texcoords_mut(&mut self) -> Result<&mut [Vector2], AllocationError> {
         if self.as_ref().texcoords.is_null() {
-            let vertex_count = self.as_ref().vertexCount as usize;
             let default_texcoords =
-                slice_to_rl_ptr::<Vector2, Vector2>(Some(&vec![Vector2::default(); vertex_count]))?;
+                slice_to_rl_ptr::<Vector2, Vector2>(Some(&vec![Vector2::default(); self.vertex_count()]))?;
             self.as_mut().texcoords = default_texcoords.cast();
         }
         Ok(self.texcoords_mut().expect("texcoords must be set"))
     }
-    /// Texture Coordinates 2 (UV (or ST) - 2 components per vertex) (shader-location = 2)
-    #[inline]
-    fn texcoords2(&self) -> Option<&[Vector2]> {
-        let texcoords2 = self.as_ref().texcoords2 as *const Vector2;
-        (!texcoords2.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts(texcoords2, self.as_ref().vertexCount as usize)
-        })
-    }
-    /// Texture Coordinates 2 (UV (or ST) - 2 components per vertex) (shader-location = 2)
-    #[inline]
-    fn texcoords2_mut(&mut self) -> Option<&mut [Vector2]> {
-        let texcoords2 = self.as_mut().texcoords2 as *mut Vector2;
-        (!texcoords2.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts_mut(texcoords2, self.as_ref().vertexCount as usize)
-        })
-    }
-    /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 3)
+    /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
     fn normals(&self) -> Option<&[Vector3]> {
         let normals = self.as_ref().normals as *const Vector3;
         (!normals.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts(normals, self.as_ref().vertexCount as usize)
+            std::slice::from_raw_parts(normals, self.vertex_count())
         })
     }
-    /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 3)
+    /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
     fn normals_mut(&mut self) -> Option<&mut [Vector3]> {
         let normals = self.as_mut().normals as *mut Vector3;
         (!normals.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts_mut(normals, self.as_ref().vertexCount as usize)
-        })
-    }
-    /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
-    #[inline]
-    fn tangents(&self) -> Option<&[Vector4]> {
-        let tangents = self.as_ref().tangents as *const Vector4;
-        (!tangents.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts(tangents, self.as_ref().vertexCount as usize)
-        })
-    }
-    /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
-    #[inline]
-    fn tangents_mut(&mut self) -> Option<&mut [Vector4]> {
-        let tangents = self.as_mut().tangents as *mut Vector4;
-        (!tangents.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts_mut(tangents, self.as_ref().vertexCount as usize)
+            std::slice::from_raw_parts_mut(normals, self.vertex_count())
         })
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
@@ -618,27 +601,39 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         }
         Ok(self.colors_mut().expect("colors must be set"))
     }
+    /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
-    fn set_colors(&mut self, colors: Option<&[Color]>) -> Result<(), AllocationError> {
-        let vertex_count = self.vertex_count();
-        match colors {
-            Some(src) => {
-                assert_eq!(src.len(), vertex_count, "Color length ({}) must match vertex count ({})", src.len(), vertex_count);
-                if let Some(dst) = self.colors_mut() {
-                    dst.copy_from_slice(src);
-                } else {
-                    let colors_ptr = slice_to_rl_ptr::<Color, Color>(Some(src))?;
-                    self.as_mut().colors = colors_ptr.cast();
-                }
-            }
-            None => {
-                if !self.as_ref().colors.is_null() { unsafe { ffi::MemFree(self.as_ref().colors as *mut c_void) }; } //TODO: uhhhhh, really?
-                self.as_mut().colors = std::ptr::null_mut();
-            }
-        }
-        Ok(())
+    fn tangents(&self) -> Option<&[Vector4]> {
+        let tangents = self.as_ref().tangents as *const Vector4;
+        (!tangents.is_null()).then(|| unsafe {
+            std::slice::from_raw_parts(tangents, self.vertex_count())
+        })
     }
-    /// Vertex indices (in case vertex data comes indexed)
+    /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
+    #[inline]
+    fn tangents_mut(&mut self) -> Option<&mut [Vector4]> {
+        let tangents = self.as_mut().tangents as *mut Vector4;
+        (!tangents.is_null()).then(|| unsafe {
+            std::slice::from_raw_parts_mut(tangents, self.vertex_count())
+        })
+    }
+    /// Texture Coordinates 2 (UV (or ST) - 2 components per vertex) (shader-location = 5)
+    #[inline]
+    fn texcoords2(&self) -> Option<&[Vector2]> {
+        let texcoords2 = self.as_ref().texcoords2 as *const Vector2;
+        (!texcoords2.is_null()).then(|| unsafe {
+            std::slice::from_raw_parts(texcoords2, self.vertex_count())
+        })
+    }
+    /// Texture Coordinates 2 (UV (or ST) - 2 components per vertex) (shader-location = 5)
+    #[inline]
+    fn texcoords2_mut(&mut self) -> Option<&mut [Vector2]> {
+        let texcoords2 = self.as_mut().texcoords2 as *mut Vector2;
+        (!texcoords2.is_null()).then(|| unsafe {
+            std::slice::from_raw_parts_mut(texcoords2, self.vertex_count())
+        })
+    }
+    /// Vertex indices (in case vertex data comes indexed) (shader-location = 6)
     #[inline]
     fn indices(&self) -> Option<&[u16]> {
         let indices = self.as_ref().indices as *const u16;
@@ -646,7 +641,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
             std::slice::from_raw_parts(indices, (self.as_ref().triangleCount as usize) * 3)
         })
     }
-    /// Vertex indices (in case vertex data comes indexed)
+    /// Vertex indices (in case vertex data comes indexed) (shader-location = 6)
     #[inline]
     fn indices_mut(&mut self) -> Option<&mut [u16]> {
         let indices = self.as_mut().indices as *mut u16;
@@ -659,6 +654,60 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         !self.as_ref().indices.is_null()
     }
 
+    /// ```
+    /// # use raylib::core::math::Vector3;
+    /// # use raylib::ffi;
+    /// # use raylib::models::{Mesh, RaylibMesh};
+    /// // Unindexed mesh: triangles() must honor triangleCount, not vertexCount
+    /// let mut vertices: Box<[Vector3]> = (0..12)
+    ///     .map(|i| Vector3::new(i as f32, 0.0, 0.0))
+    ///     .collect::<Vec<_>>()
+    ///     .into_boxed_slice();
+    ///
+    /// let raw = ffi::Mesh {
+    ///     vertexCount: 12,
+    ///     triangleCount: 1,
+    ///     vertices: vertices.as_mut_ptr().cast(),
+    ///     indices: std::ptr::null_mut(),
+    ///     ..Default::default()
+    /// };
+    /// let mesh = unsafe { Mesh::from_raw(raw).make_weak() };
+    /// assert_eq!(mesh.triangles().len(), 1);
+    /// for [a, b, c] in mesh.triangles() {
+    ///     let _ = mesh.vertices()[a];
+    ///     let _ = mesh.vertices()[b];
+    ///     let _ = mesh.vertices()[c];
+    /// }
+    /// std::mem::forget(vertices);
+    /// ```
+    /// ```
+    /// # use raylib::core::math::Vector3;
+    /// # use raylib::ffi;
+    /// # use raylib::models::{Mesh, RaylibMesh};
+    /// // Indexed mesh: triangles() should respect triangleCount == indices.len()/3
+    /// let mut vertices: Box<[Vector3]> = (0..8)
+    ///     .map(|i| Vector3::new(i as f32, 0.0, 0.0))
+    ///     .collect::<Vec<_>>()
+    ///     .into_boxed_slice();
+    /// let mut indices: Box<[u16]> = Box::new([0u16, 1, 2]);
+    /// let raw = ffi::Mesh {
+    ///     vertexCount: 8,
+    ///     triangleCount: 1,
+    ///     vertices: vertices.as_mut_ptr().cast(),
+    ///     indices: indices.as_mut_ptr(),
+    ///     ..Default::default()
+    /// };
+    /// let mesh = unsafe { Mesh::from_raw(raw).make_weak() };
+    /// assert_eq!(mesh.triangles().len(), 1);
+    /// for [a, b, c] in mesh.triangles() {
+    ///     let _ = mesh.vertices()[a];
+    ///     let _ = mesh.vertices()[b];
+    ///     let _ = mesh.vertices()[c];
+    /// }
+    /// std::mem::forget(vertices);
+    /// std::mem::forget(indices);
+    /// ```
+
     #[inline]
     fn triangles(&self) -> Triangles<'_> {
         if let Some(indices) = self.indices() {
@@ -666,8 +715,9 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
                 grouping: TriangleGrouping::Indexed(indices.chunks_exact(3)),
             }
         } else {
-            let raw_vertex_count = self.as_ref().vertexCount as usize;
-            let clamped = raw_vertex_count - (raw_vertex_count % 3);
+            // let raw_vertex_count = self.as_ref().vertexCount as usize;
+            // let clamped = raw_vertex_count - (raw_vertex_count % 3);
+            let clamped = (self.as_ref().triangleCount as usize) * 3;
             Triangles {
                 grouping: TriangleGrouping::Unindexed {
                     next: 0,
@@ -679,7 +729,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
 
     #[inline]
     fn triangle_count(&self) -> usize {
-        self.triangles().len()
+        self.as_ref().triangleCount as usize
     }
     /// Generate polygonal mesh
     #[inline]
@@ -687,12 +737,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[deprecated(note = "unsound, use try_gen_mesh_poly")]
     fn gen_mesh_poly(_: &RaylibThread, sides: i32, radius: f32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshPoly(sides, radius)) }
-    }
-
-    #[inline]
-    fn panic_gen_mesh_poly(thread: &RaylibThread, sides: i32, radius: f32) -> Mesh {
-        Self::try_gen_mesh_poly(thread, sides, radius)
-            .expect("ffi::GenMeshPoly returned an invalid mesh (check parameters)")
     }
 
     #[inline]
@@ -707,18 +751,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[deprecated(note = "unsound, use try_gen_mesh_plane")]
     fn gen_mesh_plane(_: &RaylibThread, width: f32, length: f32, res_x: i32, res_z: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshPlane(width, length, res_x, res_z)) }
-    }
-
-    #[inline]
-    fn panic_gen_mesh_plane(
-        thread: &RaylibThread,
-        width: f32,
-        length: f32,
-        res_x: i32,
-        res_z: i32,
-    ) -> Mesh {
-        Self::try_gen_mesh_plane(thread, width, length, res_x, res_z)
-            .expect("ffi::GenMeshPlane returned an invalid mesh (check parameters)")
     }
 
     #[inline]
@@ -742,12 +774,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
 
     #[inline]
-    fn panic_gen_mesh_cube(thread: &RaylibThread, width: f32, height: f32, length: f32) -> Mesh {
-        Self::try_gen_mesh_cube(thread, width, height, length)
-            .expect("ffi::GenMeshCube returned an invalid mesh (check parameters)")
-    }
-
-    #[inline]
     fn try_gen_mesh_cube(
         _: &RaylibThread,
         width: f32,
@@ -764,12 +790,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[deprecated(note = "unsound, use try_gen_mesh_sphere")]
     fn gen_mesh_sphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshSphere(radius, rings, slices)) }
-    }
-
-    #[inline]
-    fn panic_gen_mesh_sphere(thread: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
-        Self::try_gen_mesh_sphere(thread, radius, rings, slices)
-            .expect("ffi::GenMeshSphere returned an invalid mesh (check parameters)")
     }
 
     #[inline]
@@ -792,17 +812,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
 
     #[inline]
-    fn panic_gen_mesh_hemisphere(
-        thread: &RaylibThread,
-        radius: f32,
-        rings: i32,
-        slices: i32,
-    ) -> Mesh {
-        Self::try_gen_mesh_hemisphere(thread, radius, rings, slices)
-            .expect("ffi::GenMeshHemiSphere returned an invalid mesh (check parameters)")
-    }
-
-    #[inline]
     fn try_gen_mesh_hemisphere(
         _: &RaylibThread,
         radius: f32,
@@ -822,17 +831,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
 
     #[inline]
-    fn panic_gen_mesh_cylinder(
-        thread: &RaylibThread,
-        radius: f32,
-        height: f32,
-        slices: i32,
-    ) -> Mesh {
-        Self::try_gen_mesh_cylinder(thread, radius, height, slices)
-            .expect("ffi::GenMeshCylinder returned an invalid mesh (check parameters)")
-    }
-
-    #[inline]
     fn try_gen_mesh_cylinder(
         _: &RaylibThread,
         radius: f32,
@@ -849,18 +847,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[deprecated(note = "unsound, use try_gen_mesh_torus")]
     fn gen_mesh_torus(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshTorus(radius, size, rad_seg, sides)) }
-    }
-
-    #[inline]
-    fn panic_gen_mesh_torus(
-        thread: &RaylibThread,
-        radius: f32,
-        size: f32,
-        rad_seg: i32,
-        sides: i32,
-    ) -> Mesh {
-        Self::try_gen_mesh_torus(thread, radius, size, rad_seg, sides)
-            .expect("ffi::GenMeshTorus returned an invalid mesh (check parameters)")
     }
 
     #[inline]
@@ -884,18 +870,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
 
     #[inline]
-    fn panic_gen_mesh_knot(
-        thread: &RaylibThread,
-        radius: f32,
-        size: f32,
-        rad_seg: i32,
-        sides: i32,
-    ) -> Mesh {
-        Self::try_gen_mesh_knot(thread, radius, size, rad_seg, sides)
-            .expect("ffi::GenMeshKnot returned an invalid mesh (check parameters)")
-    }
-
-    #[inline]
     fn try_gen_mesh_knot(
         _: &RaylibThread,
         radius: f32,
@@ -913,16 +887,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[deprecated(note = "unsound, use try_gen_mesh_heightmap")]
     fn gen_mesh_heightmap(_: &RaylibThread, heightmap: &Image, size: impl Into<MintVec3>) -> Mesh {
         unsafe { Mesh(ffi::GenMeshHeightmap(heightmap.0, size.into())) }
-    }
-
-    #[inline]
-    fn panic_gen_mesh_heightmap(
-        thread: &RaylibThread,
-        heightmap: &Image,
-        size: impl Into<MintVec3>,
-    ) -> Mesh {
-        Self::try_gen_mesh_heightmap(thread, heightmap, size)
-            .expect("ffi::GenMeshHeightmap returned an invalid mesh (check parameters)")
     }
 
     #[inline]
@@ -948,16 +912,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     }
 
     #[inline]
-    fn panic_gen_mesh_cubicmap(
-        thread: &RaylibThread,
-        cubicmap: &Image,
-        cube_size: impl Into<MintVec3>,
-    ) -> Mesh {
-        Self::try_gen_mesh_cubicmap(thread, cubicmap, cube_size)
-            .expect("ffi::GenMeshCubicmap returned an invalid mesh (check parameters)")
-    }
-
-    #[inline]
     fn try_gen_mesh_cubicmap(
         _: &RaylibThread,
         cubicmap: &Image,
@@ -975,11 +929,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         unsafe { Mesh(ffi::GenMeshCone(radius, height, slices)) }
     }
 
-    #[inline]
-    fn panic_gen_mesh_cone(thread: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
-        Self::try_gen_mesh_cone(thread, radius, height, slices)
-            .expect("ffi::GenMeshCone returned an invalid mesh (check parameters)")
-    }
 
     #[inline]
     fn try_gen_mesh_cone(
@@ -991,13 +940,6 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         let raw_mesh = unsafe { ffi::GenMeshCone(radius, height, slices) };
         from_valid_mesh(raw_mesh)
     }
-
-    //TODO: user side validation? not sure if this is neccessary yet, remove if unused by time of merge
-    #[inline]
-    fn validate_invariants(&self) -> Result<(), InvalidMeshError> {
-        validate_mesh_invariants(self.as_ref())
-    }
-
     /// Computes mesh bounding box limits.
     #[inline]
     #[must_use]
@@ -1042,18 +984,42 @@ fn from_valid_mesh(raw: ffi::Mesh) -> Result<Mesh, GenMeshError> {
 #[inline]
 fn validate_mesh_invariants(mesh: &ffi::Mesh) -> Result<(), InvalidMeshError> {
     if mesh.vertexCount < 0 || mesh.triangleCount < 0 {
-        return Err(InvalidMeshError::NegativeCount); //TODO: not sure how this could happen...
+        return Err(InvalidMeshError::NegativeCount);
     }
+
     if mesh.vertexCount > 0 && mesh.vertices.is_null() {
         return Err(InvalidMeshError::VerticesPointerNull);
     }
+
     if !mesh.indices.is_null() {
-        if mesh.vertexCount == 0 && mesh.triangleCount > 0 {
-            return Err(InvalidMeshError::TriangleCountInconsistent);
+        // INDEXED CASE
+        if mesh.triangleCount == 0 {
+            return Ok(());
         }
-        mesh.triangleCount
-            .checked_mul(3)
+
+        let index_count = mesh.triangleCount.checked_mul(3).ok_or(InvalidMeshError::TriangleCountInconsistent)?;
+
+        let indices = unsafe {
+            std::slice::from_raw_parts(mesh.indices, index_count as usize)
+        };
+
+        let max_index = indices.iter()
+            .max()
+            .copied()
             .ok_or(InvalidMeshError::TriangleCountInconsistent)?;
+
+        if max_index as i32 >= mesh.vertexCount {
+            return Err(InvalidMeshError::IndexOutOfBounds);
+        }
+    } else {
+        // UNINDEXED CASE
+
+        if mesh.triangleCount > 0 {
+            let required_vertices = mesh.triangleCount * 3;
+            if mesh.vertexCount < required_vertices {
+                return Err(InvalidMeshError::VertexCountInsufficient);
+            }
+        }
     }
 
     Ok(())
@@ -1107,6 +1073,10 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     /// Material shader
     fn shader_mut(&mut self) -> &mut crate::shaders::WeakShader {
         unsafe { std::mem::transmute(&mut self.as_mut().shader) }
+    }
+    #[inline]
+    fn set_shader<T: AsRef<ffi::Shader>>(&mut self, src: &T) {
+        self.as_mut().shader = *src.as_ref();
     }
     #[must_use]
     #[inline]
@@ -1531,7 +1501,7 @@ impl Mesh {
     ///     Color::GREEN,
     ///     Color::BLUE,
     /// ])
-    /// .build_raw();
+    /// .build_cpu();
     /// ```
     #[inline]
     pub fn init_mesh<'a>(vertices: &'a [Vector3]) -> MeshBuilder<'a> {
@@ -1614,7 +1584,7 @@ impl<'a> MeshBuilder<'a> {
         self
     }
     #[inline]
-    pub fn gnarly_texcoords<I>(mut self, texcoords: I) -> Self
+    pub fn texcoords_opt<I>(mut self, texcoords: I) -> Self
     where I: Into<Option<&'a [Vector2]>>
     {
         assert!(
@@ -1677,7 +1647,7 @@ impl<'a> MeshBuilder<'a> {
         self
     }
     #[inline]
-    pub fn gnarly_colors<I>(mut self, colors: I) -> Self
+    pub fn colors_opt<I>(mut self, colors: I) -> Self
     where I: Into<Option<&'a [Color]>>
     {
         assert!(
@@ -1701,7 +1671,7 @@ impl<'a> MeshBuilder<'a> {
         self
     }
     #[inline]
-    pub fn gnarly_indices<I>(mut self, indices: I) -> Self
+    pub fn indices_opt<I>(mut self, indices: I) -> Self
     where I: Into<Option<&'a [u16]>>
     {
         assert!(
@@ -1745,9 +1715,9 @@ impl<'a> MeshBuilder<'a> {
     }
 
     /// Complete the [`Mesh`]
-    pub fn build_raw(self) -> Result<Mesh, GenMeshError> {
+    pub fn build_cpu(self) -> Result<Mesh, GenMeshError> {
         let (vertex_count, triangle_count) = self.validate_mesh_for_build()?;
-        let raw_mesh = ffi::Mesh {
+        let cpu_mesh = ffi::Mesh {
             vertexCount: vertex_count.try_into().unwrap(),
             triangleCount: triangle_count.try_into().unwrap(),
             vertices: slice_to_rl_ptr(Some(self.vertices))?,
@@ -1764,18 +1734,25 @@ impl<'a> MeshBuilder<'a> {
         // - i.e. for GL2.2~3.3 vaoId = 0 and all vboId = 0, so no GL objects exist yet
         // - thus UnloadMesh will only free CPU arrays (DataBuf allocated stuff, no GL/gpu stuff)
         // - Therefore this doesn't depend on the raylib init thread from my understanding:
-        let mesh = unsafe { Mesh::from_raw(raw_mesh) };
+        let mesh = unsafe { Mesh::from_raw(cpu_mesh) };
         Ok(mesh)
     }
     /// upload the [`Mesh`].
     pub fn build(self, _: &RaylibThread) -> Result<Mesh, GenMeshError> {
-        let mut mesh = self.build_raw()?;
+        let mut mesh = self.build_cpu()?;
         // SAFETY: Borrowing `RaylibThread` guarantees this is the thread the resource was created from,
         // and raw_mesh has no duplicates because it was just created. once its uploaded, we need thread for the following GL context
         // SAFETY: mesh.vertices and mesh.texcoords are valid, initialized, unique, and safe to dereference.
         unsafe {
-            //fast validation occured already, so no need to use the upload validator path
+            //fast validation occured already in build_cpu, so no need to use the upload validator path
             mesh.upload(false)
+        }
+        Ok(mesh)
+    }
+    pub fn build_dynamic(self, _: &RaylibThread) -> Result<Mesh, GenMeshError> {
+        let mut mesh = self.build_cpu()?;
+        unsafe {
+            mesh.upload(true)
         }
         Ok(mesh)
     }

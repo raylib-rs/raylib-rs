@@ -73,7 +73,7 @@ make_thin_wrapper!(
 make_thin_wrapper!(WeakTexture2D, ffi::Texture2D, no_drop);
 impl Default for WeakTexture2D {
     fn default() -> Self {
-        Self(ffi::Texture::default())
+        Self(ffi::Texture2D::default())
     }
 }
 make_thin_wrapper!(
@@ -1141,6 +1141,12 @@ impl Texture2D {
         let m = WeakTexture2D(self.0);
         std::mem::forget(self);
         m
+    }
+}
+impl Default for Texture2D {
+    #[inline]
+    fn default() -> Self {
+        Self(ffi::Texture2D::default())
     }
 }
 

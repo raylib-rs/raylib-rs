@@ -88,10 +88,13 @@ pub enum InvalidMeshError {
     VerticesPointerNull,
     #[error("triangleCount is inconsistent with vertices/indices")]
     TriangleCountInconsistent,
+
+    #[error("vertexCount is inconsistent with triangles/indices")]
+    VertexCountInsufficient
 }
 
 #[derive(Error, Debug)]
-pub enum GenMeshError {
+pub enum GenMeshError { //TODO: make Gen mesh error and BuildMeshError different? confusing names..
     #[error("provided mesh data does not correspond to a valid mesh")]
     InvalidMesh(#[from] InvalidMeshError),
     #[error("could not allocate memory for the mesh data")]
@@ -120,7 +123,12 @@ pub enum LoadModelError {
     LoadFromMeshFailed,
     #[error("could not load model from mesh: {0}")]
     InvalidMesh(#[from] InvalidMeshError),
-}
+    #[error("invalid mesh found while loading model from file\npath: {path:?}\nreason: {source}")]
+    InvalidMeshFromFile {
+        path: String,
+        #[source]
+        source: InvalidMeshError,
+    },}
 
 #[derive(Error, Debug)]
 pub enum LoadModelAnimError {
