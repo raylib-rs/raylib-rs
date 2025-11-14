@@ -19,6 +19,7 @@ use crate::{
 };
 use std::ffi::CString;
 use std::os::raw::c_void;
+use std::ptr::NonNull;
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
@@ -371,111 +372,81 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     #[must_use]
     fn vertices(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().vertices as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+        NonNull::new(self.as_ref().vertices.cast()).map_or(&[], |data| unsafe {
+            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_ref()
+        })
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
     #[must_use]
     fn vertices_mut(&mut self) -> &mut [Vector3] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().vertices as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+        NonNull::new(self.as_ref().vertices.cast()).map_or(&mut [], |data| unsafe {
+            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_mut()
+        })
     }
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
     #[must_use]
     fn normals(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().normals as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+        NonNull::new(self.as_ref().normals.cast()).map_or(&[], |data| unsafe {
+            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_ref()
+        })
     }
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
     #[must_use]
     fn normals_mut(&mut self) -> &mut [Vector3] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().normals as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+        NonNull::new(self.as_ref().normals.cast()).map_or(&mut [], |data| unsafe {
+            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_mut()
+        })
     }
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
     #[must_use]
     fn tangents(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().tangents as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+        NonNull::new(self.as_ref().tangents.cast()).map_or(&[], |data| unsafe {
+            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_ref()
+        })
     }
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
     #[must_use]
     fn tangents_mut(&mut self) -> &mut [Vector3] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().tangents as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+        NonNull::new(self.as_ref().tangents.cast()).map_or(&mut [], |data| unsafe {
+            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_mut()
+        })
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
     #[must_use]
     fn colors(&self) -> &[Color] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().colors as *const Color,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+        NonNull::new(self.as_ref().colors.cast()).map_or(&[], |data| unsafe {
+            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_ref()
+        })
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
     #[must_use]
     fn colors_mut(&mut self) -> &mut [Color] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().colors as *mut Color,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+        NonNull::new(self.as_ref().colors.cast()).map_or(&mut [], |data| unsafe {
+            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_mut()
+        })
     }
     /// Vertex indices (in case vertex data comes indexed)
     #[inline]
     #[must_use]
     fn indices(&self) -> &[u16] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().indices as *const u16,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+        NonNull::new(self.as_ref().indices.cast()).map_or(&[], |data| unsafe {
+            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_ref()
+        })
     }
     /// Vertex indices (in case vertex data comes indexed)
     #[inline]
     #[must_use]
     fn indices_mut(&mut self) -> &mut [u16] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().indices as *mut u16,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+        NonNull::new(self.as_ref().indices.cast()).map_or(&mut [], |data| unsafe {
+            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_mut()
+        })
     }
 
     /// Generate polygonal mesh
