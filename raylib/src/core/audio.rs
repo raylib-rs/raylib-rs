@@ -277,9 +277,9 @@ impl<'aud> Wave<'aud> {
         if success {
             Ok(())
         } else {
-            // const WAV: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".wav\0") };
-            const QOA: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".qoa\0") };
-            // const RAW: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".raw\0") };
+            // const WAV: &CStr = c".wav";
+            const QOA: &CStr = c".qoa";
+            // const RAW: &CStr = c".raw";
             let is_qoa = unsafe { ffi::IsFileExtension(c_filename.as_ptr(), QOA.as_ptr()) };
             if is_qoa {
                 let samples = self.0.sampleSize as i32;
