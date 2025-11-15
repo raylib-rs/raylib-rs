@@ -285,40 +285,84 @@ impl RaylibHandle {
     }
 }
 
+/// Marker trait for types that implement [`RaylibFontRef`] and [`RaylibFontMut`].
+/// Requires and default-implements both.
+pub trait RaylibFont: RaylibFontRef + RaylibFontMut {}
+impl<T: RaylibFont> RaylibFontRef for T {}
+impl<T: RaylibFont> RaylibFontMut for T {}
+
 impl RaylibFont for WeakFont {}
 impl RaylibFont for Font {}
 
-pub trait RaylibFont {
+pub trait RaylibFontRef: AsRef<ffi::Font> {
     /// Base size (default chars height)
     #[inline]
     #[must_use]
-    fn base_size(&self) -> i32
-    where
-        Self: AsRef<ffi::Font>,
-    {
+    fn base_size(&self) -> i32 {
         self.as_ref().baseSize
     }
     /// Texture atlas containing the glyphs
     #[inline]
     #[must_use]
-    fn texture(&self) -> &Texture2D
-    where
-        Self: AsRef<ffi::Font>,
-    {
+    fn texture(&self) -> &Texture2D {
         unsafe { std::mem::transmute(&self.as_ref().texture) }
     }
     /// Glyphs info data
     #[inline]
     #[must_use]
-    fn chars(&self) -> &[GlyphInfo]
-    where
-        Self: AsRef<ffi::Font>,
-    {
+    fn chars(&self) -> &[GlyphInfo] {
         let font = self.as_ref();
         unsafe {
             std::slice::from_raw_parts(font.glyphs as *const GlyphInfo, font.glyphCount as usize)
         }
     }
+
+    /// Check if a font is valid
+    #[inline]
+    #[must_use]
+    fn is_font_valid(&self) -> bool {
+        unsafe { ffi::IsFontValid(*self.as_ref()) }
+    }
+
+    /// Export font as code file, returns true on success
+    #[must_use]
+    fn export_font_as_code<A>(&self, filename: A) -> bool
+    where
+        A: Into<OsString>,
+    {
+        let c_str = CString::new(filename.into().to_string_lossy().as_bytes()).unwrap();
+        unsafe { ffi::ExportFontAsCode(*self.as_ref(), c_str.as_ptr()) }
+    }
+
+    /// Get glyph font info data for a codepoint (unicode character), fallback to '?' if not found
+    #[inline]
+    #[must_use]
+    fn get_glyph_info(&self, codepoint: char) -> GlyphInfo {
+        unsafe { GlyphInfo(ffi::GetGlyphInfo(*self.as_ref(), codepoint as i32)) }
+    }
+
+    /// Gets index position for a unicode character on `font`.
+    #[inline]
+    #[must_use]
+    fn get_glyph_index(&self, codepoint: char) -> i32 {
+        unsafe { ffi::GetGlyphIndex(*self.as_ref(), codepoint as i32) }
+    }
+
+    /// Get glyph rectangle in font atlas for a codepoint (unicode character), fallback to '?' if not found
+    #[inline]
+    #[must_use]
+    fn get_glyph_atlas_rec(&self, codepoint: char) -> Rectangle {
+        unsafe { ffi::GetGlyphAtlasRec(*self.as_ref(), codepoint as i32).into() }
+    }
+
+    /// Measures string width in pixels for `font`.
+    #[must_use]
+    fn measure_text(&self, text: &str, font_size: f32, spacing: f32) -> Vector2 {
+        let c_text = CString::new(text).unwrap();
+        unsafe { ffi::MeasureTextEx(*self.as_ref(), c_text.as_ptr(), font_size, spacing).into() }
+    }
+}
+pub trait RaylibFontMut: AsMut<ffi::Font> {
     /// Glyphs info data
     #[inline]
     #[must_use]
@@ -330,67 +374,6 @@ pub trait RaylibFont {
         unsafe {
             std::slice::from_raw_parts_mut(font.glyphs as *mut GlyphInfo, font.glyphCount as usize)
         }
-    }
-
-    /// Check if a font is valid
-    #[inline]
-    #[must_use]
-    fn is_font_valid(&self) -> bool
-    where
-        Self: AsRef<ffi::Font>,
-    {
-        unsafe { ffi::IsFontValid(*self.as_ref()) }
-    }
-
-    /// Export font as code file, returns true on success
-    #[must_use]
-    fn export_font_as_code<A>(&self, filename: A) -> bool
-    where
-        Self: AsRef<ffi::Font>,
-        A: Into<OsString>,
-    {
-        let c_str = CString::new(filename.into().to_string_lossy().as_bytes()).unwrap();
-        unsafe { ffi::ExportFontAsCode(*self.as_ref(), c_str.as_ptr()) }
-    }
-
-    /// Get glyph font info data for a codepoint (unicode character), fallback to '?' if not found
-    #[inline]
-    #[must_use]
-    fn get_glyph_info(&self, codepoint: char) -> GlyphInfo
-    where
-        Self: AsRef<ffi::Font>,
-    {
-        unsafe { GlyphInfo(ffi::GetGlyphInfo(*self.as_ref(), codepoint as i32)) }
-    }
-
-    /// Gets index position for a unicode character on `font`.
-    #[inline]
-    #[must_use]
-    fn get_glyph_index(&self, codepoint: char) -> i32
-    where
-        Self: AsRef<ffi::Font>,
-    {
-        unsafe { ffi::GetGlyphIndex(*self.as_ref(), codepoint as i32) }
-    }
-
-    /// Get glyph rectangle in font atlas for a codepoint (unicode character), fallback to '?' if not found
-    #[inline]
-    #[must_use]
-    fn get_glyph_atlas_rec(&self, codepoint: char) -> Rectangle
-    where
-        Self: AsRef<ffi::Font>,
-    {
-        unsafe { ffi::GetGlyphAtlasRec(*self.as_ref(), codepoint as i32).into() }
-    }
-
-    /// Measures string width in pixels for `font`.
-    #[must_use]
-    fn measure_text(&self, text: &str, font_size: f32, spacing: f32) -> Vector2
-    where
-        Self: AsRef<ffi::Font>,
-    {
-        let c_text = CString::new(text).unwrap();
-        unsafe { ffi::MeasureTextEx(*self.as_ref(), c_text.as_ptr(), font_size, spacing).into() }
     }
 }
 

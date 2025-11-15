@@ -267,37 +267,27 @@ impl Shader {
     }
 }
 
+/// Marker trait for types that implement [`RaylibShaderRef`] and [`RaylibShaderMut`].
+/// Requires and default-implements both.
+pub trait RaylibShader: RaylibShaderRef + RaylibShaderMut {}
+impl<T: RaylibShader> RaylibShaderRef for T {}
+impl<T: RaylibShader> RaylibShaderMut for T {}
+
 impl RaylibShader for WeakShader {}
 impl RaylibShader for Shader {}
 
-pub trait RaylibShader {
+pub trait RaylibShaderRef: AsRef<ffi::Shader> {
     /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]
     #[must_use]
-    fn locs(&self) -> &[i32]
-    where
-        Self: AsRef<ffi::Shader>,
-    {
+    fn locs(&self) -> &[i32] {
         unsafe { std::slice::from_raw_parts(self.as_ref().locs, 32) }
-    }
-
-    /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
-    #[inline]
-    #[must_use]
-    fn locs_mut(&mut self) -> &mut [i32]
-    where
-        Self: AsMut<ffi::Shader>,
-    {
-        unsafe { std::slice::from_raw_parts_mut(self.as_mut().locs, 32) }
     }
 
     /// Gets shader uniform location by name.
     #[inline]
     #[must_use]
-    fn get_shader_location(&self, uniform_name: &str) -> i32
-    where
-        Self: AsRef<ffi::Shader>,
-    {
+    fn get_shader_location(&self, uniform_name: &str) -> i32 {
         let c_uniform_name = CString::new(uniform_name).unwrap();
         unsafe { ffi::GetShaderLocation(*self.as_ref(), c_uniform_name.as_ptr()) }
     }
@@ -305,20 +295,22 @@ pub trait RaylibShader {
     /// Gets shader attribute location by name.
     #[inline]
     #[must_use]
-    fn get_shader_location_attribute(&self, attribute_name: &str) -> i32
-    where
-        Self: AsRef<ffi::Shader>,
-    {
+    fn get_shader_location_attribute(&self, attribute_name: &str) -> i32 {
         let c_attribute_name = CString::new(attribute_name).unwrap();
         unsafe { ffi::GetShaderLocationAttrib(*self.as_ref(), c_attribute_name.as_ptr()) }
+    }
+}
+pub trait RaylibShaderMut: AsMut<ffi::Shader> {
+    /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
+    #[inline]
+    #[must_use]
+    fn locs_mut(&mut self) -> &mut [i32] {
+        unsafe { std::slice::from_raw_parts_mut(self.as_mut().locs, 32) }
     }
 
     /// Sets shader uniform value
     #[inline]
-    fn set_shader_value<S: ShaderV>(&mut self, uniform_loc: i32, value: S)
-    where
-        Self: AsMut<ffi::Shader>,
-    {
+    fn set_shader_value<S: ShaderV>(&mut self, uniform_loc: i32, value: S) {
         unsafe {
             ffi::SetShaderValue(
                 *self.as_mut(),
@@ -331,10 +323,7 @@ pub trait RaylibShader {
 
     /// Set shader uniform value vector
     #[inline]
-    fn set_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S])
-    where
-        Self: AsMut<ffi::Shader>,
-    {
+    fn set_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S]) {
         unsafe {
             ffi::SetShaderValueV(
                 *self.as_mut(),
@@ -348,10 +337,7 @@ pub trait RaylibShader {
 
     /// Sets shader uniform value (matrix 4x4).
     #[inline]
-    fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<MintMatrix>)
-    where
-        Self: AsMut<ffi::Shader>,
-    {
+    fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<MintMatrix>) {
         unsafe {
             ffi::SetShaderValueMatrix(*self.as_mut(), uniform_loc, mat.into());
         }
@@ -359,10 +345,7 @@ pub trait RaylibShader {
 
     /// Sets shader uniform value (matrix 4x4).
     #[inline]
-    fn set_shader_value_texture(&mut self, uniform_loc: i32, texture: impl AsRef<ffi::Texture2D>)
-    where
-        Self: AsMut<ffi::Shader>,
-    {
+    fn set_shader_value_texture(&mut self, uniform_loc: i32, texture: impl AsRef<ffi::Texture2D>) {
         unsafe {
             ffi::SetShaderValueTexture(*self.as_mut(), uniform_loc, *texture.as_ref());
         }

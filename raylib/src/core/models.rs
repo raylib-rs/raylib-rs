@@ -183,6 +183,12 @@ impl RaylibHandle {
     }
 }
 
+/// Marker trait for types that implement [`RaylibModelRef`] and [`RaylibModelMut`].
+/// Requires and default-implements both.
+pub trait RaylibModel: RaylibModelRef + RaylibModelMut {}
+impl<T: RaylibModel> RaylibModelRef for T {}
+impl<T: RaylibModel> RaylibModelMut for T {}
+
 impl RaylibModel for WeakModel {}
 impl RaylibModel for Model {}
 
@@ -194,56 +200,26 @@ impl Model {
     }
 }
 
-pub trait RaylibModel {
+pub trait RaylibModelRef: AsRef<ffi::Model> {
     #[inline]
     #[must_use]
     /// Local transform matrix
-    fn transform(&self) -> &Matrix
-    where
-        Self: AsRef<ffi::Model>,
-    {
+    fn transform(&self) -> &Matrix {
         unsafe { std::mem::transmute(&self.as_ref().transform) }
     }
-
-    #[inline]
-    fn set_transform(&mut self, mat: &Matrix)
-    where
-        Self: AsMut<ffi::Model>,
-    {
-        self.as_mut().transform = (*mat).into();
-    }
-
     /// Meshes array
     #[inline]
     #[must_use]
-    fn meshes(&self) -> &[WeakMesh]
-    where
-        Self: AsRef<ffi::Model>,
-    {
+    fn meshes(&self) -> &[WeakMesh] {
         let model = self.as_ref();
         unsafe {
             std::slice::from_raw_parts(model.meshes as *const WeakMesh, model.meshCount as usize)
         }
     }
-    // Meshes array
-    #[inline]
-    #[must_use]
-    fn meshes_mut(&mut self) -> &mut [WeakMesh]
-    where
-        Self: AsMut<ffi::Model>,
-    {
-        let model = self.as_mut();
-        unsafe {
-            std::slice::from_raw_parts_mut(model.meshes as *mut WeakMesh, model.meshCount as usize)
-        }
-    }
     /// Materials array
     #[inline]
     #[must_use]
-    fn materials(&self) -> &[WeakMaterial]
-    where
-        Self: AsRef<ffi::Model>,
-    {
+    fn materials(&self) -> &[WeakMaterial] {
         let model = self.as_ref();
         unsafe {
             std::slice::from_raw_parts(
@@ -252,13 +228,60 @@ pub trait RaylibModel {
             )
         }
     }
+    #[inline]
+    #[must_use]
+    /// Bones information (skeleton)
+    fn bones(&self) -> Option<&[BoneInfo]> {
+        let model = self.as_ref();
+        (!model.bones.is_null()).then(|| unsafe {
+            std::slice::from_raw_parts(model.bones as *const BoneInfo, model.boneCount as usize)
+        })
+    }
+    #[inline]
+    #[must_use]
+    /// Bones base transformation (pose)
+    fn bind_pose(&self) -> Option<&Transform> {
+        let model = self.as_ref();
+        (!model.bindPose.is_null()).then(|| unsafe { &*model.bindPose.cast() })
+    }
+    #[inline]
+    #[must_use]
+    /// Check model animation skeleton match
+    fn is_model_animation_valid(&self, anim: &ModelAnimation) -> bool {
+        unsafe { ffi::IsModelAnimationValid(*self.as_ref(), anim.0) }
+    }
+    /// Check if a model is ready
+    #[inline]
+    #[must_use]
+    fn is_model_valid(&self) -> bool {
+        unsafe { ffi::IsModelValid(*self.as_ref()) }
+    }
+    /// Compute model bounding box limits (considers all meshes)
+    #[inline]
+    #[must_use]
+    fn get_model_bounding_box(&self) -> BoundingBox {
+        unsafe { BoundingBox::from(ffi::GetModelBoundingBox(*self.as_ref())) }
+    }
+}
+pub trait RaylibModelMut: AsMut<ffi::Model> {
+    #[inline]
+    fn set_transform(&mut self, mat: &Matrix) {
+        self.as_mut().transform = (*mat).into();
+    }
+
+    // Meshes array
+    #[inline]
+    #[must_use]
+    fn meshes_mut(&mut self) -> &mut [WeakMesh] {
+        let model = self.as_mut();
+        unsafe {
+            std::slice::from_raw_parts_mut(model.meshes as *mut WeakMesh, model.meshCount as usize)
+        }
+    }
     /// Materials array
     #[inline]
     #[must_use]
-    fn materials_mut(&mut self) -> &mut [WeakMaterial]
-    where
-        Self: AsMut<ffi::Model>,
-    {
+    fn materials_mut(&mut self) -> &mut [WeakMaterial] {
         let model = self.as_mut();
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -270,22 +293,7 @@ pub trait RaylibModel {
     #[inline]
     #[must_use]
     /// Bones information (skeleton)
-    fn bones(&self) -> Option<&[BoneInfo]>
-    where
-        Self: AsRef<ffi::Model>,
-    {
-        let model = self.as_ref();
-        (!model.bones.is_null()).then(|| unsafe {
-            std::slice::from_raw_parts(model.bones as *const BoneInfo, model.boneCount as usize)
-        })
-    }
-    #[inline]
-    #[must_use]
-    /// Bones information (skeleton)
-    fn bones_mut(&mut self) -> Option<&mut [BoneInfo]>
-    where
-        Self: AsMut<ffi::Model>,
-    {
+    fn bones_mut(&mut self) -> Option<&mut [BoneInfo]> {
         let model = self.as_mut();
         (!model.bones.is_null()).then(|| unsafe {
             std::slice::from_raw_parts_mut(model.bones as *mut BoneInfo, model.boneCount as usize)
@@ -294,51 +302,9 @@ pub trait RaylibModel {
     #[inline]
     #[must_use]
     /// Bones base transformation (pose)
-    fn bind_pose(&self) -> Option<&Transform>
-    where
-        Self: AsRef<ffi::Model>,
-    {
-        let model = self.as_ref();
-        (!model.bindPose.is_null()).then(|| unsafe { &*model.bindPose.cast() })
-    }
-    #[inline]
-    #[must_use]
-    /// Bones base transformation (pose)
-    fn bind_pose_mut(&mut self) -> Option<&mut Transform>
-    where
-        Self: AsMut<ffi::Model>,
-    {
+    fn bind_pose_mut(&mut self) -> Option<&mut Transform> {
         let model = self.as_mut();
         (!model.bindPose.is_null()).then(|| unsafe { &mut *model.bindPose.cast() })
-    }
-    #[inline]
-    #[must_use]
-    /// Check model animation skeleton match
-    fn is_model_animation_valid(&self, anim: &ModelAnimation) -> bool
-    where
-        Self: AsRef<ffi::Model>,
-    {
-        unsafe { ffi::IsModelAnimationValid(*self.as_ref(), anim.0) }
-    }
-
-    /// Check if a model is ready
-    #[inline]
-    #[must_use]
-    fn is_model_valid(&self) -> bool
-    where
-        Self: AsRef<ffi::Model>,
-    {
-        unsafe { ffi::IsModelValid(*self.as_ref()) }
-    }
-
-    /// Compute model bounding box limits (considers all meshes)
-    #[inline]
-    #[must_use]
-    fn get_model_bounding_box(&self) -> BoundingBox
-    where
-        Self: AsRef<ffi::Model>,
-    {
-        unsafe { BoundingBox::from(ffi::GetModelBoundingBox(*self.as_ref())) }
     }
     #[inline]
     /// Set material for a mesh
@@ -346,10 +312,7 @@ pub trait RaylibModel {
         &mut self,
         mesh_id: i32,
         material_id: i32,
-    ) -> Result<(), SetMaterialError>
-    where
-        Self: AsMut<ffi::Model>,
-    {
+    ) -> Result<(), SetMaterialError> {
         let model = self.as_mut();
         // should this be an assertion?
         if mesh_id >= model.meshCount {
@@ -363,6 +326,12 @@ pub trait RaylibModel {
     }
 }
 
+/// Marker trait for types that implement [`RaylibMeshRef`] and [`RaylibMeshMut`].
+/// Requires and default-implements both.
+pub trait RaylibMesh: RaylibMeshRef + RaylibMeshMut {}
+impl<T: RaylibMesh> RaylibMeshRef for T {}
+impl<T: RaylibMesh> RaylibMeshMut for T {}
+
 impl RaylibMesh for WeakMesh {}
 impl RaylibMesh for Mesh {}
 
@@ -371,172 +340,6 @@ impl Mesh {
         let m = WeakMesh(self.0);
         std::mem::forget(self);
         m
-    }
-}
-pub trait RaylibMesh {
-    /// Upload mesh vertex data in GPU and provide VAO/VBO ids
-    #[inline]
-    unsafe fn upload(&mut self, dynamic: bool)
-    where
-        Self: AsMut<ffi::Mesh>,
-    {
-        unsafe { ffi::UploadMesh(self.as_mut(), dynamic) };
-    }
-    /// Update mesh vertex data in GPU for a specific buffer index
-    #[inline]
-    unsafe fn update_buffer<A>(&mut self, index: i32, data: &[u8], offset: i32)
-    where
-        Self: AsRef<ffi::Mesh>,
-    {
-        unsafe {
-            ffi::UpdateMeshBuffer(
-                *self.as_ref(),
-                index,
-                data.as_ptr() as *const c_void,
-                data.len() as i32,
-                offset,
-            )
-        };
-    }
-    /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
-    #[inline]
-    #[must_use]
-    fn vertices(&self) -> &[Vector3]
-    where
-        Self: AsRef<ffi::Mesh>,
-    {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().vertices as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
-    }
-    /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
-    #[inline]
-    #[must_use]
-    fn vertices_mut(&mut self) -> &mut [Vector3]
-    where
-        Self: AsMut<ffi::Mesh>,
-    {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().vertices as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
-    }
-    /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
-    #[inline]
-    #[must_use]
-    fn normals(&self) -> &[Vector3]
-    where
-        Self: AsRef<ffi::Mesh>,
-    {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().normals as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
-    }
-    /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
-    #[inline]
-    #[must_use]
-    fn normals_mut(&mut self) -> &mut [Vector3]
-    where
-        Self: AsMut<ffi::Mesh>,
-    {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().normals as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
-    }
-    /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
-    #[inline]
-    #[must_use]
-    fn tangents(&self) -> &[Vector3]
-    where
-        Self: AsRef<ffi::Mesh>,
-    {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().tangents as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
-    }
-    /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
-    #[inline]
-    #[must_use]
-    fn tangents_mut(&mut self) -> &mut [Vector3]
-    where
-        Self: AsMut<ffi::Mesh>,
-    {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().tangents as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
-    }
-    /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
-    #[inline]
-    #[must_use]
-    fn colors(&self) -> &[Color]
-    where
-        Self: AsRef<ffi::Mesh>,
-    {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().colors as *const Color,
-                self.as_ref().vertexCount as usize,
-            )
-        }
-    }
-    /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
-    #[inline]
-    #[must_use]
-    fn colors_mut(&mut self) -> &mut [Color]
-    where
-        Self: AsMut<ffi::Mesh>,
-    {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().colors as *mut Color,
-                self.as_mut().vertexCount as usize,
-            )
-        }
-    }
-    /// Vertex indices (in case vertex data comes indexed)
-    #[inline]
-    #[must_use]
-    fn indices(&self) -> &[u16]
-    where
-        Self: AsRef<ffi::Mesh>,
-    {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().indices as *const u16,
-                self.as_ref().vertexCount as usize,
-            )
-        }
-    }
-    /// Vertex indices (in case vertex data comes indexed)
-    #[inline]
-    #[must_use]
-    fn indices_mut(&mut self) -> &mut [u16]
-    where
-        Self: AsMut<ffi::Mesh>,
-    {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().indices as *mut u16,
-                self.as_mut().vertexCount as usize,
-            )
-        }
     }
 
     /// Generate polygonal mesh
@@ -619,35 +422,75 @@ pub trait RaylibMesh {
     fn gen_mesh_cone(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
         unsafe { Mesh(ffi::GenMeshCone(radius, height, slices)) }
     }
+}
+pub trait RaylibMeshRef: AsRef<ffi::Mesh> {
+    /// Update mesh vertex data in GPU for a specific buffer index
+    #[inline]
+    unsafe fn update_buffer<A>(&mut self, index: i32, data: &[u8], offset: i32) {
+        unsafe {
+            ffi::UpdateMeshBuffer(
+                *self.as_ref(),
+                index,
+                data.as_ptr() as *const c_void,
+                data.len() as i32,
+                offset,
+            )
+        };
+    }
+    /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
+    #[inline]
+    #[must_use]
+    fn vertices(&self) -> &[Vector3] {
+        let mesh = self.as_ref();
+        unsafe {
+            std::slice::from_raw_parts(mesh.vertices as *const Vector3, mesh.vertexCount as usize)
+        }
+    }
+    /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
+    #[inline]
+    #[must_use]
+    fn normals(&self) -> &[Vector3] {
+        let mesh = self.as_ref();
+        unsafe {
+            std::slice::from_raw_parts(mesh.normals as *const Vector3, mesh.vertexCount as usize)
+        }
+    }
+    /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
+    #[inline]
+    #[must_use]
+    fn tangents(&self) -> &[Vector3] {
+        let mesh = self.as_ref();
+        unsafe {
+            std::slice::from_raw_parts(mesh.tangents as *const Vector3, mesh.vertexCount as usize)
+        }
+    }
+    /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
+    #[inline]
+    #[must_use]
+    fn colors(&self) -> &[Color] {
+        let mesh = self.as_ref();
+        unsafe {
+            std::slice::from_raw_parts(mesh.colors as *const Color, mesh.vertexCount as usize)
+        }
+    }
+    /// Vertex indices (in case vertex data comes indexed)
+    #[inline]
+    #[must_use]
+    fn indices(&self) -> &[u16] {
+        let mesh = self.as_ref();
+        unsafe { std::slice::from_raw_parts(mesh.indices as *const u16, mesh.vertexCount as usize) }
+    }
 
     /// Computes mesh bounding box limits.
     #[inline]
     #[must_use]
-    fn get_mesh_bounding_box(&self) -> BoundingBox
-    where
-        Self: AsRef<ffi::Mesh>,
-    {
+    fn get_mesh_bounding_box(&self) -> BoundingBox {
         unsafe { ffi::GetMeshBoundingBox(*self.as_ref()).into() }
-    }
-
-    /// Computes mesh tangents.
-    // NOTE: New VBO for tangents is generated at default location and also binded to mesh VAO
-    #[inline]
-    fn gen_mesh_tangents(&mut self, _: &RaylibThread)
-    where
-        Self: AsMut<ffi::Mesh>,
-    {
-        unsafe {
-            ffi::GenMeshTangents(self.as_mut());
-        }
     }
 
     /// Exports mesh as an OBJ file.
     #[inline]
-    fn export(&self, filename: &str)
-    where
-        Self: AsRef<ffi::Mesh>,
-    {
+    fn export(&self, filename: &str) {
         let c_filename = CString::new(filename).unwrap();
         unsafe {
             ffi::ExportMesh(*self.as_ref(), c_filename.as_ptr());
@@ -656,13 +499,71 @@ pub trait RaylibMesh {
 
     /// Export mesh as code file (.h) defining multiple arrays of vertex attributes
     #[inline]
-    fn export_as_code(&self, filename: &str)
-    where
-        Self: AsRef<ffi::Mesh>,
-    {
+    fn export_as_code(&self, filename: &str) {
         let c_filename = CString::new(filename).unwrap();
         unsafe {
             ffi::ExportMeshAsCode(*self.as_ref(), c_filename.as_ptr());
+        }
+    }
+}
+pub trait RaylibMeshMut: AsMut<ffi::Mesh> {
+    /// Upload mesh vertex data in GPU and provide VAO/VBO ids
+    #[inline]
+    unsafe fn upload(&mut self, dynamic: bool) {
+        unsafe { ffi::UploadMesh(self.as_mut(), dynamic) };
+    }
+    /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
+    #[inline]
+    #[must_use]
+    fn vertices_mut(&mut self) -> &mut [Vector3] {
+        let mesh = self.as_mut();
+        unsafe {
+            std::slice::from_raw_parts_mut(mesh.vertices as *mut Vector3, mesh.vertexCount as usize)
+        }
+    }
+    /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
+    #[inline]
+    #[must_use]
+    fn normals_mut(&mut self) -> &mut [Vector3] {
+        let mesh = self.as_mut();
+        unsafe {
+            std::slice::from_raw_parts_mut(mesh.normals as *mut Vector3, mesh.vertexCount as usize)
+        }
+    }
+    /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
+    #[inline]
+    #[must_use]
+    fn tangents_mut(&mut self) -> &mut [Vector3] {
+        let mesh = self.as_mut();
+        unsafe {
+            std::slice::from_raw_parts_mut(mesh.tangents as *mut Vector3, mesh.vertexCount as usize)
+        }
+    }
+    /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
+    #[inline]
+    #[must_use]
+    fn colors_mut(&mut self) -> &mut [Color] {
+        let mesh = self.as_mut();
+        unsafe {
+            std::slice::from_raw_parts_mut(mesh.colors as *mut Color, mesh.vertexCount as usize)
+        }
+    }
+    /// Vertex indices (in case vertex data comes indexed)
+    #[inline]
+    #[must_use]
+    fn indices_mut(&mut self) -> &mut [u16] {
+        let mesh = self.as_mut();
+        unsafe {
+            std::slice::from_raw_parts_mut(mesh.indices as *mut u16, mesh.vertexCount as usize)
+        }
+    }
+
+    /// Computes mesh tangents.
+    // NOTE: New VBO for tangents is generated at default location and also binded to mesh VAO
+    #[inline]
+    fn gen_mesh_tangents(&mut self, _: &RaylibThread) {
+        unsafe {
+            ffi::GenMeshTangents(self.as_mut());
         }
     }
 }
@@ -700,35 +601,26 @@ impl Material {
     }
 }
 
+/// Marker trait for types that implement [`RaylibMaterialRef`] and [`RaylibMaterialMut`].
+/// Requires and default-implements both.
+pub trait RaylibMaterial: RaylibMaterialRef + RaylibMaterialMut {}
+impl<T: RaylibMaterial> RaylibMaterialRef for T {}
+impl<T: RaylibMaterial> RaylibMaterialMut for T {}
+
 impl RaylibMaterial for WeakMaterial {}
 impl RaylibMaterial for Material {}
 
-pub trait RaylibMaterial {
+pub trait RaylibMaterialRef: AsRef<ffi::Material> {
     /// Material shader
     #[must_use]
     #[inline]
-    fn shader(&self) -> &crate::shaders::WeakShader
-    where
-        Self: AsRef<ffi::Material>,
-    {
+    fn shader(&self) -> &crate::shaders::WeakShader {
         unsafe { std::mem::transmute(&self.as_ref().shader) }
     }
     #[must_use]
     #[inline]
-    /// Material shader
-    fn shader_mut(&mut self) -> &mut crate::shaders::WeakShader
-    where
-        Self: AsMut<ffi::Material>,
-    {
-        unsafe { std::mem::transmute(&mut self.as_mut().shader) }
-    }
-    #[must_use]
-    #[inline]
     /// Material maps array (MAX_MATERIAL_MAPS)
-    fn maps(&self) -> &[MaterialMap]
-    where
-        Self: AsRef<ffi::Material>,
-    {
+    fn maps(&self) -> &[MaterialMap] {
         unsafe {
             std::slice::from_raw_parts(
                 self.as_ref().maps as *const MaterialMap,
@@ -736,13 +628,25 @@ pub trait RaylibMaterial {
             )
         }
     }
+
+    /// Check if a material is valid (shader assigned, map textures loaded in GPU)
+    #[inline]
+    #[must_use]
+    fn is_material_valid(&mut self) -> bool {
+        unsafe { ffi::IsMaterialValid(*self.as_ref()) }
+    }
+}
+pub trait RaylibMaterialMut: AsMut<ffi::Material> {
+    #[must_use]
+    #[inline]
+    /// Material shader
+    fn shader_mut(&mut self) -> &mut crate::shaders::WeakShader {
+        unsafe { std::mem::transmute(&mut self.as_mut().shader) }
+    }
     #[must_use]
     #[inline]
     /// Material maps array (MAX_MATERIAL_MAPS)
-    fn maps_mut(&mut self) -> &mut [MaterialMap]
-    where
-        Self: AsMut<ffi::Material>,
-    {
+    fn maps_mut(&mut self) -> &mut [MaterialMap] {
         unsafe {
             std::slice::from_raw_parts_mut(
                 self.as_mut().maps as *mut MaterialMap,
@@ -763,16 +667,6 @@ pub trait RaylibMaterial {
         unsafe {
             ffi::SetMaterialTexture(self.as_mut(), (map_type as u32) as i32, *texture.as_ref())
         }
-    }
-
-    /// Check if a material is valid (shader assigned, map textures loaded in GPU)
-    #[inline]
-    #[must_use]
-    fn is_material_valid(&mut self) -> bool
-    where
-        Self: AsRef<ffi::Material>,
-    {
-        unsafe { ffi::IsMaterialValid(*self.as_ref()) }
     }
 }
 
@@ -932,6 +826,12 @@ impl<'a> ExactSizeIterator for FramePoseIterMut<'a> {
     }
 }
 
+/// Marker trait for types that implement [`RaylibModelAnimationRef`] and [`RaylibModelAnimationMut`].
+/// Requires and default-implements both.
+pub trait RaylibModelAnimation: RaylibModelAnimationRef + RaylibModelAnimationMut {}
+impl<T: RaylibModelAnimation> RaylibModelAnimationRef for T {}
+impl<T: RaylibModelAnimation> RaylibModelAnimationMut for T {}
+
 impl RaylibModelAnimation for ModelAnimation {}
 impl RaylibModelAnimation for WeakModelAnimation {}
 
@@ -945,14 +845,11 @@ impl ModelAnimation {
     }
 }
 
-pub trait RaylibModelAnimation {
+pub trait RaylibModelAnimationRef: AsRef<ffi::ModelAnimation> {
     /// Bones information (skeleton)
     #[inline]
     #[must_use]
-    fn bones(&self) -> &[BoneInfo]
-    where
-        Self: AsRef<ffi::ModelAnimation>,
-    {
+    fn bones(&self) -> &[BoneInfo] {
         unsafe {
             std::slice::from_raw_parts(
                 self.as_ref().bones as *const BoneInfo,
@@ -961,27 +858,9 @@ pub trait RaylibModelAnimation {
         }
     }
 
-    /// Bones information (skeleton)
-    #[inline]
-    #[must_use]
-    fn bones_mut(&mut self) -> &mut [BoneInfo]
-    where
-        Self: AsMut<ffi::ModelAnimation>,
-    {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().bones as *mut BoneInfo,
-                self.as_mut().boneCount as usize,
-            )
-        }
-    }
-
     #[must_use]
     /// Poses array by frame
-    fn frame_poses(&self) -> Vec<&[Transform]>
-    where
-        Self: AsRef<ffi::ModelAnimation>,
-    {
+    fn frame_poses(&self) -> Vec<&[Transform]> {
         let anim = self.as_ref();
         let mut top = Vec::with_capacity(anim.frameCount as usize);
 
@@ -997,10 +876,7 @@ pub trait RaylibModelAnimation {
         top
     }
     #[must_use]
-    fn frame_poses_iter<'a>(&'a self) -> FramePoseIter<'a>
-    where
-        Self: AsRef<ffi::ModelAnimation>,
-    {
+    fn frame_poses_iter<'a>(&'a self) -> FramePoseIter<'a> {
         let anim = self.as_ref();
         unsafe {
             FramePoseIter::new(
@@ -1010,14 +886,24 @@ pub trait RaylibModelAnimation {
             )
         }
     }
+}
+pub trait RaylibModelAnimationMut: AsMut<ffi::ModelAnimation> {
+    /// Bones information (skeleton)
+    #[inline]
+    #[must_use]
+    fn bones_mut(&mut self) -> &mut [BoneInfo] {
+        unsafe {
+            std::slice::from_raw_parts_mut(
+                self.as_mut().bones as *mut BoneInfo,
+                self.as_mut().boneCount as usize,
+            )
+        }
+    }
 
     #[must_use]
     /// Poses array by frame
-    fn frame_poses_mut(&mut self) -> Vec<&mut [Transform]>
-    where
-        Self: AsRef<ffi::ModelAnimation>,
-    {
-        let anim = self.as_ref();
+    fn frame_poses_mut(&mut self) -> Vec<&mut [Transform]> {
+        let anim = self.as_mut();
         let mut top = Vec::with_capacity(anim.frameCount as usize);
 
         for i in 0..anim.frameCount {
@@ -1032,11 +918,8 @@ pub trait RaylibModelAnimation {
         top
     }
     #[must_use]
-    fn frame_poses_iter_mut<'a>(&'a mut self) -> FramePoseIterMut<'a>
-    where
-        Self: AsRef<ffi::ModelAnimation>,
-    {
-        let anim = self.as_ref();
+    fn frame_poses_iter_mut<'a>(&'a mut self) -> FramePoseIterMut<'a> {
+        let anim = self.as_mut();
         unsafe {
             FramePoseIterMut::new(
                 anim.framePoses,
