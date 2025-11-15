@@ -21,31 +21,37 @@ pub const fn rcolor(r: u8, g: u8, b: u8, a: u8) -> Color {
     Color::new(r, g, b, a)
 }
 
-impl Into<Vector4> for Color {
-    fn into(self) -> Vector4 {
+impl From<Color> for Vector4 {
+    fn from(v: Color) -> Self {
         Vector4 {
-            x: self.r as f32 / 255.0,
-            y: self.g as f32 / 255.0,
-            z: self.b as f32 / 255.0,
-            w: self.a as f32 / 255.0,
+            x: v.r as f32 / 255.0,
+            y: v.g as f32 / 255.0,
+            z: v.b as f32 / 255.0,
+            w: v.a as f32 / 255.0,
         }
     }
 }
 
-impl Into<Color> for &Color {
-    fn into(self) -> Color {
+impl From<&Color> for Color {
+    fn from(v: &Color) -> Self {
         Color {
-            r: self.r,
-            g: self.g,
-            b: self.b,
-            a: self.a,
+            r: v.r,
+            g: v.g,
+            b: v.b,
+            a: v.a,
         }
     }
 }
 
 impl From<(u8, u8, u8, u8)> for Color {
-    fn from(col: (u8, u8, u8, u8)) -> Color {
-        Color::new(col.0, col.1, col.2, col.3)
+    fn from((r, g, b, a): (u8, u8, u8, u8)) -> Color {
+        Color::new(r, g, b, a)
+    }
+}
+
+impl From<[u8; 4]> for Color {
+    fn from([r, g, b, a]: [u8; 4]) -> Color {
+        Color::new(r, g, b, a)
     }
 }
 

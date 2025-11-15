@@ -38,21 +38,21 @@ impl From<ffi::NPatchInfo> for NPatchInfo {
     }
 }
 
-impl Into<ffi::NPatchInfo> for NPatchInfo {
-    fn into(self) -> ffi::NPatchInfo {
-        unsafe { std::mem::transmute(self) }
+impl From<NPatchInfo> for ffi::NPatchInfo {
+    fn from(v: NPatchInfo) -> Self {
+        unsafe { std::mem::transmute(v) }
     }
 }
 
-impl Into<ffi::NPatchInfo> for &NPatchInfo {
-    fn into(self) -> ffi::NPatchInfo {
+impl From<&NPatchInfo> for ffi::NPatchInfo {
+    fn from(v: &NPatchInfo) -> Self {
         ffi::NPatchInfo {
-            source: self.source.into(),
-            left: self.left,
-            top: self.top,
-            right: self.right,
-            bottom: self.bottom,
-            layout: (self.layout as u32) as i32,
+            source: v.source.into(),
+            left: v.left,
+            top: v.top,
+            right: v.right,
+            bottom: v.bottom,
+            layout: (v.layout as u32) as i32,
         }
     }
 }
