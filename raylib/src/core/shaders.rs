@@ -107,100 +107,37 @@ pub trait ShaderV {
     unsafe fn value(&self) -> *const c_void;
 }
 
-impl ShaderV for f32 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_FLOAT;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const f32 as *const c_void
-    }
+macro_rules! shader_v {
+    ([] $x:ident) => { $x.as_ptr() };
+
+    (& $x:ident) => { std::ptr::from_ref($x) };
+
+    ($( $T:ty as $convert:tt $([ $x:ident => $explicit:expr ])? => $UNIFORM_TYPE:ident ),* $(,)?) => {$(
+        impl ShaderV for $T {
+            const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::$UNIFORM_TYPE;
+            #[inline]
+            unsafe fn value(&self) -> *const c_void {
+                shader_v!($convert self $($x => $explicit)?).cast()
+            }
+        }
+    )*};
+
+    (# $x:ident $arg:ident => $explicit:expr) => {{ let $arg = $x; $explicit }};
 }
 
-impl ShaderV for Vector2 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC2;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const Vector2 as *const c_void
-    }
-}
-
-impl ShaderV for Vector3 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC3;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const Vector3 as *const c_void
-    }
-}
-
-impl ShaderV for Vector4 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC4;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const Vector4 as *const c_void
-    }
-}
-
-impl ShaderV for i32 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_INT;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const i32 as *const c_void
-    }
-}
-
-impl ShaderV for [i32; 2] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC2;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for [i32; 3] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC3;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for [i32; 4] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC4;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for [f32; 2] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC2;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for [f32; 3] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC3;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for [f32; 4] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC4;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for &[i32] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_SAMPLER2D;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
+shader_v! {
+    f32 as & => SHADER_UNIFORM_FLOAT,
+    Vector2 as & => SHADER_UNIFORM_VEC2,
+    Vector3 as & => SHADER_UNIFORM_VEC3,
+    Vector4 as & => SHADER_UNIFORM_VEC4,
+    i32 as & => SHADER_UNIFORM_INT,
+    [i32; 2] as [] => SHADER_UNIFORM_IVEC2,
+    [i32; 3] as [] => SHADER_UNIFORM_IVEC3,
+    [i32; 4] as [] => SHADER_UNIFORM_IVEC4,
+    [f32; 2] as [] => SHADER_UNIFORM_VEC2,
+    [f32; 3] as [] => SHADER_UNIFORM_VEC3,
+    [f32; 4] as [] => SHADER_UNIFORM_VEC4,
+    &[i32] as [] => SHADER_UNIFORM_SAMPLER2D,
 }
 
 impl Shader {
