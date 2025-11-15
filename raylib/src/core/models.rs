@@ -437,7 +437,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[must_use]
     fn indices(&self) -> &[u16] {
         NonNull::new(self.as_ref().indices.cast()).map_or(&[], |data| unsafe {
-            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_ref()
+            NonNull::slice_from_raw_parts(data, self.as_ref().triangleCount as usize * 3).as_ref()
         })
     }
     /// Vertex indices (in case vertex data comes indexed)
@@ -445,7 +445,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[must_use]
     fn indices_mut(&mut self) -> &mut [u16] {
         NonNull::new(self.as_ref().indices.cast()).map_or(&mut [], |data| unsafe {
-            NonNull::slice_from_raw_parts(data, self.as_ref().vertexCount as usize).as_mut()
+            NonNull::slice_from_raw_parts(data, self.as_ref().triangleCount as usize * 3).as_mut()
         })
     }
 
