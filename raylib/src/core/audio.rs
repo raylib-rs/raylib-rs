@@ -56,10 +56,15 @@ impl Drop for WaveSamples {
 }
 
 /// A marker trait specifying an audio sample (`u8`, `i16`, or `f32`).
-pub trait AudioSample {}
-impl AudioSample for u8 {}
-impl AudioSample for i16 {}
-impl AudioSample for f32 {}
+pub trait AudioSample: private::AudioSample {}
+impl<T: private::AudioSample> AudioSample for T {}
+
+mod private {
+    pub trait AudioSample {}
+    impl AudioSample for u8 {}
+    impl AudioSample for i16 {}
+    impl AudioSample for f32 {}
+}
 
 /// This token is used to indicate audio is initialized. It's also used to create [`Wave`], [`Sound`], [`Music`], [`AudioStream`], and [`SoundAlias`].
 /// All of those have a lifetime that is bound to RaylibAudio. The compiler will disallow you from using them without ensuring that the [`RaylibAudio`] is present while doing so.
