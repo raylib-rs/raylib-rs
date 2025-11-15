@@ -146,25 +146,34 @@ impl RenderTexture2D {
     }
 }
 
-pub trait RaylibRenderTexture2D: AsRef<ffi::RenderTexture2D> + AsMut<ffi::RenderTexture2D> {
+pub trait RaylibRenderTexture2D {
     /// OpenGL framebuffer object id
     #[inline]
     #[must_use]
-    fn id(&self) -> u32 {
+    fn id(&self) -> u32
+    where
+        Self: AsRef<ffi::RenderTexture2D>,
+    {
         self.as_ref().id
     }
 
     /// Color buffer attachment texture
     #[inline]
     #[must_use]
-    fn texture(&self) -> &WeakTexture2D {
+    fn texture(&self) -> &WeakTexture2D
+    where
+        Self: AsRef<ffi::RenderTexture2D>,
+    {
         unsafe { std::mem::transmute(&self.as_ref().texture) }
     }
 
     /// Color buffer attachment texture
     #[inline]
     #[must_use]
-    fn texture_mut(&mut self) -> &mut WeakTexture2D {
+    fn texture_mut(&mut self) -> &mut WeakTexture2D
+    where
+        Self: AsMut<ffi::RenderTexture2D>,
+    {
         unsafe { std::mem::transmute(&mut self.as_mut().texture) }
     }
 }
@@ -1144,43 +1153,59 @@ impl Texture2D {
     }
 }
 
-pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
+pub trait RaylibTexture2D {
     /// Texture base width
     #[inline]
     #[must_use]
-    fn width(&self) -> i32 {
+    fn width(&self) -> i32
+    where
+        Self: AsRef<ffi::Texture2D>,
+    {
         self.as_ref().width
     }
 
     /// Texture base height
     #[inline]
     #[must_use]
-    fn height(&self) -> i32 {
+    fn height(&self) -> i32
+    where
+        Self: AsRef<ffi::Texture2D>,
+    {
         self.as_ref().height
     }
 
     /// Mipmap levels, 1 by default
     #[inline]
     #[must_use]
-    fn mipmaps(&self) -> i32 {
+    fn mipmaps(&self) -> i32
+    where
+        Self: AsRef<ffi::Texture2D>,
+    {
         self.as_ref().width
     }
 
     /// Data format (PixelFormat type)
     #[inline]
     #[must_use]
-    fn format(&self) -> i32 {
+    fn format(&self) -> i32
+    where
+        Self: AsRef<ffi::Texture2D>,
+    {
         self.as_ref().format
     }
 
     /// Updates GPU texture with new data.
     #[inline]
-    fn update_texture(&mut self, pixels: &[u8]) -> Result<(), UpdateTextureError> {
+    fn update_texture(&mut self, pixels: &[u8]) -> Result<(), UpdateTextureError>
+    where
+        Self: AsMut<ffi::Texture2D>,
+    {
+        let tex = self.as_mut();
         let expected_len = unsafe {
             get_pixel_data_size(
-                self.as_ref().width,
-                self.as_ref().height,
-                std::mem::transmute::<i32, ffi::PixelFormat>(self.as_ref().format),
+                tex.width,
+                tex.height,
+                std::mem::transmute::<i32, ffi::PixelFormat>(tex.format),
             ) as usize
         };
         if pixels.len() != expected_len {
@@ -1190,10 +1215,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
             });
         }
         unsafe {
-            ffi::UpdateTexture(
-                *self.as_mut(),
-                pixels.as_ptr() as *const std::os::raw::c_void,
-            );
+            ffi::UpdateTexture(*tex, pixels.as_ptr() as *const std::os::raw::c_void);
         }
 
         Ok(())
@@ -1204,13 +1226,17 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
         &mut self,
         rec: impl Into<ffi::Rectangle>,
         pixels: &[u8],
-    ) -> Result<(), UpdateTextureError> {
+    ) -> Result<(), UpdateTextureError>
+    where
+        Self: AsRef<ffi::Texture2D>,
+    {
         let rec = rec.into();
+        let tex = self.as_ref();
 
         if (rec.x < 0.0)
             || (rec.y < 0.0)
-            || ((rec.x as i32 + rec.width as i32) > (self.as_ref().width))
-            || ((rec.y as i32 + rec.height as i32) > (self.as_ref().height))
+            || ((rec.x as i32 + rec.width as i32) > (tex.width))
+            || ((rec.y as i32 + rec.height as i32) > (tex.height))
         {
             return Err(UpdateTextureError::OutOfBounds);
         }
@@ -1222,7 +1248,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
             get_pixel_data_size(
                 rec.width as i32,
                 rec.height as i32,
-                std::mem::transmute::<i32, ffi::PixelFormat>(self.as_ref().format),
+                std::mem::transmute::<i32, ffi::PixelFormat>(tex.format),
             ) as usize
         };
         if pixels.len() != expected_len {
@@ -1231,13 +1257,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
                 actual: pixels.len(),
             });
         }
-        unsafe {
-            ffi::UpdateTextureRec(
-                *self.as_ref(),
-                rec,
-                pixels.as_ptr() as *const std::os::raw::c_void,
-            )
-        }
+        unsafe { ffi::UpdateTextureRec(*tex, rec, pixels.as_ptr() as *const std::os::raw::c_void) }
 
         Ok(())
     }
@@ -1246,7 +1266,10 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     /// Fairly sure this would never fail. If it does wrap in result.
     #[inline]
     #[must_use]
-    fn load_image(&self) -> Result<Image, InvalidImageError> {
+    fn load_image(&self) -> Result<Image, InvalidImageError>
+    where
+        Self: AsRef<ffi::Texture2D>,
+    {
         let i = unsafe { ffi::LoadImageFromTexture(*self.as_ref()) };
         if i.data.is_null() {
             return Err(InvalidImageError::NullDataFromTexture);
@@ -1256,7 +1279,10 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
 
     /// Generates GPU mipmaps for a `texture`.
     #[inline]
-    fn gen_texture_mipmaps(&mut self) {
+    fn gen_texture_mipmaps(&mut self)
+    where
+        Self: AsMut<ffi::Texture2D>,
+    {
         unsafe {
             ffi::GenTextureMipmaps(self.as_mut());
         }
@@ -1264,7 +1290,10 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
 
     /// Sets global `texture` scaling filter mode.
     #[inline]
-    fn set_texture_filter(&self, _: &RaylibThread, filter_mode: crate::consts::TextureFilter) {
+    fn set_texture_filter(&self, _: &RaylibThread, filter_mode: crate::consts::TextureFilter)
+    where
+        Self: AsRef<ffi::Texture2D>,
+    {
         unsafe {
             ffi::SetTextureFilter(*self.as_ref(), filter_mode as i32);
         }
@@ -1272,7 +1301,10 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
 
     /// Sets global texture wrapping mode.
     #[inline]
-    fn set_texture_wrap(&self, _: &RaylibThread, wrap_mode: crate::consts::TextureWrap) {
+    fn set_texture_wrap(&self, _: &RaylibThread, wrap_mode: crate::consts::TextureWrap)
+    where
+        Self: AsRef<ffi::Texture2D>,
+    {
         unsafe {
             ffi::SetTextureWrap(*self.as_ref(), wrap_mode as i32);
         }
@@ -1280,7 +1312,10 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
 
     /// Check if a texture is valid (loaded in GPU)
     #[inline]
-    fn is_texture_valid(&self) -> bool {
+    fn is_texture_valid(&self) -> bool
+    where
+        Self: AsRef<ffi::Texture2D>,
+    {
         unsafe { ffi::IsTextureValid(*self.as_ref()) }
     }
 }

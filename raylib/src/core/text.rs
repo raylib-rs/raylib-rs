@@ -288,46 +288,57 @@ impl RaylibHandle {
 impl RaylibFont for WeakFont {}
 impl RaylibFont for Font {}
 
-pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
+pub trait RaylibFont {
     /// Base size (default chars height)
     #[inline]
     #[must_use]
-    fn base_size(&self) -> i32 {
+    fn base_size(&self) -> i32
+    where
+        Self: AsRef<ffi::Font>,
+    {
         self.as_ref().baseSize
     }
     /// Texture atlas containing the glyphs
     #[inline]
     #[must_use]
-    fn texture(&self) -> &Texture2D {
+    fn texture(&self) -> &Texture2D
+    where
+        Self: AsRef<ffi::Font>,
+    {
         unsafe { std::mem::transmute(&self.as_ref().texture) }
     }
     /// Glyphs info data
     #[inline]
     #[must_use]
-    fn chars(&self) -> &[GlyphInfo] {
+    fn chars(&self) -> &[GlyphInfo]
+    where
+        Self: AsRef<ffi::Font>,
+    {
+        let font = self.as_ref();
         unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().glyphs as *const GlyphInfo,
-                self.as_ref().glyphCount as usize,
-            )
+            std::slice::from_raw_parts(font.glyphs as *const GlyphInfo, font.glyphCount as usize)
         }
     }
     /// Glyphs info data
     #[inline]
     #[must_use]
-    fn chars_mut(&mut self) -> &mut [GlyphInfo] {
+    fn chars_mut(&mut self) -> &mut [GlyphInfo]
+    where
+        Self: AsMut<ffi::Font>,
+    {
+        let font = self.as_mut();
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().glyphs as *mut GlyphInfo,
-                self.as_ref().glyphCount as usize,
-            )
+            std::slice::from_raw_parts_mut(font.glyphs as *mut GlyphInfo, font.glyphCount as usize)
         }
     }
 
     /// Check if a font is valid
     #[inline]
     #[must_use]
-    fn is_font_valid(&self) -> bool {
+    fn is_font_valid(&self) -> bool
+    where
+        Self: AsRef<ffi::Font>,
+    {
         unsafe { ffi::IsFontValid(*self.as_ref()) }
     }
 
@@ -335,6 +346,7 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     #[must_use]
     fn export_font_as_code<A>(&self, filename: A) -> bool
     where
+        Self: AsRef<ffi::Font>,
         A: Into<OsString>,
     {
         let c_str = CString::new(filename.into().to_string_lossy().as_bytes()).unwrap();
@@ -344,27 +356,39 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     /// Get glyph font info data for a codepoint (unicode character), fallback to '?' if not found
     #[inline]
     #[must_use]
-    fn get_glyph_info(&self, codepoint: char) -> GlyphInfo {
+    fn get_glyph_info(&self, codepoint: char) -> GlyphInfo
+    where
+        Self: AsRef<ffi::Font>,
+    {
         unsafe { GlyphInfo(ffi::GetGlyphInfo(*self.as_ref(), codepoint as i32)) }
     }
 
     /// Gets index position for a unicode character on `font`.
     #[inline]
     #[must_use]
-    fn get_glyph_index(&self, codepoint: char) -> i32 {
+    fn get_glyph_index(&self, codepoint: char) -> i32
+    where
+        Self: AsRef<ffi::Font>,
+    {
         unsafe { ffi::GetGlyphIndex(*self.as_ref(), codepoint as i32) }
     }
 
     /// Get glyph rectangle in font atlas for a codepoint (unicode character), fallback to '?' if not found
     #[inline]
     #[must_use]
-    fn get_glyph_atlas_rec(&self, codepoint: char) -> Rectangle {
+    fn get_glyph_atlas_rec(&self, codepoint: char) -> Rectangle
+    where
+        Self: AsRef<ffi::Font>,
+    {
         unsafe { ffi::GetGlyphAtlasRec(*self.as_ref(), codepoint as i32).into() }
     }
 
     /// Measures string width in pixels for `font`.
     #[must_use]
-    fn measure_text(&self, text: &str, font_size: f32, spacing: f32) -> Vector2 {
+    fn measure_text(&self, text: &str, font_size: f32, spacing: f32) -> Vector2
+    where
+        Self: AsRef<ffi::Font>,
+    {
         let c_text = CString::new(text).unwrap();
         unsafe { ffi::MeasureTextEx(*self.as_ref(), c_text.as_ptr(), font_size, spacing).into() }
     }
