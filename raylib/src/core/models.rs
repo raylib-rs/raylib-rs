@@ -1077,7 +1077,7 @@ impl Mesh {
     /// Create a new [`MeshBuilder`] to begin generating a custom [`Mesh`].
     ///
     /// # Example
-    /// ```
+    /// ```no_run
     /// # use raylib::prelude::*;
     /// # let (mut rl, thread) = init().build();
     /// let mesh = Mesh::gen_mesh(&[
