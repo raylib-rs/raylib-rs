@@ -170,12 +170,12 @@ impl RaylibHandle {
     pub fn update_model_animation(
         &mut self,
         _: &RaylibThread,
-        mut model: impl AsMut<ffi::Model>,
-        anim: impl AsRef<ffi::ModelAnimation>,
+        mut model: impl AsMut<Model>,
+        anim: impl AsRef<ModelAnimation>,
         frame: i32,
     ) {
         unsafe {
-            ffi::UpdateModelAnimation(*model.as_mut(), *anim.as_ref(), frame);
+            ffi::UpdateModelAnimation(model.as_mut().clone_raw(), anim.as_ref().clone_raw(), frame);
         }
     }
 
@@ -184,12 +184,16 @@ impl RaylibHandle {
     pub fn update_model_animation_bones(
         &mut self,
         _: &RaylibThread,
-        mut model: impl AsMut<ffi::Model>,
-        anim: impl AsRef<ffi::ModelAnimation>,
+        mut model: impl AsMut<Model>,
+        anim: impl AsRef<ModelAnimation>,
         frame: i32,
     ) {
         unsafe {
-            ffi::UpdateModelAnimationBones(*model.as_mut(), *anim.as_ref(), frame);
+            ffi::UpdateModelAnimationBones(
+                model.as_mut().clone_raw(),
+                anim.as_ref().clone_raw(),
+                frame,
+            );
         }
     }
 }

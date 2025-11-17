@@ -8,7 +8,7 @@ use crate::core::{RaylibHandle, RaylibThread};
 use crate::math::Matrix;
 use crate::math::Vector2;
 use crate::math::Vector3;
-use crate::models::WeakMaterial;
+use crate::models::{Material, Mesh, Model};
 use crate::{MintMatrix, MintVec2};
 use crate::{MintVec3, ffi};
 use std::ffi::CString;
@@ -1729,25 +1729,31 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_mesh(
         &mut self,
-        mesh: impl AsRef<ffi::Mesh>,
-        material: WeakMaterial,
+        mesh: impl AsRef<Mesh>,
+        material: impl AsRef<Material>,
         transform: impl Into<ffi::Matrix>,
     ) {
-        unsafe { ffi::DrawMesh(*mesh.as_ref(), material.clone_raw(), transform.into()) }
+        unsafe {
+            ffi::DrawMesh(
+                mesh.as_ref().clone_raw(),
+                material.as_ref().clone_raw(),
+                transform.into(),
+            )
+        }
     }
 
     /// Draw multiple mesh instances with material and different transforms
     #[inline]
     fn draw_mesh_instanced(
         &mut self,
-        mesh: impl AsRef<ffi::Mesh>,
-        material: WeakMaterial,
+        mesh: impl AsRef<Mesh>,
+        material: impl AsRef<Material>,
         transforms: &[Matrix],
     ) {
         unsafe {
             ffi::DrawMeshInstanced(
-                *mesh.as_ref(),
-                material.clone_raw(),
+                mesh.as_ref().clone_raw(),
+                material.as_ref().clone_raw(),
                 transforms.as_ptr() as *const MintMatrix,
                 transforms.len() as i32,
             )
@@ -1968,13 +1974,18 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_model(
         &mut self,
-        model: impl AsRef<ffi::Model>,
+        model: impl AsRef<Model>,
         position: impl Into<MintVec3>,
         scale: f32,
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::DrawModel(*model.as_ref(), position.into(), scale, tint.into());
+            ffi::DrawModel(
+                model.as_ref().clone_raw(),
+                position.into(),
+                scale,
+                tint.into(),
+            );
         }
     }
 
@@ -1982,7 +1993,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_model_ex(
         &mut self,
-        model: impl AsRef<ffi::Model>,
+        model: impl AsRef<Model>,
         position: impl Into<MintVec3>,
         rotation_axis: impl Into<MintVec3>,
         rotation_angle: f32,
@@ -1991,7 +2002,7 @@ pub trait RaylibDraw3D {
     ) {
         unsafe {
             ffi::DrawModelEx(
-                *model.as_ref(),
+                model.as_ref().clone_raw(),
                 position.into(),
                 rotation_axis.into(),
                 rotation_angle,
@@ -2005,13 +2016,18 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_model_wires(
         &mut self,
-        model: impl AsRef<ffi::Model>,
+        model: impl AsRef<Model>,
         position: impl Into<MintVec3>,
         scale: f32,
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::DrawModelWires(*model.as_ref(), position.into(), scale, tint.into());
+            ffi::DrawModelWires(
+                model.as_ref().clone_raw(),
+                position.into(),
+                scale,
+                tint.into(),
+            );
         }
     }
 
@@ -2019,7 +2035,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_model_wires_ex(
         &mut self,
-        model: impl AsRef<ffi::Model>,
+        model: impl AsRef<Model>,
         position: impl Into<MintVec3>,
         rotation_axis: impl Into<MintVec3>,
         rotation_angle: f32,
@@ -2028,7 +2044,7 @@ pub trait RaylibDraw3D {
     ) {
         unsafe {
             ffi::DrawModelWiresEx(
-                *model.as_ref(),
+                model.as_ref().clone_raw(),
                 position.into(),
                 rotation_axis.into(),
                 rotation_angle,
@@ -2121,13 +2137,18 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_model_points(
         &mut self,
-        model: impl Into<ffi::Model>,
+        model: impl AsRef<Model>,
         position: impl Into<MintVec3>,
         scale: f32,
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::DrawModelPoints(model.into(), position.into(), scale, tint.into());
+            ffi::DrawModelPoints(
+                model.as_ref().clone_raw(),
+                position.into(),
+                scale,
+                tint.into(),
+            );
         }
     }
 
@@ -2135,7 +2156,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_model_points_ex(
         &mut self,
-        model: impl Into<ffi::Model>,
+        model: impl AsRef<Model>,
         position: impl Into<MintVec3>,
         rotation_axis: impl Into<MintVec3>,
         angle: f32,
@@ -2144,7 +2165,7 @@ pub trait RaylibDraw3D {
     ) {
         unsafe {
             ffi::DrawModelPointsEx(
-                model.into(),
+                model.as_ref().clone_raw(),
                 position.into(),
                 rotation_axis.into(),
                 angle,
