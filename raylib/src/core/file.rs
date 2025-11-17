@@ -2,7 +2,7 @@
 use crate::ffi;
 
 use crate::core::RaylibHandle;
-use std::ffi::{c_char, CStr, CString, OsString};
+use std::ffi::{CStr, CString, OsString, c_char};
 
 #[derive(Debug, Clone)]
 pub struct FilePathIter<'a> {
@@ -117,35 +117,47 @@ impl<'a> ExactSizeIterator for FilePathIter<'a> {
     }
 }
 
-make_thin_wrapper!(FilePathList, ffi::FilePathList, ffi::UnloadDirectoryFiles);
-make_thin_wrapper!(
-    DroppedFilePathList,
-    ffi::FilePathList,
-    ffi::UnloadDroppedFiles
-);
+make_thick_wrapper! {
+    pub struct FilePathList {
+        capacity: ::std::os::raw::c_uint,
+        count: ::std::os::raw::c_uint,
+        paths: *mut *mut ::std::os::raw::c_char,
+    }
+    raw = ffi::FilePathList,
+    drop = ffi::UnloadDirectoryFiles
+}
+make_thick_wrapper! {
+    pub struct DroppedFilePathList {
+        capacity: ::std::os::raw::c_uint,
+        count: ::std::os::raw::c_uint,
+        paths: *mut *mut ::std::os::raw::c_char,
+    }
+    raw = ffi::FilePathList,
+    drop = ffi::UnloadDroppedFiles
+}
 
 impl FilePathList {
     /// Length of the file path list
     #[inline]
     pub const fn count(&self) -> u32 {
-        self.0.count
+        self.count
     }
     /// The amount of files that can be held in this list.
     #[inline]
     pub const fn capacity(&self) -> u32 {
-        self.0.capacity
+        self.capacity
     }
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
     pub fn paths(&self) -> Vec<&str> {
-        unsafe { std::slice::from_raw_parts(self.0.paths, self.count() as usize) }
+        unsafe { std::slice::from_raw_parts(self.paths, self.count() as usize) }
             .iter()
             .map(|f| unsafe { CStr::from_ptr(*f) }.to_str().unwrap())
             .collect()
     }
     /// An iterator over the paths held in this list.
     pub fn iter<'a>(&'a self) -> FilePathIter<'a> {
-        unsafe { FilePathIter::new(self.0.paths, self.count()) }
+        unsafe { FilePathIter::new(self.paths, self.count()) }
     }
 }
 
@@ -153,24 +165,24 @@ impl DroppedFilePathList {
     /// Length of the file path list
     #[inline]
     pub const fn count(&self) -> u32 {
-        self.0.count
+        self.count
     }
     /// The amount of files that can be held in this list.
     #[inline]
     pub const fn capacity(&self) -> u32 {
-        self.0.capacity
+        self.capacity
     }
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
     pub fn paths(&self) -> Vec<&str> {
-        unsafe { std::slice::from_raw_parts(self.0.paths, self.count() as usize) }
+        unsafe { std::slice::from_raw_parts(self.paths, self.count() as usize) }
             .iter()
             .map(|f| unsafe { CStr::from_ptr(*f) }.to_str().unwrap())
             .collect()
     }
     /// An iterator over the paths held in this list.
     pub fn iter<'a>(&'a self) -> FilePathIter<'a> {
-        unsafe { FilePathIter::new(self.0.paths, self.count()) }
+        unsafe { FilePathIter::new(self.paths, self.count()) }
     }
 }
 
@@ -234,7 +246,7 @@ impl RaylibHandle {
     {
         unsafe {
             let c_str = CString::new(dir_path.into().to_string_lossy().as_bytes()).unwrap(); // .unwrap() is okay here because any nul bytes placed into the actual string should be cleared out by to_string_lossy.
-            FilePathList(ffi::LoadDirectoryFiles(c_str.as_ptr()))
+            FilePathList::from_raw_unchecked(ffi::LoadDirectoryFiles(c_str.as_ptr()))
         }
     }
 
@@ -251,7 +263,7 @@ impl RaylibHandle {
         unsafe {
             let dir_c_str = CString::new(dir_path.into().to_string_lossy().as_bytes()).unwrap(); // .unwrap() is okay here because any nul bytes placed into the actual string should be cleared out by to_string_lossy.
             let filter_c_str = CString::new(filter.replace("\0", "").as_bytes()).unwrap();
-            FilePathList(ffi::LoadDirectoryFilesEx(
+            FilePathList::from_raw_unchecked(ffi::LoadDirectoryFilesEx(
                 dir_c_str.as_ptr(),
                 filter_c_str.as_ptr(),
                 scan_sub_dirs,
@@ -262,23 +274,25 @@ impl RaylibHandle {
     /// Check if a file has been dropped into window
     #[inline]
     pub fn load_dropped_files(&self) -> DroppedFilePathList {
-        unsafe { DroppedFilePathList(ffi::LoadDroppedFiles()) }
+        unsafe { DroppedFilePathList::from_raw_unchecked(ffi::LoadDroppedFiles()) }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::mem::ManuallyDrop;
     use super::*;
+    use std::mem::ManuallyDrop;
 
     #[test]
     #[should_panic(expected = "file path array cannot be null")]
     fn test_null_list() {
-        let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 0,
-            count: 0,
-            paths: std::ptr::null_mut(),
-        }));
+        let list = ManuallyDrop::new(unsafe {
+            FilePathList::from_raw_unchecked(ffi::FilePathList {
+                capacity: 0,
+                count: 0,
+                paths: std::ptr::null_mut(),
+            })
+        });
         let _it = list.iter();
         // should have panicked while calling .iter()
     }
@@ -287,11 +301,13 @@ mod tests {
     #[should_panic(expected = "file path string cannot be null")]
     fn test_null_item() {
         let mut paths = [std::ptr::null_mut()];
-        let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 1,
-            count: 1,
-            paths: paths.as_mut_ptr(),
-        }));
+        let list = ManuallyDrop::new(unsafe {
+            FilePathList::from_raw_unchecked(ffi::FilePathList {
+                capacity: 1,
+                count: 1,
+                paths: paths.as_mut_ptr(),
+            })
+        });
         let mut it = list.iter();
         let _f = it.next();
         // should have panicked while calling .next()
@@ -301,11 +317,13 @@ mod tests {
     #[should_panic(expected = "file path string cannot be null")]
     fn test_null_item_double_ended() {
         let mut paths = [std::ptr::null_mut()];
-        let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 1,
-            count: 1,
-            paths: paths.as_mut_ptr(),
-        }));
+        let list = ManuallyDrop::new(unsafe {
+            FilePathList::from_raw_unchecked(ffi::FilePathList {
+                capacity: 1,
+                count: 1,
+                paths: paths.as_mut_ptr(),
+            })
+        });
         let mut it = list.iter();
         let _f = it.next_back();
         // should have panicked while calling .next_back()
@@ -314,17 +332,34 @@ mod tests {
     #[test]
     fn test_len() {
         let mut paths = [
-            CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"orange\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"banana\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"mango\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"pineapple\0").unwrap().as_ptr().cast_mut(),
+            CStr::from_bytes_with_nul(b"apple\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"orange\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"banana\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"mango\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"pineapple\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
         ];
-        let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 5,
-            count: 5,
-            paths: paths.as_mut_ptr(),
-        }));
+        let list = ManuallyDrop::new(unsafe {
+            FilePathList::from_raw_unchecked(ffi::FilePathList {
+                capacity: 5,
+                count: 5,
+                paths: paths.as_mut_ptr(),
+            })
+        });
         let mut it = list.iter();
         assert_eq!(it.len(), 5);
         assert_eq!(it.next(), Some("apple"));
@@ -343,17 +378,34 @@ mod tests {
     #[test]
     fn test_len_double_ended() {
         let mut paths = [
-            CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"orange\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"banana\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"mango\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"pineapple\0").unwrap().as_ptr().cast_mut(),
+            CStr::from_bytes_with_nul(b"apple\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"orange\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"banana\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"mango\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"pineapple\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
         ];
-        let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 5,
-            count: 5,
-            paths: paths.as_mut_ptr(),
-        }));
+        let list = ManuallyDrop::new(unsafe {
+            FilePathList::from_raw_unchecked(ffi::FilePathList {
+                capacity: 5,
+                count: 5,
+                paths: paths.as_mut_ptr(),
+            })
+        });
         let mut it = list.iter();
         assert_eq!(it.len(), 5);
         assert_eq!(it.next_back(), Some("pineapple"));

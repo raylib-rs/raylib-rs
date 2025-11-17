@@ -4,7 +4,7 @@ use std::{
     ptr::null,
 };
 
-use crate::{ffi, RaylibHandle};
+use crate::{RaylibHandle, ffi};
 
 #[derive(Debug, Clone)]
 pub struct AutomationEventIter<'a> {
@@ -68,31 +68,34 @@ impl<'a> ExactSizeIterator for AutomationEventIter<'a> {
     }
 }
 
-make_thin_wrapper!(
-    AutomationEventList,
-    ffi::AutomationEventList,
-    ffi::UnloadAutomationEventList,
-    false
-);
+make_thick_wrapper! {
+    pub struct AutomationEventList {
+        capacity: u32,
+        count: u32,
+        events: *mut ffi::AutomationEvent,
+    }
+    raw = ffi::AutomationEventList,
+    drop = ffi::UnloadAutomationEventList,
+}
 
 impl AutomationEventList {
     /// Length of the automation event list
     #[inline]
     #[must_use]
     pub const fn count(&self) -> u32 {
-        self.0.count
+        self.count
     }
     /// The amount of automation events that can be held in this list.
     #[inline]
     #[must_use]
     pub const fn capacity(&self) -> u32 {
-        self.0.capacity
+        self.capacity
     }
     /// The events held in this list.
     /// NOTE: This will copy the values into a vector.
     #[must_use]
     pub fn events(&self) -> Vec<AutomationEvent> {
-        unsafe { std::slice::from_raw_parts(self.0.events, self.count() as usize) }
+        unsafe { std::slice::from_raw_parts(self.events, self.count() as usize) }
             .iter()
             .map(|f| AutomationEvent(*f))
             .collect()
@@ -100,13 +103,13 @@ impl AutomationEventList {
     /// An iterator over the events held in this list.
     #[must_use]
     pub fn iter<'a>(&'a self) -> AutomationEventIter<'a> {
-        unsafe { AutomationEventIter::new(self.0.events, self.count()) }
+        unsafe { AutomationEventIter::new(self.events, self.count()) }
     }
 
     /// Export automation events list as text file
     pub fn export(&self, file_name: impl AsRef<Path>) -> bool {
         let c_str = CString::new(file_name.as_ref().to_string_lossy().as_bytes()).unwrap();
-        unsafe { ffi::ExportAutomationEventList(self.0, c_str.as_ptr()) }
+        unsafe { ffi::ExportAutomationEventList(self.clone_raw(), c_str.as_ptr()) }
     }
 }
 
@@ -157,16 +160,22 @@ impl RaylibHandle {
         match file_name {
             Some(a) => {
                 let c_str = CString::new(a.to_string_lossy().as_bytes()).unwrap();
-                AutomationEventList(unsafe { ffi::LoadAutomationEventList(c_str.as_ptr()) })
+                unsafe {
+                    AutomationEventList::from_raw_unchecked(ffi::LoadAutomationEventList(
+                        c_str.as_ptr(),
+                    ))
+                }
             }
-            None => AutomationEventList(unsafe { ffi::LoadAutomationEventList(null()) }),
+            None => unsafe {
+                AutomationEventList::from_raw_unchecked(ffi::LoadAutomationEventList(null()))
+            },
         }
     }
     /// Set automation event list to record to
     #[inline]
     pub fn set_automation_event_list(&self, l: &mut AutomationEventList) {
         unsafe {
-            ffi::SetAutomationEventList(&mut l.0 as *mut ffi::AutomationEventList);
+            ffi::SetAutomationEventList(l.as_raw_mut());
         }
     }
     /// Set automation event internal base frame to start recording
