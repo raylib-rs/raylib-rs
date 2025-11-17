@@ -409,15 +409,29 @@ impl AsMut<Mesh> for WeakMesh {
 }
 
 impl Mesh {
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
     #[inline]
     pub unsafe fn make_weak(self) -> WeakMesh {
         WeakMesh(ManuallyDrop::new(self))
     }
-
+    /// # Safety
+    /// - Do not break Rust's aliasing rules.
+    /// - Other weak instances of this mesh must not be accessed after the `Mesh` is dropped.
     #[inline]
-    pub unsafe fn from_raw_unchecked(raw: ffi::Mesh) -> Self {
+    pub unsafe fn from_weak(weak: WeakMesh) -> Mesh {
+        ManuallyDrop::into_inner(weak.0)
+    }
+
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
+    /// - Other raw instances of this mesh must not be accessed after the `Mesh` is dropped.
+    #[inline]
+    pub unsafe fn from_raw_unchecked(raw: ffi::Mesh) -> Mesh {
         unsafe { std::mem::transmute(raw) }
     }
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
     #[inline]
     pub unsafe fn to_raw(self) -> ffi::Mesh {
         unsafe { std::mem::transmute(self) }
