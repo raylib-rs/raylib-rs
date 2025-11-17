@@ -353,7 +353,7 @@ where
         &'a mut self,
         shader: &'b mut Shader,
     ) -> RaylibShaderMode<'a, 'b, Self> {
-        unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
+        unsafe { ffi::BeginShaderMode(shader.clone_raw()) }
         RaylibShaderMode(self, PhantomData)
     }
 
@@ -363,7 +363,7 @@ where
         shader: &'b mut Shader,
         func: impl FnOnce(RaylibShaderMode<'a, 'b, Self>),
     ) {
-        unsafe { ffi::BeginShaderMode(*shader.as_ref()) }
+        unsafe { ffi::BeginShaderMode(shader.clone_raw()) }
         func(RaylibShaderMode(self, PhantomData));
         // Uncomment the following if RaylibShaderMode has been changed to no longer call EndShaderMode() in its drop implementation:
         // unsafe { ffi::EndShaderMode(); }

@@ -4,13 +4,20 @@ use crate::consts::ShaderUniformDataType;
 use crate::core::math::Matrix;
 use crate::core::math::{Vector2, Vector3, Vector4};
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::{ffi, MintMatrix};
+use crate::{MintMatrix, ffi};
 use std::ffi::CString;
 use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
-make_thin_wrapper!(Shader, ffi::Shader, ffi::UnloadShader);
-make_thin_wrapper!(WeakShader, ffi::Shader, no_drop);
+make_thick_wrapper! {
+    pub struct Shader {
+        id: u32,
+        locs: *mut i32,
+    }
+    weak = WeakShader,
+    raw = ffi::Shader,
+    drop = ffi::UnloadShader
+}
 
 // #[cfg(feature = "nightly")]
 // impl !Send for Shader {}
@@ -36,7 +43,7 @@ impl RaylibHandle {
             .as_ref()
             .map_or_else(std::ptr::null, |s| s.as_ptr());
 
-        Shader(unsafe { ffi::LoadShader(vs, fs) })
+        unsafe { Shader::from_raw_unchecked(ffi::LoadShader(vs, fs)) }
     }
 
     #[must_use]
@@ -57,7 +64,7 @@ impl RaylibHandle {
             .as_ref()
             .map_or_else(std::ptr::null, |s| s.as_ptr());
 
-        Shader(unsafe { ffi::LoadShaderFromMemory(vs, fs) })
+        unsafe { Shader::from_raw_unchecked(ffi::LoadShaderFromMemory(vs, fs)) }
     }
 
     /// Sets a custom projection matrix (replaces internal projection matrix).
@@ -94,10 +101,11 @@ impl RaylibHandle {
     /// Get default shader. Modifying it modifies everything that uses that shader
     pub fn get_shader_default() -> WeakShader {
         unsafe {
-            WeakShader(ffi::Shader {
+            Shader::from_raw_unchecked(ffi::Shader {
                 id: ffi::rlGetShaderIdDefault(),
                 locs: ffi::rlGetShaderLocsDefault(),
             })
+            .make_weak()
         }
     }
 }
@@ -204,19 +212,11 @@ impl ShaderV for &[i32] {
 }
 
 impl Shader {
-    #[inline]
-    #[must_use]
-    pub unsafe fn make_weak(self) -> WeakShader {
-        let m = WeakShader(self.0);
-        std::mem::forget(self);
-        m
-    }
-
     /// Check if shader is valid
     #[inline]
     #[must_use]
     pub fn is_shader_valid(&self) -> bool {
-        unsafe { ffi::IsShaderValid(self.0) }
+        unsafe { ffi::IsShaderValid(self.clone_raw()) }
     }
 
     /// Sets shader uniform value
@@ -224,7 +224,7 @@ impl Shader {
     pub fn set_shader_value<S: ShaderV>(&mut self, uniform_loc: i32, value: S) {
         unsafe {
             ffi::SetShaderValue(
-                self.0,
+                self.clone_raw(),
                 uniform_loc,
                 value.value(),
                 (S::UNIFORM_TYPE as u32) as i32,
@@ -237,7 +237,7 @@ impl Shader {
     pub fn set_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S]) {
         unsafe {
             ffi::SetShaderValueV(
-                self.0,
+                self.clone_raw(),
                 uniform_loc,
                 value.as_ptr() as *const ::std::os::raw::c_void,
                 (S::UNIFORM_TYPE as u32) as i32,
@@ -250,7 +250,7 @@ impl Shader {
     #[inline]
     pub fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<MintMatrix>) {
         unsafe {
-            ffi::SetShaderValueMatrix(self.0, uniform_loc, mat.into());
+            ffi::SetShaderValueMatrix(self.clone_raw(), uniform_loc, mat.into());
         }
     }
 
@@ -262,27 +262,22 @@ impl Shader {
         texture: impl AsRef<ffi::Texture2D>,
     ) {
         unsafe {
-            ffi::SetShaderValueTexture(self.0, uniform_loc, *texture.as_ref());
+            ffi::SetShaderValueTexture(self.clone_raw(), uniform_loc, *texture.as_ref());
         }
     }
-}
 
-impl RaylibShader for WeakShader {}
-impl RaylibShader for Shader {}
-
-pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]
     #[must_use]
     fn locs(&self) -> &[i32] {
-        unsafe { std::slice::from_raw_parts(self.as_ref().locs, 32) }
+        unsafe { std::slice::from_raw_parts(self.locs, 32) }
     }
 
     /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]
     #[must_use]
     fn locs_mut(&mut self) -> &mut [i32] {
-        unsafe { std::slice::from_raw_parts_mut(self.as_mut().locs, 32) }
+        unsafe { std::slice::from_raw_parts_mut(self.locs, 32) }
     }
 
     /// Gets shader uniform location by name.
@@ -290,7 +285,7 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     #[must_use]
     fn get_shader_location(&self, uniform_name: &str) -> i32 {
         let c_uniform_name = CString::new(uniform_name).unwrap();
-        unsafe { ffi::GetShaderLocation(*self.as_ref(), c_uniform_name.as_ptr()) }
+        unsafe { ffi::GetShaderLocation(self.clone_raw(), c_uniform_name.as_ptr()) }
     }
 
     /// Gets shader attribute location by name.
@@ -298,49 +293,6 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     #[must_use]
     fn get_shader_location_attribute(&self, attribute_name: &str) -> i32 {
         let c_attribute_name = CString::new(attribute_name).unwrap();
-        unsafe { ffi::GetShaderLocationAttrib(*self.as_ref(), c_attribute_name.as_ptr()) }
-    }
-
-    /// Sets shader uniform value
-    #[inline]
-    fn set_shader_value<S: ShaderV>(&mut self, uniform_loc: i32, value: S) {
-        unsafe {
-            ffi::SetShaderValue(
-                *self.as_mut(),
-                uniform_loc,
-                value.value(),
-                (S::UNIFORM_TYPE as u32) as i32,
-            );
-        }
-    }
-
-    /// Set shader uniform value vector
-    #[inline]
-    fn set_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S]) {
-        unsafe {
-            ffi::SetShaderValueV(
-                *self.as_mut(),
-                uniform_loc,
-                value.as_ptr() as *const ::std::os::raw::c_void,
-                (S::UNIFORM_TYPE as u32) as i32,
-                value.len() as i32,
-            );
-        }
-    }
-
-    /// Sets shader uniform value (matrix 4x4).
-    #[inline]
-    fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<MintMatrix>) {
-        unsafe {
-            ffi::SetShaderValueMatrix(*self.as_mut(), uniform_loc, mat.into());
-        }
-    }
-
-    /// Sets shader uniform value (matrix 4x4).
-    #[inline]
-    fn set_shader_value_texture(&mut self, uniform_loc: i32, texture: impl AsRef<ffi::Texture2D>) {
-        unsafe {
-            ffi::SetShaderValueTexture(*self.as_mut(), uniform_loc, *texture.as_ref());
-        }
+        unsafe { ffi::GetShaderLocationAttrib(self.clone_raw(), c_attribute_name.as_ptr()) }
     }
 }
