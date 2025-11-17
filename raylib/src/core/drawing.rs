@@ -1733,7 +1733,7 @@ pub trait RaylibDraw3D {
         material: WeakMaterial,
         transform: impl Into<ffi::Matrix>,
     ) {
-        unsafe { ffi::DrawMesh(*mesh.as_ref(), material.0, transform.into()) }
+        unsafe { ffi::DrawMesh(*mesh.as_ref(), material.clone_raw(), transform.into()) }
     }
 
     /// Draw multiple mesh instances with material and different transforms
@@ -1747,7 +1747,7 @@ pub trait RaylibDraw3D {
         unsafe {
             ffi::DrawMeshInstanced(
                 *mesh.as_ref(),
-                material.0,
+                material.clone_raw(),
                 transforms.as_ptr() as *const MintMatrix,
                 transforms.len() as i32,
             )
