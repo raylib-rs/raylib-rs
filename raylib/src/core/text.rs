@@ -27,12 +27,17 @@ make_thick_wrapper! {
     raw = ffi::Font,
     drop = ffi::UnloadFont
 }
-make_thin_wrapper!(
+make_thick_wrapper! {
     /// GlyphInfo, font characters glyphs info
-    GlyphInfo,
-    ffi::GlyphInfo,
-    no_drop
-);
+    pub struct GlyphInfo {
+        pub value: i32,
+        pub offsetX: i32,
+        pub offsetY: i32,
+        pub advanceX: i32,
+        pub image: ManuallyDrop<Image>,
+    }
+    raw = ffi::GlyphInfo
+}
 
 #[repr(transparent)]
 #[derive(Debug)]
@@ -287,7 +292,7 @@ impl RaylibHandle {
                 return None;
             }
 
-            return Some(GlyphInfo::from_raw(*glyph_info));
+            return Some(GlyphInfo::from_raw_unchecked(*glyph_info));
         }
     }
 }
@@ -343,7 +348,9 @@ impl Font {
     #[inline]
     #[must_use]
     fn get_glyph_info(&self, codepoint: char) -> GlyphInfo {
-        unsafe { GlyphInfo(ffi::GetGlyphInfo(self.clone_raw(), codepoint as i32)) }
+        unsafe {
+            GlyphInfo::from_raw_unchecked(ffi::GetGlyphInfo(self.clone_raw(), codepoint as i32))
+        }
     }
 
     /// Gets index position for a unicode character on `font`.

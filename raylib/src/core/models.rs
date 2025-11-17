@@ -6,7 +6,7 @@ use crate::core::math::BoundingBox;
 use crate::core::math::Matrix;
 use crate::core::math::Transform;
 use crate::core::math::{Vector2, Vector3, Vector4};
-use crate::core::texture::Image;
+use crate::core::texture::{Image, Texture2D};
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi::Color;
 use crate::{
@@ -91,12 +91,15 @@ make_thin_wrapper!(
     ffi::BoneInfo,
     no_drop
 );
-make_thin_wrapper!(
+make_thick_wrapper! {
     /// MaterialMap
-    MaterialMap,
-    ffi::MaterialMap,
-    no_drop
-);
+    pub struct MaterialMap {
+        pub texture: std::mem::ManuallyDrop<Texture2D>,
+        pub color: Color,
+        pub value: f32,
+    }
+    raw = ffi::MaterialMap
+}
 
 impl RaylibHandle {
     #[must_use]
@@ -841,39 +844,39 @@ impl MaterialMap {
     #[inline]
     #[must_use]
     pub fn texture(&self) -> &crate::texture::WeakTexture2D {
-        unsafe { std::mem::transmute(&self.0.texture) }
+        unsafe { std::mem::transmute(&self.texture) }
     }
     /// Material map texture
     #[inline]
     #[must_use]
     pub fn texture_mut(&mut self) -> &mut crate::texture::WeakTexture2D {
-        unsafe { std::mem::transmute(&mut self.0.texture) }
+        unsafe { std::mem::transmute(&mut self.texture) }
     }
 
     /// Material map color
     #[inline]
     #[must_use]
     pub fn color(&self) -> &Color {
-        unsafe { std::mem::transmute(&self.0.color) }
+        unsafe { std::mem::transmute(&self.color) }
     }
     /// Material map color
     #[inline]
     #[must_use]
     pub fn color_mut(&mut self) -> &mut Color {
-        unsafe { std::mem::transmute(&mut self.0.color) }
+        unsafe { std::mem::transmute(&mut self.color) }
     }
 
     /// Material map value
     #[inline]
     #[must_use]
     pub fn value(&self) -> &f32 {
-        unsafe { std::mem::transmute(&self.0.value) }
+        unsafe { std::mem::transmute(&self.value) }
     }
     /// Material map value
     #[inline]
     #[must_use]
     pub fn value_mut(&mut self) -> &mut f32 {
-        unsafe { std::mem::transmute(&mut self.0.value) }
+        unsafe { std::mem::transmute(&mut self.value) }
     }
 }
 

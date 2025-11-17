@@ -178,8 +178,8 @@ macro_rules! make_thick_wrapper {
             ),* $(,)?
         }
         $(weak = $(#[$weak_attrs:meta])* $WeakTy:ident,)?
-        raw = $RawTy:ty,
-        drop = $dropfunc:expr $(,)?
+        raw = $RawTy:ty
+        $(, drop = $dropfunc:expr)?  $(,)?
     ) => {
         $(#[$attrs])*
         #[derive(Debug)]
@@ -199,13 +199,16 @@ macro_rules! make_thick_wrapper {
             $([concat!("Offset of field: ", stringify!($WrapperTy::$field))][::std::mem::offset_of!($WrapperTy, $field) - ::std::mem::offset_of!($RawTy, $field)];)*
         };
 
+    $(
         impl Drop for $WrapperTy {
             fn drop(&mut self) {
+                #[allow(unused_unsafe)]
                 unsafe {
                     $dropfunc(self.clone_raw());
                 }
             }
         }
+    )?
 
     $(
         $(#[$weak_attrs])*
