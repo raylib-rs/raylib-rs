@@ -79,7 +79,7 @@ make_thick_wrapper! {
         frameCount: i32,
         bones: *mut ffi::BoneInfo,
         framePoses: *mut *mut Transform,
-        name: [::std::os::raw::c_char; 32],
+        pub name: [::std::os::raw::c_char; 32],
     }
     weak = WeakModelAnimation,
     raw = ffi::ModelAnimation,
