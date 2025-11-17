@@ -57,7 +57,6 @@ impl Into<ffi::NPatchInfo> for &NPatchInfo {
     }
 }
 
-fn no_drop<T>(_thing: T) {}
 make_thick_wrapper! {
     /// Image, pixel data stored in CPU memory (RAM)
     pub struct Image {
