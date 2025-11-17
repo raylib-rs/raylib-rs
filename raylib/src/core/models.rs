@@ -105,7 +105,7 @@ impl RaylibHandle {
         _: &RaylibThread,
         mesh: WeakMesh,
     ) -> Result<Model, LoadModelError> {
-        let m = unsafe { ffi::LoadModelFromMesh(*mesh.as_raw_ref()) };
+        let m = unsafe { ffi::LoadModelFromMesh(mesh.clone_raw()) };
 
         if m.meshes.is_null() || m.materials.is_null() {
             return Err(LoadModelError::LoadFromMeshFailed);
@@ -349,7 +349,7 @@ pub struct Mesh {
 }
 impl Drop for Mesh {
     fn drop(&mut self) {
-        unsafe { ffi::UnloadMesh(*self.as_raw_mut()) };
+        unsafe { ffi::UnloadMesh(self.clone_raw()) };
     }
 }
 
@@ -633,7 +633,7 @@ impl Mesh {
     #[inline]
     #[must_use]
     pub fn get_mesh_bounding_box(&self) -> BoundingBox {
-        unsafe { ffi::GetMeshBoundingBox(*self.as_raw_ref()).into() }
+        unsafe { ffi::GetMeshBoundingBox(self.clone_raw()).into() }
     }
 
     /// Computes mesh tangents.
@@ -650,7 +650,7 @@ impl Mesh {
     pub fn export(&self, filename: &str) {
         let c_filename = CString::new(filename).unwrap();
         unsafe {
-            ffi::ExportMesh(*self.as_raw_ref(), c_filename.as_ptr());
+            ffi::ExportMesh(self.clone_raw(), c_filename.as_ptr());
         }
     }
 
@@ -659,7 +659,7 @@ impl Mesh {
     pub fn export_as_code(&self, filename: &str) {
         let c_filename = CString::new(filename).unwrap();
         unsafe {
-            ffi::ExportMeshAsCode(*self.as_raw_ref(), c_filename.as_ptr());
+            ffi::ExportMeshAsCode(self.clone_raw(), c_filename.as_ptr());
         }
     }
 }
@@ -1087,7 +1087,7 @@ impl RaylibHandle {
     /// Unload mesh from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_mesh(&mut self, _: &RaylibThread, mesh: WeakMesh) {
-        unsafe { ffi::UnloadMesh(*mesh.as_raw_ref()) }
+        unsafe { ffi::UnloadMesh(mesh.clone_raw()) }
     }
 }
 
