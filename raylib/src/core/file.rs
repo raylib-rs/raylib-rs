@@ -2,17 +2,64 @@
 use crate::{core::RaylibHandle, ffi};
 use std::ffi::{CStr, CString, OsString, c_char};
 
-/// Iterator over file paths
+/// # Safety
 ///
-/// Created by [`FilePathList::iter`].
-#[derive(Debug, Clone)]
-pub struct FilePathIter<'a> {
-    iter: std::slice::Iter<'a, Option<&'a c_char>>,
+/// `ptr` must be given by a [`FilePathList`] or [`DroppedFilePathList`]
+fn ptr_to_path_str(&ptr: &*const c_char) -> &str {
+    assert!(!ptr.is_null(), "path within bounds should not be null");
+    // SAFETY: `ptr` is guaranteed non-null and aligned due to coming from a reference.
+    // Given this iterator can only be initialized from Raylib data, `ptr` is guaranteed to be a nul-terminated c-string.
+    unsafe { CStr::from_ptr(ptr) }
+        .to_str()
+        .expect("file path string should be in utf-8") // TODO: Paths aren't necessarily encoded in UTF-8
 }
-impl<'a> FilePathIter<'a> {
-    /// # Safety
-    /// The memory pointed to by `list` must not be mutated for `'a`.
-    /// Every `*mut c_char` in `list` must outlive `'a`.
+
+/// Iterator over file paths
+pub type FilePathIter<'a> =
+    std::iter::Map<std::slice::Iter<'a, *const c_char>, fn(&'a *const c_char) -> &'a str>;
+
+make_thin_wrapper!(
+    /// Iterable list of file paths.
+    FilePathList,
+    ffi::FilePathList,
+    ffi::UnloadDirectoryFiles
+);
+
+make_thin_wrapper!(
+    /// Iterable list of paths to files that were dropped.
+    DroppedFilePathList,
+    ffi::FilePathList,
+    ffi::UnloadDroppedFiles
+);
+
+impl FilePathList {
+    /// Length of the file path list
+    #[inline]
+    #[must_use]
+    pub const fn count(&self) -> u32 {
+        self.0.count
+    }
+
+    /// The amount of files that can be held in this list.
+    #[inline]
+    #[must_use]
+    pub const fn capacity(&self) -> u32 {
+        self.0.capacity
+    }
+
+    /// The paths held in this list.
+    /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if a path is not compatible with utf-8.
+    //  which happens a lot??? WTF-8 is standard on windows!!
+    #[must_use]
+    pub fn paths(&self) -> Vec<&str> {
+        self.iter().collect()
+    }
+
+    /// An iterator over the paths held in this list.
     ///
     /// ## Examples
     ///
@@ -63,114 +110,16 @@ impl<'a> FilePathIter<'a> {
     /// //          ^^^^ mutable borrow occurs here
     /// assert_eq!(s, Some("apple")); // immutable borrow later used here
     /// ```
-    unsafe fn new(list: *mut *mut c_char, count: u32) -> Self {
-        // No new items are being created that get dropped here, these are just changes in perspective of how to borrow-check the pointers.
-        assert!(!list.is_null(), "file path array cannot be null");
-        assert!(list.is_aligned(), "file path array must be aligned");
-        let list = list.cast::<Option<&'a c_char>>();
-        let iter = unsafe { std::slice::from_raw_parts(list, count as usize) }.iter();
-        Self { iter }
-    }
-    fn func(f: Option<&'a c_char>) -> &'a str {
-        // CStr isn't being "constructed", it's essentially an adapter on &[c_char]
-        let s = std::slice::from_ref(f.expect("file path string cannot be null"));
-        unsafe { CStr::from_ptr(s.as_ptr()) }
-            .to_str()
-            .expect("file path string should be in utf-8") // no???
-    }
-}
-impl<'a> Iterator for FilePathIter<'a> {
-    type Item = &'a str;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().copied().map(Self::func)
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
-    }
-
-    #[inline]
-    fn count(self) -> usize {
-        self.len()
-    }
-
-    fn last(self) -> Option<Self::Item> {
-        self.iter.last().copied().map(Self::func)
-    }
-
-    fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.iter.nth(n).copied().map(Self::func)
-    }
-}
-impl DoubleEndedIterator for FilePathIter<'_> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().copied().map(Self::func)
-    }
-
-    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
-        self.iter.nth_back(n).copied().map(Self::func)
-    }
-}
-impl ExactSizeIterator for FilePathIter<'_> {
-    #[inline]
-    fn len(&self) -> usize {
-        self.iter.len()
-    }
-}
-
-make_thin_wrapper!(
-    /// Iterable list of file paths.
-    FilePathList,
-    ffi::FilePathList,
-    ffi::UnloadDirectoryFiles
-);
-make_thin_wrapper!(
-    /// Iterable list of paths to files that were dropped.
-    DroppedFilePathList,
-    ffi::FilePathList,
-    ffi::UnloadDroppedFiles
-);
-
-impl FilePathList {
-    /// Length of the file path list
-    #[inline]
-    #[must_use]
-    pub const fn count(&self) -> u32 {
-        self.0.count
-    }
-
-    /// The amount of files that can be held in this list.
-    #[inline]
-    #[must_use]
-    pub const fn capacity(&self) -> u32 {
-        self.0.capacity
-    }
-
-    /// The paths held in this list.
-    /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
-    ///
-    /// # Panics
-    ///
-    /// This method will panic if a path is not compatible with utf-8.
-    //  which happens a lot??? WTF-8 is standard on windows!!
-    #[must_use]
-    pub fn paths(&self) -> Vec<&str> {
-        unsafe { std::slice::from_raw_parts(self.0.paths, self.count() as usize) }
-            .iter()
-            .map(|f| {
-                unsafe { CStr::from_ptr(*f) }
-                    .to_str()
-                    .expect("file path string should be in utf-8") // no???
-            })
-            .collect()
-    }
-
-    /// An iterator over the paths held in this list.
-    #[must_use]
     pub fn iter(&self) -> FilePathIter<'_> {
-        unsafe { FilePathIter::new(self.0.paths, self.count()) }
+        (!self.0.paths.is_null())
+            .then(||
+                // SAFETY: Just checked and `list` is both non-null.
+                // FilePathList cannot be constructed outside of the library, and Raylib
+                // guarantees that its count will accurately describe its pointer.
+                unsafe { std::slice::from_raw_parts(self.0.paths.cast(), self.count as usize) })
+            .unwrap_or_default()
+            .iter()
+            .map(ptr_to_path_str)
     }
 }
 
@@ -207,20 +156,20 @@ impl DroppedFilePathList {
     /// This method will panic if a path is not compatible with utf-8.
     #[must_use]
     pub fn paths(&self) -> Vec<&str> {
-        unsafe { std::slice::from_raw_parts(self.0.paths, self.count() as usize) }
-            .iter()
-            .map(|f| {
-                unsafe { CStr::from_ptr(*f) }
-                    .to_str()
-                    .expect("file path string should be in utf-8") // no???
-            })
-            .collect()
+        self.iter().collect()
     }
 
     /// An iterator over the paths held in this list.
-    #[must_use]
     pub fn iter(&self) -> FilePathIter<'_> {
-        unsafe { FilePathIter::new(self.0.paths, self.count()) }
+        (!self.0.paths.is_null())
+            .then(||
+                // SAFETY: Just checked and `list` is both non-null.
+                // FilePathList cannot be constructed outside of the library, and Raylib
+                // guarantees that its count will accurately describe its pointer.
+                unsafe { std::slice::from_raw_parts(self.0.paths.cast(), self.count as usize) })
+            .unwrap_or_default()
+            .iter()
+            .map(ptr_to_path_str)
     }
 }
 
@@ -239,6 +188,8 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn is_file_dropped(&self) -> bool {
+        // SOUNDNESS HOLE: IsFileDropped reads a global static without locking.
+        // There is nothing stopping it from being written to on another thread mid-read.
         unsafe { ffi::IsFileDropped() }
     }
 
@@ -258,6 +209,10 @@ impl RaylibHandle {
             .expect("lossy file_name string should not have an internal 0 byte");
         let file_ext = CString::new(file_ext.into().to_string_lossy().as_bytes())
             .expect("lossy file_ext string should not have an internal 0 byte");
+        // SOUNDNESS HOLE: IsFileExtension calls TextSplit, which returns a static buffer
+        // without locking instead of allocating memory. There is nothing stopping another
+        // thread from calling TextSplit and mutating the static buffer while IsFileExtension
+        // holds a reference to it.
         unsafe { ffi::IsFileExtension(file_name.as_ptr(), file_ext.as_ptr()) }
     }
 
@@ -268,6 +223,10 @@ impl RaylibHandle {
     /// This method will panic if the application directory is not compatible with utf-8.
     #[must_use]
     pub fn application_directory(&self) -> String {
+        // SOUNDNESS HOLE: GetApplicationDirectory returns a static buffer without locking
+        // instead of allocating memory. There is nothing stopping another thread from
+        // calling GetApplicationDirectory at the same time and mutating the buffer before
+        // this method finishes copying it.
         let st = unsafe { ffi::GetApplicationDirectory() };
         let c_str = unsafe { CStr::from_ptr(st) };
 
