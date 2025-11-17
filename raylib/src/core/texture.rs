@@ -61,11 +61,16 @@ fn no_drop<T>(_thing: T) {}
 make_thick_wrapper! {
     /// Image, pixel data stored in CPU memory (RAM)
     pub struct Image {
+        /// Image raw data
         data: *mut ::std::os::raw::c_void,
+        /// Image base width
         width: i32,
+        /// Image base height
         height: i32,
+        /// Mipmap levels, 1 by default
         mipmaps: i32,
-        format: i32,
+        /// Data format (PixelFormat type)
+        format: ffi::PixelFormat,
     }
     raw = ffi::Image,
     drop = ffi::UnloadImage
@@ -73,10 +78,15 @@ make_thick_wrapper! {
 make_thick_wrapper! {
     /// Texture, tex data stored in GPU memory (VRAM)
     pub struct Texture2D {
+        /// OpenGL texture id
         id: u32,
+        /// Texture base width
         width: i32,
+        /// Texture base height
         height: i32,
+        /// Mipmap levels, 1 by default
         mipmaps: i32,
+        /// Data format (PixelFormat type)
         format: i32,
     }
     weak = WeakTexture2D,
@@ -93,9 +103,12 @@ impl Default for WeakTexture2D {
 make_thick_wrapper! {
     /// RenderTexture, fbo for texture rendering
     pub struct RenderTexture2D {
+        /// OpenGL framebuffer object id
         id: u32,
-        texture: ffi::Texture,
-        depth: ffi::Texture,
+        /// Color buffer attachment texture
+        pub texture: WeakTexture2D,
+        /// Depth buffer attachment texture
+        pub depth: WeakTexture2D,
     }
     weak = WeakRenderTexture2D,
     raw = ffi::RenderTexture2D,

@@ -69,9 +69,13 @@ impl<'a> ExactSizeIterator for AutomationEventIter<'a> {
 }
 
 make_thick_wrapper! {
+    /// Automation event list
     pub struct AutomationEventList {
+        /// Events max entries (MAX_AUTOMATION_EVENTS)
         capacity: u32,
+        /// Events entries count
         count: u32,
+        /// Events entries
         events: *mut ffi::AutomationEvent,
     }
     raw = ffi::AutomationEventList,

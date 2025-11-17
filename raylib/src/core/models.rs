@@ -23,15 +23,28 @@ use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
 make_thick_wrapper! {
+    /// Model, meshes, materials and animation data
     pub struct Model {
+        /// Local transform matrix
         pub transform: Matrix,
+
+        /// Number of meshes
         meshCount: i32,
+        /// Number of materials
         materialCount: i32,
+        /// Meshes array
         meshes: *mut WeakMesh,
+        /// Materials array
         materials: *mut WeakMaterial,
+        /// Mesh material number
         meshMaterial: *mut i32,
+
+        // Animation data
+        /// Number of bones
         boneCount: i32,
+        /// Bones information (skeleton)
         bones: *mut BoneInfo,
+        /// Bones base transformation (pose)
         bindPose: *mut Transform,
     }
     weak = WeakModel,
@@ -41,22 +54,45 @@ make_thick_wrapper! {
 make_thick_wrapper! {
     /// Mesh, vertex data and vao/vbo
     pub struct Mesh {
+        /// Number of vertices stored in arrays
         vertexCount: i32,
+        /// Number of triangles stored (indexed or not)
         triangleCount: i32,
+
+        // Vertex attributes data
+        /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
         vertices: *mut Vector3,
+        /// Vertex texture coordinates (UV - 2 components per vertex) (shader-location = 1)
         texcoords: *mut Vector2,
+        /// Vertex texture second coordinates (UV - 2 components per vertex) (shader-location = 5)
         texcoords2: *mut Vector2,
+        /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
         normals: *mut Vector3,
+        /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
         tangents: *mut Vector4,
+        /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
         colors: *mut Color,
+        /// Vertex indices (in case vertex data comes indexed)
         indices: *mut u16,
+
+        // Animation vertex data
+        /// Animated vertex positions (after bones transformations)
         animVertices: *mut Vector3,
+        /// Animated normals (after bones transformations)
         animNormals: *mut Vector3,
+        /// Vertex bone ids, max 255 bone ids, up to 4 bones influence by vertex (skinning) (shader-location = 6)
         boneIds: *mut u8,
+        /// Vertex bone weight, up to 4 bones influence by vertex (skinning) (shader-location = 7)
         boneWeights: *mut f32,
+        /// Bones animated transformation matrices
         boneMatrices: *mut Matrix,
+        /// Number of bones
         boneCount: i32,
+
+        // OpenGL identifiers
+        /// OpenGL Vertex Array Object id
         vaoId: u32,
+        /// OpenGL Vertex Buffer Objects id (default vertex data)
         vboId: *mut u32,
     }
     weak = WeakMesh,
@@ -66,8 +102,11 @@ make_thick_wrapper! {
 make_thick_wrapper! {
     /// Material, includes shader and maps
     pub struct Material {
+        /// Material shader
         pub shader: WeakShader,
+        /// Material maps array (MAX_MATERIAL_MAPS)
         maps: *mut MaterialMap,
+        /// Material generic parameters (if required)
         pub params: [f32; 4],
     }
     weak = WeakMaterial,
@@ -75,11 +114,17 @@ make_thick_wrapper! {
     drop = ffi::UnloadMaterial,
 }
 make_thick_wrapper! {
+    /// ModelAnimation
     pub struct ModelAnimation {
+        /// Number of bones
         boneCount: i32,
+        /// Number of animation frames
         frameCount: i32,
+        /// Bones information (skeleton)
         bones: *mut BoneInfo,
+        /// Poses array by frame
         framePoses: *mut *mut Transform,
+        /// Animation name
         pub name: [::std::os::raw::c_char; 32],
     }
     weak = WeakModelAnimation,
@@ -95,8 +140,11 @@ make_thin_wrapper!(
 make_thick_wrapper! {
     /// MaterialMap
     pub struct MaterialMap {
+        /// Material map texture
         pub texture: WeakTexture2D,
+        /// Material map color
         pub color: Color,
+        /// Material map value
         pub value: f32,
     }
     raw = ffi::MaterialMap

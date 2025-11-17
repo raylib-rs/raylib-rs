@@ -10,8 +10,11 @@ use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
 make_thick_wrapper! {
+    /// Shader
     pub struct Shader {
+        /// Shader program id
         id: u32,
+        /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
         locs: *mut i32,
     }
     weak = WeakShader,

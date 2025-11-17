@@ -118,18 +118,26 @@ impl<'a> ExactSizeIterator for FilePathIter<'a> {
 }
 
 make_thick_wrapper! {
+    /// File path list
     pub struct FilePathList {
-        capacity: ::std::os::raw::c_uint,
-        count: ::std::os::raw::c_uint,
+        /// Filepaths max entries
+        capacity: u32,
+        /// Filepaths entries count
+        count: u32,
+        /// Filepaths entries
         paths: *mut *mut ::std::os::raw::c_char,
     }
     raw = ffi::FilePathList,
     drop = ffi::UnloadDirectoryFiles
 }
 make_thick_wrapper! {
+    /// File path list
     pub struct DroppedFilePathList {
-        capacity: ::std::os::raw::c_uint,
-        count: ::std::os::raw::c_uint,
+        /// Filepaths max entries
+        capacity: u32,
+        /// Filepaths entries count
+        count: u32,
+        /// Filepaths entries
         paths: *mut *mut ::std::os::raw::c_char,
     }
     raw = ffi::FilePathList,

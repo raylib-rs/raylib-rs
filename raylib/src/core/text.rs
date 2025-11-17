@@ -16,11 +16,17 @@ fn no_drop<T>(_thing: T) {}
 make_thick_wrapper! {
     /// Font, font texture and GlyphInfo array data
     pub struct Font {
+        /// Base size (default chars height)
         pub baseSize: i32,
+        /// Number of glyph characters
         glyphCount: i32,
+        /// Padding around the glyph characters
         pub glyphPadding: i32,
+        /// Texture atlas containing the glyphs
         texture: ffi::Texture2D,
+        /// Rectangles in texture for the glyphs
         recs: *mut ffi::Rectangle,
+        /// Glyphs info data
         glyphs: *mut ffi::GlyphInfo,
     }
     weak = WeakFont,
@@ -30,10 +36,15 @@ make_thick_wrapper! {
 make_thick_wrapper! {
     /// GlyphInfo, font characters glyphs info
     pub struct GlyphInfo {
-        pub value: i32,
+        /// Character value (Unicode)
+        pub value: char,
+        /// Character offset X when drawing
         pub offsetX: i32,
+        /// Character offset Y when drawing
         pub offsetY: i32,
+        /// Character advance position X
         pub advanceX: i32,
+        /// Character image data
         pub image: ManuallyDrop<Image>,
     }
     raw = ffi::GlyphInfo
