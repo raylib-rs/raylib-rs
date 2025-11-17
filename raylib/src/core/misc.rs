@@ -82,7 +82,7 @@ impl RaylibHandle {
     #[must_use]
     /// Load pixels from the screen into a CPU image
     pub fn load_image_from_screen(&self, _: &RaylibThread) -> Image {
-        unsafe { Image(ffi::LoadImageFromScreen()) }
+        unsafe { Image::from_raw_unchecked(ffi::LoadImageFromScreen()) }
     }
 
     /// Takes a screenshot of current screen (saved a .png)

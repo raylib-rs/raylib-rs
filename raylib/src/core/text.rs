@@ -203,7 +203,7 @@ impl RaylibHandle {
         key: impl Into<ffi::Color>,
         first_char: i32,
     ) -> Result<Font, LoadFontError> {
-        let f = unsafe { ffi::LoadFontFromImage(image.0, key.into(), first_char) };
+        let f = unsafe { ffi::LoadFontFromImage(image.clone_raw(), key.into(), first_char) };
         if f.glyphs.is_null() {
             return Err(LoadFontError::LoadFromImageFailed);
         }
@@ -435,7 +435,7 @@ pub fn gen_image_font_atlas(
     unsafe {
         let mut ptr = std::ptr::null_mut();
 
-        let img = Image(ffi::GenImageFontAtlas(
+        let img = Image::from_raw_unchecked(ffi::GenImageFontAtlas(
             chars.as_mut_ptr(),
             &mut ptr,
             font_size,

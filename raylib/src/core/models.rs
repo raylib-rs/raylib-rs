@@ -18,7 +18,6 @@ use crate::{
     ffi,
 };
 use std::ffi::CString;
-use std::mem::ManuallyDrop;
 use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
@@ -470,7 +469,9 @@ impl Mesh {
         heightmap: &Image,
         size: impl Into<MintVec3>,
     ) -> Mesh {
-        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshHeightmap(heightmap.0, size.into())) }
+        unsafe {
+            Mesh::from_raw_unchecked(ffi::GenMeshHeightmap(heightmap.clone_raw(), size.into()))
+        }
     }
 
     /// Generates cubes-based map mesh from image data.
@@ -481,7 +482,9 @@ impl Mesh {
         cubicmap: &Image,
         cube_size: impl Into<MintVec3>,
     ) -> Mesh {
-        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshCubicmap(cubicmap.0, cube_size.into())) }
+        unsafe {
+            Mesh::from_raw_unchecked(ffi::GenMeshCubicmap(cubicmap.clone_raw(), cube_size.into()))
+        }
     }
 
     /// Generate cone/pyramid mesh

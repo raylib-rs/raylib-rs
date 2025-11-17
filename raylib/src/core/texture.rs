@@ -58,12 +58,18 @@ impl Into<ffi::NPatchInfo> for &NPatchInfo {
 }
 
 fn no_drop<T>(_thing: T) {}
-make_thin_wrapper!(
+make_thick_wrapper! {
     /// Image, pixel data stored in CPU memory (RAM)
-    Image,
-    ffi::Image,
-    ffi::UnloadImage
-);
+    pub struct Image {
+        data: *mut ::std::os::raw::c_void,
+        width: i32,
+        height: i32,
+        mipmaps: i32,
+        format: i32,
+    }
+    raw = ffi::Image,
+    drop = ffi::UnloadImage
+}
 make_thin_wrapper!(
     /// Texture, tex data stored in GPU memory (VRAM)
     Texture2D,
@@ -172,7 +178,7 @@ pub trait RaylibRenderTexture2D: AsRef<ffi::RenderTexture2D> + AsMut<ffi::Render
 impl Clone for Image {
     /// Create an image duplicate (useful for transformations)
     fn clone(&self) -> Image {
-        unsafe { Image(ffi::ImageCopy(self.0)) }
+        unsafe { Image::from_raw_unchecked(ffi::ImageCopy(self.clone_raw())) }
     }
 }
 
@@ -181,47 +187,49 @@ impl Image {
     #[inline]
     #[must_use]
     pub fn width(&self) -> i32 {
-        self.0.width
+        self.width
     }
     /// Image base height
     #[inline]
     #[must_use]
     pub fn height(&self) -> i32 {
-        self.0.height
+        self.height
     }
     /// Mipmap levels, 1 by default
     #[inline]
     #[must_use]
     pub fn mipmaps(&self) -> i32 {
-        self.0.mipmaps
+        self.mipmaps
     }
     /// Image raw data
     #[inline]
     #[must_use]
     pub unsafe fn data(&self) -> *mut ::std::os::raw::c_void {
-        self.0.data
+        self.data
     }
 
     /// Apply Gaussian blur using a box blur approximation
     #[inline]
     pub fn blur_gaussian(&mut self, blur_size: i32) {
-        unsafe { ffi::ImageBlurGaussian(&mut self.0, blur_size) }
+        unsafe { ffi::ImageBlurGaussian(self.as_raw_mut(), blur_size) }
     }
     /// Rotate image by input angle in degrees (-359 to 359)
     #[inline]
     pub fn rotate(&mut self, degrees: i32) {
-        unsafe { ffi::ImageRotate(&mut self.0, degrees) }
+        unsafe { ffi::ImageRotate(self.as_raw_mut(), degrees) }
     }
     /// Get image pixel color at (x, y) position
     #[inline]
     #[must_use]
     pub fn get_color(&self, x: i32, y: i32) -> Color {
-        Color::from(unsafe { ffi::GetImageColor(self.0, x, y) })
+        Color::from(unsafe { ffi::GetImageColor(self.clone_raw(), x, y) })
     }
     /// Draw circle outline within an image
     #[inline]
     pub fn draw_circle_lines(&mut self, center_x: i32, center_y: i32, radius: i32, color: Color) {
-        unsafe { ffi::ImageDrawCircleLines(&mut self.0, center_x, center_y, radius, color.into()) }
+        unsafe {
+            ffi::ImageDrawCircleLines(self.as_raw_mut(), center_x, center_y, radius, color.into())
+        }
     }
     /// Draw circle outline within an image (Vector version)
     #[inline]
@@ -231,7 +239,9 @@ impl Image {
         center_y: i32,
         color: Color,
     ) {
-        unsafe { ffi::ImageDrawCircleLinesV(&mut self.0, center.into(), center_y, color.into()) }
+        unsafe {
+            ffi::ImageDrawCircleLinesV(self.as_raw_mut(), center.into(), center_y, color.into())
+        }
     }
 
     /// Data format (PixelFormat type)
@@ -246,21 +256,23 @@ impl Image {
     #[must_use]
     #[inline]
     pub fn from_image(&self, rec: impl Into<ffi::Rectangle>) -> Image {
-        unsafe { Image(ffi::ImageFromImage(self.0, rec.into())) }
+        unsafe { Image::from_raw_unchecked(ffi::ImageFromImage(self.clone_raw(), rec.into())) }
     }
 
     /// Create an image from a selected channel of another image (GRAYSCALE)
     #[inline]
     #[must_use]
     pub fn from_channel(&self, selected_channel: i32) -> Image {
-        unsafe { Image(ffi::ImageFromChannel(self.0, selected_channel)) }
+        unsafe {
+            Image::from_raw_unchecked(ffi::ImageFromChannel(self.clone_raw(), selected_channel))
+        }
     }
     /// Exports image as a PNG file.
     #[inline]
     pub fn export_image(&self, filename: &str) {
         let c_filename = CString::new(filename).unwrap();
         unsafe {
-            ffi::ExportImage(self.0, c_filename.as_ptr());
+            ffi::ExportImage(self.clone_raw(), c_filename.as_ptr());
         }
     }
 
@@ -269,7 +281,7 @@ impl Image {
     pub fn export_image_as_code(&self, filename: &str) {
         let c_filename = CString::new(filename).unwrap();
         unsafe {
-            ffi::ExportImageAsCode(self.0, c_filename.as_ptr());
+            ffi::ExportImageAsCode(self.clone_raw(), c_filename.as_ptr());
         }
     }
 
@@ -284,7 +296,7 @@ impl Image {
     #[must_use]
     pub fn get_image_data(&self) -> ImageColors {
         unsafe {
-            let image_data = ffi::LoadImageColors(self.0);
+            let image_data = ffi::LoadImageColors(self.clone_raw());
             let image_data_len = (self.width * self.height) as usize;
             ImageColors(ManuallyDrop::new(Box::from_raw(
                 std::slice::from_raw_parts_mut(image_data as *mut _, image_data_len),
@@ -327,7 +339,7 @@ impl Image {
         unsafe {
             let mut palette_len = 0;
             let image_data =
-                ffi::LoadImagePalette(self.0, max_palette_size as i32, &mut palette_len);
+                ffi::LoadImagePalette(self.clone_raw(), max_palette_size as i32, &mut palette_len);
             ImagePalette(ManuallyDrop::new(Box::from_raw(
                 std::slice::from_raw_parts_mut(image_data as *mut _, palette_len as usize),
             )))
@@ -338,7 +350,7 @@ impl Image {
     #[inline]
     pub fn to_pot(&mut self, fill_color: impl Into<ffi::Color>) {
         unsafe {
-            ffi::ImageToPOT(&mut self.0, fill_color.into());
+            ffi::ImageToPOT(self.as_raw_mut(), fill_color.into());
         }
     }
 
@@ -346,7 +358,7 @@ impl Image {
     #[inline]
     pub fn set_format(&mut self, new_format: crate::consts::PixelFormat) {
         unsafe {
-            ffi::ImageFormat(&mut self.0, (new_format as u32) as i32);
+            ffi::ImageFormat(self.as_raw_mut(), (new_format as u32) as i32);
         }
     }
 
@@ -356,7 +368,7 @@ impl Image {
     #[inline]
     pub fn alpha_mask(&mut self, alpha_mask: &Image) {
         unsafe {
-            ffi::ImageAlphaMask(&mut self.0, alpha_mask.0);
+            ffi::ImageAlphaMask(self.as_raw_mut(), alpha_mask.clone_raw());
         }
     }
 
@@ -364,7 +376,7 @@ impl Image {
     #[inline]
     pub fn alpha_clear(&mut self, color: impl Into<ffi::Color>, threshold: f32) {
         unsafe {
-            ffi::ImageAlphaClear(&mut self.0, color.into(), threshold);
+            ffi::ImageAlphaClear(self.as_raw_mut(), color.into(), threshold);
         }
     }
 
@@ -372,7 +384,7 @@ impl Image {
     #[inline]
     pub fn alpha_crop(&mut self, threshold: f32) {
         unsafe {
-            ffi::ImageAlphaCrop(&mut self.0, threshold);
+            ffi::ImageAlphaCrop(self.as_raw_mut(), threshold);
         }
     }
 
@@ -380,7 +392,7 @@ impl Image {
     #[inline]
     pub fn alpha_premultiply(&mut self) {
         unsafe {
-            ffi::ImageAlphaPremultiply(&mut self.0);
+            ffi::ImageAlphaPremultiply(self.as_raw_mut());
         }
     }
 
@@ -388,7 +400,7 @@ impl Image {
     #[inline]
     pub fn crop(&mut self, crop: impl Into<ffi::Rectangle>) {
         unsafe {
-            ffi::ImageCrop(&mut self.0, crop.into());
+            ffi::ImageCrop(self.as_raw_mut(), crop.into());
         }
     }
 
@@ -396,7 +408,7 @@ impl Image {
     #[inline]
     pub fn resize(&mut self, new_width: i32, new_height: i32) {
         unsafe {
-            ffi::ImageResize(&mut self.0, new_width, new_height);
+            ffi::ImageResize(self.as_raw_mut(), new_width, new_height);
         }
     }
 
@@ -404,7 +416,7 @@ impl Image {
     #[inline]
     pub fn resize_nn(&mut self, new_width: i32, new_height: i32) {
         unsafe {
-            ffi::ImageResizeNN(&mut self.0, new_width, new_height);
+            ffi::ImageResizeNN(self.as_raw_mut(), new_width, new_height);
         }
     }
 
@@ -420,7 +432,7 @@ impl Image {
     ) {
         unsafe {
             ffi::ImageResizeCanvas(
-                &mut self.0,
+                self.as_raw_mut(),
                 new_width,
                 new_height,
                 offset_x,
@@ -434,7 +446,7 @@ impl Image {
     #[inline]
     pub fn gen_mipmaps(&mut self) {
         unsafe {
-            ffi::ImageMipmaps(&mut self.0);
+            ffi::ImageMipmaps(self.as_raw_mut());
         }
     }
 
@@ -442,20 +454,20 @@ impl Image {
     #[inline]
     pub fn dither(&mut self, r_bpp: i32, g_bpp: i32, b_bpp: i32, a_bpp: i32) {
         unsafe {
-            ffi::ImageDither(&mut self.0, r_bpp, g_bpp, b_bpp, a_bpp);
+            ffi::ImageDither(self.as_raw_mut(), r_bpp, g_bpp, b_bpp, a_bpp);
         }
     }
 
     /// Get image alpha border rectangle
     #[inline]
     pub fn get_image_alpha_border(&self, threshold: f32) -> Rectangle {
-        unsafe { ffi::GetImageAlphaBorder(self.0, threshold).into() }
+        unsafe { ffi::GetImageAlphaBorder(self.clone_raw(), threshold).into() }
     }
 
     /// Clear image background with given color
     #[inline]
     pub fn clear_background(&mut self, color: impl Into<ffi::Color>) {
-        unsafe { ffi::ImageClearBackground(&mut self.0, color.into()) }
+        unsafe { ffi::ImageClearBackground(self.as_raw_mut(), color.into()) }
     }
 
     /// Draws a source image within a destination image.
@@ -469,8 +481,8 @@ impl Image {
     ) {
         unsafe {
             ffi::ImageDraw(
-                &mut self.0,
-                src.0,
+                self.as_raw_mut(),
+                src.clone_raw(),
                 src_rec.into(),
                 dst_rec.into(),
                 tint.into(),
@@ -481,13 +493,13 @@ impl Image {
     /// Draw pixel within an image
     #[inline]
     pub fn draw_pixel(&mut self, pos_x: i32, pos_y: i32, color: impl Into<ffi::Color>) {
-        unsafe { ffi::ImageDrawPixel(&mut self.0, pos_x, pos_y, color.into()) }
+        unsafe { ffi::ImageDrawPixel(self.as_raw_mut(), pos_x, pos_y, color.into()) }
     }
 
     /// Draw pixel within an image (Vector version)
     #[inline]
     pub fn draw_pixel_v(&mut self, position: impl Into<MintVec2>, color: impl Into<ffi::Color>) {
-        unsafe { ffi::ImageDrawPixelV(&mut self.0, position.into(), color.into()) }
+        unsafe { ffi::ImageDrawPixelV(self.as_raw_mut(), position.into(), color.into()) }
     }
 
     /// Draw line within an image
@@ -502,7 +514,7 @@ impl Image {
     ) {
         unsafe {
             ffi::ImageDrawLine(
-                &mut self.0,
+                self.as_raw_mut(),
                 start_pos_x,
                 start_pos_y,
                 end_pos_x,
@@ -523,7 +535,7 @@ impl Image {
     ) {
         unsafe {
             ffi::ImageDrawLineEx(
-                &mut self.0,
+                self.as_raw_mut(),
                 start_pos.into(),
                 end_pos.into(),
                 thick,
@@ -540,7 +552,7 @@ impl Image {
         end: impl Into<MintVec2>,
         color: impl Into<ffi::Color>,
     ) {
-        unsafe { ffi::ImageDrawLineV(&mut self.0, start.into(), end.into(), color.into()) }
+        unsafe { ffi::ImageDrawLineV(self.as_raw_mut(), start.into(), end.into(), color.into()) }
     }
 
     /// Draw triangle within an image
@@ -553,7 +565,13 @@ impl Image {
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::ImageDrawTriangle(&mut self.0, v1.into(), v2.into(), v3.into(), color.into())
+            ffi::ImageDrawTriangle(
+                self.as_raw_mut(),
+                v1.into(),
+                v2.into(),
+                v3.into(),
+                color.into(),
+            )
         }
     }
 
@@ -570,7 +588,7 @@ impl Image {
     ) {
         unsafe {
             ffi::ImageDrawTriangleEx(
-                &mut self.0,
+                self.as_raw_mut(),
                 v1.into(),
                 v2.into(),
                 v3.into(),
@@ -591,7 +609,13 @@ impl Image {
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::ImageDrawTriangleLines(&mut self.0, v1.into(), v2.into(), v3.into(), color.into())
+            ffi::ImageDrawTriangleLines(
+                self.as_raw_mut(),
+                v1.into(),
+                v2.into(),
+                v3.into(),
+                color.into(),
+            )
         }
     }
 
@@ -603,7 +627,7 @@ impl Image {
     ) {
         unsafe {
             ffi::ImageDrawTriangleFan(
-                &mut self.0,
+                self.as_raw_mut(),
                 points.as_ptr() as *mut MintVec2,
                 points.len() as i32,
                 color.into(),
@@ -619,7 +643,7 @@ impl Image {
     ) {
         unsafe {
             ffi::ImageDrawTriangleStrip(
-                &mut self.0,
+                self.as_raw_mut(),
                 points.as_ptr() as *mut MintVec2,
                 points.len() as i32,
                 color.into(),
@@ -636,7 +660,7 @@ impl Image {
         radius: i32,
         color: impl Into<ffi::Color>,
     ) {
-        unsafe { ffi::ImageDrawCircle(&mut self.0, center_x, center_y, radius, color.into()) }
+        unsafe { ffi::ImageDrawCircle(self.as_raw_mut(), center_x, center_y, radius, color.into()) }
     }
 
     /// Draw circle within an image (Vector version)
@@ -647,7 +671,7 @@ impl Image {
         radius: i32,
         color: impl Into<ffi::Color>,
     ) {
-        unsafe { ffi::ImageDrawCircleV(&mut self.0, center.into(), radius, color.into()) }
+        unsafe { ffi::ImageDrawCircleV(self.as_raw_mut(), center.into(), radius, color.into()) }
     }
 
     /// Draws a rectangle within an image.
@@ -661,7 +685,7 @@ impl Image {
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::ImageDrawRectangle(&mut self.0, pos_x, pos_y, width, height, color.into());
+            ffi::ImageDrawRectangle(self.as_raw_mut(), pos_x, pos_y, width, height, color.into());
         }
     }
 
@@ -674,7 +698,12 @@ impl Image {
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::ImageDrawRectangleV(&mut self.0, position.into(), size.into(), color.into());
+            ffi::ImageDrawRectangleV(
+                self.as_raw_mut(),
+                position.into(),
+                size.into(),
+                color.into(),
+            );
         }
     }
 
@@ -686,7 +715,7 @@ impl Image {
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::ImageDrawRectangleRec(&mut self.0, rectangle.into(), color.into());
+            ffi::ImageDrawRectangleRec(self.as_raw_mut(), rectangle.into(), color.into());
         }
     }
 
@@ -699,7 +728,7 @@ impl Image {
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::ImageDrawRectangleLines(&mut self.0, rec.into(), thickness, color.into());
+            ffi::ImageDrawRectangleLines(self.as_raw_mut(), rec.into(), thickness, color.into());
         }
     }
 
@@ -716,7 +745,7 @@ impl Image {
         let c_text = CString::new(text).unwrap();
         unsafe {
             ffi::ImageDrawText(
-                &mut self.0,
+                self.as_raw_mut(),
                 c_text.as_ptr(),
                 pos_x,
                 pos_y,
@@ -740,7 +769,7 @@ impl Image {
         let c_text = CString::new(text).unwrap();
         unsafe {
             ffi::ImageDrawTextEx(
-                &mut self.0,
+                self.as_raw_mut(),
                 *font.as_ref(),
                 c_text.as_ptr(),
                 position.into(),
@@ -755,7 +784,7 @@ impl Image {
     #[inline]
     pub fn flip_vertical(&mut self) {
         unsafe {
-            ffi::ImageFlipVertical(&mut self.0);
+            ffi::ImageFlipVertical(self.as_raw_mut());
         }
     }
 
@@ -763,7 +792,7 @@ impl Image {
     #[inline]
     pub fn flip_horizontal(&mut self) {
         unsafe {
-            ffi::ImageFlipHorizontal(&mut self.0);
+            ffi::ImageFlipHorizontal(self.as_raw_mut());
         }
     }
 
@@ -771,7 +800,7 @@ impl Image {
     #[inline]
     pub fn rotate_cw(&mut self) {
         unsafe {
-            ffi::ImageRotateCW(&mut self.0);
+            ffi::ImageRotateCW(self.as_raw_mut());
         }
     }
 
@@ -779,7 +808,7 @@ impl Image {
     #[inline]
     pub fn rotate_ccw(&mut self) {
         unsafe {
-            ffi::ImageRotateCCW(&mut self.0);
+            ffi::ImageRotateCCW(self.as_raw_mut());
         }
     }
 
@@ -787,7 +816,7 @@ impl Image {
     #[inline]
     pub fn color_tint(&mut self, color: impl Into<ffi::Color>) {
         unsafe {
-            ffi::ImageColorTint(&mut self.0, color.into());
+            ffi::ImageColorTint(self.as_raw_mut(), color.into());
         }
     }
 
@@ -795,7 +824,7 @@ impl Image {
     #[inline]
     pub fn color_invert(&mut self) {
         unsafe {
-            ffi::ImageColorInvert(&mut self.0);
+            ffi::ImageColorInvert(self.as_raw_mut());
         }
     }
 
@@ -803,7 +832,7 @@ impl Image {
     #[inline]
     pub fn color_grayscale(&mut self) {
         unsafe {
-            ffi::ImageColorGrayscale(&mut self.0);
+            ffi::ImageColorGrayscale(self.as_raw_mut());
         }
     }
 
@@ -811,7 +840,7 @@ impl Image {
     #[inline]
     pub fn color_contrast(&mut self, contrast: f32) {
         unsafe {
-            ffi::ImageColorContrast(&mut self.0, contrast);
+            ffi::ImageColorContrast(self.as_raw_mut(), contrast);
         }
     }
 
@@ -819,7 +848,7 @@ impl Image {
     #[inline]
     pub fn color_brightness(&mut self, brightness: i32) {
         unsafe {
-            ffi::ImageColorBrightness(&mut self.0, brightness);
+            ffi::ImageColorBrightness(self.as_raw_mut(), brightness);
         }
     }
 
@@ -827,7 +856,7 @@ impl Image {
     #[inline]
     pub fn color_replace(&mut self, color: impl Into<ffi::Color>, replace: impl Into<ffi::Color>) {
         unsafe {
-            ffi::ImageColorReplace(&mut self.0, color.into(), replace.into());
+            ffi::ImageColorReplace(self.as_raw_mut(), color.into(), replace.into());
         }
     }
 
@@ -846,7 +875,8 @@ impl Image {
 
         let c_filetype = CString::new(file_type).unwrap();
         let data_size: &mut i32 = &mut 0;
-        let data = unsafe { ffi::ExportImageToMemory(self.0, c_filetype.as_ptr(), data_size) };
+        let data =
+            unsafe { ffi::ExportImageToMemory(self.clone_raw(), c_filetype.as_ptr(), data_size) };
 
         // The actual function returns null if the code for converting to a file type never goes off.
         if data == null_mut() {
@@ -876,7 +906,9 @@ impl Image {
             return Err(InvalidImageError::NonSquareKernel);
         }
 
-        unsafe { ffi::ImageKernelConvolution(&mut self.0, kernel.as_ptr(), kernel.len() as i32) }
+        unsafe {
+            ffi::ImageKernelConvolution(self.as_raw_mut(), kernel.as_ptr(), kernel.len() as i32)
+        }
 
         Ok(())
     }
@@ -885,7 +917,7 @@ impl Image {
     #[inline]
     #[must_use]
     pub fn gen_image_color(width: i32, height: i32, color: impl Into<ffi::Color>) -> Image {
-        unsafe { Image(ffi::GenImageColor(width, height, color.into())) }
+        unsafe { Image::from_raw_unchecked(ffi::GenImageColor(width, height, color.into())) }
     }
     /// Generate image: perlin noise
     pub fn gen_image_perlin_noise(
@@ -896,7 +928,11 @@ impl Image {
         offset_y: i32,
         scale: f32,
     ) -> Image {
-        Image(unsafe { ffi::GenImagePerlinNoise(width, height, offset_x, offset_y, scale) })
+        unsafe {
+            Image::from_raw_unchecked(ffi::GenImagePerlinNoise(
+                width, height, offset_x, offset_y, scale,
+            ))
+        }
     }
 
     /// Generates an Image containing a radial gradient.
@@ -910,7 +946,7 @@ impl Image {
         outer: impl Into<ffi::Color>,
     ) -> Image {
         unsafe {
-            Image(ffi::GenImageGradientRadial(
+            Image::from_raw_unchecked(ffi::GenImageGradientRadial(
                 width,
                 height,
                 density,
@@ -932,7 +968,7 @@ impl Image {
         col2: impl Into<ffi::Color>,
     ) -> Image {
         unsafe {
-            Image(ffi::GenImageChecked(
+            Image::from_raw_unchecked(ffi::GenImageChecked(
                 width,
                 height,
                 checks_x,
@@ -955,7 +991,7 @@ impl Image {
         end: Color,
     ) -> Image {
         unsafe {
-            Image(ffi::GenImageGradientLinear(
+            Image::from_raw_unchecked(ffi::GenImageGradientLinear(
                 width,
                 height,
                 direction,
@@ -976,7 +1012,7 @@ impl Image {
         end: Color,
     ) -> Image {
         unsafe {
-            Image(ffi::GenImageGradientSquare(
+            Image::from_raw_unchecked(ffi::GenImageGradientSquare(
                 width,
                 height,
                 density,
@@ -990,21 +1026,21 @@ impl Image {
     #[must_use]
     pub fn gen_image_text(width: i32, height: i32, text: &str) -> Image {
         let c_str = CString::new(text).unwrap();
-        unsafe { Image(ffi::GenImageText(width, height, c_str.as_ptr())) }
+        unsafe { Image::from_raw_unchecked(ffi::GenImageText(width, height, c_str.as_ptr())) }
     }
 
     /// Generates an Image containing white noise.
     #[inline]
     #[must_use]
     pub fn gen_image_white_noise(width: i32, height: i32, factor: f32) -> Image {
-        unsafe { Image(ffi::GenImageWhiteNoise(width, height, factor)) }
+        unsafe { Image::from_raw_unchecked(ffi::GenImageWhiteNoise(width, height, factor)) }
     }
 
     /// Generates an Image using a cellular algorithm. Bigger `tile_size` means bigger cells.
     #[inline]
     #[must_use]
     pub fn gen_image_cellular(width: i32, height: i32, tile_size: i32) -> Image {
-        unsafe { Image(ffi::GenImageCellular(width, height, tile_size)) }
+        unsafe { Image::from_raw_unchecked(ffi::GenImageCellular(width, height, tile_size)) }
     }
 
     /// Get clipboard image.
@@ -1028,7 +1064,7 @@ impl Image {
         if i.data.is_null() {
             return Err(InvalidImageError::NullDataFromFile);
         }
-        Ok(Image(i))
+        Ok(unsafe { Image::from_raw_unchecked(i) })
     }
 
     /// Loads image from a given memory buffer
@@ -1045,7 +1081,7 @@ impl Image {
         if i.data.is_null() {
             return Err(InvalidImageError::NullDataFromMemory);
         };
-        Ok(Image(i))
+        Ok(unsafe { Image::from_raw_unchecked(i) })
     }
 
     /// Load image sequence from file, with the number of frames loaded saved to frame_num.
@@ -1056,7 +1092,7 @@ impl Image {
     pub fn load_image_anim(filename: &str, frame_num: &mut i32) -> Self {
         let c_filename = CString::new(filename).unwrap();
 
-        unsafe { Image(ffi::LoadImageAnim(c_filename.as_ptr(), frame_num)) }
+        unsafe { Image::from_raw_unchecked(ffi::LoadImageAnim(c_filename.as_ptr(), frame_num)) }
     }
 
     /// Load image from memory buffer, with the number of frames loaded saved to frame_num.
@@ -1066,7 +1102,7 @@ impl Image {
         let c_filetype = CString::new(filetype).unwrap();
 
         unsafe {
-            Image(ffi::LoadImageAnimFromMemory(
+            Image::from_raw_unchecked(ffi::LoadImageAnimFromMemory(
                 c_filetype.as_ptr(),
                 data.as_ptr(),
                 data.len() as i32,
@@ -1090,7 +1126,7 @@ impl Image {
         if i.data.is_null() {
             return Err(InvalidImageError::NullDataFromFile);
         }
-        Ok(Image(i))
+        Ok(unsafe { Image::from_raw_unchecked(i) })
     }
 
     /// Creates an image from `text` (custom font).
@@ -1098,7 +1134,9 @@ impl Image {
     #[must_use]
     pub fn image_text(text: &str, font_size: i32, color: impl Into<ffi::Color>) -> Image {
         let c_text = CString::new(text).unwrap();
-        unsafe { Image(ffi::ImageText(c_text.as_ptr(), font_size, color.into())) }
+        unsafe {
+            Image::from_raw_unchecked(ffi::ImageText(c_text.as_ptr(), font_size, color.into()))
+        }
     }
 
     /// Creates an image from `text` (custom font).
@@ -1113,7 +1151,7 @@ impl Image {
     ) -> Image {
         let c_text = CString::new(text).unwrap();
         unsafe {
-            Image(ffi::ImageTextEx(
+            Image::from_raw_unchecked(ffi::ImageTextEx(
                 *font.as_ref(),
                 c_text.as_ptr(),
                 font_size,
@@ -1127,7 +1165,7 @@ impl Image {
     #[inline]
     #[must_use]
     pub fn is_image_valid(&self) -> bool {
-        unsafe { ffi::IsImageValid(self.0) }
+        unsafe { ffi::IsImageValid(self.clone_raw()) }
     }
 }
 
@@ -1251,7 +1289,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
         if i.data.is_null() {
             return Err(InvalidImageError::NullDataFromTexture);
         }
-        Ok(Image(i))
+        Ok(unsafe { Image::from_raw_unchecked(i) })
     }
 
     /// Generates GPU mipmaps for a `texture`.
@@ -1317,7 +1355,7 @@ impl RaylibHandle {
         image: &Image,
         layout: crate::consts::CubemapLayout,
     ) -> Result<Texture2D, LoadTextureError> {
-        let t = unsafe { ffi::LoadTextureCubemap(image.0, layout as i32) };
+        let t = unsafe { ffi::LoadTextureCubemap(image.clone_raw(), layout as i32) };
         if t.id == 0 {
             return Err(LoadTextureError::CubemapFromImageFailed);
         }
@@ -1335,7 +1373,7 @@ impl RaylibHandle {
         if image.width == 0 || image.height == 0 {
             return Err(LoadTextureError::InvalidData);
         }
-        let t = unsafe { ffi::LoadTextureFromImage(image.0) };
+        let t = unsafe { ffi::LoadTextureFromImage(image.clone_raw()) };
         if t.id == 0 {
             return Err(LoadTextureError::TextureFromImageFailed);
         }
