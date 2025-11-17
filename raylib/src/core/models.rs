@@ -23,13 +23,6 @@ use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
-    /// Material, includes shader and maps
-    Material,
-    ffi::Material,
-    ffi::UnloadMaterial
-);
-make_thin_wrapper!(WeakMaterial, ffi::Material, no_drop);
-make_thin_wrapper!(
     /// Bone, skeletal animation bone
     BoneInfo,
     ffi::BoneInfo,
@@ -48,12 +41,6 @@ make_thin_wrapper!(
     ffi::MaterialMap,
     no_drop
 );
-// Weak things can be clone
-impl Clone for WeakMaterial {
-    fn clone(&self) -> WeakMaterial {
-        WeakMaterial(self.0)
-    }
-}
 
 // Weak things can be clone
 impl Clone for WeakModelAnimation {
@@ -169,10 +156,19 @@ pub struct Model {
     bind_pose: *mut Transform,
 }
 
+impl Drop for Model {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::UnloadModel(self.clone_raw());
+        }
+    }
+}
+
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct WeakModel(ManuallyDrop<Model>);
 
+// Weak things can be clone
 impl Clone for WeakModel {
     #[inline]
     fn clone(&self) -> Self {
@@ -221,6 +217,7 @@ impl Model {
     /// # Safety
     /// Do not break Rust's aliasing rules.
     #[inline]
+    #[must_use = "weak resources must be manually unloaded"]
     pub unsafe fn make_weak(self) -> WeakModel {
         WeakModel(ManuallyDrop::new(self))
     }
@@ -469,6 +466,7 @@ impl Mesh {
     /// # Safety
     /// Do not break Rust's aliasing rules.
     #[inline]
+    #[must_use = "weak resources must be manually unloaded"]
     pub unsafe fn make_weak(self) -> WeakMesh {
         WeakMesh(ManuallyDrop::new(self))
     }
@@ -735,13 +733,116 @@ impl Mesh {
     }
 }
 
-impl Material {
-    #[must_use]
+/// Material, includes shader and maps
+#[derive(Debug)]
+#[repr(C)]
+pub struct Material {
+    shader: ffi::Shader,
+    maps: *mut MaterialMap,
+    pub params: [f32; 4],
+}
+
+impl Drop for Material {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::UnloadMaterial(self.clone_raw());
+        }
+    }
+}
+
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct WeakMaterial(ManuallyDrop<Material>);
+
+// Weak things can be clone
+impl Clone for WeakMaterial {
     #[inline]
+    fn clone(&self) -> Self {
+        Self(ManuallyDrop::new(Material {
+            shader: self.0.shader,
+            maps: self.0.maps,
+            params: self.0.params,
+        }))
+    }
+}
+
+impl std::ops::Deref for WeakMaterial {
+    type Target = Material;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for WeakMaterial {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+impl AsRef<Material> for WeakMaterial {
+    #[inline]
+    fn as_ref(&self) -> &Material {
+        self
+    }
+}
+impl AsMut<Material> for WeakMaterial {
+    #[inline]
+    fn as_mut(&mut self) -> &mut Material {
+        self
+    }
+}
+
+impl Material {
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
+    #[inline]
+    #[must_use = "weak resources must be manually unloaded"]
     pub unsafe fn make_weak(self) -> WeakMaterial {
-        let m = WeakMaterial(self.0);
-        std::mem::forget(self);
-        m
+        WeakMaterial(ManuallyDrop::new(self))
+    }
+    /// # Safety
+    /// - Do not break Rust's aliasing rules.
+    /// - Other weak instances of this mesh must not be accessed after the `Material` is dropped.
+    #[inline]
+    pub unsafe fn from_weak(weak: WeakMaterial) -> Material {
+        ManuallyDrop::into_inner(weak.0)
+    }
+
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
+    /// - Other raw instances of this mesh must not be accessed after the `Material` is dropped.
+    #[inline]
+    pub unsafe fn from_raw_unchecked(raw: ffi::Material) -> Material {
+        unsafe { std::mem::transmute(raw) }
+    }
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
+    #[inline]
+    pub unsafe fn to_raw(self) -> ffi::Material {
+        unsafe { std::mem::transmute(self) }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Material`] to be misused.
+    ///
+    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
+    #[inline]
+    pub(crate) fn clone_raw(&self) -> ffi::Material {
+        unsafe { std::mem::transmute_copy(self) }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Material`] to be misused.
+    ///
+    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
+    #[inline]
+    pub(crate) fn as_raw_ref(&self) -> &ffi::Material {
+        unsafe { &*std::ptr::from_ref(self).cast() }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Material`] to be misused.
+    #[inline]
+    pub(crate) fn as_raw_mut(&mut self) -> &mut ffi::Material {
+        unsafe { &mut *std::ptr::from_mut(self).cast() }
     }
 
     /// Load materials from model file
@@ -758,7 +859,7 @@ impl Material {
         let mut m_vec = Vec::with_capacity(m_size as usize);
         for i in 0..m_size {
             unsafe {
-                m_vec.push(Material(*m_ptr.offset(i as isize)));
+                m_vec.push(Material::from_raw_unchecked(*m_ptr.offset(i as isize)));
             }
         }
         unsafe {
@@ -766,23 +867,18 @@ impl Material {
         }
         Ok(m_vec)
     }
-}
 
-impl RaylibMaterial for WeakMaterial {}
-impl RaylibMaterial for Material {}
-
-pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     /// Material shader
     #[must_use]
     #[inline]
     fn shader(&self) -> &crate::shaders::WeakShader {
-        unsafe { std::mem::transmute(&self.as_ref().shader) }
+        unsafe { std::mem::transmute(&self.shader) }
     }
     #[must_use]
     #[inline]
     /// Material shader
     fn shader_mut(&mut self) -> &mut crate::shaders::WeakShader {
-        unsafe { std::mem::transmute(&mut self.as_mut().shader) }
+        unsafe { std::mem::transmute(&mut self.shader) }
     }
     #[must_use]
     #[inline]
@@ -790,7 +886,7 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     fn maps(&self) -> &[MaterialMap] {
         unsafe {
             std::slice::from_raw_parts(
-                self.as_ref().maps as *const MaterialMap,
+                self.maps as *const MaterialMap,
                 consts::MAX_MATERIAL_MAPS as usize,
             )
         }
@@ -801,7 +897,7 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     fn maps_mut(&mut self) -> &mut [MaterialMap] {
         unsafe {
             std::slice::from_raw_parts_mut(
-                self.as_mut().maps as *mut MaterialMap,
+                self.maps as *mut MaterialMap,
                 consts::MAX_MATERIAL_MAPS as usize,
             )
         }
@@ -815,7 +911,11 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
         texture: impl AsRef<ffi::Texture2D>,
     ) {
         unsafe {
-            ffi::SetMaterialTexture(self.as_mut(), (map_type as u32) as i32, *texture.as_ref())
+            ffi::SetMaterialTexture(
+                self.as_raw_mut(),
+                (map_type as u32) as i32,
+                *texture.as_ref(),
+            )
         }
     }
 
@@ -823,7 +923,7 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     #[inline]
     #[must_use]
     fn is_material_valid(&mut self) -> bool {
-        unsafe { ffi::IsMaterialValid(*self.as_ref()) }
+        unsafe { ffi::IsMaterialValid(self.clone_raw()) }
     }
 }
 
@@ -988,7 +1088,7 @@ impl RaylibModelAnimation for WeakModelAnimation {}
 
 impl ModelAnimation {
     #[inline]
-    #[must_use]
+    #[must_use = "weak resources must be manually unloaded"]
     pub unsafe fn make_weak(self) -> WeakModelAnimation {
         let m = WeakModelAnimation(self.0);
         std::mem::forget(self);
@@ -1126,14 +1226,14 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn load_material_default(&self, _: &RaylibThread) -> WeakMaterial {
-        WeakMaterial(unsafe { ffi::LoadMaterialDefault() })
+        unsafe { Material::from_raw_unchecked(ffi::LoadMaterialDefault()).make_weak() }
     }
 
     /// Weak materials will leak memory if they are not unlaoded
     /// Unload material from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_material(&mut self, _: &RaylibThread, material: WeakMaterial) {
-        unsafe { ffi::UnloadMaterial(*material.as_ref()) }
+        unsafe { ffi::UnloadMaterial(material.clone_raw()) }
     }
 
     /// Weak models will leak memory if they are not unlaoded
