@@ -211,13 +211,13 @@ macro_rules! make_thick_wrapper {
         $(#[$weak_attrs])*
         #[derive(Debug)]
         #[repr(transparent)]
-        pub struct $WeakTy(ManuallyDrop<$WrapperTy>);
+        pub struct $WeakTy(std::mem::ManuallyDrop<$WrapperTy>);
 
         // Weak things can be clone
         impl Clone for $WeakTy {
             #[inline]
             fn clone(&self) -> Self {
-                Self(ManuallyDrop::new(unsafe { $WrapperTy::from_raw_unchecked(self.0.clone_raw()) }))
+                Self(std::mem::ManuallyDrop::new(unsafe { $WrapperTy::from_raw_unchecked(self.0.clone_raw()) }))
             }
         }
 
@@ -256,14 +256,14 @@ macro_rules! make_thick_wrapper {
             #[inline]
             #[must_use = "weak resources must be manually unloaded"]
             pub unsafe fn make_weak(self) -> $WeakTy {
-                $WeakTy(ManuallyDrop::new(self))
+                $WeakTy(std::mem::ManuallyDrop::new(self))
             }
             /// # Safety
             /// - Do not break Rust's aliasing rules.
             #[doc = concat!(" - Other weak instances of this mesh must not be accessed after the [`", stringify!($WrapperTy), "`] is dropped.")]
             #[inline]
             pub unsafe fn from_weak(weak: $WeakTy) -> $WrapperTy {
-                ManuallyDrop::into_inner(weak.0)
+                std::mem::ManuallyDrop::into_inner(weak.0)
             }
         )?
 
