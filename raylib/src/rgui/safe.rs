@@ -2,6 +2,7 @@ use crate::core::RaylibHandle;
 use crate::core::drawing::RaylibDraw;
 use crate::core::text::WeakFont;
 use crate::ffi::{Color, Rectangle, Vector2};
+use crate::prelude::Font;
 use crate::{MintVec2, ffi};
 
 use std::ffi::{CStr, CString, c_char};
@@ -51,7 +52,7 @@ impl RaylibHandle {
     /// Get gui custom font (global state)
     #[inline]
     pub fn gui_get_font(&mut self) -> WeakFont {
-        unsafe { WeakFont(ffi::GuiGetFont()) }
+        unsafe { Font::from_raw_unchecked(ffi::GuiGetFont()).make_weak() }
     }
     /// Set one style property
     #[inline]
@@ -160,7 +161,7 @@ pub trait RaylibDrawGui {
     /// Get gui custom font (global state)
     #[inline]
     fn gui_get_font(&mut self) -> WeakFont {
-        unsafe { WeakFont(ffi::GuiGetFont()) }
+        unsafe { Font::from_raw_unchecked(ffi::GuiGetFont()).make_weak() }
     }
     /// Set one style property
     #[inline]
@@ -384,7 +385,12 @@ pub trait RaylibDrawGui {
         buffer.push('\0');
         let (ptr, capacity) = (buffer.as_mut_ptr(), buffer.capacity());
         let res = unsafe {
-            ffi::GuiTextBox(bounds.into(), ptr as *mut c_char, capacity as i32, edit_mode) > 0
+            ffi::GuiTextBox(
+                bounds.into(),
+                ptr as *mut c_char,
+                capacity as i32,
+                edit_mode,
+            ) > 0
         };
         let cap = buffer.capacity();
 

@@ -13,13 +13,20 @@ use std::ffi::{CString, OsString};
 use std::mem::ManuallyDrop;
 
 fn no_drop<T>(_thing: T) {}
-make_thin_wrapper!(
+make_thick_wrapper! {
     /// Font, font texture and GlyphInfo array data
-    Font,
-    ffi::Font,
-    ffi::UnloadFont
-);
-make_thin_wrapper!(WeakFont, ffi::Font, no_drop);
+    pub struct Font {
+        pub baseSize: i32,
+        glyphCount: i32,
+        glyphPadding: i32,
+        texture: ffi::Texture2D,
+        recs: *mut ffi::Rectangle,
+        glyphs: *mut ffi::GlyphInfo,
+    }
+    weak = WeakFont,
+    raw = ffi::Font,
+    drop = ffi::UnloadFont
+}
 make_thin_wrapper!(
     /// GlyphInfo, font characters glyphs info
     GlyphInfo,
@@ -83,13 +90,13 @@ impl std::ops::DerefMut for RSliceGlyphInfo {
 
 impl AsRef<ffi::Texture2D> for Font {
     fn as_ref(&self) -> &ffi::Texture2D {
-        return &self.0.texture;
+        &self.texture
     }
 }
 
 impl AsRef<ffi::Texture2D> for WeakFont {
     fn as_ref(&self) -> &ffi::Texture2D {
-        return &self.0.texture;
+        &self.texture
     }
 }
 
@@ -135,7 +142,7 @@ impl RaylibHandle {
     /// Unload font from GPU memory (VRAM)
     #[inline]
     pub fn unload_font(&mut self, font: WeakFont) {
-        unsafe { ffi::UnloadFont(font.0) };
+        unsafe { ffi::UnloadFont(font.clone_raw()) };
     }
 
     /// Loads font from file into GPU memory (VRAM).
@@ -149,7 +156,7 @@ impl RaylibHandle {
                 path: filename.into(),
             });
         }
-        Ok(Font(f))
+        Ok(unsafe { Font::from_raw_unchecked(f) })
     }
 
     /// Loads font from file with extended parameters.
@@ -183,7 +190,7 @@ impl RaylibHandle {
                 path: filename.into(),
             });
         }
-        Ok(Font(f))
+        Ok(unsafe { Font::from_raw_unchecked(f) })
     }
 
     /// Load font from Image (XNA style)
@@ -200,7 +207,7 @@ impl RaylibHandle {
         if f.glyphs.is_null() {
             return Err(LoadFontError::LoadFromImageFailed);
         }
-        Ok(Font(f))
+        Ok(unsafe { Font::from_raw_unchecked(f) })
     }
     /// Load font data from a given memory buffer.
     /// `file_type` refers to the extension, e.g. ".ttf".
@@ -242,7 +249,7 @@ impl RaylibHandle {
         if f.glyphs.is_null() || f.texture.id == 0 {
             return Err(LoadFontError::LoadFromMemoryFailed);
         }
-        Ok(Font(f))
+        Ok(unsafe { Font::from_raw_unchecked(f) })
     }
     /// Loads font data for further use (see also `Font::from_data`).
     /// Now supports .tiff
@@ -285,31 +292,25 @@ impl RaylibHandle {
     }
 }
 
-impl RaylibFont for WeakFont {}
-impl RaylibFont for Font {}
-
-pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
+impl Font {
     /// Base size (default chars height)
     #[inline]
     #[must_use]
     fn base_size(&self) -> i32 {
-        self.as_ref().baseSize
+        self.baseSize
     }
     /// Texture atlas containing the glyphs
     #[inline]
     #[must_use]
     fn texture(&self) -> &Texture2D {
-        unsafe { std::mem::transmute(&self.as_ref().texture) }
+        unsafe { std::mem::transmute(&self.texture) }
     }
     /// Glyphs info data
     #[inline]
     #[must_use]
     fn chars(&self) -> &[GlyphInfo] {
         unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().glyphs as *const GlyphInfo,
-                self.as_ref().glyphCount as usize,
-            )
+            std::slice::from_raw_parts(self.glyphs as *const GlyphInfo, self.glyphCount as usize)
         }
     }
     /// Glyphs info data
@@ -317,10 +318,7 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     #[must_use]
     fn chars_mut(&mut self) -> &mut [GlyphInfo] {
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().glyphs as *mut GlyphInfo,
-                self.as_ref().glyphCount as usize,
-            )
+            std::slice::from_raw_parts_mut(self.glyphs as *mut GlyphInfo, self.glyphCount as usize)
         }
     }
 
@@ -328,7 +326,7 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     #[inline]
     #[must_use]
     fn is_font_valid(&self) -> bool {
-        unsafe { ffi::IsFontValid(*self.as_ref()) }
+        unsafe { ffi::IsFontValid(self.clone_raw()) }
     }
 
     /// Export font as code file, returns true on success
@@ -338,46 +336,37 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
         A: Into<OsString>,
     {
         let c_str = CString::new(filename.into().to_string_lossy().as_bytes()).unwrap();
-        unsafe { ffi::ExportFontAsCode(*self.as_ref(), c_str.as_ptr()) }
+        unsafe { ffi::ExportFontAsCode(self.clone_raw(), c_str.as_ptr()) }
     }
 
     /// Get glyph font info data for a codepoint (unicode character), fallback to '?' if not found
     #[inline]
     #[must_use]
     fn get_glyph_info(&self, codepoint: char) -> GlyphInfo {
-        unsafe { GlyphInfo(ffi::GetGlyphInfo(*self.as_ref(), codepoint as i32)) }
+        unsafe { GlyphInfo(ffi::GetGlyphInfo(self.clone_raw(), codepoint as i32)) }
     }
 
     /// Gets index position for a unicode character on `font`.
     #[inline]
     #[must_use]
     fn get_glyph_index(&self, codepoint: char) -> i32 {
-        unsafe { ffi::GetGlyphIndex(*self.as_ref(), codepoint as i32) }
+        unsafe { ffi::GetGlyphIndex(self.clone_raw(), codepoint as i32) }
     }
 
     /// Get glyph rectangle in font atlas for a codepoint (unicode character), fallback to '?' if not found
     #[inline]
     #[must_use]
     fn get_glyph_atlas_rec(&self, codepoint: char) -> Rectangle {
-        unsafe { ffi::GetGlyphAtlasRec(*self.as_ref(), codepoint as i32).into() }
+        unsafe { ffi::GetGlyphAtlasRec(self.clone_raw(), codepoint as i32).into() }
     }
 
     /// Measures string width in pixels for `font`.
     #[must_use]
     fn measure_text(&self, text: &str, font_size: f32, spacing: f32) -> Vector2 {
         let c_text = CString::new(text).unwrap();
-        unsafe { ffi::MeasureTextEx(*self.as_ref(), c_text.as_ptr(), font_size, spacing).into() }
+        unsafe { ffi::MeasureTextEx(self.clone_raw(), c_text.as_ptr(), font_size, spacing).into() }
     }
-}
 
-impl Font {
-    #[inline]
-    #[must_use]
-    pub fn make_weak(self) -> WeakFont {
-        let w = WeakFont(self.0);
-        std::mem::forget(self);
-        return w;
-    }
     /// Returns a new `Font` using provided `GlyphInfo` data and parameters.
     #[must_use]
     fn from_data(
@@ -393,7 +382,7 @@ impl Font {
 
             let atlas = ffi::GenImageFontAtlas(
                 f.glyphs,
-                &mut f.0.recs,
+                &mut f.recs,
                 f.baseSize,
                 f.glyphCount,
                 padding,
@@ -403,7 +392,7 @@ impl Font {
             ffi::UnloadImage(atlas);
             f
         };
-        if f.0.glyphs.is_null() || f.0.texture.id == 0 {
+        if f.glyphs.is_null() || f.texture.id == 0 {
             return Err(LoadFontError::LoadFromImageFailed);
         }
         Ok(f)
@@ -469,7 +458,7 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_font_default(&self) -> WeakFont {
-        WeakFont(unsafe { ffi::GetFontDefault() })
+        unsafe { Font::from_raw_unchecked(ffi::GetFontDefault()).make_weak() }
     }
     /// Measures string width in pixels for default font.
     #[must_use]
