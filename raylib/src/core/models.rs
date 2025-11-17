@@ -6,7 +6,8 @@ use crate::core::math::BoundingBox;
 use crate::core::math::Matrix;
 use crate::core::math::Transform;
 use crate::core::math::{Vector2, Vector3, Vector4};
-use crate::core::texture::{Image, Texture2D};
+use crate::core::shaders::WeakShader;
+use crate::core::texture::{Image, WeakTexture2D};
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi::Color;
 use crate::{
@@ -53,7 +54,7 @@ make_thick_wrapper! {
         animNormals: *mut Vector3,
         boneIds: *mut u8,
         boneWeights: *mut f32,
-        boneMatrices: *mut ffi::Matrix,
+        boneMatrices: *mut Matrix,
         boneCount: i32,
         vaoId: u32,
         vboId: *mut u32,
@@ -65,7 +66,7 @@ make_thick_wrapper! {
 make_thick_wrapper! {
     /// Material, includes shader and maps
     pub struct Material {
-        shader: ffi::Shader,
+        pub shader: WeakShader,
         maps: *mut MaterialMap,
         pub params: [f32; 4],
     }
@@ -77,7 +78,7 @@ make_thick_wrapper! {
     pub struct ModelAnimation {
         boneCount: i32,
         frameCount: i32,
-        bones: *mut ffi::BoneInfo,
+        bones: *mut BoneInfo,
         framePoses: *mut *mut Transform,
         pub name: [::std::os::raw::c_char; 32],
     }
@@ -94,7 +95,7 @@ make_thin_wrapper!(
 make_thick_wrapper! {
     /// MaterialMap
     pub struct MaterialMap {
-        pub texture: std::mem::ManuallyDrop<Texture2D>,
+        pub texture: WeakTexture2D,
         pub color: Color,
         pub value: f32,
     }
