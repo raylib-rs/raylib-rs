@@ -22,6 +22,70 @@ use std::mem::ManuallyDrop;
 use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
+make_thick_wrapper! {
+    pub struct Model {
+        pub transform: Matrix,
+        meshCount: i32,
+        materialCount: i32,
+        meshes: *mut WeakMesh,
+        materials: *mut WeakMaterial,
+        meshMaterial: *mut i32,
+        boneCount: i32,
+        bones: *mut BoneInfo,
+        bindPose: *mut Transform,
+    }
+    weak = WeakModel,
+    raw = ffi::Model,
+    drop = ffi::UnloadModel,
+}
+make_thick_wrapper! {
+    /// Mesh, vertex data and vao/vbo
+    pub struct Mesh {
+        vertexCount: i32,
+        triangleCount: i32,
+        vertices: *mut Vector3,
+        texcoords: *mut Vector2,
+        texcoords2: *mut Vector2,
+        normals: *mut Vector3,
+        tangents: *mut Vector4,
+        colors: *mut Color,
+        indices: *mut u16,
+        animVertices: *mut Vector3,
+        animNormals: *mut Vector3,
+        boneIds: *mut u8,
+        boneWeights: *mut f32,
+        boneMatrices: *mut ffi::Matrix,
+        boneCount: i32,
+        vaoId: u32,
+        vboId: *mut u32,
+    }
+    weak = WeakMesh,
+    raw = ffi::Mesh,
+    drop = ffi::UnloadMesh,
+}
+make_thick_wrapper! {
+    /// Material, includes shader and maps
+    pub struct Material {
+        shader: ffi::Shader,
+        maps: *mut MaterialMap,
+        pub params: [f32; 4],
+    }
+    weak = WeakMaterial,
+    raw = ffi::Material,
+    drop = ffi::UnloadMaterial,
+}
+make_thick_wrapper! {
+    pub struct ModelAnimation {
+        boneCount: i32,
+        frameCount: i32,
+        bones: *mut ffi::BoneInfo,
+        framePoses: *mut *mut Transform,
+        name: [::std::os::raw::c_char; 32],
+    }
+    weak = WeakModelAnimation,
+    raw = ffi::ModelAnimation,
+    drop = ffi::UnloadModelAnimation,
+}
 make_thin_wrapper!(
     /// Bone, skeletal animation bone
     BoneInfo,
@@ -128,23 +192,6 @@ impl RaylibHandle {
             ffi::UpdateModelAnimationBones(*model.as_mut(), *anim.as_ref(), frame);
         }
     }
-}
-
-make_thick_wrapper! {
-    pub struct Model {
-        pub transform: Matrix,
-        meshCount: i32,
-        materialCount: i32,
-        meshes: *mut WeakMesh,
-        materials: *mut WeakMaterial,
-        meshMaterial: *mut i32,
-        boneCount: i32,
-        bones: *mut BoneInfo,
-        bindPose: *mut Transform,
-    }
-    weak = WeakModel,
-    raw = ffi::Model,
-    drop = ffi::UnloadModel,
 }
 
 impl Model {
@@ -259,32 +306,6 @@ impl Model {
             Ok(())
         }
     }
-}
-
-make_thick_wrapper! {
-    /// Mesh, vertex data and vao/vbo
-    pub struct Mesh {
-        vertexCount: i32,
-        triangleCount: i32,
-        vertices: *mut Vector3,
-        texcoords: *mut Vector2,
-        texcoords2: *mut Vector2,
-        normals: *mut Vector3,
-        tangents: *mut Vector4,
-        colors: *mut Color,
-        indices: *mut u16,
-        animVertices: *mut Vector3,
-        animNormals: *mut Vector3,
-        boneIds: *mut u8,
-        boneWeights: *mut f32,
-        boneMatrices: *mut ffi::Matrix,
-        boneCount: i32,
-        vaoId: u32,
-        vboId: *mut u32,
-    }
-    weak = WeakMesh,
-    raw = ffi::Mesh,
-    drop = ffi::UnloadMesh,
 }
 
 impl Mesh {
@@ -503,18 +524,6 @@ impl Mesh {
             ffi::ExportMeshAsCode(self.clone_raw(), c_filename.as_ptr());
         }
     }
-}
-
-make_thick_wrapper! {
-    /// Material, includes shader and maps
-    pub struct Material {
-        shader: ffi::Shader,
-        maps: *mut MaterialMap,
-        pub params: [f32; 4],
-    }
-    weak = WeakMaterial,
-    raw = ffi::Material,
-    drop = ffi::UnloadMaterial,
 }
 
 impl Material {
@@ -744,19 +753,6 @@ impl<'a> ExactSizeIterator for FramePoseIterMut<'a> {
     fn len(&self) -> usize {
         self.iter.len()
     }
-}
-
-make_thick_wrapper! {
-    pub struct ModelAnimation {
-        boneCount: i32,
-        frameCount: i32,
-        bones: *mut ffi::BoneInfo,
-        framePoses: *mut *mut Transform,
-        name: [::std::os::raw::c_char; 32],
-    }
-    weak = WeakModelAnimation,
-    raw = ffi::ModelAnimation,
-    drop = ffi::UnloadModelAnimation,
 }
 
 impl ModelAnimation {
