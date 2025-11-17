@@ -184,12 +184,20 @@ macro_rules! make_thick_wrapper {
         $(#[$attrs])*
         #[derive(Debug)]
         #[repr(C)]
+        #[allow(non_snake_case)]
         pub struct $WrapperTy {
             $(
                 $(#[$field_attrs])*
                 $field_vis $field: $FieldTy
             ),*
         }
+
+        #[allow(clippy::unnecessary_operation, clippy::identity_op)]
+        const _: () = {
+            [concat!("Size of ", stringify!($WrapperTy))][::std::mem::size_of::<$WrapperTy>() - ::std::mem::size_of::<$RawTy>()];
+            [concat!("Alignment of ", stringify!($WrapperTy))][::std::mem::align_of::<$WrapperTy>() - ::std::mem::align_of::<$RawTy>()];
+            $([concat!("Offset of field: ", stringify!($WrapperTy::$field))][::std::mem::offset_of!($WrapperTy, $field) - ::std::mem::offset_of!($RawTy, $field)];)*
+        };
 
         impl Drop for $WrapperTy {
             fn drop(&mut self) {

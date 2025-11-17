@@ -133,14 +133,14 @@ impl RaylibHandle {
 make_thick_wrapper! {
     pub struct Model {
         pub transform: Matrix,
-        mesh_count: i32,
-        material_count: i32,
+        meshCount: i32,
+        materialCount: i32,
         meshes: *mut WeakMesh,
         materials: *mut WeakMaterial,
-        mesh_material: *mut i32,
-        bone_count: i32,
+        meshMaterial: *mut i32,
+        boneCount: i32,
         bones: *mut BoneInfo,
-        bind_pose: *mut Transform,
+        bindPose: *mut Transform,
     }
     weak = WeakModel,
     raw = ffi::Model,
@@ -164,25 +164,25 @@ impl Model {
     #[inline]
     #[must_use]
     fn meshes(&self) -> &[WeakMesh] {
-        unsafe { std::slice::from_raw_parts(self.meshes, self.mesh_count as usize) }
+        unsafe { std::slice::from_raw_parts(self.meshes, self.meshCount as usize) }
     }
     // Meshes array
     #[inline]
     #[must_use]
     fn meshes_mut(&mut self) -> &mut [WeakMesh] {
-        unsafe { std::slice::from_raw_parts_mut(self.meshes, self.mesh_count as usize) }
+        unsafe { std::slice::from_raw_parts_mut(self.meshes, self.meshCount as usize) }
     }
     /// Materials array
     #[inline]
     #[must_use]
     fn materials(&self) -> &[WeakMaterial] {
-        unsafe { std::slice::from_raw_parts(self.materials, self.material_count as usize) }
+        unsafe { std::slice::from_raw_parts(self.materials, self.materialCount as usize) }
     }
     /// Materials array
     #[inline]
     #[must_use]
     fn materials_mut(&mut self) -> &mut [WeakMaterial] {
-        unsafe { std::slice::from_raw_parts_mut(self.materials, self.material_count as usize) }
+        unsafe { std::slice::from_raw_parts_mut(self.materials, self.materialCount as usize) }
     }
     #[inline]
     #[must_use]
@@ -192,7 +192,7 @@ impl Model {
             return None;
         }
 
-        Some(unsafe { std::slice::from_raw_parts(self.bones, self.bone_count as usize) })
+        Some(unsafe { std::slice::from_raw_parts(self.bones, self.boneCount as usize) })
     }
     #[inline]
     #[must_use]
@@ -202,25 +202,25 @@ impl Model {
             return None;
         }
 
-        Some(unsafe { std::slice::from_raw_parts_mut(self.bones, self.bone_count as usize) })
+        Some(unsafe { std::slice::from_raw_parts_mut(self.bones, self.boneCount as usize) })
     }
     #[inline]
     #[must_use]
     /// Bones base transformation (pose)
     fn bind_pose(&self) -> Option<&Transform> {
-        if self.bind_pose.is_null() {
+        if self.bindPose.is_null() {
             return None;
         }
-        Some(unsafe { &*self.bind_pose })
+        Some(unsafe { &*self.bindPose })
     }
     #[inline]
     #[must_use]
     /// Bones base transformation (pose)
     fn bind_pose_mut(&mut self) -> Option<&mut Transform> {
-        if self.bind_pose.is_null() {
+        if self.bindPose.is_null() {
             return None;
         }
-        Some(unsafe { &mut *self.bind_pose })
+        Some(unsafe { &mut *self.bindPose })
     }
     #[inline]
     #[must_use]
@@ -250,9 +250,9 @@ impl Model {
         material_id: i32,
     ) -> Result<(), SetMaterialError> {
         // should this be an assertion?
-        if mesh_id >= self.mesh_count {
+        if mesh_id >= self.meshCount {
             Err(SetMaterialError::MeshIdOutOfBounds)
-        } else if material_id >= self.material_count {
+        } else if material_id >= self.materialCount {
             Err(SetMaterialError::MaterialIdOutOfBounds)
         } else {
             unsafe { ffi::SetModelMeshMaterial(self.as_raw_mut(), mesh_id, material_id) };
@@ -264,8 +264,8 @@ impl Model {
 make_thick_wrapper! {
     /// Mesh, vertex data and vao/vbo
     pub struct Mesh {
-        vertex_count: i32,
-        triangle_count: i32,
+        vertexCount: i32,
+        triangleCount: i32,
         vertices: *mut Vector3,
         texcoords: *mut Vector2,
         texcoords2: *mut Vector2,
@@ -273,14 +273,14 @@ make_thick_wrapper! {
         tangents: *mut Vector4,
         colors: *mut Color,
         indices: *mut u16,
-        anim_vertices: *mut Vector3,
-        anim_normals: *mut Vector3,
-        bone_ids: *mut u8,
-        bone_weights: *mut f32,
-        bone_matrices: *mut ffi::Matrix,
-        bone_count: i32,
-        vao_id: u32,
-        vbo_id: *mut u32,
+        animVertices: *mut Vector3,
+        animNormals: *mut Vector3,
+        boneIds: *mut u8,
+        boneWeights: *mut f32,
+        boneMatrices: *mut ffi::Matrix,
+        boneCount: i32,
+        vaoId: u32,
+        vboId: *mut u32,
     }
     weak = WeakMesh,
     raw = ffi::Mesh,
@@ -310,63 +310,61 @@ impl Mesh {
     #[inline]
     #[must_use]
     pub fn vertices(&self) -> &[Vector3] {
-        unsafe { std::slice::from_raw_parts(self.vertices, self.vertex_count as usize) }
+        unsafe { std::slice::from_raw_parts(self.vertices, self.vertexCount as usize) }
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
     #[must_use]
     pub fn vertices_mut(&mut self) -> &mut [Vector3] {
-        unsafe { std::slice::from_raw_parts_mut(self.vertices, self.vertex_count as usize) }
+        unsafe { std::slice::from_raw_parts_mut(self.vertices, self.vertexCount as usize) }
     }
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
     #[must_use]
     pub fn normals(&self) -> &[Vector3] {
-        unsafe { std::slice::from_raw_parts(self.normals, self.vertex_count as usize) }
+        unsafe { std::slice::from_raw_parts(self.normals, self.vertexCount as usize) }
     }
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
     #[must_use]
     pub fn normals_mut(&mut self) -> &mut [Vector3] {
-        unsafe { std::slice::from_raw_parts_mut(self.normals, self.vertex_count as usize) }
+        unsafe { std::slice::from_raw_parts_mut(self.normals, self.vertexCount as usize) }
     }
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
     #[must_use]
     pub fn tangents(&self) -> &[Vector4] {
-        unsafe { std::slice::from_raw_parts(self.tangents, self.vertex_count as usize) }
+        unsafe { std::slice::from_raw_parts(self.tangents, self.vertexCount as usize) }
     }
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
     #[must_use]
     pub fn tangents_mut(&mut self) -> &mut [Vector4] {
-        unsafe { std::slice::from_raw_parts_mut(self.tangents, self.vertex_count as usize) }
+        unsafe { std::slice::from_raw_parts_mut(self.tangents, self.vertexCount as usize) }
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
     #[must_use]
     pub fn colors(&self) -> &[Color] {
-        unsafe { std::slice::from_raw_parts(self.colors, self.vertex_count as usize) }
+        unsafe { std::slice::from_raw_parts(self.colors, self.vertexCount as usize) }
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
     #[must_use]
     pub fn colors_mut(&mut self) -> &mut [Color] {
-        unsafe { std::slice::from_raw_parts_mut(self.colors, self.vertex_count as usize) }
+        unsafe { std::slice::from_raw_parts_mut(self.colors, self.vertexCount as usize) }
     }
     /// Vertex indices (in case vertex data comes indexed)
     #[inline]
     #[must_use]
     pub fn indices(&self) -> &[u16] {
-        unsafe {
-            std::slice::from_raw_parts(self.indices as *const u16, self.vertex_count as usize)
-        }
+        unsafe { std::slice::from_raw_parts(self.indices as *const u16, self.vertexCount as usize) }
     }
     /// Vertex indices (in case vertex data comes indexed)
     #[inline]
     #[must_use]
     pub fn indices_mut(&mut self) -> &mut [u16] {
-        unsafe { std::slice::from_raw_parts_mut(self.indices, self.vertex_count as usize) }
+        unsafe { std::slice::from_raw_parts_mut(self.indices, self.vertexCount as usize) }
     }
 
     /// Generate polygonal mesh
@@ -750,10 +748,10 @@ impl<'a> ExactSizeIterator for FramePoseIterMut<'a> {
 
 make_thick_wrapper! {
     pub struct ModelAnimation {
-        bone_count: i32,
-        frame_count: i32,
+        boneCount: i32,
+        frameCount: i32,
         bones: *mut ffi::BoneInfo,
-        frame_poses: *mut *mut Transform,
+        framePoses: *mut *mut Transform,
         name: [::std::os::raw::c_char; 32],
     }
     weak = WeakModelAnimation,
@@ -767,7 +765,7 @@ impl ModelAnimation {
     #[must_use]
     fn bones(&self) -> &[BoneInfo] {
         unsafe {
-            std::slice::from_raw_parts(self.bones as *const BoneInfo, self.bone_count as usize)
+            std::slice::from_raw_parts(self.bones as *const BoneInfo, self.boneCount as usize)
         }
     }
 
@@ -776,7 +774,7 @@ impl ModelAnimation {
     #[must_use]
     fn bones_mut(&mut self) -> &mut [BoneInfo] {
         unsafe {
-            std::slice::from_raw_parts_mut(self.bones as *mut BoneInfo, self.bone_count as usize)
+            std::slice::from_raw_parts_mut(self.bones as *mut BoneInfo, self.boneCount as usize)
         }
     }
 
@@ -784,13 +782,13 @@ impl ModelAnimation {
     /// Poses array by frame
     fn frame_poses(&self) -> Vec<&[Transform]> {
         let anim = self;
-        let mut top = Vec::with_capacity(anim.frame_count as usize);
+        let mut top = Vec::with_capacity(anim.frameCount as usize);
 
-        for i in 0..anim.frame_count {
+        for i in 0..anim.frameCount {
             top.push(unsafe {
                 std::slice::from_raw_parts(
-                    *(anim.frame_poses.offset(i as isize) as *const *const Transform),
-                    anim.bone_count as usize,
+                    *(anim.framePoses.offset(i as isize) as *const *const Transform),
+                    anim.boneCount as usize,
                 )
             });
         }
@@ -802,9 +800,9 @@ impl ModelAnimation {
         let anim = self;
         unsafe {
             FramePoseIter::new(
-                anim.frame_poses.cast(),
-                anim.frame_count as usize,
-                anim.bone_count as usize,
+                anim.framePoses.cast(),
+                anim.frameCount as usize,
+                anim.boneCount as usize,
             )
         }
     }
@@ -813,13 +811,13 @@ impl ModelAnimation {
     /// Poses array by frame
     fn frame_poses_mut(&mut self) -> Vec<&mut [Transform]> {
         let anim = self;
-        let mut top = Vec::with_capacity(anim.frame_count as usize);
+        let mut top = Vec::with_capacity(anim.frameCount as usize);
 
-        for i in 0..anim.frame_count {
+        for i in 0..anim.frameCount {
             top.push(unsafe {
                 std::slice::from_raw_parts_mut(
-                    *(anim.frame_poses.offset(i as isize) as *mut *mut Transform),
-                    anim.bone_count as usize,
+                    *(anim.framePoses.offset(i as isize) as *mut *mut Transform),
+                    anim.boneCount as usize,
                 )
             });
         }
@@ -831,9 +829,9 @@ impl ModelAnimation {
         let anim = self;
         unsafe {
             FramePoseIterMut::new(
-                anim.frame_poses.cast(),
-                anim.frame_count as usize,
-                anim.bone_count as usize,
+                anim.framePoses.cast(),
+                anim.frameCount as usize,
+                anim.boneCount as usize,
             )
         }
     }
