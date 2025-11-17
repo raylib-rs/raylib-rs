@@ -167,3 +167,133 @@ macro_rules! impl_rslice {
         }
     };
 }
+
+macro_rules! make_thick_wrapper {
+    (
+        $(#[$attrs:meta])*
+        $vis:vis struct $WrapperTy:ident {
+            $(
+                $(#[$field_attrs:meta])*
+                $field_vis:vis $field:ident: $FieldTy:ty
+            ),* $(,)?
+        }
+        $(weak = $(#[$weak_attrs:meta])* $WeakTy:ident,)?
+        raw = $RawTy:ty,
+        drop = $dropfunc:expr $(,)?
+    ) => {
+        $(#[$attrs])*
+        #[derive(Debug)]
+        #[repr(C)]
+        pub struct $WrapperTy {
+            $(
+                $(#[$field_attrs])*
+                $field_vis $field: $FieldTy
+            ),*
+        }
+
+        impl Drop for $WrapperTy {
+            fn drop(&mut self) {
+                unsafe {
+                    $dropfunc(self.clone_raw());
+                }
+            }
+        }
+
+    $(
+        $(#[$weak_attrs])*
+        #[derive(Debug)]
+        #[repr(transparent)]
+        pub struct $WeakTy(ManuallyDrop<$WrapperTy>);
+
+        // Weak things can be clone
+        impl Clone for $WeakTy {
+            #[inline]
+            fn clone(&self) -> Self {
+                Self(ManuallyDrop::new(unsafe { $WrapperTy::from_raw_unchecked(self.0.clone_raw()) }))
+            }
+        }
+
+        impl std::ops::Deref for $WeakTy {
+            type Target = $WrapperTy;
+
+            #[inline]
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+        impl std::ops::DerefMut for $WeakTy {
+            #[inline]
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+        impl AsRef<$WrapperTy> for $WeakTy {
+            #[inline]
+            fn as_ref(&self) -> &$WrapperTy {
+                self
+            }
+        }
+        impl AsMut<$WrapperTy> for $WeakTy {
+            #[inline]
+            fn as_mut(&mut self) -> &mut $WrapperTy {
+                self
+            }
+        }
+    )?
+
+        impl $WrapperTy {
+        $(
+            /// # Safety
+            /// Do not break Rust's aliasing rules.
+            #[inline]
+            #[must_use = "weak resources must be manually unloaded"]
+            pub unsafe fn make_weak(self) -> $WeakTy {
+                $WeakTy(ManuallyDrop::new(self))
+            }
+            /// # Safety
+            /// - Do not break Rust's aliasing rules.
+            #[doc = concat!(" - Other weak instances of this mesh must not be accessed after the [`", stringify!($WrapperTy), "`] is dropped.")]
+            #[inline]
+            pub unsafe fn from_weak(weak: $WeakTy) -> $WrapperTy {
+                ManuallyDrop::into_inner(weak.0)
+            }
+        )?
+
+            /// # Safety
+            /// - Do not break Rust's aliasing rules.
+            #[doc = concat!(" - Other raw instances of this mesh must not be accessed after the [`", stringify!($WrapperTy), "`] is dropped.")]
+            #[inline]
+            pub unsafe fn from_raw_unchecked(raw: $RawTy) -> $WrapperTy {
+                unsafe { std::mem::transmute(raw) }
+            }
+            /// # Safety
+            /// Do not break Rust's aliasing rules.
+            #[inline]
+            pub unsafe fn to_raw(self) -> $RawTy {
+                unsafe { std::mem::transmute(self) }
+            }
+
+            #[doc = concat!(" This is safe as long as it isn't made public, because that would allow unsafe fields of [`", stringify!($WrapperTy), "`] to be misused.")]
+            ///
+            /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
+            #[inline]
+            pub(crate) fn clone_raw(&self) -> $RawTy {
+                unsafe { std::mem::transmute_copy(self) }
+            }
+
+            #[doc = concat!(" This is safe as long as it isn't made public, because that would allow unsafe fields of [`", stringify!($WrapperTy), "`] to be misused.")]
+            ///
+            /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
+            #[inline]
+            pub(crate) fn as_raw_ref(&self) -> &$RawTy {
+                unsafe { &*std::ptr::from_ref(self).cast() }
+            }
+
+            #[doc = concat!(" This is safe as long as it isn't made public, because that would allow unsafe fields of [`", stringify!($WrapperTy), "`] to be misused.")]
+            #[inline]
+            pub(crate) fn as_raw_mut(&mut self) -> &mut $RawTy {
+                unsafe { &mut *std::ptr::from_mut(self).cast() }
+            }
+        }
+    };
+}

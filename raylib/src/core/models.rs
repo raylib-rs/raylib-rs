@@ -130,129 +130,24 @@ impl RaylibHandle {
     }
 }
 
-#[derive(Debug)]
-#[repr(C)]
-pub struct Model {
-    pub transform: Matrix,
-    mesh_count: i32,
-    material_count: i32,
-    meshes: *mut WeakMesh,
-    materials: *mut WeakMaterial,
-    mesh_material: *mut i32,
-    bone_count: i32,
-    bones: *mut BoneInfo,
-    bind_pose: *mut Transform,
-}
-
-impl Drop for Model {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::UnloadModel(self.clone_raw());
-        }
+make_thick_wrapper! {
+    pub struct Model {
+        pub transform: Matrix,
+        mesh_count: i32,
+        material_count: i32,
+        meshes: *mut WeakMesh,
+        materials: *mut WeakMaterial,
+        mesh_material: *mut i32,
+        bone_count: i32,
+        bones: *mut BoneInfo,
+        bind_pose: *mut Transform,
     }
-}
-
-#[derive(Debug)]
-#[repr(transparent)]
-pub struct WeakModel(ManuallyDrop<Model>);
-
-// Weak things can be clone
-impl Clone for WeakModel {
-    #[inline]
-    fn clone(&self) -> Self {
-        Self(ManuallyDrop::new(Model {
-            transform: self.0.transform,
-            mesh_count: self.0.mesh_count,
-            material_count: self.0.material_count,
-            meshes: self.0.meshes,
-            materials: self.0.materials,
-            mesh_material: self.0.mesh_material,
-            bone_count: self.0.bone_count,
-            bones: self.0.bones,
-            bind_pose: self.0.bind_pose,
-        }))
-    }
-}
-
-impl std::ops::Deref for WeakModel {
-    type Target = Model;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl std::ops::DerefMut for WeakModel {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-impl AsRef<Model> for WeakModel {
-    #[inline]
-    fn as_ref(&self) -> &Model {
-        self
-    }
-}
-impl AsMut<Model> for WeakModel {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Model {
-        self
-    }
+    weak = WeakModel,
+    raw = ffi::Model,
+    drop = ffi::UnloadModel,
 }
 
 impl Model {
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    #[inline]
-    #[must_use = "weak resources must be manually unloaded"]
-    pub unsafe fn make_weak(self) -> WeakModel {
-        WeakModel(ManuallyDrop::new(self))
-    }
-    /// # Safety
-    /// - Do not break Rust's aliasing rules.
-    /// - Other weak instances of this mesh must not be accessed after the `Model` is dropped.
-    #[inline]
-    pub unsafe fn from_weak(weak: WeakModel) -> Model {
-        ManuallyDrop::into_inner(weak.0)
-    }
-
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    /// - Other raw instances of this mesh must not be accessed after the `Model` is dropped.
-    #[inline]
-    pub unsafe fn from_raw_unchecked(raw: ffi::Model) -> Model {
-        unsafe { std::mem::transmute(raw) }
-    }
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    #[inline]
-    pub unsafe fn to_raw(self) -> ffi::Model {
-        unsafe { std::mem::transmute(self) }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Model`] to be misused.
-    ///
-    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
-    #[inline]
-    pub(crate) fn clone_raw(&self) -> ffi::Model {
-        unsafe { std::mem::transmute_copy(self) }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Model`] to be misused.
-    ///
-    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
-    #[inline]
-    pub(crate) fn as_raw_ref(&self) -> &ffi::Model {
-        unsafe { &*std::ptr::from_ref(self).cast() }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Model`] to be misused.
-    #[inline]
-    pub(crate) fn as_raw_mut(&mut self) -> &mut ffi::Model {
-        unsafe { &mut *std::ptr::from_mut(self).cast() }
-    }
-
     #[inline]
     #[must_use]
     /// Local transform matrix
@@ -366,142 +261,33 @@ impl Model {
     }
 }
 
-/// Mesh, vertex data and vao/vbo
-#[derive(Debug)]
-#[repr(C)]
-pub struct Mesh {
-    vertex_count: i32,
-    triangle_count: i32,
-    vertices: *mut Vector3,
-    texcoords: *mut Vector2,
-    texcoords2: *mut Vector2,
-    normals: *mut Vector3,
-    tangents: *mut Vector4,
-    colors: *mut Color,
-    indices: *mut u16,
-    anim_vertices: *mut Vector3,
-    anim_normals: *mut Vector3,
-    bone_ids: *mut u8,
-    bone_weights: *mut f32,
-    bone_matrices: *mut ffi::Matrix,
-    bone_count: i32,
-    vao_id: u32,
-    vbo_id: *mut u32,
-}
-impl Drop for Mesh {
-    fn drop(&mut self) {
-        unsafe { ffi::UnloadMesh(self.clone_raw()) };
+make_thick_wrapper! {
+    /// Mesh, vertex data and vao/vbo
+    pub struct Mesh {
+        vertex_count: i32,
+        triangle_count: i32,
+        vertices: *mut Vector3,
+        texcoords: *mut Vector2,
+        texcoords2: *mut Vector2,
+        normals: *mut Vector3,
+        tangents: *mut Vector4,
+        colors: *mut Color,
+        indices: *mut u16,
+        anim_vertices: *mut Vector3,
+        anim_normals: *mut Vector3,
+        bone_ids: *mut u8,
+        bone_weights: *mut f32,
+        bone_matrices: *mut ffi::Matrix,
+        bone_count: i32,
+        vao_id: u32,
+        vbo_id: *mut u32,
     }
-}
-
-#[derive(Debug)]
-#[repr(transparent)]
-pub struct WeakMesh(ManuallyDrop<Mesh>);
-
-// Weak things can be clone
-impl Clone for WeakMesh {
-    fn clone(&self) -> Self {
-        Self(ManuallyDrop::new(Mesh {
-            vertex_count: self.0.vertex_count,
-            triangle_count: self.0.triangle_count,
-            vertices: self.0.vertices,
-            texcoords: self.0.texcoords,
-            texcoords2: self.0.texcoords2,
-            normals: self.0.normals,
-            tangents: self.0.tangents,
-            colors: self.0.colors,
-            indices: self.0.indices,
-            anim_vertices: self.0.anim_vertices,
-            anim_normals: self.0.anim_normals,
-            bone_ids: self.0.bone_ids,
-            bone_weights: self.0.bone_weights,
-            bone_matrices: self.0.bone_matrices,
-            bone_count: self.0.bone_count,
-            vao_id: self.0.vao_id,
-            vbo_id: self.0.vbo_id,
-        }))
-    }
-}
-
-impl std::ops::Deref for WeakMesh {
-    type Target = Mesh;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl std::ops::DerefMut for WeakMesh {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-impl AsRef<Mesh> for WeakMesh {
-    #[inline]
-    fn as_ref(&self) -> &Mesh {
-        self
-    }
-}
-impl AsMut<Mesh> for WeakMesh {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Mesh {
-        self
-    }
+    weak = WeakMesh,
+    raw = ffi::Mesh,
+    drop = ffi::UnloadMesh,
 }
 
 impl Mesh {
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    #[inline]
-    #[must_use = "weak resources must be manually unloaded"]
-    pub unsafe fn make_weak(self) -> WeakMesh {
-        WeakMesh(ManuallyDrop::new(self))
-    }
-    /// # Safety
-    /// - Do not break Rust's aliasing rules.
-    /// - Other weak instances of this mesh must not be accessed after the `Mesh` is dropped.
-    #[inline]
-    pub unsafe fn from_weak(weak: WeakMesh) -> Mesh {
-        ManuallyDrop::into_inner(weak.0)
-    }
-
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    /// - Other raw instances of this mesh must not be accessed after the `Mesh` is dropped.
-    #[inline]
-    pub unsafe fn from_raw_unchecked(raw: ffi::Mesh) -> Mesh {
-        unsafe { std::mem::transmute(raw) }
-    }
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    #[inline]
-    pub unsafe fn to_raw(self) -> ffi::Mesh {
-        unsafe { std::mem::transmute(self) }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Mesh`] to be misused.
-    ///
-    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
-    #[inline]
-    pub(crate) fn clone_raw(&self) -> ffi::Mesh {
-        unsafe { std::mem::transmute_copy(self) }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Mesh`] to be misused.
-    ///
-    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
-    #[inline]
-    pub(crate) fn as_raw_ref(&self) -> &ffi::Mesh {
-        unsafe { &*std::ptr::from_ref(self).cast() }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Mesh`] to be misused.
-    #[inline]
-    pub(crate) fn as_raw_mut(&mut self) -> &mut ffi::Mesh {
-        unsafe { &mut *std::ptr::from_mut(self).cast() }
-    }
-
     /// Upload mesh vertex data in GPU and provide VAO/VBO ids
     #[inline]
     pub unsafe fn upload(&mut self, dynamic: bool) {
@@ -721,118 +507,19 @@ impl Mesh {
     }
 }
 
-/// Material, includes shader and maps
-#[derive(Debug)]
-#[repr(C)]
-pub struct Material {
-    shader: ffi::Shader,
-    maps: *mut MaterialMap,
-    pub params: [f32; 4],
-}
-
-impl Drop for Material {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::UnloadMaterial(self.clone_raw());
-        }
+make_thick_wrapper! {
+    /// Material, includes shader and maps
+    pub struct Material {
+        shader: ffi::Shader,
+        maps: *mut MaterialMap,
+        pub params: [f32; 4],
     }
-}
-
-#[derive(Debug)]
-#[repr(transparent)]
-pub struct WeakMaterial(ManuallyDrop<Material>);
-
-// Weak things can be clone
-impl Clone for WeakMaterial {
-    #[inline]
-    fn clone(&self) -> Self {
-        Self(ManuallyDrop::new(Material {
-            shader: self.0.shader,
-            maps: self.0.maps,
-            params: self.0.params,
-        }))
-    }
-}
-
-impl std::ops::Deref for WeakMaterial {
-    type Target = Material;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl std::ops::DerefMut for WeakMaterial {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-impl AsRef<Material> for WeakMaterial {
-    #[inline]
-    fn as_ref(&self) -> &Material {
-        self
-    }
-}
-impl AsMut<Material> for WeakMaterial {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Material {
-        self
-    }
+    weak = WeakMaterial,
+    raw = ffi::Material,
+    drop = ffi::UnloadMaterial,
 }
 
 impl Material {
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    #[inline]
-    #[must_use = "weak resources must be manually unloaded"]
-    pub unsafe fn make_weak(self) -> WeakMaterial {
-        WeakMaterial(ManuallyDrop::new(self))
-    }
-    /// # Safety
-    /// - Do not break Rust's aliasing rules.
-    /// - Other weak instances of this mesh must not be accessed after the `Material` is dropped.
-    #[inline]
-    pub unsafe fn from_weak(weak: WeakMaterial) -> Material {
-        ManuallyDrop::into_inner(weak.0)
-    }
-
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    /// - Other raw instances of this mesh must not be accessed after the `Material` is dropped.
-    #[inline]
-    pub unsafe fn from_raw_unchecked(raw: ffi::Material) -> Material {
-        unsafe { std::mem::transmute(raw) }
-    }
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    #[inline]
-    pub unsafe fn to_raw(self) -> ffi::Material {
-        unsafe { std::mem::transmute(self) }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Material`] to be misused.
-    ///
-    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
-    #[inline]
-    pub(crate) fn clone_raw(&self) -> ffi::Material {
-        unsafe { std::mem::transmute_copy(self) }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Material`] to be misused.
-    ///
-    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
-    #[inline]
-    pub(crate) fn as_raw_ref(&self) -> &ffi::Material {
-        unsafe { &*std::ptr::from_ref(self).cast() }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Material`] to be misused.
-    #[inline]
-    pub(crate) fn as_raw_mut(&mut self) -> &mut ffi::Material {
-        unsafe { &mut *std::ptr::from_mut(self).cast() }
-    }
-
     /// Load materials from model file
     #[must_use]
     pub fn load_materials(filename: &str) -> Result<Vec<Material>, LoadMaterialError> {
@@ -872,23 +559,13 @@ impl Material {
     #[inline]
     /// Material maps array (MAX_MATERIAL_MAPS)
     fn maps(&self) -> &[MaterialMap] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.maps as *const MaterialMap,
-                consts::MAX_MATERIAL_MAPS as usize,
-            )
-        }
+        unsafe { std::slice::from_raw_parts(self.maps, consts::MAX_MATERIAL_MAPS as usize) }
     }
     #[must_use]
     #[inline]
     /// Material maps array (MAX_MATERIAL_MAPS)
     fn maps_mut(&mut self) -> &mut [MaterialMap] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.maps as *mut MaterialMap,
-                consts::MAX_MATERIAL_MAPS as usize,
-            )
-        }
+        unsafe { std::slice::from_raw_parts_mut(self.maps, consts::MAX_MATERIAL_MAPS as usize) }
     }
 
     /// Set texture for a material map type (MATERIAL_MAP_DIFFUSE, MATERIAL_MAP_SPECULAR...)
@@ -1071,121 +748,20 @@ impl<'a> ExactSizeIterator for FramePoseIterMut<'a> {
     }
 }
 
-#[derive(Debug)]
-#[repr(C)]
-pub struct ModelAnimation {
-    bone_count: i32,
-    frame_count: i32,
-    bones: *mut ffi::BoneInfo,
-    frame_poses: *mut *mut Transform,
-    name: [::std::os::raw::c_char; 32],
-}
-
-impl Drop for ModelAnimation {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::UnloadModelAnimation(self.clone_raw());
-        }
+make_thick_wrapper! {
+    pub struct ModelAnimation {
+        bone_count: i32,
+        frame_count: i32,
+        bones: *mut ffi::BoneInfo,
+        frame_poses: *mut *mut Transform,
+        name: [::std::os::raw::c_char; 32],
     }
-}
-
-#[derive(Debug)]
-#[repr(transparent)]
-pub struct WeakModelAnimation(ManuallyDrop<ModelAnimation>);
-
-// Weak things can be clone
-impl Clone for WeakModelAnimation {
-    #[inline]
-    fn clone(&self) -> Self {
-        Self(ManuallyDrop::new(ModelAnimation {
-            bone_count: self.0.bone_count,
-            frame_count: self.0.frame_count,
-            bones: self.0.bones,
-            frame_poses: self.0.frame_poses,
-            name: self.0.name,
-        }))
-    }
-}
-
-impl std::ops::Deref for WeakModelAnimation {
-    type Target = ModelAnimation;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl std::ops::DerefMut for WeakModelAnimation {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-impl AsRef<ModelAnimation> for WeakModelAnimation {
-    #[inline]
-    fn as_ref(&self) -> &ModelAnimation {
-        self
-    }
-}
-impl AsMut<ModelAnimation> for WeakModelAnimation {
-    #[inline]
-    fn as_mut(&mut self) -> &mut ModelAnimation {
-        self
-    }
+    weak = WeakModelAnimation,
+    raw = ffi::ModelAnimation,
+    drop = ffi::UnloadModelAnimation,
 }
 
 impl ModelAnimation {
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    #[inline]
-    #[must_use = "weak resources must be manually unloaded"]
-    pub unsafe fn make_weak(self) -> WeakModelAnimation {
-        WeakModelAnimation(ManuallyDrop::new(self))
-    }
-    /// # Safety
-    /// - Do not break Rust's aliasing rules.
-    /// - Other weak instances of this mesh must not be accessed after the `ModelAnimation` is dropped.
-    #[inline]
-    pub unsafe fn from_weak(weak: WeakModelAnimation) -> ModelAnimation {
-        ManuallyDrop::into_inner(weak.0)
-    }
-
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    /// - Other raw instances of this mesh must not be accessed after the `ModelAnimation` is dropped.
-    #[inline]
-    pub unsafe fn from_raw_unchecked(raw: ffi::ModelAnimation) -> ModelAnimation {
-        unsafe { std::mem::transmute(raw) }
-    }
-    /// # Safety
-    /// Do not break Rust's aliasing rules.
-    #[inline]
-    pub unsafe fn to_raw(self) -> ffi::ModelAnimation {
-        unsafe { std::mem::transmute(self) }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`ModelAnimation`] to be misused.
-    ///
-    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
-    #[inline]
-    pub(crate) fn clone_raw(&self) -> ffi::ModelAnimation {
-        unsafe { std::mem::transmute_copy(self) }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`ModelAnimation`] to be misused.
-    ///
-    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
-    #[inline]
-    pub(crate) fn as_raw_ref(&self) -> &ffi::ModelAnimation {
-        unsafe { &*std::ptr::from_ref(self).cast() }
-    }
-
-    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`ModelAnimation`] to be misused.
-    #[inline]
-    pub(crate) fn as_raw_mut(&mut self) -> &mut ffi::ModelAnimation {
-        unsafe { &mut *std::ptr::from_mut(self).cast() }
-    }
-
     /// Bones information (skeleton)
     #[inline]
     #[must_use]
