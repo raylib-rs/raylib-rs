@@ -23,13 +23,6 @@ use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
-    /// Model, meshes, materials and animation data
-    Model,
-    ffi::Model,
-    ffi::UnloadModel
-);
-make_thin_wrapper!(WeakModel, ffi::Model, no_drop);
-make_thin_wrapper!(
     /// Material, includes shader and maps
     Material,
     ffi::Material,
@@ -55,14 +48,6 @@ make_thin_wrapper!(
     ffi::MaterialMap,
     no_drop
 );
-
-// Weak things can be clone
-impl Clone for WeakModel {
-    fn clone(&self) -> WeakModel {
-        WeakModel(self.0)
-    }
-}
-
 // Weak things can be clone
 impl Clone for WeakMaterial {
     fn clone(&self) -> WeakMaterial {
@@ -95,7 +80,7 @@ impl RaylibHandle {
             });
         }
         // TODO check if null pointer checks are necessary.
-        Ok(Model(m))
+        Ok(unsafe { Model::from_raw_unchecked(m) })
     }
 
     #[must_use]
@@ -111,7 +96,7 @@ impl RaylibHandle {
             return Err(LoadModelError::LoadFromMeshFailed);
         }
 
-        Ok(Model(m))
+        Ok(unsafe { Model::from_raw_unchecked(m) })
     }
 
     #[must_use]
@@ -170,141 +155,212 @@ impl RaylibHandle {
     }
 }
 
-impl RaylibModel for WeakModel {}
-impl RaylibModel for Model {}
+#[derive(Debug)]
+#[repr(C)]
+pub struct Model {
+    pub transform: Matrix,
+    mesh_count: i32,
+    material_count: i32,
+    meshes: *mut WeakMesh,
+    materials: *mut WeakMaterial,
+    mesh_material: *mut i32,
+    bone_count: i32,
+    bones: *mut BoneInfo,
+    bind_pose: *mut Transform,
+}
 
-impl Model {
-    pub unsafe fn make_weak(self) -> WeakModel {
-        let m = WeakModel(self.0);
-        std::mem::forget(self);
-        m
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct WeakModel(ManuallyDrop<Model>);
+
+impl Clone for WeakModel {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self(ManuallyDrop::new(Model {
+            transform: self.0.transform,
+            mesh_count: self.0.mesh_count,
+            material_count: self.0.material_count,
+            meshes: self.0.meshes,
+            materials: self.0.materials,
+            mesh_material: self.0.mesh_material,
+            bone_count: self.0.bone_count,
+            bones: self.0.bones,
+            bind_pose: self.0.bind_pose,
+        }))
     }
 }
 
-pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
+impl std::ops::Deref for WeakModel {
+    type Target = Model;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for WeakModel {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+impl AsRef<Model> for WeakModel {
+    #[inline]
+    fn as_ref(&self) -> &Model {
+        self
+    }
+}
+impl AsMut<Model> for WeakModel {
+    #[inline]
+    fn as_mut(&mut self) -> &mut Model {
+        self
+    }
+}
+
+impl Model {
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
+    #[inline]
+    pub unsafe fn make_weak(self) -> WeakModel {
+        WeakModel(ManuallyDrop::new(self))
+    }
+    /// # Safety
+    /// - Do not break Rust's aliasing rules.
+    /// - Other weak instances of this mesh must not be accessed after the `Model` is dropped.
+    #[inline]
+    pub unsafe fn from_weak(weak: WeakModel) -> Model {
+        ManuallyDrop::into_inner(weak.0)
+    }
+
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
+    /// - Other raw instances of this mesh must not be accessed after the `Model` is dropped.
+    #[inline]
+    pub unsafe fn from_raw_unchecked(raw: ffi::Model) -> Model {
+        unsafe { std::mem::transmute(raw) }
+    }
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
+    #[inline]
+    pub unsafe fn to_raw(self) -> ffi::Model {
+        unsafe { std::mem::transmute(self) }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Model`] to be misused.
+    ///
+    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
+    #[inline]
+    pub(crate) fn clone_raw(&self) -> ffi::Model {
+        unsafe { std::mem::transmute_copy(self) }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Model`] to be misused.
+    ///
+    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
+    #[inline]
+    pub(crate) fn as_raw_ref(&self) -> &ffi::Model {
+        unsafe { &*std::ptr::from_ref(self).cast() }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Model`] to be misused.
+    #[inline]
+    pub(crate) fn as_raw_mut(&mut self) -> &mut ffi::Model {
+        unsafe { &mut *std::ptr::from_mut(self).cast() }
+    }
+
     #[inline]
     #[must_use]
     /// Local transform matrix
     fn transform(&self) -> &Matrix {
-        unsafe { std::mem::transmute(&self.as_ref().transform) }
+        &self.transform
     }
 
     #[inline]
     fn set_transform(&mut self, mat: &Matrix) {
-        self.as_mut().transform = (*mat).into();
+        self.transform.clone_from(mat);
     }
 
     /// Meshes array
     #[inline]
     #[must_use]
     fn meshes(&self) -> &[WeakMesh] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().meshes as *const WeakMesh,
-                self.as_ref().meshCount as usize,
-            )
-        }
+        unsafe { std::slice::from_raw_parts(self.meshes, self.mesh_count as usize) }
     }
     // Meshes array
     #[inline]
     #[must_use]
     fn meshes_mut(&mut self) -> &mut [WeakMesh] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().meshes as *mut WeakMesh,
-                self.as_mut().meshCount as usize,
-            )
-        }
+        unsafe { std::slice::from_raw_parts_mut(self.meshes, self.mesh_count as usize) }
     }
     /// Materials array
     #[inline]
     #[must_use]
     fn materials(&self) -> &[WeakMaterial] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().materials as *const WeakMaterial,
-                self.as_ref().materialCount as usize,
-            )
-        }
+        unsafe { std::slice::from_raw_parts(self.materials, self.material_count as usize) }
     }
     /// Materials array
     #[inline]
     #[must_use]
     fn materials_mut(&mut self) -> &mut [WeakMaterial] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().materials as *mut WeakMaterial,
-                self.as_mut().materialCount as usize,
-            )
-        }
+        unsafe { std::slice::from_raw_parts_mut(self.materials, self.material_count as usize) }
     }
     #[inline]
     #[must_use]
     /// Bones information (skeleton)
     fn bones(&self) -> Option<&[BoneInfo]> {
-        if self.as_ref().bones.is_null() {
+        if self.bones.is_null() {
             return None;
         }
 
-        Some(unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().bones as *const BoneInfo,
-                self.as_ref().boneCount as usize,
-            )
-        })
+        Some(unsafe { std::slice::from_raw_parts(self.bones, self.bone_count as usize) })
     }
     #[inline]
     #[must_use]
     /// Bones information (skeleton)
     fn bones_mut(&mut self) -> Option<&mut [BoneInfo]> {
-        if self.as_ref().bones.is_null() {
+        if self.bones.is_null() {
             return None;
         }
 
-        Some(unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().bones as *mut BoneInfo,
-                self.as_mut().boneCount as usize,
-            )
-        })
+        Some(unsafe { std::slice::from_raw_parts_mut(self.bones, self.bone_count as usize) })
     }
     #[inline]
     #[must_use]
     /// Bones base transformation (pose)
     fn bind_pose(&self) -> Option<&Transform> {
-        if self.as_ref().bindPose.is_null() {
+        if self.bind_pose.is_null() {
             return None;
         }
-        Some(unsafe { std::mem::transmute(self.as_ref().bindPose) })
+        Some(unsafe { &*self.bind_pose })
     }
     #[inline]
     #[must_use]
     /// Bones base transformation (pose)
     fn bind_pose_mut(&mut self) -> Option<&mut Transform> {
-        if self.as_ref().bindPose.is_null() {
+        if self.bind_pose.is_null() {
             return None;
         }
-        Some(unsafe { std::mem::transmute(self.as_mut().bindPose) })
+        Some(unsafe { &mut *self.bind_pose })
     }
     #[inline]
     #[must_use]
     /// Check model animation skeleton match
     fn is_model_animation_valid(&self, anim: &ModelAnimation) -> bool {
-        unsafe { ffi::IsModelAnimationValid(*self.as_ref(), anim.0) }
+        unsafe { ffi::IsModelAnimationValid(self.clone_raw(), anim.0) }
     }
 
     /// Check if a model is ready
     #[inline]
     #[must_use]
     fn is_model_valid(&self) -> bool {
-        unsafe { ffi::IsModelValid(*self.as_ref()) }
+        unsafe { ffi::IsModelValid(self.clone_raw()) }
     }
 
     /// Compute model bounding box limits (considers all meshes)
     #[inline]
     #[must_use]
     fn get_model_bounding_box(&self) -> BoundingBox {
-        unsafe { BoundingBox::from(ffi::GetModelBoundingBox(*self.as_ref())) }
+        unsafe { BoundingBox::from(ffi::GetModelBoundingBox(self.clone_raw())) }
     }
     #[inline]
     /// Set material for a mesh
@@ -314,12 +370,12 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
         material_id: i32,
     ) -> Result<(), SetMaterialError> {
         // should this be an assertion?
-        if mesh_id >= self.as_ref().meshCount {
+        if mesh_id >= self.mesh_count {
             Err(SetMaterialError::MeshIdOutOfBounds)
-        } else if material_id >= self.as_ref().materialCount {
+        } else if material_id >= self.material_count {
             Err(SetMaterialError::MaterialIdOutOfBounds)
         } else {
-            unsafe { ffi::SetModelMeshMaterial(self.as_mut(), mesh_id, material_id) };
+            unsafe { ffi::SetModelMeshMaterial(self.as_raw_mut(), mesh_id, material_id) };
             Ok(())
         }
     }
@@ -354,6 +410,7 @@ impl Drop for Mesh {
 }
 
 #[derive(Debug)]
+#[repr(transparent)]
 pub struct WeakMesh(ManuallyDrop<Mesh>);
 
 // Weak things can be clone
@@ -1083,7 +1140,7 @@ impl RaylibHandle {
     /// Unload model from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_model(&mut self, _: &RaylibThread, model: WeakModel) {
-        unsafe { ffi::UnloadModel(*model.as_ref()) }
+        unsafe { ffi::UnloadModel(model.clone_raw()) }
     }
 
     /// Weak model_animations will leak memory if they are not unlaoded
