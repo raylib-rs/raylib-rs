@@ -503,7 +503,7 @@ pub trait RaylibDraw {
     #[inline]
     #[must_use]
     fn get_shapes_texture(&self) -> Texture2D {
-        Texture2D(unsafe { ffi::GetShapesTexture() })
+        unsafe { Texture2D::from_raw_unchecked(ffi::GetShapesTexture()) }
     }
 
     /// Get texture source rectangle that is used for shapes drawing
@@ -2051,7 +2051,13 @@ pub trait RaylibDraw3D {
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::DrawBillboard(camera.into(), texture.0, center.into(), size, tint.into());
+            ffi::DrawBillboard(
+                camera.into(),
+                texture.clone_raw(),
+                center.into(),
+                size,
+                tint.into(),
+            );
         }
     }
 
@@ -2069,7 +2075,7 @@ pub trait RaylibDraw3D {
         unsafe {
             ffi::DrawBillboardRec(
                 camera.into(),
-                texture.0,
+                texture.clone_raw(),
                 source_rec.into(),
                 center.into(),
                 size.into(),

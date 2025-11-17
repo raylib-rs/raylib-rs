@@ -70,108 +70,93 @@ make_thick_wrapper! {
     raw = ffi::Image,
     drop = ffi::UnloadImage
 }
-make_thin_wrapper!(
+make_thick_wrapper! {
     /// Texture, tex data stored in GPU memory (VRAM)
-    Texture2D,
-    ffi::Texture2D,
-    ffi::UnloadTexture
-);
-make_thin_wrapper!(WeakTexture2D, ffi::Texture2D, no_drop);
+    pub struct Texture2D {
+        id: u32,
+        width: i32,
+        height: i32,
+        mipmaps: i32,
+        format: i32,
+    }
+    weak = WeakTexture2D,
+    raw = ffi::Texture2D,
+    drop = ffi::UnloadTexture
+}
 impl Default for WeakTexture2D {
     fn default() -> Self {
-        Self(ffi::Texture::default())
+        Self(ManuallyDrop::new(unsafe {
+            Texture2D::from_raw_unchecked(ffi::Texture::default())
+        }))
     }
 }
-make_thin_wrapper!(
+make_thick_wrapper! {
     /// RenderTexture, fbo for texture rendering
-    RenderTexture2D,
-    ffi::RenderTexture2D,
-    ffi::UnloadRenderTexture
-);
-make_thin_wrapper!(WeakRenderTexture2D, ffi::RenderTexture2D, no_drop);
-
-// Weak things can be clone
-impl Clone for WeakTexture2D {
-    fn clone(&self) -> WeakTexture2D {
-        WeakTexture2D(self.0)
+    pub struct RenderTexture2D {
+        id: u32,
+        texture: ffi::Texture,
+        depth: ffi::Texture,
     }
+    weak = WeakRenderTexture2D,
+    raw = ffi::RenderTexture2D,
+    drop = ffi::UnloadRenderTexture
 }
 
-// Weak things can be clone
-impl Clone for WeakRenderTexture2D {
-    fn clone(&self) -> WeakRenderTexture2D {
-        WeakRenderTexture2D(self.0)
-    }
-}
-
-impl RaylibRenderTexture2D for WeakRenderTexture2D {}
-impl RaylibRenderTexture2D for RenderTexture2D {}
-
-impl AsRef<ffi::Texture2D> for RenderTexture2D {
+impl AsRef<Texture2D> for RenderTexture2D {
     #[inline]
-    fn as_ref(&self) -> &ffi::Texture2D {
+    fn as_ref(&self) -> &Texture2D {
         self.texture()
     }
 }
 
-impl AsMut<ffi::Texture2D> for RenderTexture2D {
+impl AsMut<Texture2D> for RenderTexture2D {
     #[inline]
-    fn as_mut(&mut self) -> &mut ffi::Texture2D {
+    fn as_mut(&mut self) -> &mut Texture2D {
         self.texture_mut()
     }
 }
 
-impl AsRef<ffi::Texture2D> for WeakRenderTexture2D {
+impl AsRef<Texture2D> for WeakRenderTexture2D {
     #[inline]
-    fn as_ref(&self) -> &ffi::Texture2D {
-        self.texture()
+    fn as_ref(&self) -> &Texture2D {
+        self.0.texture()
     }
 }
 
-impl AsMut<ffi::Texture2D> for WeakRenderTexture2D {
+impl AsMut<Texture2D> for WeakRenderTexture2D {
     #[inline]
-    fn as_mut(&mut self) -> &mut ffi::Texture2D {
-        self.texture_mut()
+    fn as_mut(&mut self) -> &mut Texture2D {
+        self.0.texture_mut()
     }
 }
 
 impl RenderTexture2D {
-    #[inline]
-    #[must_use]
-    pub unsafe fn make_weak(self) -> WeakRenderTexture2D {
-        let m = WeakRenderTexture2D(self.0);
-        std::mem::forget(self);
-        m
-    }
-
     /// Check if a render texture is valid (loaded in GPU)
     #[inline]
     #[must_use]
     pub fn is_render_texture_valid(&self) -> bool {
-        unsafe { ffi::IsRenderTextureValid(self.0) }
+        unsafe { ffi::IsRenderTextureValid(self.clone_raw()) }
     }
-}
 
-pub trait RaylibRenderTexture2D: AsRef<ffi::RenderTexture2D> + AsMut<ffi::RenderTexture2D> {
     /// OpenGL framebuffer object id
     #[inline]
     #[must_use]
     fn id(&self) -> u32 {
-        self.as_ref().id
+        self.id
     }
 
     /// Color buffer attachment texture
     #[inline]
     #[must_use]
     fn texture(&self) -> &WeakTexture2D {
-        unsafe { std::mem::transmute(&self.as_ref().texture) }
+        unsafe { std::mem::transmute(&self.texture) }
     }
 
     /// Color buffer attachment texture
     #[inline]
     #[must_use]
     fn texture_mut(&mut self) -> &mut WeakTexture2D {
-        unsafe { std::mem::transmute(&mut self.as_mut().texture) }
+        unsafe { std::mem::transmute(&mut self.texture) }
     }
 }
 
@@ -1169,46 +1154,33 @@ impl Image {
     }
 }
 
-impl RaylibTexture2D for WeakTexture2D {}
-impl RaylibTexture2D for Texture2D {}
-impl RaylibTexture2D for WeakRenderTexture2D {}
-impl RaylibTexture2D for RenderTexture2D {}
-
 impl Texture2D {
-    pub unsafe fn make_weak(self) -> WeakTexture2D {
-        let m = WeakTexture2D(self.0);
-        std::mem::forget(self);
-        m
-    }
-}
-
-pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     /// Texture base width
     #[inline]
     #[must_use]
     fn width(&self) -> i32 {
-        self.as_ref().width
+        self.width
     }
 
     /// Texture base height
     #[inline]
     #[must_use]
     fn height(&self) -> i32 {
-        self.as_ref().height
+        self.height
     }
 
     /// Mipmap levels, 1 by default
     #[inline]
     #[must_use]
     fn mipmaps(&self) -> i32 {
-        self.as_ref().width
+        self.width
     }
 
     /// Data format (PixelFormat type)
     #[inline]
     #[must_use]
     fn format(&self) -> i32 {
-        self.as_ref().format
+        self.format
     }
 
     /// Updates GPU texture with new data.
@@ -1216,9 +1188,9 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     fn update_texture(&mut self, pixels: &[u8]) -> Result<(), UpdateTextureError> {
         let expected_len = unsafe {
             get_pixel_data_size(
-                self.as_ref().width,
-                self.as_ref().height,
-                std::mem::transmute::<i32, ffi::PixelFormat>(self.as_ref().format),
+                self.width,
+                self.height,
+                std::mem::transmute::<i32, ffi::PixelFormat>(self.format),
             ) as usize
         };
         if pixels.len() != expected_len {
@@ -1229,7 +1201,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
         }
         unsafe {
             ffi::UpdateTexture(
-                *self.as_mut(),
+                self.clone_raw(),
                 pixels.as_ptr() as *const std::os::raw::c_void,
             );
         }
@@ -1247,8 +1219,8 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
 
         if (rec.x < 0.0)
             || (rec.y < 0.0)
-            || ((rec.x as i32 + rec.width as i32) > (self.as_ref().width))
-            || ((rec.y as i32 + rec.height as i32) > (self.as_ref().height))
+            || ((rec.x as i32 + rec.width as i32) > (self.width))
+            || ((rec.y as i32 + rec.height as i32) > (self.height))
         {
             return Err(UpdateTextureError::OutOfBounds);
         }
@@ -1260,7 +1232,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
             get_pixel_data_size(
                 rec.width as i32,
                 rec.height as i32,
-                std::mem::transmute::<i32, ffi::PixelFormat>(self.as_ref().format),
+                std::mem::transmute::<i32, ffi::PixelFormat>(self.format),
             ) as usize
         };
         if pixels.len() != expected_len {
@@ -1271,7 +1243,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
         }
         unsafe {
             ffi::UpdateTextureRec(
-                *self.as_ref(),
+                self.clone_raw(),
                 rec,
                 pixels.as_ptr() as *const std::os::raw::c_void,
             )
@@ -1285,7 +1257,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     #[inline]
     #[must_use]
     fn load_image(&self) -> Result<Image, InvalidImageError> {
-        let i = unsafe { ffi::LoadImageFromTexture(*self.as_ref()) };
+        let i = unsafe { ffi::LoadImageFromTexture(self.clone_raw()) };
         if i.data.is_null() {
             return Err(InvalidImageError::NullDataFromTexture);
         }
@@ -1296,7 +1268,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     #[inline]
     fn gen_texture_mipmaps(&mut self) {
         unsafe {
-            ffi::GenTextureMipmaps(self.as_mut());
+            ffi::GenTextureMipmaps(self.as_raw_mut());
         }
     }
 
@@ -1304,7 +1276,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     #[inline]
     fn set_texture_filter(&self, _: &RaylibThread, filter_mode: crate::consts::TextureFilter) {
         unsafe {
-            ffi::SetTextureFilter(*self.as_ref(), filter_mode as i32);
+            ffi::SetTextureFilter(self.clone_raw(), filter_mode as i32);
         }
     }
 
@@ -1312,14 +1284,14 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     #[inline]
     fn set_texture_wrap(&self, _: &RaylibThread, wrap_mode: crate::consts::TextureWrap) {
         unsafe {
-            ffi::SetTextureWrap(*self.as_ref(), wrap_mode as i32);
+            ffi::SetTextureWrap(self.clone_raw(), wrap_mode as i32);
         }
     }
 
     /// Check if a texture is valid (loaded in GPU)
     #[inline]
     fn is_texture_valid(&self) -> bool {
-        unsafe { ffi::IsTextureValid(*self.as_ref()) }
+        unsafe { ffi::IsTextureValid(self.clone_raw()) }
     }
 }
 
@@ -1344,7 +1316,7 @@ impl RaylibHandle {
                 path: filename.into(),
             });
         }
-        Ok(Texture2D(t))
+        Ok(unsafe { Texture2D::from_raw_unchecked(t) })
     }
 
     /// Load cubemap from image, multiple image cubemap layouts supported
@@ -1359,7 +1331,7 @@ impl RaylibHandle {
         if t.id == 0 {
             return Err(LoadTextureError::CubemapFromImageFailed);
         }
-        Ok(Texture2D(t))
+        Ok(unsafe { Texture2D::from_raw_unchecked(t) })
     }
 
     /// Loads texture from image data.
@@ -1377,7 +1349,7 @@ impl RaylibHandle {
         if t.id == 0 {
             return Err(LoadTextureError::TextureFromImageFailed);
         }
-        Ok(Texture2D(t))
+        Ok(unsafe { Texture2D::from_raw_unchecked(t) })
     }
 
     /// Loads texture for rendering (framebuffer).
@@ -1392,7 +1364,7 @@ impl RaylibHandle {
         if t.id == 0 {
             return Err(LoadTextureError::CreateRenderTextureFailed);
         }
-        Ok(RenderTexture2D(t))
+        Ok(unsafe { RenderTexture2D::from_raw_unchecked(t) })
     }
 }
 
@@ -1401,12 +1373,12 @@ impl RaylibHandle {
     /// Unload textures from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_texture(&mut self, _: &RaylibThread, texture: WeakTexture2D) {
-        unsafe { ffi::UnloadTexture(*texture.as_ref()) }
+        unsafe { ffi::UnloadTexture(texture.clone_raw()) }
     }
     /// Weak RenderTextures will leak memory if they are not unloaded
     /// Unload RenderTextures from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_render_texture(&mut self, _: &RaylibThread, texture: WeakRenderTexture2D) {
-        unsafe { ffi::UnloadRenderTexture(*texture.as_ref()) }
+        unsafe { ffi::UnloadRenderTexture(texture.clone_raw()) }
     }
 }

@@ -18,7 +18,7 @@ make_thick_wrapper! {
     pub struct Font {
         pub baseSize: i32,
         glyphCount: i32,
-        glyphPadding: i32,
+        pub glyphPadding: i32,
         texture: ffi::Texture2D,
         recs: *mut ffi::Rectangle,
         glyphs: *mut ffi::GlyphInfo,
@@ -415,8 +415,7 @@ impl Font {
 
     /// Sets the texture on the current Font, and takes ownership of `tex`.
     fn set_texture(&mut self, tex: Texture2D) {
-        self.texture = tex.0;
-        std::mem::forget(tex); // UnloadFont will also unload the texture
+        self.texture = unsafe { tex.to_raw() }; // UnloadFont will also unload the texture
     }
 }
 
