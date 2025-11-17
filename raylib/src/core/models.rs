@@ -18,6 +18,7 @@ use crate::{
     ffi,
 };
 use std::ffi::CString;
+use std::mem::ManuallyDrop;
 use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
@@ -28,13 +29,6 @@ make_thin_wrapper!(
     ffi::UnloadModel
 );
 make_thin_wrapper!(WeakModel, ffi::Model, no_drop);
-make_thin_wrapper!(
-    /// Mesh, vertex data and vao/vbo
-    Mesh,
-    ffi::Mesh,
-    |mesh: ffi::Mesh| ffi::UnloadMesh(mesh)
-);
-make_thin_wrapper!(WeakMesh, ffi::Mesh, no_drop);
 make_thin_wrapper!(
     /// Material, includes shader and maps
     Material,
@@ -66,13 +60,6 @@ make_thin_wrapper!(
 impl Clone for WeakModel {
     fn clone(&self) -> WeakModel {
         WeakModel(self.0)
-    }
-}
-
-// Weak things can be clone
-impl Clone for WeakMesh {
-    fn clone(&self) -> WeakMesh {
-        WeakMesh(self.0)
     }
 }
 
@@ -118,7 +105,7 @@ impl RaylibHandle {
         _: &RaylibThread,
         mesh: WeakMesh,
     ) -> Result<Model, LoadModelError> {
-        let m = unsafe { ffi::LoadModelFromMesh(mesh.0) };
+        let m = unsafe { ffi::LoadModelFromMesh(*mesh.as_raw_ref()) };
 
         if m.meshes.is_null() || m.materials.is_null() {
             return Err(LoadModelError::LoadFromMeshFailed);
@@ -338,28 +325,137 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
 }
 
-impl RaylibMesh for WeakMesh {}
-impl RaylibMesh for Mesh {}
-
-impl Mesh {
-    pub unsafe fn make_weak(self) -> WeakMesh {
-        let m = WeakMesh(self.0);
-        std::mem::forget(self);
-        m
+/// Mesh, vertex data and vao/vbo
+#[derive(Debug)]
+#[repr(C)]
+pub struct Mesh {
+    vertex_count: i32,
+    triangle_count: i32,
+    vertices: *mut Vector3,
+    texcoords: *mut Vector2,
+    texcoords2: *mut Vector2,
+    normals: *mut Vector3,
+    tangents: *mut Vector4,
+    colors: *mut Color,
+    indices: *mut u16,
+    anim_vertices: *mut Vector3,
+    anim_normals: *mut Vector3,
+    bone_ids: *mut u8,
+    bone_weights: *mut f32,
+    bone_matrices: *mut ffi::Matrix,
+    bone_count: i32,
+    vao_id: u32,
+    vbo_id: *mut u32,
+}
+impl Drop for Mesh {
+    fn drop(&mut self) {
+        unsafe { ffi::UnloadMesh(*self.as_raw_mut()) };
     }
 }
-pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
+
+#[derive(Debug)]
+pub struct WeakMesh(ManuallyDrop<Mesh>);
+
+// Weak things can be clone
+impl Clone for WeakMesh {
+    fn clone(&self) -> Self {
+        Self(ManuallyDrop::new(Mesh {
+            vertex_count: self.0.vertex_count,
+            triangle_count: self.0.triangle_count,
+            vertices: self.0.vertices,
+            texcoords: self.0.texcoords,
+            texcoords2: self.0.texcoords2,
+            normals: self.0.normals,
+            tangents: self.0.tangents,
+            colors: self.0.colors,
+            indices: self.0.indices,
+            anim_vertices: self.0.anim_vertices,
+            anim_normals: self.0.anim_normals,
+            bone_ids: self.0.bone_ids,
+            bone_weights: self.0.bone_weights,
+            bone_matrices: self.0.bone_matrices,
+            bone_count: self.0.bone_count,
+            vao_id: self.0.vao_id,
+            vbo_id: self.0.vbo_id,
+        }))
+    }
+}
+
+impl std::ops::Deref for WeakMesh {
+    type Target = Mesh;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for WeakMesh {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+impl AsRef<Mesh> for WeakMesh {
+    #[inline]
+    fn as_ref(&self) -> &Mesh {
+        self
+    }
+}
+impl AsMut<Mesh> for WeakMesh {
+    #[inline]
+    fn as_mut(&mut self) -> &mut Mesh {
+        self
+    }
+}
+
+impl Mesh {
+    #[inline]
+    pub unsafe fn make_weak(self) -> WeakMesh {
+        WeakMesh(ManuallyDrop::new(self))
+    }
+
+    #[inline]
+    pub unsafe fn from_raw_unchecked(raw: ffi::Mesh) -> Self {
+        unsafe { std::mem::transmute(raw) }
+    }
+    #[inline]
+    pub unsafe fn to_raw(self) -> ffi::Mesh {
+        unsafe { std::mem::transmute(self) }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Mesh`] to be misused.
+    ///
+    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
+    #[inline]
+    pub(crate) fn clone_raw(&self) -> ffi::Mesh {
+        unsafe { std::mem::transmute_copy(self) }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Mesh`] to be misused.
+    ///
+    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
+    #[inline]
+    pub(crate) fn as_raw_ref(&self) -> &ffi::Mesh {
+        unsafe { &*std::ptr::from_ref(self).cast() }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`Mesh`] to be misused.
+    #[inline]
+    pub(crate) fn as_raw_mut(&mut self) -> &mut ffi::Mesh {
+        unsafe { &mut *std::ptr::from_mut(self).cast() }
+    }
+
     /// Upload mesh vertex data in GPU and provide VAO/VBO ids
     #[inline]
-    unsafe fn upload(&mut self, dynamic: bool) {
-        unsafe { ffi::UploadMesh(self.as_mut(), dynamic) };
+    pub unsafe fn upload(&mut self, dynamic: bool) {
+        unsafe { ffi::UploadMesh(self.as_raw_mut(), dynamic) };
     }
     /// Update mesh vertex data in GPU for a specific buffer index
     #[inline]
-    unsafe fn update_buffer<A>(&mut self, index: i32, data: &[u8], offset: i32) {
+    pub unsafe fn update_buffer(&mut self, index: i32, data: &[u8], offset: i32) {
         unsafe {
             ffi::UpdateMeshBuffer(
-                *self.as_ref(),
+                self.clone_raw(),
                 index,
                 data.as_ptr() as *const c_void,
                 data.len() as i32,
@@ -370,226 +466,200 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
     #[must_use]
-    fn vertices(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().vertices as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+    pub fn vertices(&self) -> &[Vector3] {
+        unsafe { std::slice::from_raw_parts(self.vertices, self.vertex_count as usize) }
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
     #[must_use]
-    fn vertices_mut(&mut self) -> &mut [Vector3] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().vertices as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+    pub fn vertices_mut(&mut self) -> &mut [Vector3] {
+        unsafe { std::slice::from_raw_parts_mut(self.vertices, self.vertex_count as usize) }
     }
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
     #[must_use]
-    fn normals(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().normals as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+    pub fn normals(&self) -> &[Vector3] {
+        unsafe { std::slice::from_raw_parts(self.normals, self.vertex_count as usize) }
     }
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
     #[must_use]
-    fn normals_mut(&mut self) -> &mut [Vector3] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().normals as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+    pub fn normals_mut(&mut self) -> &mut [Vector3] {
+        unsafe { std::slice::from_raw_parts_mut(self.normals, self.vertex_count as usize) }
     }
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
     #[must_use]
-    fn tangents(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().tangents as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+    pub fn tangents(&self) -> &[Vector4] {
+        unsafe { std::slice::from_raw_parts(self.tangents, self.vertex_count as usize) }
     }
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
     #[must_use]
-    fn tangents_mut(&mut self) -> &mut [Vector3] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().tangents as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+    pub fn tangents_mut(&mut self) -> &mut [Vector4] {
+        unsafe { std::slice::from_raw_parts_mut(self.tangents, self.vertex_count as usize) }
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
     #[must_use]
-    fn colors(&self) -> &[Color] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().colors as *const Color,
-                self.as_ref().vertexCount as usize,
-            )
-        }
+    pub fn colors(&self) -> &[Color] {
+        unsafe { std::slice::from_raw_parts(self.colors, self.vertex_count as usize) }
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
     #[must_use]
-    fn colors_mut(&mut self) -> &mut [Color] {
+    pub fn colors_mut(&mut self) -> &mut [Color] {
+        unsafe { std::slice::from_raw_parts_mut(self.colors, self.vertex_count as usize) }
+    }
+    /// Vertex indices (in case vertex data comes indexed)
+    #[inline]
+    #[must_use]
+    pub fn indices(&self) -> &[u16] {
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().colors as *mut Color,
-                self.as_mut().vertexCount as usize,
-            )
+            std::slice::from_raw_parts(self.indices as *const u16, self.vertex_count as usize)
         }
     }
     /// Vertex indices (in case vertex data comes indexed)
     #[inline]
     #[must_use]
-    fn indices(&self) -> &[u16] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().indices as *const u16,
-                self.as_ref().vertexCount as usize,
-            )
-        }
-    }
-    /// Vertex indices (in case vertex data comes indexed)
-    #[inline]
-    #[must_use]
-    fn indices_mut(&mut self) -> &mut [u16] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().indices as *mut u16,
-                self.as_mut().vertexCount as usize,
-            )
-        }
+    pub fn indices_mut(&mut self) -> &mut [u16] {
+        unsafe { std::slice::from_raw_parts_mut(self.indices, self.vertex_count as usize) }
     }
 
     /// Generate polygonal mesh
     #[inline]
     #[must_use]
-    fn gen_mesh_poly(_: &RaylibThread, sides: i32, radius: f32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshPoly(sides, radius)) }
+    pub fn gen_mesh_poly(_: &RaylibThread, sides: i32, radius: f32) -> Mesh {
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshPoly(sides, radius)) }
     }
 
     /// Generates plane mesh (with subdivisions).
     #[inline]
     #[must_use]
-    fn gen_mesh_plane(_: &RaylibThread, width: f32, length: f32, res_x: i32, res_z: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshPlane(width, length, res_x, res_z)) }
+    pub fn gen_mesh_plane(
+        _: &RaylibThread,
+        width: f32,
+        length: f32,
+        res_x: i32,
+        res_z: i32,
+    ) -> Mesh {
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshPlane(width, length, res_x, res_z)) }
     }
 
     /// Generates cuboid mesh.
     #[inline]
     #[must_use]
-    fn gen_mesh_cube(_: &RaylibThread, width: f32, height: f32, length: f32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshCube(width, height, length)) }
+    pub fn gen_mesh_cube(_: &RaylibThread, width: f32, height: f32, length: f32) -> Mesh {
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshCube(width, height, length)) }
     }
 
     /// Generates sphere mesh (standard sphere).
     #[inline]
     #[must_use]
-    fn gen_mesh_sphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshSphere(radius, rings, slices)) }
+    pub fn gen_mesh_sphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshSphere(radius, rings, slices)) }
     }
 
     /// Generates half-sphere mesh (no bottom cap).
     #[inline]
     #[must_use]
-    fn gen_mesh_hemisphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshHemiSphere(radius, rings, slices)) }
+    pub fn gen_mesh_hemisphere(_: &RaylibThread, radius: f32, rings: i32, slices: i32) -> Mesh {
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshHemiSphere(radius, rings, slices)) }
     }
 
     /// Generates cylinder mesh.
     #[inline]
     #[must_use]
-    fn gen_mesh_cylinder(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshCylinder(radius, height, slices)) }
+    pub fn gen_mesh_cylinder(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshCylinder(radius, height, slices)) }
     }
 
     /// Generates torus mesh.
     #[inline]
     #[must_use]
-    fn gen_mesh_torus(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshTorus(radius, size, rad_seg, sides)) }
+    pub fn gen_mesh_torus(
+        _: &RaylibThread,
+        radius: f32,
+        size: f32,
+        rad_seg: i32,
+        sides: i32,
+    ) -> Mesh {
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshTorus(radius, size, rad_seg, sides)) }
     }
 
     /// Generates trefoil knot mesh.
     #[inline]
     #[must_use]
-    fn gen_mesh_knot(_: &RaylibThread, radius: f32, size: f32, rad_seg: i32, sides: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshKnot(radius, size, rad_seg, sides)) }
+    pub fn gen_mesh_knot(
+        _: &RaylibThread,
+        radius: f32,
+        size: f32,
+        rad_seg: i32,
+        sides: i32,
+    ) -> Mesh {
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshKnot(radius, size, rad_seg, sides)) }
     }
 
     /// Generates heightmap mesh from image data.
     #[inline]
     #[must_use]
-    fn gen_mesh_heightmap(_: &RaylibThread, heightmap: &Image, size: impl Into<MintVec3>) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshHeightmap(heightmap.0, size.into())) }
+    pub fn gen_mesh_heightmap(
+        _: &RaylibThread,
+        heightmap: &Image,
+        size: impl Into<MintVec3>,
+    ) -> Mesh {
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshHeightmap(heightmap.0, size.into())) }
     }
 
     /// Generates cubes-based map mesh from image data.
     #[inline]
     #[must_use]
-    fn gen_mesh_cubicmap(
+    pub fn gen_mesh_cubicmap(
         _: &RaylibThread,
         cubicmap: &Image,
         cube_size: impl Into<MintVec3>,
     ) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshCubicmap(cubicmap.0, cube_size.into())) }
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshCubicmap(cubicmap.0, cube_size.into())) }
     }
 
     /// Generate cone/pyramid mesh
     #[inline]
     #[must_use]
-    fn gen_mesh_cone(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
-        unsafe { Mesh(ffi::GenMeshCone(radius, height, slices)) }
+    pub fn gen_mesh_cone(_: &RaylibThread, radius: f32, height: f32, slices: i32) -> Mesh {
+        unsafe { Mesh::from_raw_unchecked(ffi::GenMeshCone(radius, height, slices)) }
     }
 
     /// Computes mesh bounding box limits.
     #[inline]
     #[must_use]
-    fn get_mesh_bounding_box(&self) -> BoundingBox {
-        unsafe { ffi::GetMeshBoundingBox(*self.as_ref()).into() }
+    pub fn get_mesh_bounding_box(&self) -> BoundingBox {
+        unsafe { ffi::GetMeshBoundingBox(*self.as_raw_ref()).into() }
     }
 
     /// Computes mesh tangents.
     // NOTE: New VBO for tangents is generated at default location and also binded to mesh VAO
     #[inline]
-    fn gen_mesh_tangents(&mut self, _: &RaylibThread) {
+    pub fn gen_mesh_tangents(&mut self, _: &RaylibThread) {
         unsafe {
-            ffi::GenMeshTangents(self.as_mut());
+            ffi::GenMeshTangents(self.as_raw_mut());
         }
     }
 
     /// Exports mesh as an OBJ file.
     #[inline]
-    fn export(&self, filename: &str) {
+    pub fn export(&self, filename: &str) {
         let c_filename = CString::new(filename).unwrap();
         unsafe {
-            ffi::ExportMesh(*self.as_ref(), c_filename.as_ptr());
+            ffi::ExportMesh(*self.as_raw_ref(), c_filename.as_ptr());
         }
     }
 
     /// Export mesh as code file (.h) defining multiple arrays of vertex attributes
     #[inline]
-    fn export_as_code(&self, filename: &str) {
+    pub fn export_as_code(&self, filename: &str) {
         let c_filename = CString::new(filename).unwrap();
         unsafe {
-            ffi::ExportMeshAsCode(*self.as_ref(), c_filename.as_ptr());
+            ffi::ExportMeshAsCode(*self.as_raw_ref(), c_filename.as_ptr());
         }
     }
 }
@@ -1017,7 +1087,7 @@ impl RaylibHandle {
     /// Unload mesh from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_mesh(&mut self, _: &RaylibThread, mesh: WeakMesh) {
-        unsafe { ffi::UnloadMesh(*mesh.as_ref()) }
+        unsafe { ffi::UnloadMesh(*mesh.as_raw_ref()) }
     }
 }
 
@@ -1252,7 +1322,7 @@ impl<'a> MeshBuilder<'a> {
         };
         // SAFETY: Borrowing `RaylibThread` guarantees this is the thread the resourece was created from,
         // and raw_mesh has no duplicates because it was just created.
-        let mut mesh = unsafe { Mesh::from_raw(raw_mesh) };
+        let mut mesh = unsafe { Mesh::from_raw_unchecked(raw_mesh) };
         // SAFETY: mesh.vertices and mesh.texcoords are valid, initialized, unique, and safe to dereference.
         unsafe {
             mesh.upload(false);
