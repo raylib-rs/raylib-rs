@@ -29,25 +29,11 @@ make_thin_wrapper!(
     no_drop
 );
 make_thin_wrapper!(
-    /// ModelAnimation
-    ModelAnimation,
-    ffi::ModelAnimation,
-    ffi::UnloadModelAnimation
-);
-make_thin_wrapper!(WeakModelAnimation, ffi::ModelAnimation, no_drop);
-make_thin_wrapper!(
     /// MaterialMap
     MaterialMap,
     ffi::MaterialMap,
     no_drop
 );
-
-// Weak things can be clone
-impl Clone for WeakModelAnimation {
-    fn clone(&self) -> WeakModelAnimation {
-        WeakModelAnimation(self.0)
-    }
-}
 
 impl RaylibHandle {
     #[must_use]
@@ -104,7 +90,9 @@ impl RaylibHandle {
         let mut m_vec = Vec::with_capacity(m_size as usize);
         for i in 0..m_size {
             unsafe {
-                m_vec.push(ModelAnimation(*m_ptr.offset(i as isize)));
+                m_vec.push(ModelAnimation::from_raw_unchecked(
+                    *m_ptr.offset(i as isize),
+                ));
             }
         }
         unsafe {
@@ -343,7 +331,7 @@ impl Model {
     #[must_use]
     /// Check model animation skeleton match
     fn is_model_animation_valid(&self, anim: &ModelAnimation) -> bool {
-        unsafe { ffi::IsModelAnimationValid(self.clone_raw(), anim.0) }
+        unsafe { ffi::IsModelAnimationValid(self.clone_raw(), anim.clone_raw()) }
     }
 
     /// Check if a model is ready
@@ -1083,29 +1071,127 @@ impl<'a> ExactSizeIterator for FramePoseIterMut<'a> {
     }
 }
 
-impl RaylibModelAnimation for ModelAnimation {}
-impl RaylibModelAnimation for WeakModelAnimation {}
+#[derive(Debug)]
+#[repr(C)]
+pub struct ModelAnimation {
+    bone_count: i32,
+    frame_count: i32,
+    bones: *mut ffi::BoneInfo,
+    frame_poses: *mut *mut Transform,
+    name: [::std::os::raw::c_char; 32],
+}
 
-impl ModelAnimation {
-    #[inline]
-    #[must_use = "weak resources must be manually unloaded"]
-    pub unsafe fn make_weak(self) -> WeakModelAnimation {
-        let m = WeakModelAnimation(self.0);
-        std::mem::forget(self);
-        m
+impl Drop for ModelAnimation {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::UnloadModelAnimation(self.clone_raw());
+        }
     }
 }
 
-pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAnimation> {
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct WeakModelAnimation(ManuallyDrop<ModelAnimation>);
+
+// Weak things can be clone
+impl Clone for WeakModelAnimation {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self(ManuallyDrop::new(ModelAnimation {
+            bone_count: self.0.bone_count,
+            frame_count: self.0.frame_count,
+            bones: self.0.bones,
+            frame_poses: self.0.frame_poses,
+            name: self.0.name,
+        }))
+    }
+}
+
+impl std::ops::Deref for WeakModelAnimation {
+    type Target = ModelAnimation;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for WeakModelAnimation {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+impl AsRef<ModelAnimation> for WeakModelAnimation {
+    #[inline]
+    fn as_ref(&self) -> &ModelAnimation {
+        self
+    }
+}
+impl AsMut<ModelAnimation> for WeakModelAnimation {
+    #[inline]
+    fn as_mut(&mut self) -> &mut ModelAnimation {
+        self
+    }
+}
+
+impl ModelAnimation {
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
+    #[inline]
+    #[must_use = "weak resources must be manually unloaded"]
+    pub unsafe fn make_weak(self) -> WeakModelAnimation {
+        WeakModelAnimation(ManuallyDrop::new(self))
+    }
+    /// # Safety
+    /// - Do not break Rust's aliasing rules.
+    /// - Other weak instances of this mesh must not be accessed after the `ModelAnimation` is dropped.
+    #[inline]
+    pub unsafe fn from_weak(weak: WeakModelAnimation) -> ModelAnimation {
+        ManuallyDrop::into_inner(weak.0)
+    }
+
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
+    /// - Other raw instances of this mesh must not be accessed after the `ModelAnimation` is dropped.
+    #[inline]
+    pub unsafe fn from_raw_unchecked(raw: ffi::ModelAnimation) -> ModelAnimation {
+        unsafe { std::mem::transmute(raw) }
+    }
+    /// # Safety
+    /// Do not break Rust's aliasing rules.
+    #[inline]
+    pub unsafe fn to_raw(self) -> ffi::ModelAnimation {
+        unsafe { std::mem::transmute(self) }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`ModelAnimation`] to be misused.
+    ///
+    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
+    #[inline]
+    pub(crate) fn clone_raw(&self) -> ffi::ModelAnimation {
+        unsafe { std::mem::transmute_copy(self) }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`ModelAnimation`] to be misused.
+    ///
+    /// This may seem safer than [`Self::as_raw_mut`], but mutable pointers can be copied and their contents mutated from behind a shared reference.
+    #[inline]
+    pub(crate) fn as_raw_ref(&self) -> &ffi::ModelAnimation {
+        unsafe { &*std::ptr::from_ref(self).cast() }
+    }
+
+    /// This is safe as long as it isn't made public, because that would allow unsafe fields of [`ModelAnimation`] to be misused.
+    #[inline]
+    pub(crate) fn as_raw_mut(&mut self) -> &mut ffi::ModelAnimation {
+        unsafe { &mut *std::ptr::from_mut(self).cast() }
+    }
+
     /// Bones information (skeleton)
     #[inline]
     #[must_use]
     fn bones(&self) -> &[BoneInfo] {
         unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().bones as *const BoneInfo,
-                self.as_ref().boneCount as usize,
-            )
+            std::slice::from_raw_parts(self.bones as *const BoneInfo, self.bone_count as usize)
         }
     }
 
@@ -1114,24 +1200,21 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
     #[must_use]
     fn bones_mut(&mut self) -> &mut [BoneInfo] {
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().bones as *mut BoneInfo,
-                self.as_mut().boneCount as usize,
-            )
+            std::slice::from_raw_parts_mut(self.bones as *mut BoneInfo, self.bone_count as usize)
         }
     }
 
     #[must_use]
     /// Poses array by frame
     fn frame_poses(&self) -> Vec<&[Transform]> {
-        let anim = self.as_ref();
-        let mut top = Vec::with_capacity(anim.frameCount as usize);
+        let anim = self;
+        let mut top = Vec::with_capacity(anim.frame_count as usize);
 
-        for i in 0..anim.frameCount {
+        for i in 0..anim.frame_count {
             top.push(unsafe {
                 std::slice::from_raw_parts(
-                    *(anim.framePoses.offset(i as isize) as *const *const Transform),
-                    anim.boneCount as usize,
+                    *(anim.frame_poses.offset(i as isize) as *const *const Transform),
+                    anim.bone_count as usize,
                 )
             });
         }
@@ -1140,12 +1223,12 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
     }
     #[must_use]
     fn frame_poses_iter<'a>(&'a self) -> FramePoseIter<'a> {
-        let anim = self.as_ref();
+        let anim = self;
         unsafe {
             FramePoseIter::new(
-                anim.framePoses,
-                anim.frameCount as usize,
-                anim.boneCount as usize,
+                anim.frame_poses.cast(),
+                anim.frame_count as usize,
+                anim.bone_count as usize,
             )
         }
     }
@@ -1153,14 +1236,14 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
     #[must_use]
     /// Poses array by frame
     fn frame_poses_mut(&mut self) -> Vec<&mut [Transform]> {
-        let anim = self.as_ref();
-        let mut top = Vec::with_capacity(anim.frameCount as usize);
+        let anim = self;
+        let mut top = Vec::with_capacity(anim.frame_count as usize);
 
-        for i in 0..anim.frameCount {
+        for i in 0..anim.frame_count {
             top.push(unsafe {
                 std::slice::from_raw_parts_mut(
-                    *(anim.framePoses.offset(i as isize) as *mut *mut Transform),
-                    anim.boneCount as usize,
+                    *(anim.frame_poses.offset(i as isize) as *mut *mut Transform),
+                    anim.bone_count as usize,
                 )
             });
         }
@@ -1169,12 +1252,12 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
     }
     #[must_use]
     fn frame_poses_iter_mut<'a>(&'a mut self) -> FramePoseIterMut<'a> {
-        let anim = self.as_ref();
+        let anim = self;
         unsafe {
             FramePoseIterMut::new(
-                anim.framePoses,
-                anim.frameCount as usize,
-                anim.boneCount as usize,
+                anim.frame_poses.cast(),
+                anim.frame_count as usize,
+                anim.bone_count as usize,
             )
         }
     }
@@ -1233,14 +1316,14 @@ impl RaylibHandle {
     /// Unload material from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_material(&mut self, _: &RaylibThread, material: WeakMaterial) {
-        unsafe { ffi::UnloadMaterial(material.clone_raw()) }
+        unsafe { _ = Material::from_weak(material) }
     }
 
     /// Weak models will leak memory if they are not unlaoded
     /// Unload model from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_model(&mut self, _: &RaylibThread, model: WeakModel) {
-        unsafe { ffi::UnloadModel(model.clone_raw()) }
+        unsafe { _ = Model::from_weak(model) }
     }
 
     /// Weak model_animations will leak memory if they are not unlaoded
@@ -1251,14 +1334,14 @@ impl RaylibHandle {
         _: &RaylibThread,
         model_animation: WeakModelAnimation,
     ) {
-        unsafe { ffi::UnloadModelAnimation(*model_animation.as_ref()) }
+        unsafe { _ = ModelAnimation::from_weak(model_animation) }
     }
 
     /// Weak meshs will leak memory if they are not unlaoded
     /// Unload mesh from GPU memory (VRAM)
     #[inline]
     pub unsafe fn unload_mesh(&mut self, _: &RaylibThread, mesh: WeakMesh) {
-        unsafe { ffi::UnloadMesh(mesh.clone_raw()) }
+        unsafe { _ = Mesh::from_weak(mesh) }
     }
 }
 
