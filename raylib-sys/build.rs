@@ -329,6 +329,9 @@ fn gen_bindings() {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
+
+    // export include path information for dependent crates
+    println!("cargo::metadata=include={}/include", out_path.display())
 }
 
 fn gen_rgui() {
