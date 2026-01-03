@@ -70,37 +70,37 @@ impl Color {
         Color { r, g, b, a }
     }
 
-    /// Returns hexadecimal value for a Color
+    /// Get hexadecimal value for a Color (0xRRGGBBAA)
     #[inline]
     pub fn color_to_int(&self) -> i32 {
         unsafe { super::ColorToInt(self.into()) }
     }
 
-    /// Returns color normalized as float [0..1]
+    /// Get Color normalized as float [0..1]
     #[inline]
     pub fn color_normalize(&self) -> Vector4 {
         unsafe { super::ColorNormalize(self.into()).into() }
     }
 
-    /// Returns HSV values for a Color
+    /// Get HSV values for a Color, hue [0..360], saturation/value [0..1]
     #[inline]
     pub fn color_to_hsv(&self) -> Vector3 {
         unsafe { super::ColorToHSV(self.into()).into() }
     }
 
-    /// Returns a Color from HSV values
+    /// Get a Color from HSV values, hue [0..360], saturation/value [0..1]
     #[inline]
     pub fn color_from_hsv(hue: f32, saturation: f32, value: f32) -> Color {
         unsafe { super::ColorFromHSV(hue, saturation, value).into() }
     }
 
-    /// Returns color from normalized values [0..1]
+    /// Get Color from normalized values [0..1]
     #[inline]
     pub fn color_from_normalized(normalized: Vector4) -> Color {
         unsafe { super::ColorFromNormalized(normalized.into()).into() }
     }
 
-    /// Returns a Color struct from hexadecimal value
+    /// Get Color structure from hexadecimal value
     #[inline]
     pub fn get_color(hex_value: u32) -> Color {
         unsafe { super::GetColor(hex_value).into() }
@@ -138,7 +138,7 @@ impl Color {
     pub fn color_alpha_blend(dst: &Color, src: &Color, tint: &Color) -> Color {
         unsafe { super::ColorAlphaBlend(dst.into(), src.into(), tint.into()).into() }
     }
-    /// Check if color is equal to another.
+    /// Check if two colors are equal
     #[inline]
     pub fn is_equal(&self, rhs: impl Into<super::Color>) -> bool {
         unsafe { super::ColorIsEqual(self.into(), rhs.into()) }
