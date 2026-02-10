@@ -11,6 +11,7 @@ pkgs.mkShell {
     xorg.libXinerama
     xorg.libXcursor
     xorg.libXi
+    libGL
     # Web support (uncomment to enable) -- Untested - @JamesKEbert
     # emscripten
   ];
