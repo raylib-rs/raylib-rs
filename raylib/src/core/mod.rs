@@ -87,6 +87,7 @@ pub struct RaylibBuilder {
     window_resizable: bool,
     window_undecorated: bool,
     window_transparent: bool,
+    window_highdpi: bool,
     msaa_4x_hint: bool,
     vsync_hint: bool,
     log_level: TraceLogLevel,
@@ -133,6 +134,12 @@ impl RaylibBuilder {
     /// Sets the window to be transparent.
     pub fn transparent(&mut self) -> &mut Self {
         self.window_transparent = true;
+        self
+    }
+
+    /// Sets the window to scale for high DPI displays.
+    pub fn highdpi(&mut self) -> &mut Self {
+        self.window_highdpi = true;
         self
     }
 
@@ -192,6 +199,9 @@ impl RaylibBuilder {
         }
         if self.window_transparent {
             flags |= FLAG_WINDOW_TRANSPARENT as u32;
+        }
+        if self.window_highdpi {
+            flags |= FLAG_WINDOW_HIGHDPI as u32;
         }
         if self.msaa_4x_hint {
             flags |= FLAG_MSAA_4X_HINT as u32;
