@@ -529,9 +529,9 @@ pub trait RaylibDrawGui {
         &mut self,
         bounds: impl Into<ffi::Rectangle>,
         text: impl Iterator<Item = impl AsRef<str>>,
-        focus: &mut i32,
         scroll_index: &mut i32,
         active: &mut i32,
+        focus: &mut i32,
     ) -> i32 {
         // We need to keep track of all CStr buffers.
         let buffer: Box<[Box<CStr>]> = text
@@ -546,9 +546,9 @@ pub trait RaylibDrawGui {
                 bounds.into(),
                 text_params.as_mut_ptr(),
                 text_params.len() as i32,
-                focus,
                 scroll_index,
                 active,
+                focus,
             )
         }
     }
