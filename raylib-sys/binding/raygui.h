@@ -744,6 +744,7 @@ extern "C"
 
     // Styles loading functions
     RAYGUIAPI void GuiLoadStyle(const char *fileName); // Load style file over global style variable (.rgs)
+    RAYGUIAPI void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize); // Load style from memory (binary only)
     RAYGUIAPI void GuiLoadStyleDefault(void);          // Load style default over global style
 
     // Tooltips management functions
@@ -1531,7 +1532,7 @@ static void DrawRectangleGradientV(int posX, int posY, int width, int height, Co
 //----------------------------------------------------------------------------------
 // Module specific Functions Declaration
 //----------------------------------------------------------------------------------
-static void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize); // Load style from memory (binary only)
+void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize); // Load style from memory (binary only)
 
 static int GetTextWidth(const char *text);                     // Gui get text width using gui font and style
 static Rectangle GetTextBounds(int control, Rectangle bounds); // Get text bounds considering control bounds
@@ -4977,7 +4978,7 @@ void GuiSetIconScale(int scale)
 
 // Load style from memory
 // WARNING: Binary files only
-static void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize)
+void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize)
 {
     unsigned char *fileDataPtr = (unsigned char *)fileData;
 
