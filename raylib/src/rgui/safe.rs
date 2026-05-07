@@ -84,6 +84,11 @@ impl RaylibHandle {
     pub fn gui_load_style_default(&mut self) {
         unsafe { ffi::GuiLoadStyleDefault() }
     }
+    /// Load style data from a given memory buffer.
+    #[inline]
+    pub fn gui_load_style_from_memory(&mut self, data: &[u8]) {
+        unsafe { ffi::GuiLoadStyleFromMemory(data.as_ptr(), data.len() as i32) }
+    }
 
     /// Enable gui tooltips (global state)
     #[inline]
@@ -195,6 +200,11 @@ pub trait RaylibDrawGui {
     #[inline]
     fn gui_load_style_default(&mut self) {
         unsafe { ffi::GuiLoadStyleDefault() }
+    }
+    /// Load style data from a given memory buffer.
+    #[inline]
+    fn gui_load_style_from_memory(&mut self, data: &[u8]) {
+        unsafe { ffi::GuiLoadStyleFromMemory(data.as_ptr(), data.len() as i32) }
     }
     /// Window Box control, shows a window that can be closed
     #[inline]
