@@ -1,0 +1,26 @@
+name: baseline
+
+on:
+  push:
+    branches: [6.0-rc]
+  pull_request:
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup component add rustfmt
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+  build-sys:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install build deps (cmake, glfw, alsa, udev)
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libglfw3-dev libasound2-dev libudev-dev
+      - name: Build raylib-sys
+        run: cargo build -p raylib-sys
