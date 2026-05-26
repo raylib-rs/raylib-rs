@@ -15,6 +15,8 @@ pub const MAX_MATERIAL_MAPS: u32 = 12;
 mod color;
 mod math;
 mod matrix_quat_math;
+#[cfg(feature = "mint")]
+mod mint_conv;
 mod vector_math;
 #[allow(unused_imports)]
 pub use color::*;
