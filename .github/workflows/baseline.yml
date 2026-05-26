@@ -15,12 +15,21 @@ jobs:
         run: cargo fmt --all --check
 
   build-sys:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Install build deps (cmake, glfw, alsa, udev)
+      - name: Install Linux build deps
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libglfw3-dev libasound2-dev libudev-dev
+      - name: Install macOS build deps
+        if: runner.os == 'macOS'
+        run: brew install cmake
+      # Windows runners ship cmake + MSVC; no extra deps needed.
       - name: Build raylib-sys
         run: cargo build -p raylib-sys
