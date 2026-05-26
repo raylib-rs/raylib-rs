@@ -66,7 +66,7 @@ default = [
   "SUPPORT_FILEFORMAT_MOD",
   "SUPPORT_TRACELOG",
 ]
-serde = ["dep:serde"]
+serde = ["dep:serde"]  # TODO(ws2b): re-add mint/glam/serde adapters as optional
 raygui = []
 # Do not autogenerate bindings, instead read an existing one specified by env RAYLIB_BINDGEN_LOCATION
 # useful when bindgen doesn't generate correctly on esoteric platforms and need manual auidting
