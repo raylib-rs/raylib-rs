@@ -734,9 +734,9 @@ impl Vector4 {
     /// Subtract scalar from all components. (raymath `Vector4SubtractValue`)
     #[inline]
     #[must_use]
-    pub fn sub_value(self, add: f32) -> Self {
+    pub fn sub_value(self, sub: f32) -> Self {
         // SAFETY: pure value-in/out, no preconditions.
-        unsafe { crate::Vector4SubtractValue(self, add) }
+        unsafe { crate::Vector4SubtractValue(self, sub) }
     }
 
     /// Vector length. (raymath `Vector4Length`)
