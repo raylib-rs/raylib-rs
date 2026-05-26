@@ -11,6 +11,7 @@ categories = ["external-ffi-bindings"]
 edition = "2024"
 rust-version = "1.85"
 exclude = ["raylib/examples/*", "raylib/projects/*", "raylib/templates/*"]
+links = "raylib"
 
 [dependencies]
 mint = { version = "0.5" }

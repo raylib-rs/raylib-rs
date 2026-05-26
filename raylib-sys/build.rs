@@ -329,6 +329,11 @@ fn gen_bindings() {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
+
+    // Export the raylib include path so dependent crates (e.g. other raylib C-utility sys-crates)
+    // can compose against the same headers without version drift.  Accessible as
+    // the `DEP_RAYLIB_INCLUDE` environment variable in the downstream build script.
+    println!("cargo::metadata=include={}/include", out_path.display());
 }
 
 fn gen_rgui() {
