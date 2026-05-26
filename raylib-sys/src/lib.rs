@@ -14,10 +14,12 @@ pub const MAX_MATERIAL_MAPS: u32 = 12;
 
 mod color;
 mod math;
+mod vector_math;
 #[allow(unused_imports)]
 pub use color::*;
 #[allow(unused_imports)]
 pub use math::*;
+pub use vector_math::vector3_ortho_normalize;
 
 impl Default for TraceLogLevel {
     fn default() -> Self {
