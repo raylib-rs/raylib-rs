@@ -2,9 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
-**Goal:** Replace the `mint` type aliases in `raylib-sys` with raylib-rs's own `#[repr(C)]` `Vector2/3/4`, `Matrix`, `Quaternion`, and give them their math by **calling raylib's own raymath functions** through a C-shim — so the default build owns its math types with zero math-crate dependencies.
+**Goal:** Drop the `mint` type aliases in `raylib-sys` — let **bindgen generate** the POD `Vector2/3/4` and `Matrix` straight from the C headers, keep `Quaternion` as a distinct transparent `#[repr(C)]` newtype (C aliases it to `Vector4`, so bindgen can't give it its own method namespace), and give them all their math by **calling raylib's own raymath functions** through a C-shim — so the default build owns its math types with zero math-crate dependencies.
 
-**Architecture (owner decision 2026-05-26 — "C-shim, reuse raylib's math"):** raymath.h's 146 functions are `inline` (no symbols). A one-TU shim `#define RAYMATH_IMPLEMENTATION` + `#include raymath.h` emits external definitions (confirmed: raymath.h lines 21/67/75). We compile that shim (mirroring `gen_rgui()`), add raymath.h to the bindgen header so the functions are generated, and write thin inherent-method/operator wrappers on the native types that call the FFI raymath fns. The native types are `#[repr(C)]` and layout-compatible (guarded by the WS1 `layout_compat` test), so passing them by value to the C functions is sound. **This is sys-only** — the safe crate keeps compiling against `ffi::*` as before; it *adopts* these types as its public `Vector2` in WS3. `mint`/`glam`/`serde` adapters are **WS2b**.
+**Architecture (owner decision 2026-05-26 — "C-shim, reuse raylib's math"):** raymath.h's 146 functions are `inline` (no symbols). A one-TU shim `#define RAYMATH_IMPLEMENTATION` + `#include raymath.h` emits external definitions (confirmed: raymath.h lines 21/67/75). We compile that shim (mirroring `gen_rgui()`), add raymath.h to the bindgen header so the functions are generated, and write thin inherent-method/operator wrappers (in our own modules — legal since the types are local to `raylib-sys`) that call the FFI raymath fns. The types are `#[repr(C)]` and layout-compatible (guarded by the WS1 `layout_compat` test), so passing them by value to the C functions is sound.
+
+**Type sourcing (owner decision 2026-05-26, clarified):** the hand-definitions were a *legacy of the mint aliasing* — blocklisting was only needed to alias the types to `mint`. With mint gone:
+- **`Vector2/3/4` + `Matrix` → bindgen-generated** (un-blocklist them). They're plain `typedef struct`s; bindgen emits clean POD structs that track the header automatically (no drift risk). We add methods/operators/conversions via `impl` blocks.
+- **`Quaternion` → distinct hand-defined `#[repr(C)] struct Quaternion { pub x, y, z, w: f32 }`** (stays blocklisted). Because C does `typedef Vector4 Quaternion`, bindgen would emit a bare alias with no separate method namespace; a distinct struct (public fields, layout-identical to `Vector4`) gives it clean ops and zero-cost `From`/`Into<Vector4>` at FFI boundaries. Mirrors what the safe crate already exposes.
+- **`Rectangle` + `Color` → unchanged** (stay hand-defined/blocklisted — never about mint; they carry rich APIs like `Color::RED` and rectangle collision helpers).
+
+**This is sys-only** — the safe crate keeps compiling against `ffi::*` as before; it *adopts* these types as its public `Vector2` in WS3. `mint`/`glam`/`serde` adapters are **WS2b** (serde on the bindgen-generated types is injected via a `build.rs` `add_derives` callback gated on `CARGO_FEATURE_SERDE`).
 
 **Tech Stack:** Rust 1.85, `cc` (shim compile), `bindgen`, raylib 6.0 `raymath.h`. Branch `6.0-rc`; push to `fork` triggers the green 3-OS CI from WS1.
 
@@ -20,7 +27,8 @@
 
 | Path | Responsibility | Task |
 |------|----------------|------|
-| `raylib-sys/src/math.rs` | Native `#[repr(C)]` Vector2/3/4, Matrix, Quaternion (replace mint aliases); keep Rectangle; constructors + derives | 1 |
+| `raylib-sys/build.rs` | Un-blocklist `Vector2/3/4` + `Matrix` (let bindgen generate); trim `TypeOverrideCallback` to Rectangle/Color | 1 |
+| `raylib-sys/src/math.rs` | Drop mint aliases; keep distinct `#[repr(C)]` `Quaternion` (pub x/y/z/w) + `From`/`Into<Vector4>`; keep `Rectangle` | 1 |
 | `raylib-sys/binding/raymath_shim.c` | `#define RAYMATH_IMPLEMENTATION` + include raymath.h (create) | 2 |
 | `raylib-sys/binding/binding.h` | add `#include "../raylib/src/raymath.h"` so bindgen generates raymath fns (modify) | 2 |
 | `raylib-sys/build.rs` | `gen_raymath()` compiles the shim (mirror `gen_rgui`); call it (modify) | 2 |
@@ -31,47 +39,43 @@
 
 ---
 
-## Task 1: Native `#[repr(C)]` math types (replace mint aliases)
+## Task 1: Un-blocklist the POD types; keep a distinct `Quaternion`
 
-**Files:** Modify `raylib-sys/src/math.rs`.
+**Files:** Modify `raylib-sys/build.rs` (blocklist + `TypeOverrideCallback`) and `raylib-sys/src/math.rs`.
 
-Currently `Vector2 = mint::Vector2<f32>` etc. Replace with own structs. Match raylib.h field layout exactly (the `layout_compat` test enforces size/align).
+The hand-definitions were a legacy of the mint aliasing. Let bindgen generate `Vector2/3/4` + `Matrix`; keep `Quaternion` distinct (C aliases it to `Vector4`); leave `Rectangle`/`Color` alone.
 
-- [ ] **Step 1: Write the test first — confirm the layout guard is the contract.** Run `cargo test -p raylib-sys --test layout_compat` → PASS now (mint types). This test is your red/green oracle for this task: it must still PASS after the rewrite.
+- [ ] **Step 1: The layout guard is the contract.** Run `cargo test -p raylib-sys --test layout_compat` → PASS now. It must still PASS after this task (it now also guards that the *bindgen-generated* types have the expected layout).
 
-- [ ] **Step 2: Rewrite the type section of `raylib-sys/src/math.rs`.** Remove `pub use mint;` and the five `pub type X = mint::...` aliases. Add (keep the existing `Rectangle` struct + its collision methods as-is):
+- [ ] **Step 2: Un-blocklist `Vector2/3/4` + `Matrix` in `raylib-sys/build.rs`.** In `gen_bindings()` (~line 298), delete the four lines `.blocklist_type("Vector2")`, `"Vector3"`, `"Vector4"`, `"Matrix"`. **Keep** `.blocklist_type("Quaternion")`, `.blocklist_type("Rectangle")`, `.blocklist_type("Color")`. In the `TypeOverrideCallback` `overridden_types` array (~line 61), remove `"Vector2"`, `"Vector3"`, `"Vector4"`, `"Matrix"`; keep `"Quaternion"`, `"Rectangle"`, `"Color"` (bindgen now derives Copy/Debug/PartialEq on the generated Vector*/Matrix itself).
+
+- [ ] **Step 3: Rewrite the type section of `raylib-sys/src/math.rs`.** Remove `pub use mint;` and all five `pub type X = mint::...` aliases. bindgen now supplies `Vector2/3/4` and `Matrix`. Add a **distinct** transparent Quaternion (public fields, layout = `Vector4`) and its conversions; keep the existing `Rectangle` struct + collision methods unchanged:
 
 ```rust
+/// Quaternion. C aliases this to Vector4 (`typedef Vector4 Quaternion`); we use a
+/// distinct, layout-identical #[repr(C)] struct so it has its own method namespace.
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
-pub struct Vector2 { pub x: f32, pub y: f32 }
-#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, PartialEq)]
-pub struct Vector3 { pub x: f32, pub y: f32, pub z: f32 }
-#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, PartialEq)]
-pub struct Vector4 { pub x: f32, pub y: f32, pub z: f32, pub w: f32 }
-/// raylib aliases Quaternion to Vector4 (raylib.h); we match it.
-pub type Quaternion = Vector4;
-#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, PartialEq)]
-pub struct Matrix {
-    pub m0: f32, pub m4: f32, pub m8: f32, pub m12: f32,
-    pub m1: f32, pub m5: f32, pub m9: f32, pub m13: f32,
-    pub m2: f32, pub m6: f32, pub m10: f32, pub m14: f32,
-    pub m3: f32, pub m7: f32, pub m11: f32, pub m15: f32,
+pub struct Quaternion { pub x: f32, pub y: f32, pub z: f32, pub w: f32 }
+
+impl Quaternion {
+    #[inline] pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self { Self { x, y, z, w } }
+}
+// Zero-cost interchange with the FFI Vector4 that raymath's Quaternion* fns actually take/return.
+impl From<crate::Vector4> for Quaternion {
+    #[inline] fn from(v: crate::Vector4) -> Self { Self { x: v.x, y: v.y, z: v.z, w: v.w } }
+}
+impl From<Quaternion> for crate::Vector4 {
+    #[inline] fn from(q: Quaternion) -> Self { crate::Vector4 { x: q.x, y: q.y, z: q.z, w: q.w } }
 }
 ```
-Field names/order MUST match `raylib-sys/raylib/src/raylib.h` (grep `typedef struct Matrix`, `Vector3`). Add simple `pub const fn new(...)` constructors for Vector2/3/4 and a `Matrix::new(...)`/`Matrix::identity()` if convenient (keep minimal — full math is Tasks 3–4).
 
-- [ ] **Step 3: Build sys.** `cargo build -p raylib-sys`. Expected: success. (The `Rectangle` collision methods call `crate::CheckCollisionRecs` etc., still fine. If anything in sys referenced the mint API specifically, adjust.)
-
-- [ ] **Step 4: Run the guards.** `cargo test -p raylib-sys --test layout_compat --test symbol_presence` → all PASS (layout unchanged: Vector2=8, Vector3=12, Vector4=16, Matrix=64, Quaternion=16). If `layout_compat` fails, your struct layout is wrong — fix field set/order to match raylib.h.
+- [ ] **Step 4: Build + guards.** `cargo build -p raylib-sys` → success (bindgen generates Vector*/Matrix; we define Quaternion). Then `cargo test -p raylib-sys --test layout_compat --test symbol_presence` → all PASS (layout unchanged: Vector2=8, Vector3=12, Vector4=16, Matrix=64, Quaternion=16). If `layout_compat` fails on a *generated* type, that's a real signal bindgen produced an unexpected layout — investigate before proceeding. `cargo fmt --all`.
 
 - [ ] **Step 5: Commit.**
 ```bash
-git add raylib-sys/src/math.rs
-git commit -m "$(printf 'feat(ws2a)!: native #[repr(C)] math types in raylib-sys (drop mint aliases)\n\nReplace mint type aliases with own Vector2/3/4, Matrix, Quaternion=Vector4.\nLayout guarded by the existing layout_compat test. Math methods follow via\nthe raymath shim.\n\nCo-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>')"
+git add raylib-sys/build.rs raylib-sys/src/math.rs
+git commit -m "$(printf 'refactor(ws2a)!: bindgen-generate Vector*/Matrix; distinct Quaternion\n\nUn-blocklist Vector2/3/4 + Matrix (the hand-defs were only there to alias\nto mint); trim TypeOverrideCallback. Keep Quaternion as a distinct\n#[repr(C)] newtype (C aliases it to Vector4) with From/Into<Vector4>.\nRectangle/Color unchanged. Layout still guarded by layout_compat.\n\nCo-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>')"
 ```
 
 ---
@@ -210,6 +214,7 @@ Same pattern as Task 3. **Source of truth:** every `Matrix*` and `Quaternion*` f
 
 - [ ] **Step 1: Enumerate** the Matrix*/Quaternion* fns (grep above).
 - [ ] **Step 2: Wrappers** — inherent methods + operators (`Mul for Matrix`→`MatrixMultiply`, `Add`/`Sub`→`MatrixAdd`/`MatrixSubtract`; `Mul for Quaternion`→`QuaternionMultiply`), each `unsafe { crate::MatrixXxx(...) }` with a `// SAFETY:` comment. Provide `Matrix::identity()` (→`MatrixIdentity`) and `Quaternion::identity()` (→`QuaternionIdentity`).
+  - **Quaternion conversion note:** because C does `typedef Vector4 Quaternion`, bindgen resolves the blocklisted alias to `Vector4`, so the generated `Quaternion*` fns take/return `crate::Vector4`. Quaternion methods therefore convert at the call: `pub fn normalize(self) -> Self { /* SAFETY: pure, layout-identical */ unsafe { crate::QuaternionNormalize(self.into()) }.into() }`. The `From`/`Into<Vector4>` impls from Task 1 make this zero-cost. **Verify the generated signatures** (`Vector4` vs `Quaternion`) early in this task and adjust the conversion accordingly — if bindgen unexpectedly keeps the `Quaternion` name, no conversion is needed.
 - [ ] **Step 3: Tier-1 tests** — e.g. `Matrix::identity()` is the identity; `MatrixMultiply(identity, m) == m`; `Quaternion::identity().normalize()` stays identity; determinant of identity == 1.
 ```rust
 use raylib_sys::{Matrix, Quaternion};
@@ -253,7 +258,7 @@ git push fork 6.0-rc
 
 ## Done criteria (WS2a)
 
-- [ ] `raylib-sys` defines native `#[repr(C)]` Vector2/3/4, Matrix, Quaternion; no `mint` aliases; `layout_compat` still green.
+- [ ] `Vector2/3/4` + `Matrix` are bindgen-generated (un-blocklisted); `Quaternion` is a distinct hand-defined `#[repr(C)]` newtype with `From`/`Into<Vector4>`; no `mint` aliases; `layout_compat` still green.
 - [ ] raymath shim compiles + links; raymath fns bound (symbol guard green).
 - [ ] Vector2/3/4 + Matrix + Quaternion expose methods/operators for the raymath fns; Tier-1 wrapper tests green.
 - [ ] Default `raylib-sys` build pulls **zero** math crates (`cargo tree` clean).
