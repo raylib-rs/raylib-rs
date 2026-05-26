@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 /// distinct, layout-identical #[repr(C)] struct so it has its own method namespace.
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Quaternion {
     pub x: f32,
     pub y: f32,
@@ -68,6 +69,8 @@ impl Rectangle {
     #[inline]
     #[must_use]
     pub fn check_collision_recs(&self, other: Rectangle) -> bool {
+        // SAFETY: CheckCollisionRecs is a pure value-in/out raylib fn; both args are
+        // #[repr(C)] Copy structs with no pointer aliasing or preconditions.
         unsafe { crate::CheckCollisionRecs(*self, other) }
     }
 
@@ -79,6 +82,8 @@ impl Rectangle {
         center: impl Into<crate::Vector2>,
         radius: f32,
     ) -> bool {
+        // SAFETY: CheckCollisionCircleRec is a pure value-in/out raylib fn; all args are
+        // #[repr(C)] Copy values (Vector2, f32, Rectangle) with no pointer aliasing or preconditions.
         unsafe { crate::CheckCollisionCircleRec(center.into(), radius, *self) }
     }
 
@@ -94,14 +99,19 @@ impl Rectangle {
     #[inline]
     #[must_use]
     pub fn get_collision_rec(&self, other: Rectangle) -> Option<Rectangle> {
-        self.check_collision_recs(other)
-            .then(|| unsafe { crate::GetCollisionRec(*self, other) })
+        self.check_collision_recs(other).then(|| {
+            // SAFETY: GetCollisionRec is a pure value-in/out raylib fn; both args are
+            // #[repr(C)] Copy structs with no pointer aliasing or preconditions.
+            unsafe { crate::GetCollisionRec(*self, other) }
+        })
     }
 
     /// Checks if point is inside rectangle.
     #[inline]
     #[must_use]
     pub fn check_collision_point_rec(&self, point: impl Into<crate::Vector2>) -> bool {
+        // SAFETY: CheckCollisionPointRec is a pure value-in/out raylib fn; both args are
+        // #[repr(C)] Copy values (Vector2, Rectangle) with no pointer aliasing or preconditions.
         unsafe { crate::CheckCollisionPointRec(point.into(), *self) }
     }
 }
