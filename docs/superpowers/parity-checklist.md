@@ -803,12 +803,18 @@ _48 implemented · 0 wont-impl · 9 TODO of 57 RAYGUIAPI fns._
 - [ ] `GuiGetIcons`
 - [ ] `GuiLoadIcons`
 - [ ] `GuiDrawIcon`
+
+### Container/separator controls, useful for controls organization
+
 - [x] `GuiWindowBox`
 - [x] `GuiGroupBox`
 - [x] `GuiLine`
 - [x] `GuiPanel`
 - [ ] `GuiTabBar`
 - [x] `GuiScrollPanel`
+
+### Basic controls set
+
 - [x] `GuiLabel`
 - [x] `GuiButton`
 - [x] `GuiLabelButton`
@@ -828,6 +834,9 @@ _48 implemented · 0 wont-impl · 9 TODO of 57 RAYGUIAPI fns._
 - [x] `GuiStatusBar`
 - [x] `GuiDummyRec`
 - [x] `GuiGrid`
+
+### Advance controls set
+
 - [x] `GuiListView`
 - [x] `GuiListViewEx`
 - [x] `GuiMessageBox`

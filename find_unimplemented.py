@@ -95,13 +95,20 @@ def extract_func_name(line):
 
 
 def load_src_files(directory):
-    """Read all files under directory (non-recursive) into a list of strings."""
+    """Read all .rs files under directory (recursive) into a list of strings.
+
+    Uses os.walk so that files in subdirectories (e.g. core/callbacks/) are
+    included, preventing subdir-only wrappers from being falsely marked TODO.
+    """
     src_files = []
     try:
-        for entry in os.scandir(directory):
-            if entry.is_file(follow_symlinks=True):
+        for dirpath, _dirnames, filenames in os.walk(directory):
+            for filename in filenames:
+                if not filename.endswith(".rs"):
+                    continue
+                filepath = os.path.join(dirpath, filename)
                 try:
-                    with open(entry.path, encoding="utf-8", errors="replace") as f:
+                    with open(filepath, encoding="utf-8", errors="replace") as f:
                         src_files.append(f.read())
                 except OSError:
                     pass
@@ -138,7 +145,12 @@ def is_section_header(line, lookahead_lines, opener):
     # Must look like a standalone header, not a NOTE/WARNING prefix
     if tl.startswith("note:") or tl.startswith("warning"):
         return False
-    if "function" not in tl and "module" not in tl:
+    # "control" covers raygui's "// Controls" / "// Basic controls set" headings.
+    # We restrict the "control" match to short lines (≤80 chars) so that longer
+    # inline comments like "// To avoid that behaviour and control frame…" are
+    # not mistakenly promoted to section headers.
+    has_control = "control" in tl and len(text) <= 80
+    if "function" not in tl and "module" not in tl and not has_control:
         return False
     # Confirm at least one API line follows (match exact opener prefix)
     return any(l.startswith(opener) for l in lookahead_lines)
@@ -219,6 +231,10 @@ def write_section_rows(out, rows):
             out.write(f"\n### {section}\n\n")
             current_section = section
         if status == "~":
+            # NOTE: [~] is a visual convention meaning "intentionally skipped".
+            # It is NOT standard GitHub task-list syntax (GitHub only renders
+            # [x] and [ ] as checkboxes).  The legend in the generated file
+            # explains this to human readers; this comment is for maintainers.
             out.write(f"- [~] `{fn}` — {reason}\n")
         elif status == "x":
             out.write(f"- [x] `{fn}`\n")
