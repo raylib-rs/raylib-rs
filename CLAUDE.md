@@ -56,7 +56,7 @@ Upgrading the bindings from raylib 5.x to **raylib 6.0**. **Authoritative artifa
 - Backlog PRs are cherry-picked **with attribution** as each workstream reaches that area (per `inventory.md`), not merged wholesale.
 - New work flows brainstorming → writing-plans → subagent-driven execution; the `docs/superpowers/` artifacts are the source of truth.
 
-**Workstreams:** WS0 baseline ✅ · WS1 sys 6.0 parity ✅ (3-OS CI green) · **WS2a native math types ← current** · WS2b ecosystem adapters · WS3 safe-API parity · WS4 software renderer + headless test harness · WS5 raygui + rlgl · WS6 platform + full CI/CD · WS7 docs & book · WS8 release · WS9 showcase → GitHub Pages (finale).
+**Workstreams:** WS0 ✅ · WS1 ✅ (3-OS CI green) · WS2a ✅ · WS2b ✅ — **math decouple done: `raylib-sys` default = nothing but raylib; mint/glam/serde opt-in** · **WS3 safe-API parity ← NEXT (start here: `docs/superpowers/ws3-kickoff.md`)** · WS4 software renderer + headless test harness · WS5 raygui + rlgl · WS6 platform + full CI/CD · WS7 docs & book · WS8 release · WS9 showcase → GitHub Pages (finale).
 
 **6.0 decisions that change how you work here:**
 - **Math types own their layout, zero math deps by default.** `Vector2/3/4` + `Matrix` are **bindgen-generated** (don't hand-roll FFI structs without a concrete blocker — see the memory note); `Quaternion` is a distinct `#[repr(C)]` struct (C aliases it to `Vector4`). Their math comes from **raylib's own raymath via a C-shim** (`binding/raymath_shim.c`, `RAYMATH_IMPLEMENTATION`), wrapped as methods/operators. `mint`, `glam`, `serde` are **optional features** — never assume they're present.
