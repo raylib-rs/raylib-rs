@@ -9,6 +9,7 @@ repository = "https://github.com/raylib-rs/raylib-rs"
 keywords = ["bindings", "raylib", "gamedev", "ffi"]
 categories = ["external-ffi-bindings"]
 edition = "2024"
+rust-version = "1.85"
 exclude = ["raylib/examples/*", "raylib/projects/*", "raylib/templates/*"]
 
 [dependencies]

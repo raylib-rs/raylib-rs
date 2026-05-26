@@ -10,6 +10,7 @@ repository = "https://github.com/raylib-rs/raylib-rs"
 keywords = ["bindings", "raylib", "gamedev"]
 categories = ["api-bindings", "game-engines", "graphics"]
 edition = "2024"
+rust-version = "1.85"
 autoexamples = false
 
 [dependencies]

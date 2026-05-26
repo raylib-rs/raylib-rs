@@ -1,0 +1,7 @@
+# Pins the Rust toolchain for this repo. rustup reads this automatically.
+# MSRV for raylib-rs 6.0 is 1.85 (the floor for edition 2024); dev builds on the
+# same version so MSRV violations surface locally. CI adds a `stable` job in WS6.
+[toolchain]
+channel = "1.85.0"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-emscripten"]
