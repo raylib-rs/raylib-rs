@@ -590,7 +590,6 @@ fn features_from_env(cmake: &mut Config) {
     cmake.define("SUPPORT_SSH_KEYBOARD_RPI", bstr(cfg!(feature = "SUPPORT_SSH_KEYBOARD_RPI")));
     cmake.define("SUPPORT_WINMM_HIGHRES_TIMER", bstr(cfg!(feature = "SUPPORT_WINMM_HIGHRES_TIMER")));
     cmake.define("SUPPORT_PARTIALBUSY_WAIT_LOOP", bstr(cfg!(feature = "SUPPORT_PARTIALBUSY_WAIT_LOOP")));
-    cmake.define("SUPPORT_GIF_RECORDING", bstr(cfg!(feature = "SUPPORT_GIF_RECORDING")));
     cmake.define("SUPPORT_COMPRESSION_API", bstr(cfg!(feature = "SUPPORT_COMPRESSION_API")));
     cmake.define("SUPPORT_AUTOMATION_EVENTS", bstr(cfg!(feature = "SUPPORT_AUTOMATION_EVENTS")));
     cmake.define("SUPPORT_CUSTOM_FRAME_CONTROL", bstr(cfg!(feature = "SUPPORT_CUSTOM_FRAME_CONTROL")));
@@ -606,19 +605,16 @@ fn features_from_env(cmake: &mut Config) {
     cmake.define("SUPPORT_FILEFORMAT_DDS", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_DDS")));
     cmake.define("SUPPORT_FILEFORMAT_HDR", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_HDR")));
     cmake.define("SUPPORT_FILEFORMAT_PIC", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_PIC")));
+    cmake.define("SUPPORT_FILEFORMAT_PNM", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_PNM")));
     cmake.define("SUPPORT_FILEFORMAT_KTX", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_KTX")));
     cmake.define("SUPPORT_FILEFORMAT_ASTC", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_ASTC")));
     cmake.define("SUPPORT_FILEFORMAT_PKM", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_PKM")));
     cmake.define("SUPPORT_FILEFORMAT_PVR", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_PVR")));
     cmake.define("SUPPORT_IMAGE_EXPORT", bstr(cfg!(feature = "SUPPORT_IMAGE_EXPORT")));
     cmake.define("SUPPORT_IMAGE_GENERATION", bstr(cfg!(feature = "SUPPORT_IMAGE_GENERATION")));
-    cmake.define("SUPPORT_IMAGE_MANIPULATION", bstr(cfg!(feature = "SUPPORT_IMAGE_MANIPULATION")));
-    cmake.define("SUPPORT_DEFAULT_FONT", bstr(cfg!(feature = "SUPPORT_DEFAULT_FONT")));
     cmake.define("SUPPORT_FILEFORMAT_TTF", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_TTF")));
     cmake.define("SUPPORT_FILEFORMAT_FNT", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_FNT")));
     cmake.define("SUPPORT_FILEFORMAT_BDF", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_BDF")));
-    cmake.define("SUPPORT_TEXT_MANIPULATION", bstr(cfg!(feature = "SUPPORT_TEXT_MANIPULATION")));
-    cmake.define("SUPPORT_FONT_ATLAS_WHITE_REC", bstr(cfg!(feature = "SUPPORT_FONT_ATLAS_WHITE_REC")));
     cmake.define("SUPPORT_FILEFORMAT_OBJ", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_OBJ")));
     cmake.define("SUPPORT_FILEFORMAT_MTL", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_MTL")));
     cmake.define("SUPPORT_FILEFORMAT_IQM", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_IQM")));
@@ -626,6 +622,7 @@ fn features_from_env(cmake: &mut Config) {
     cmake.define("SUPPORT_FILEFORMAT_VOX", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_VOX")));
     cmake.define("SUPPORT_FILEFORMAT_M3D", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_M3D")));
     cmake.define("SUPPORT_MESH_GENERATION", bstr(cfg!(feature = "SUPPORT_MESH_GENERATION")));
+    cmake.define("SUPPORT_GPU_SKINNING", bstr(cfg!(feature = "SUPPORT_GPU_SKINNING")));
     cmake.define("SUPPORT_FILEFORMAT_WAV", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_WAV")));
     cmake.define("SUPPORT_FILEFORMAT_OGG", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_OGG")));
     cmake.define("SUPPORT_FILEFORMAT_MP3", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_MP3")));
@@ -633,12 +630,8 @@ fn features_from_env(cmake: &mut Config) {
     cmake.define("SUPPORT_FILEFORMAT_FLAC", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_FLAC")));
     cmake.define("SUPPORT_FILEFORMAT_XM", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_XM")));
     cmake.define("SUPPORT_FILEFORMAT_MOD", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_MOD")));
-    cmake.define("SUPPORT_STANDARD_FILEIO", bstr(cfg!(feature = "SUPPORT_STANDARD_FILEIO")));
     cmake.define("SUPPORT_TRACELOG", bstr(cfg!(feature = "SUPPORT_TRACELOG")));
     cmake.define("SUPPORT_SCREEN_CAPTURE", bstr(cfg!(feature = "SUPPORT_SCREEN_CAPTURE")));
-    cmake.define("SUPPORT_VR_SIMULATOR", bstr(cfg!(feature = "SUPPORT_VR_SIMULATOR")));
-    cmake.define("SUPPORT_DISTORTION_SHADER", bstr(cfg!(feature = "SUPPORT_DISTORTION_SHADER")));
-    cmake.define("SUPPORT_FONT_TEXTURE", bstr(cfg!(feature = "SUPPORT_FONT_TEXTURE")));
 }
 #[must_use]
 fn bstr(b: bool) -> &'static str {
