@@ -16,6 +16,7 @@ links = "raylib"
 [dependencies]
 serde = { version = "1.0", optional = true }
 mint = { version = "0.5", optional = true }
+glam = { version = "0.30", optional = true }
 
 [build-dependencies]
 cmake = "0.1.51"
@@ -69,6 +70,7 @@ default = [
 ]
 serde = ["dep:serde"]
 mint = ["dep:mint"]
+glam = ["dep:glam"]
 raygui = []
 # Do not autogenerate bindings, instead read an existing one specified by env RAYLIB_BINDGEN_LOCATION
 # useful when bindgen doesn't generate correctly on esoteric platforms and need manual auidting

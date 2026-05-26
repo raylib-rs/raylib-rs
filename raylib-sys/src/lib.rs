@@ -13,6 +13,8 @@ include!(env!("RAYLIB_BINDGEN_LOCATION"));
 pub const MAX_MATERIAL_MAPS: u32 = 12;
 
 mod color;
+#[cfg(feature = "glam")]
+mod glam_conv;
 mod math;
 mod matrix_quat_math;
 #[cfg(feature = "mint")]
