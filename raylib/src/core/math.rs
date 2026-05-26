@@ -15,7 +15,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 */
 
 use crate::misc::AsF32;
-use crate::{ffi, MintVec3};
+use crate::{MintVec3, ffi};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Range, Sub, SubAssign};
 
 #[cfg(feature = "serde")]

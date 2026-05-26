@@ -49,7 +49,7 @@ impl Into<ffi::VrDeviceInfo> for &VrDeviceInfo {
     fn into(self) -> ffi::VrDeviceInfo {
         ffi::VrDeviceInfo {
             hResolution: self.h_resolution,  // Horizontal resolution in pixels
-            vResolution: self.v_resolution,   // Vertical resolution in pixels
+            vResolution: self.v_resolution,  // Vertical resolution in pixels
             hScreenSize: self.h_screen_size, // Horizontal size in meters
             vScreenSize: self.v_screen_size, // Vertical size in meters
             eyeToScreenDistance: self.eye_to_screen_distance, // Distance between eye and display in meters

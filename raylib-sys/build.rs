@@ -461,11 +461,13 @@ fn main() {
 
     link(platform, platform_os);
 
-    #[cfg(feature = "raygui")] {
+    #[cfg(feature = "raygui")]
+    {
         gen_rgui();
     }
 
-    #[cfg(not(feature = "nobuild"))] {
+    #[cfg(not(feature = "nobuild"))]
+    {
         gen_utils();
     }
 }

@@ -4,7 +4,7 @@ use crate::consts::ShaderUniformDataType;
 use crate::core::math::Matrix;
 use crate::core::math::{Vector2, Vector3, Vector4};
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::{ffi, MintMatrix};
+use crate::{MintMatrix, ffi};
 use std::ffi::CString;
 use std::os::raw::c_void;
 

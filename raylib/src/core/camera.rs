@@ -2,9 +2,9 @@
 use raylib_sys::CameraMode;
 use std::mem::transmute;
 
+use crate::MintVec3;
 use crate::ffi::{self, CameraProjection};
 use crate::math::{Vector2, Vector3};
-use crate::MintVec3;
 
 use super::math::Matrix;
 

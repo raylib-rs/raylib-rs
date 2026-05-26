@@ -2,7 +2,7 @@
 use crate::ffi;
 
 use crate::core::RaylibHandle;
-use std::ffi::{c_char, CStr, CString, OsString};
+use std::ffi::{CStr, CString, OsString, c_char};
 
 #[derive(Debug, Clone)]
 pub struct FilePathIter<'a> {
@@ -268,8 +268,8 @@ impl RaylibHandle {
 
 #[cfg(test)]
 mod tests {
-    use std::mem::ManuallyDrop;
     use super::*;
+    use std::mem::ManuallyDrop;
 
     #[test]
     #[should_panic(expected = "file path array cannot be null")]
@@ -314,11 +314,26 @@ mod tests {
     #[test]
     fn test_len() {
         let mut paths = [
-            CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"orange\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"banana\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"mango\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"pineapple\0").unwrap().as_ptr().cast_mut(),
+            CStr::from_bytes_with_nul(b"apple\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"orange\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"banana\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"mango\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"pineapple\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
         ];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
             capacity: 5,
@@ -343,11 +358,26 @@ mod tests {
     #[test]
     fn test_len_double_ended() {
         let mut paths = [
-            CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"orange\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"banana\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"mango\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"pineapple\0").unwrap().as_ptr().cast_mut(),
+            CStr::from_bytes_with_nul(b"apple\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"orange\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"banana\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"mango\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
+            CStr::from_bytes_with_nul(b"pineapple\0")
+                .unwrap()
+                .as_ptr()
+                .cast_mut(),
         ];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
             capacity: 5,

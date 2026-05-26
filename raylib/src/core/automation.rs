@@ -4,7 +4,7 @@ use std::{
     ptr::null,
 };
 
-use crate::{ffi, RaylibHandle};
+use crate::{RaylibHandle, ffi};
 
 #[derive(Debug, Clone)]
 pub struct AutomationEventIter<'a> {

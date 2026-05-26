@@ -384,7 +384,12 @@ pub trait RaylibDrawGui {
         buffer.push('\0');
         let (ptr, capacity) = (buffer.as_mut_ptr(), buffer.capacity());
         let res = unsafe {
-            ffi::GuiTextBox(bounds.into(), ptr as *mut c_char, capacity as i32, edit_mode) > 0
+            ffi::GuiTextBox(
+                bounds.into(),
+                ptr as *mut c_char,
+                capacity as i32,
+                edit_mode,
+            ) > 0
         };
         let cap = buffer.capacity();
 

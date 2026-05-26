@@ -1,12 +1,12 @@
 //! Keyboard, Controller, and Mouse related functions
 use crate::consts::Gesture;
-use crate::core::math::Vector2;
 use crate::core::RaylibHandle;
+use crate::core::math::Vector2;
 use crate::{ffi, trace_log};
 use raylib_sys::TraceLogLevel;
 
-use std::ffi::c_char;
 use std::ffi::CStr;
+use std::ffi::c_char;
 
 impl RaylibHandle {
     /// Detect if a key has been pressed once.
