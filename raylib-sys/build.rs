@@ -45,6 +45,21 @@ impl bindgen::callbacks::ParseCallbacks for IgnoreMacros {
 }
 
 #[derive(Debug)]
+struct SerdeOnMath;
+
+impl bindgen::callbacks::ParseCallbacks for SerdeOnMath {
+    fn add_derives(&self, info: &bindgen::callbacks::DeriveInfo) -> Vec<String> {
+        match info.name {
+            "Vector2" | "Vector3" | "Vector4" | "Matrix" => vec![
+                "serde::Serialize".to_string(),
+                "serde::Deserialize".to_string(),
+            ],
+            _ => vec![],
+        }
+    }
+}
+
+#[derive(Debug)]
 struct TypeOverrideCallback;
 
 impl ParseCallbacks for TypeOverrideCallback {
@@ -316,6 +331,10 @@ fn gen_bindings() {
         builder = builder
             .clang_arg("-fvisibility=default")
             .clang_arg("--target=wasm32-emscripten");
+    }
+
+    if std::env::var("CARGO_FEATURE_SERDE").is_ok() {
+        builder = builder.parse_callbacks(Box::new(SerdeOnMath));
     }
 
     // Build

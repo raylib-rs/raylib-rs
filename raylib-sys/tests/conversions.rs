@@ -1,4 +1,5 @@
 //! Round-trip conversion tests between raylib-sys math types and mint/glam interop types.
+//! Also includes optional serde JSON round-trip tests (feature = "serde").
 
 #[cfg(feature = "mint")]
 mod mint_tests {
@@ -263,5 +264,76 @@ mod glam_tests {
             g,
             expected
         );
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde_tests {
+    use raylib_sys::{Color, Matrix, Quaternion, Rectangle, Vector2, Vector3, Vector4};
+
+    #[test]
+    fn serde_vector2_roundtrip() {
+        let v = Vector2::new(1.0, 2.0);
+        let j = serde_json::to_string(&v).unwrap();
+        assert_eq!(serde_json::from_str::<Vector2>(&j).unwrap(), v);
+    }
+
+    #[test]
+    fn serde_vector3_roundtrip() {
+        let v = Vector3::new(1.0, 2.0, 3.0);
+        let j = serde_json::to_string(&v).unwrap();
+        assert_eq!(serde_json::from_str::<Vector3>(&j).unwrap(), v);
+    }
+
+    #[test]
+    fn serde_vector4_roundtrip() {
+        let v = Vector4::new(1.0, 2.0, 3.0, 4.0);
+        let j = serde_json::to_string(&v).unwrap();
+        assert_eq!(serde_json::from_str::<Vector4>(&j).unwrap(), v);
+    }
+
+    #[test]
+    fn serde_matrix_roundtrip() {
+        let mat = Matrix {
+            m0: 1.0,
+            m1: 0.0,
+            m2: 0.0,
+            m3: 0.0,
+            m4: 0.0,
+            m5: 1.0,
+            m6: 0.0,
+            m7: 0.0,
+            m8: 0.0,
+            m9: 0.0,
+            m10: 1.0,
+            m11: 0.0,
+            m12: 4.0,
+            m13: 5.0,
+            m14: 6.0,
+            m15: 1.0,
+        };
+        let j = serde_json::to_string(&mat).unwrap();
+        assert_eq!(serde_json::from_str::<Matrix>(&j).unwrap(), mat);
+    }
+
+    #[test]
+    fn serde_quaternion_roundtrip() {
+        let q = Quaternion::new(0.1, 0.2, 0.3, 0.9);
+        let j = serde_json::to_string(&q).unwrap();
+        assert_eq!(serde_json::from_str::<Quaternion>(&j).unwrap(), q);
+    }
+
+    #[test]
+    fn serde_rectangle_roundtrip() {
+        let r = Rectangle::new(10.0, 20.0, 100.0, 50.0);
+        let j = serde_json::to_string(&r).unwrap();
+        assert_eq!(serde_json::from_str::<Rectangle>(&j).unwrap(), r);
+    }
+
+    #[test]
+    fn serde_color_roundtrip() {
+        let c = Color::new(255, 128, 0, 255);
+        let j = serde_json::to_string(&c).unwrap();
+        assert_eq!(serde_json::from_str::<Color>(&j).unwrap(), c);
     }
 }
