@@ -1,20 +1,47 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-// pub use glam;
-// pub type Vector2 = glam::f32::Vec2;
-// pub type Vector3 = glam::f32::Vec3;
-// pub type Vector4 = glam::f32::Vec4;
-// glam Matrix and Quat are not align compat with raylib so we write our own in math.rs
-// pub type Matrix = glam::Mat4;
-// pub type Quaternion = glam::Quat;
+/// Quaternion. C aliases this to Vector4 (`typedef Vector4 Quaternion`); we use a
+/// distinct, layout-identical #[repr(C)] struct so it has its own method namespace.
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, PartialEq)]
+pub struct Quaternion {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub w: f32,
+}
 
-pub use mint;
-pub type Vector2 = mint::Vector2<f32>;
-pub type Vector3 = mint::Vector3<f32>;
-pub type Vector4 = mint::Vector4<f32>;
-pub type Matrix = mint::RowMatrix4<f32>;
-pub type Quaternion = mint::Vector4<f32>; // raylib does this same alias so we match it
+impl Quaternion {
+    #[inline]
+    pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
+        Self { x, y, z, w }
+    }
+}
+
+// Zero-cost interchange with the FFI Vector4 that raymath's Quaternion* fns actually take/return.
+impl From<crate::Vector4> for Quaternion {
+    #[inline]
+    fn from(v: crate::Vector4) -> Self {
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+            w: v.w,
+        }
+    }
+}
+impl From<Quaternion> for crate::Vector4 {
+    #[inline]
+    fn from(q: Quaternion) -> Self {
+        crate::Vector4 {
+            x: q.x,
+            y: q.y,
+            z: q.z,
+            w: q.w,
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
@@ -47,7 +74,11 @@ impl Rectangle {
     /// Checks collision between circle and rectangle.
     #[inline]
     #[must_use]
-    pub fn check_collision_circle_rec(&self, center: impl Into<Vector2>, radius: f32) -> bool {
+    pub fn check_collision_circle_rec(
+        &self,
+        center: impl Into<crate::Vector2>,
+        radius: f32,
+    ) -> bool {
         unsafe { crate::CheckCollisionCircleRec(center.into(), radius, *self) }
     }
 
@@ -70,7 +101,7 @@ impl Rectangle {
     /// Checks if point is inside rectangle.
     #[inline]
     #[must_use]
-    pub fn check_collision_point_rec(&self, point: impl Into<Vector2>) -> bool {
+    pub fn check_collision_point_rec(&self, point: impl Into<crate::Vector2>) -> bool {
         unsafe { crate::CheckCollisionPointRec(point.into(), *self) }
     }
 }

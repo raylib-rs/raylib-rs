@@ -14,7 +14,6 @@ exclude = ["raylib/examples/*", "raylib/projects/*", "raylib/templates/*"]
 links = "raylib"
 
 [dependencies]
-mint = { version = "0.5" }
 serde = { version = "1.0", optional = true }
 
 [build-dependencies]
@@ -67,7 +66,7 @@ default = [
   "SUPPORT_FILEFORMAT_MOD",
   "SUPPORT_TRACELOG",
 ]
-serde = ["dep:serde", "mint/serde"]
+serde = ["dep:serde"]
 raygui = []
 # Do not autogenerate bindings, instead read an existing one specified by env RAYLIB_BINDGEN_LOCATION
 # useful when bindgen doesn't generate correctly on esoteric platforms and need manual auidting

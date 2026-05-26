@@ -58,15 +58,7 @@ impl ParseCallbacks for TypeOverrideCallback {
             DeriveTrait::Debug,
             DeriveTrait::PartialEqOrPartialOrd,
         ];
-        let overridden_types = [
-            "Vector2",
-            "Vector3",
-            "Vector4",
-            "Matrix",
-            "Quaternion",
-            "Rectangle",
-            "Color",
-        ];
+        let overridden_types = ["Quaternion", "Rectangle", "Color"];
 
         (OK_TRAITS.contains(&derive_trait) && overridden_types.contains(&name))
             .then_some(ImplementsTrait::Yes)
@@ -295,10 +287,6 @@ fn gen_bindings() {
         .rustified_enum(".+")
         .derive_partialeq(true)
         .derive_default(true)
-        .blocklist_type("Vector2")
-        .blocklist_type("Vector3")
-        .blocklist_type("Vector4")
-        .blocklist_type("Matrix")
         .blocklist_type("Quaternion")
         .blocklist_type("Rectangle")
         .blocklist_type("Color")
