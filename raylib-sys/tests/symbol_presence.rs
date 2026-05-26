@@ -21,3 +21,11 @@ fn new_6_0_types_exist() {
     // ModelAnimPose is `typedef Transform *ModelAnimPose` in 6.0
     let _: Option<ModelAnimPose> = None;
 }
+
+#[test]
+fn raymath_functions_are_bound() {
+    let _ = Vector3DotProduct as *const ();
+    let _ = Vector3CrossProduct as *const ();
+    let _ = MatrixMultiply as *const ();
+    let _ = QuaternionNormalize as *const ();
+}

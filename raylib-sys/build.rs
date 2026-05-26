@@ -297,6 +297,14 @@ fn gen_bindings() {
         .clang_arg("-I../raylib/src")
         .clang_arg("-std=c99")
         .clang_arg(plat)
+        // RAYMATH_IMPLEMENTATION makes RMAPI expand to `extern inline` so
+        // bindgen sees the raymath functions as non-static external declarations
+        // and generates Rust FFI stubs for them.  The matching external symbols
+        // are provided by the raymath_shim static library (gen_raymath).
+        .clang_arg("-DRAYMATH_IMPLEMENTATION")
+        // Emit Rust `extern "C"` declarations for raymath's inline functions.
+        // External symbols are provided by the raymath_shim static library.
+        .generate_inline_functions(true)
         .parse_callbacks(Box::new(ignored_macros));
 
     if platform == Platform::Desktop && os == PlatformOS::Windows {
@@ -342,6 +350,15 @@ fn gen_utils() {
         .warnings(false)
         .extra_warnings(false)
         .compile("utils_log");
+}
+
+fn gen_raymath() {
+    cc::Build::new()
+        .files(vec!["binding/raymath_shim.c"])
+        .include("binding")
+        .warnings(false)
+        .extra_warnings(false)
+        .compile("raymath_shim");
 }
 
 #[cfg(feature = "nobuild")]
@@ -462,6 +479,7 @@ fn main() {
     #[cfg(not(feature = "nobuild"))]
     {
         gen_utils();
+        gen_raymath();
     }
 }
 
