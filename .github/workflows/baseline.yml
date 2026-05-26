@@ -26,7 +26,9 @@ jobs:
           submodules: recursive
       - name: Install Linux build deps
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libglfw3-dev libasound2-dev libudev-dev
+        # raylib builds its own bundled GLFW (USE_EXTERNAL_GLFW=OFF, GLFW_BUILD_X11=ON),
+        # so the full X11 dev cluster is required, not just libglfw3-dev.
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
       - name: Install macOS build deps
         if: runner.os == 'macOS'
         run: brew install cmake
