@@ -14,11 +14,13 @@ pub const MAX_MATERIAL_MAPS: u32 = 12;
 
 mod color;
 mod math;
+mod matrix_quat_math;
 mod vector_math;
 #[allow(unused_imports)]
 pub use color::*;
 #[allow(unused_imports)]
 pub use math::*;
+pub use matrix_quat_math::{matrix_decompose, quaternion_to_axis_angle};
 pub use vector_math::vector3_ortho_normalize;
 
 impl Default for TraceLogLevel {

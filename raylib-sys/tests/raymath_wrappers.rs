@@ -1,5 +1,5 @@
 #![allow(clippy::approx_constant)]
-use raylib_sys::{Vector2, Vector3, Vector4};
+use raylib_sys::{Matrix, Quaternion, Vector2, Vector3, Vector4};
 
 #[test]
 fn vector3_core_ops() {
@@ -39,4 +39,21 @@ fn vector4_core_ops() {
     assert!((a.length() - 1.0).abs() < 1e-6);
     let sum = Vector4::new(1.0, 2.0, 3.0, 4.0) + Vector4::new(1.0, 1.0, 1.0, 1.0);
     assert_eq!(sum, Vector4::new(2.0, 3.0, 4.0, 5.0));
+}
+
+#[test]
+fn matrix_identity_is_neutral() {
+    let id = Matrix::identity();
+    let m = Matrix::translate(1.0, 2.0, 3.0);
+    assert_eq!(id * m, m);
+    assert_eq!(id.determinant(), 1.0);
+}
+
+#[test]
+fn quaternion_identity_normalizes() {
+    let q = Quaternion::identity();
+    let n = q.normalize();
+    // identity quaternion is already unit length
+    assert!((q.length() - 1.0).abs() < 1e-6);
+    assert_eq!(n, q);
 }
