@@ -883,10 +883,12 @@ impl Image {
     /// Generates a plain `color` Image.
     #[inline]
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_color(width: i32, height: i32, color: impl Into<ffi::Color>) -> Image {
         unsafe { Image(ffi::GenImageColor(width, height, color.into())) }
     }
     /// Generate image: perlin noise
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_perlin_noise(
         &self,
         width: i32,
@@ -901,6 +903,7 @@ impl Image {
     /// Generates an Image containing a radial gradient.
     #[inline]
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_gradient_radial(
         width: i32,
         height: i32,
@@ -922,6 +925,7 @@ impl Image {
     /// Generates an Image containing a checkerboard pattern.
     #[inline]
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_checked(
         width: i32,
         height: i32,
@@ -946,6 +950,7 @@ impl Image {
     /// `direction` in expected to be degrees [0..360]. 0 results in a vertical gradient
     #[must_use]
     #[inline]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_gradient_linear(
         width: i32,
         height: i32,
@@ -967,6 +972,7 @@ impl Image {
     #[inline]
     /// Generate images an image with a square gradient
     /// For best results, `density` should be `0.0..1.0``
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_gradient_square(
         width: i32,
         height: i32,
@@ -987,6 +993,7 @@ impl Image {
 
     // Generates an image with text
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_text(width: i32, height: i32, text: &str) -> Image {
         let c_str = CString::new(text).unwrap();
         unsafe { Image(ffi::GenImageText(width, height, c_str.as_ptr())) }
@@ -995,6 +1002,7 @@ impl Image {
     /// Generates an Image containing white noise.
     #[inline]
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_white_noise(width: i32, height: i32, factor: f32) -> Image {
         unsafe { Image(ffi::GenImageWhiteNoise(width, height, factor)) }
     }
@@ -1002,6 +1010,7 @@ impl Image {
     /// Generates an Image using a cellular algorithm. Bigger `tile_size` means bigger cells.
     #[inline]
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_cellular(width: i32, height: i32, tile_size: i32) -> Image {
         unsafe { Image(ffi::GenImageCellular(width, height, tile_size)) }
     }
