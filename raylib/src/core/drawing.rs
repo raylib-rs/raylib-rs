@@ -2115,41 +2115,4 @@ pub trait RaylibDraw3D {
             )
         }
     }
-
-    /// Draw a model as points
-    #[inline]
-    fn draw_model_points(
-        &mut self,
-        model: impl Into<ffi::Model>,
-        position: impl Into<Vector3>,
-        scale: f32,
-        tint: impl Into<ffi::Color>,
-    ) {
-        unsafe {
-            ffi::DrawModelPoints(model.into(), position.into(), scale, tint.into());
-        }
-    }
-
-    /// Draw a model as points with extended parameters
-    #[inline]
-    fn draw_model_points_ex(
-        &mut self,
-        model: impl Into<ffi::Model>,
-        position: impl Into<Vector3>,
-        rotation_axis: impl Into<Vector3>,
-        angle: f32,
-        scale: impl Into<Vector3>,
-        tint: impl Into<ffi::Color>,
-    ) {
-        unsafe {
-            ffi::DrawModelPointsEx(
-                model.into(),
-                position.into(),
-                rotation_axis.into(),
-                angle,
-                scale.into(),
-                tint.into(),
-            );
-        }
-    }
 }
