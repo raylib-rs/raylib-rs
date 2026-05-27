@@ -961,11 +961,7 @@ impl Image {
     ) -> Image {
         unsafe {
             Image(ffi::GenImageGradientLinear(
-                width,
-                height,
-                direction,
-                start.into(),
-                end.into(),
+                width, height, direction, start, end,
             ))
         }
     }
@@ -983,11 +979,7 @@ impl Image {
     ) -> Image {
         unsafe {
             Image(ffi::GenImageGradientSquare(
-                width,
-                height,
-                density,
-                start.into(),
-                end.into(),
+                width, height, density, start, end,
             ))
         }
     }
