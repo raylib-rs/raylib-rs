@@ -19,7 +19,9 @@ pub trait RaylibGuiIcons {
         }
         // SAFETY: GuiIconText returns a pointer to a raygui-internal static buffer
         // holding a valid C string; we copy it out and never free it.
-        unsafe { CStr::from_ptr(buffer) }.to_string_lossy().into_owned()
+        unsafe { CStr::from_ptr(buffer) }
+            .to_string_lossy()
+            .into_owned()
     }
     /// Set default icon drawing size (in pixels).
     #[inline]

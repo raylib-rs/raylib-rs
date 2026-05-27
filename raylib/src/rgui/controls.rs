@@ -93,7 +93,14 @@ pub trait RaylibGuiControls {
         edit_mode: bool,
     ) -> bool {
         unsafe {
-            ffi::GuiSpinner(bounds.into(), scratch_txt(text), value, min_value, max_value, edit_mode) > 0
+            ffi::GuiSpinner(
+                bounds.into(),
+                scratch_txt(text),
+                value,
+                min_value,
+                max_value,
+                edit_mode,
+            ) > 0
         }
     }
     /// Value Box control, updates input text with numbers.
@@ -108,7 +115,14 @@ pub trait RaylibGuiControls {
         edit_mode: bool,
     ) -> bool {
         unsafe {
-            ffi::GuiValueBox(bounds.into(), scratch_txt(text), value, min_value, max_value, edit_mode) > 0
+            ffi::GuiValueBox(
+                bounds.into(),
+                scratch_txt(text),
+                value,
+                min_value,
+                max_value,
+                edit_mode,
+            ) > 0
         }
     }
     /// Slider control, returns selected value.
@@ -174,7 +188,13 @@ pub trait RaylibGuiControls {
     ) -> (bool, Vector2) {
         let mut mouse_cell = Vector2 { x: 0.0, y: 0.0 };
         let r = unsafe {
-            ffi::GuiGrid(bounds.into(), scratch_txt(text), spacing, subdivs, &mut mouse_cell) > 0
+            ffi::GuiGrid(
+                bounds.into(),
+                scratch_txt(text),
+                spacing,
+                subdivs,
+                &mut mouse_cell,
+            ) > 0
         };
         (r, mouse_cell)
     }
@@ -209,9 +229,13 @@ pub trait RaylibGuiControls {
         let label = scratch_txt(text);
         // GuiValueBoxFloat ignores any size and writes up to RAYGUI_VALUEBOX_MAX_CHARS
         // (+ NUL), so the buffer MUST be at least that large to avoid an overrun.
-        gui_edit_string(text_value, RAYGUI_VALUEBOX_MAX_CHARS + 1, |ptr, _cap| unsafe {
-            ffi::GuiValueBoxFloat(bounds.into(), label, ptr, value, edit_mode) > 0
-        })
+        gui_edit_string(
+            text_value,
+            RAYGUI_VALUEBOX_MAX_CHARS + 1,
+            |ptr, _cap| unsafe {
+                ffi::GuiValueBoxFloat(bounds.into(), label, ptr, value, edit_mode) > 0
+            },
+        )
     }
 }
 

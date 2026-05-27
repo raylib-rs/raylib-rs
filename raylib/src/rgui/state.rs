@@ -201,4 +201,3 @@ impl GuiProperty for crate::consts::GuiToggleProperty {
         self as i32
     }
 }
-

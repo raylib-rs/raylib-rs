@@ -75,12 +75,7 @@ pub(crate) fn scratch_txt_two(
         // SAFETY: `oa` and `ob` are valid offsets in `buf` computed after all pushes.
         // Both pointers are derived from the final buffer base and are within bounds.
         // The caller uses them synchronously before any further scratch mutation.
-        unsafe {
-            (
-                base.add(oa) as *const c_char,
-                base.add(ob) as *const c_char,
-            )
-        }
+        unsafe { (base.add(oa) as *const c_char, base.add(ob) as *const c_char) }
     })
 }
 
