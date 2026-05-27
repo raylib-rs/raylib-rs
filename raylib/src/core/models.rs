@@ -100,7 +100,10 @@ impl RaylibHandle {
     ) -> Result<Model, LoadModelError> {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadModel(c_filename.as_ptr()) };
-        if m.meshes.is_null() && m.materials.is_null() && m.bones.is_null() && m.bindPose.is_null()
+        if m.meshes.is_null()
+            && m.materials.is_null()
+            && m.skeleton.bones.is_null()
+            && m.skeleton.bindPose.is_null()
         {
             return Err(LoadModelError::LoadFromFileFailed {
                 path: filename.into(),
@@ -254,14 +257,14 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     #[must_use]
     /// Bones information (skeleton)
     fn bones(&self) -> Option<&[BoneInfo]> {
-        if self.as_ref().bones.is_null() {
+        if self.as_ref().skeleton.bones.is_null() {
             return None;
         }
 
         Some(unsafe {
             std::slice::from_raw_parts(
-                self.as_ref().bones as *const BoneInfo,
-                self.as_ref().boneCount as usize,
+                self.as_ref().skeleton.bones as *const BoneInfo,
+                self.as_ref().skeleton.boneCount as usize,
             )
         })
     }
@@ -269,14 +272,14 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     #[must_use]
     /// Bones information (skeleton)
     fn bones_mut(&mut self) -> Option<&mut [BoneInfo]> {
-        if self.as_ref().bones.is_null() {
+        if self.as_ref().skeleton.bones.is_null() {
             return None;
         }
 
         Some(unsafe {
             std::slice::from_raw_parts_mut(
-                self.as_mut().bones as *mut BoneInfo,
-                self.as_mut().boneCount as usize,
+                self.as_mut().skeleton.bones as *mut BoneInfo,
+                self.as_mut().skeleton.boneCount as usize,
             )
         })
     }
@@ -284,19 +287,19 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     #[must_use]
     /// Bones base transformation (pose)
     fn bind_pose(&self) -> Option<&Transform> {
-        if self.as_ref().bindPose.is_null() {
+        if self.as_ref().skeleton.bindPose.is_null() {
             return None;
         }
-        Some(unsafe { std::mem::transmute(self.as_ref().bindPose) })
+        Some(unsafe { std::mem::transmute(self.as_ref().skeleton.bindPose) })
     }
     #[inline]
     #[must_use]
     /// Bones base transformation (pose)
     fn bind_pose_mut(&mut self) -> Option<&mut Transform> {
-        if self.as_ref().bindPose.is_null() {
+        if self.as_ref().skeleton.bindPose.is_null() {
             return None;
         }
-        Some(unsafe { std::mem::transmute(self.as_mut().bindPose) })
+        Some(unsafe { std::mem::transmute(self.as_mut().skeleton.bindPose) })
     }
     #[inline]
     #[must_use]
