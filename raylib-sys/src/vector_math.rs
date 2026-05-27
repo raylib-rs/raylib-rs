@@ -3,6 +3,11 @@ use crate::{Matrix, Quaternion, Vector2, Vector3, Vector4};
 // ─── Vector2 ─────────────────────────────────────────────────────────────────
 
 impl Vector2 {
+    /// The zero vector `(0, 0)`.
+    pub const ZERO: Self = Self { x: 0.0, y: 0.0 };
+    /// The vector `(1, 1)`.
+    pub const ONE: Self = Self { x: 1.0, y: 1.0 };
+
     /// Construct a new Vector2.
     #[inline]
     pub fn new(x: f32, y: f32) -> Self {
@@ -317,6 +322,37 @@ impl std::ops::Neg for Vector2 {
 // ─── Vector3 ─────────────────────────────────────────────────────────────────
 
 impl Vector3 {
+    /// The zero vector `(0, 0, 0)`.
+    pub const ZERO: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    /// The vector `(1, 1, 1)`.
+    pub const ONE: Self = Self {
+        x: 1.0,
+        y: 1.0,
+        z: 1.0,
+    };
+    /// The unit vector along +X `(1, 0, 0)`.
+    pub const X: Self = Self {
+        x: 1.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    /// The unit vector along +Y `(0, 1, 0)`.
+    pub const Y: Self = Self {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    };
+    /// The unit vector along +Z `(0, 0, 1)`.
+    pub const Z: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        z: 1.0,
+    };
+
     /// Construct a new Vector3.
     #[inline]
     pub fn new(x: f32, y: f32, z: f32) -> Self {

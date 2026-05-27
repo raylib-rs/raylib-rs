@@ -88,6 +88,10 @@ jobs:
   # framebuffer. Linux-only — macOS/Windows have no xvfb equivalent.
   integration-xvfb:
     runs-on: ubuntu-latest
+    # Non-required: raylib-test is stale vs the 6.0 API (a nightly test-harness
+    # API drift remains). See docs/superpowers/notes/spike-raylib-test-delete-or-fix.md.
+    # The software-render jobs are the gating headless Tier-2 coverage.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:
