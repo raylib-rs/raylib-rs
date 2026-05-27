@@ -11,7 +11,7 @@ thread_local! {
 }
 
 /// raygui global state, style, font and tooltip controls. Implemented for the
-/// draw-handle types (call during drawing) and for [`RaylibHandle`] (call during
+/// draw-handle types (call during drawing) and for [`crate::RaylibHandle`] (call during
 /// setup).
 pub trait RaylibGuiState {
     /// Enable gui controls (global state)

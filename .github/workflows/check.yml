@@ -32,6 +32,23 @@ jobs:
       - name: Clippy (software_renderer tests)
         run: cargo clippy -p raylib --tests --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,raygui -- -D warnings
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Linux build deps
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+      # #![deny(missing_docs)] fails the build on any undocumented public item;
+      # RUSTDOCFLAGS=-Dwarnings additionally catches broken intra-doc links.
+      - name: Doc build (deny missing_docs + broken links)
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc -p raylib --no-deps --features full
+      - name: Doctests
+        run: cargo test -p raylib --doc --features full
+
   cargo-deny:
     runs-on: ubuntu-latest
     steps:

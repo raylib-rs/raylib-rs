@@ -3,7 +3,7 @@
 //! mode vertex streams, a few render-state toggles, and ergonomic methods that
 //! bind the crate's safe [`Texture2D`](crate::core::texture::Texture2D) /
 //! [`Shader`](crate::core::shaders::Shader) handles. GL-object *lifecycle*
-//! (create/destroy) stays with those safe types and raw [`ffi`](crate::ffi); the
+//! (create/destroy) stays with those safe types and raw [`ffi`]; the
 //! full 161-fn rlgl surface remains available there as a power-user escape hatch.
 //!
 //! All entry points hang off the draw-handle types (via [`RaylibRlgl`]), so they

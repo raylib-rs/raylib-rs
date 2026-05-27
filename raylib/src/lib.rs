@@ -55,7 +55,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 //#![cfg_attr(feature = "nightly", feature(auto_traits))]
 
 #![allow(dead_code)]
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 pub mod consts;
 /// Core raylib functionality — window, drawing, input, audio, and other subsystems.
 pub mod core;
@@ -75,22 +75,22 @@ pub mod ffi {
 
 pub use crate::core::collision::*;
 
-/// Deprecated alias for [`Vector2`]; the public type is now the native `raylib-sys` type.
+/// Deprecated alias for [`ffi::Vector2`]; the public type is now the native `raylib-sys` type.
 #[deprecated(
     since = "6.0.0",
     note = "use `Vector2` (the native type); `MintVec2` is now identical"
 )]
 pub type MintVec2 = ffi::Vector2;
-/// Deprecated alias for [`Vector3`].
+/// Deprecated alias for [`ffi::Vector3`].
 #[deprecated(since = "6.0.0", note = "use `Vector3`; `MintVec3` is now identical")]
 pub type MintVec3 = ffi::Vector3;
-/// Deprecated alias for [`Vector4`].
+/// Deprecated alias for [`ffi::Vector4`].
 #[deprecated(since = "6.0.0", note = "use `Vector4`; `MintVec4` is now identical")]
 pub type MintVec4 = ffi::Vector4;
-/// Deprecated alias for [`Matrix`].
+/// Deprecated alias for [`ffi::Matrix`].
 #[deprecated(since = "6.0.0", note = "use `Matrix`; `MintMatrix` is now identical")]
 pub type MintMatrix = ffi::Matrix;
-/// Deprecated alias for [`Quaternion`].
+/// Deprecated alias for [`ffi::Quaternion`].
 #[deprecated(
     since = "6.0.0",
     note = "use `Quaternion`; `MintQuat` is now identical"

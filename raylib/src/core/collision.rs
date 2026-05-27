@@ -5,7 +5,7 @@ use crate::ffi;
 use crate::math::{Matrix, RayCollision};
 use crate::models::Mesh;
 
-/// Check if circle collides with a line created between two points [p1] and [p2]
+/// Check if circle collides with a line created between two points `p1` and `p2`
 #[inline]
 #[must_use]
 pub fn check_collision_circle_line(
@@ -48,7 +48,7 @@ pub fn check_collision_point_poly(point: impl Into<ffi::Vector2>, points: &[Vect
     unsafe { ffi::CheckCollisionPointPoly(point.into(), points.as_ptr(), points.len() as i32) }
 }
 
-/// Check if point belongs to line created between two points [p1] and [p2] with defined margin in pixels [threshold]
+/// Check if point belongs to line created between two points `p1` and `p2` with defined margin in pixels `threshold`
 #[inline]
 #[must_use]
 pub fn check_collision_point_line(

@@ -212,7 +212,7 @@ pub use rl_managed::*;
 ///
 /// If the pointer is expected to be conditionally deallocated by Raylib,
 /// (i.e. conditionally passing the buffer to a Raylib function that will certainly deallocatate it)
-/// use [`DataBuf::leak`] to prevent [`DataBuf::drop`] from causing a double-free.
+/// use [`DataBuf::into_inner`] to prevent the [`Drop`] impl from causing a double-free.
 #[derive(Debug)]
 #[repr(transparent)]
 #[must_use]

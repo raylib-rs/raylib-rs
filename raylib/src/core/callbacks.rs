@@ -12,7 +12,7 @@ use std::{
     slice::from_raw_parts_mut,
     sync::atomic::{AtomicUsize, Ordering},
 };
-/// Low-level per-stream audio callback registration for [`AudioStream`].
+/// Low-level per-stream audio callback registration for `AudioStream`.
 pub mod audio_stream_callback;
 mod stream_processor_with_user_data_wrapper;
 use super::audio::Music;

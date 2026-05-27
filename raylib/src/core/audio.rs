@@ -411,8 +411,8 @@ impl Sound<'_> {
     ///     - potential upstream raylib discussion: "too many frames" doesn't exist for the `Sound`'s `AudioStream`
     ///     - potential upstream raylib discussion: adding sampleSize checks for the `memcpy`
     /// 2. raylib's `Sound`'s `AudioStream` always gets 32-bit sample size (so we always catch non-32-bit `Sound`'s with a `SampleSizeMismatch`)
-    ///     - 32-bit fixed in config here: https://github.com/raysan5/raylib/blob/master/src/config.h#L282
-    ///     - device format set here: https://github.com/raysan5/raylib/blob/master/src/raudio.c#L288
+    ///     - 32-bit fixed in config here: <https://github.com/raysan5/raylib/blob/master/src/config.h#L282>
+    ///     - device format set here: <https://github.com/raysan5/raylib/blob/master/src/raudio.c#L288>
     ///     - potential upstream raylib discussion: allowing for other samplesSizes for `Sound`
     #[inline]
     pub fn update<T: AudioSample>(&mut self, data: &[T]) -> Result<(), UpdateAudioStreamError> {
