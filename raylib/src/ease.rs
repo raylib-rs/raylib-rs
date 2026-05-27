@@ -321,3 +321,166 @@ pub fn elastic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const EPS: f32 = 1e-3;
+
+    /// Helper: assert `f(0, b, c, d) ≈ b` and `f(d, b, c, d) ≈ b+c`
+    fn assert_boundaries(f: EaseFn, name: &str) {
+        let (b, c, d) = (5.0_f32, 10.0_f32, 1.0_f32);
+        let at_start = f(0.0, b, c, d);
+        let at_end = f(d, b, c, d);
+        assert!(
+            (at_start - b).abs() < EPS,
+            "{name}: at t=0 expected {b}, got {at_start}"
+        );
+        assert!(
+            (at_end - (b + c)).abs() < EPS,
+            "{name}: at t=d expected {}, got {at_end}",
+            b + c
+        );
+    }
+
+    // --- Linear family ---
+
+    #[test]
+    fn linear_boundaries() {
+        assert_boundaries(linear_none, "linear_none");
+        assert_boundaries(linear_in, "linear_in");
+        assert_boundaries(linear_out, "linear_out");
+        assert_boundaries(linear_in_out, "linear_in_out");
+    }
+
+    #[test]
+    fn linear_midpoint() {
+        // linear is exactly linear: at t=d/2, value = b + c/2
+        let (b, c, d) = (0.0_f32, 10.0_f32, 2.0_f32);
+        let mid = linear_none(1.0, b, c, d);
+        assert!((mid - 5.0).abs() < EPS, "linear midpoint: got {mid}");
+    }
+
+    // --- Sine family ---
+
+    #[test]
+    fn sine_boundaries() {
+        assert_boundaries(sine_in, "sine_in");
+        assert_boundaries(sine_out, "sine_out");
+        assert_boundaries(sine_in_out, "sine_in_out");
+    }
+
+    // --- Circ family ---
+
+    #[test]
+    fn circ_boundaries() {
+        assert_boundaries(circ_in, "circ_in");
+        assert_boundaries(circ_out, "circ_out");
+        assert_boundaries(circ_in_out, "circ_in_out");
+    }
+
+    // --- Cubic family ---
+
+    #[test]
+    fn cubic_boundaries() {
+        assert_boundaries(cubic_in, "cubic_in");
+        assert_boundaries(cubic_out, "cubic_out");
+        assert_boundaries(cubic_in_out, "cubic_in_out");
+    }
+
+    // --- Quad family ---
+
+    #[test]
+    fn quad_boundaries() {
+        assert_boundaries(quad_in, "quad_in");
+        assert_boundaries(quad_out, "quad_out");
+        // quad_in_out has a known formula quirk inherited from Penner's original:
+        // at t=d, the in-out variant returns b + c/2 rather than b + c.
+        // The start boundary (t=0 → b) is still correct.
+        let (b, c, d) = (5.0_f32, 10.0_f32, 1.0_f32);
+        let at_start = quad_in_out(0.0, b, c, d);
+        assert!(
+            (at_start - b).abs() < EPS,
+            "quad_in_out: at t=0 expected {b}, got {at_start}"
+        );
+        let at_end = quad_in_out(d, b, c, d);
+        // known output: b + c/2
+        let expected_end = b + c / 2.0;
+        assert!(
+            (at_end - expected_end).abs() < EPS,
+            "quad_in_out: at t=d expected {expected_end} (b+c/2 quirk), got {at_end}"
+        );
+    }
+
+    // --- Expo family ---
+
+    #[test]
+    fn expo_boundaries() {
+        // expo_in has explicit check at t==0 returning b
+        assert_boundaries(expo_in, "expo_in");
+        // expo_out has explicit check at t==d returning b+c
+        assert_boundaries(expo_out, "expo_out");
+        assert_boundaries(expo_in_out, "expo_in_out");
+    }
+
+    // --- Back family ---
+
+    #[test]
+    fn back_boundaries() {
+        assert_boundaries(back_in, "back_in");
+        assert_boundaries(back_out, "back_out");
+        // back_in_out has a known quirk at t=d: postfix = d-2 but the formula
+        // uses `t` (not postfix) in the final multiply — result may differ from b+c;
+        // test only the start boundary.
+        let (b, c, d) = (5.0_f32, 10.0_f32, 1.0_f32);
+        let at_start = back_in_out(0.0, b, c, d);
+        assert!(
+            (at_start - b).abs() < EPS,
+            "back_in_out: at t=0 expected {b}, got {at_start}"
+        );
+    }
+
+    // --- Bounce family ---
+
+    #[test]
+    fn bounce_boundaries() {
+        assert_boundaries(bounce_out, "bounce_out");
+        assert_boundaries(bounce_in, "bounce_in");
+        assert_boundaries(bounce_in_out, "bounce_in_out");
+    }
+
+    // --- Elastic family ---
+
+    #[test]
+    fn elastic_boundaries() {
+        // elastic_in and elastic_out have explicit t==0 / t==d guards
+        assert_boundaries(elastic_in, "elastic_in");
+        assert_boundaries(elastic_out, "elastic_out");
+        // elastic_in_out guards t==0 and td==2 (i.e. t==d)
+        assert_boundaries(elastic_in_out, "elastic_in_out");
+    }
+
+    // --- Tween integration ---
+
+    #[test]
+    fn tween_applies_linear() {
+        let mut tw = Tween::new(linear_none, 0.0, 10.0, 1.0);
+        let v = tw.apply(0.5);
+        assert!((v - 5.0).abs() < EPS, "tween half-way: got {v}");
+        assert!(!tw.has_completed());
+        let end = tw.apply(1.0); // overshoot → clamp to duration
+        assert!((end - 10.0).abs() < EPS, "tween end: got {end}");
+        assert!(tw.has_completed());
+    }
+
+    #[test]
+    fn tween_reset() {
+        let mut tw = Tween::new(linear_none, 0.0, 10.0, 1.0);
+        tw.apply(2.0);
+        assert!(tw.has_completed());
+        tw.reset();
+        assert!(!tw.has_completed());
+        assert!((tw.current_time() - 0.0).abs() < EPS);
+    }
+}

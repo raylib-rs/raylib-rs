@@ -31,6 +31,132 @@ pub mod window;
 
 use raylib_sys::TraceLogLevel;
 
+#[cfg(test)]
+mod color_tests {
+    use crate::ffi::Color;
+
+    // --- Color::new / field access ---
+
+    #[test]
+    fn rgba_fields() {
+        let c = Color::new(10, 20, 30, 40);
+        assert_eq!((c.r, c.g, c.b, c.a), (10, 20, 30, 40));
+    }
+
+    // --- Color::from_hex ---
+
+    #[test]
+    fn from_hex_red() {
+        let c = Color::from_hex("ff0000").unwrap();
+        assert_eq!((c.r, c.g, c.b, c.a), (255, 0, 0, 255));
+    }
+
+    #[test]
+    fn from_hex_white() {
+        let c = Color::from_hex("ffffff").unwrap();
+        assert_eq!((c.r, c.g, c.b, c.a), (255, 255, 255, 255));
+    }
+
+    #[test]
+    fn from_hex_invalid_returns_err() {
+        assert!(Color::from_hex("zzzzzz").is_err());
+    }
+
+    // --- Color::get_color (from u32 hex value) ---
+
+    #[test]
+    fn get_color_opaque_red() {
+        // 0xRRGGBBAA — raylib packs it as 0xFF0000FF = red fully opaque
+        let c = Color::get_color(0xFF0000FF);
+        assert_eq!((c.r, c.g, c.b, c.a), (255, 0, 0, 255));
+    }
+
+    // --- Color::color_to_int ---
+
+    #[test]
+    fn color_to_int_roundtrip() {
+        let c = Color::new(100, 150, 200, 255);
+        let packed = c.color_to_int();
+        // Reparse via get_color using the packed u32
+        let back = Color::get_color(packed as u32);
+        assert_eq!((back.r, back.g, back.b, back.a), (c.r, c.g, c.b, c.a));
+    }
+
+    // --- Color::color_normalize / color_from_normalized round-trip ---
+
+    #[test]
+    fn normalize_roundtrip() {
+        let c = Color::new(51, 102, 153, 204); // 0.2, 0.4, 0.6, 0.8 in [0..1]
+        let norm = c.color_normalize();
+        let back = Color::color_from_normalized(norm);
+        // Round-trip through f32 may drift by 1 LSB
+        assert!((back.r as i32 - c.r as i32).abs() <= 1);
+        assert!((back.g as i32 - c.g as i32).abs() <= 1);
+        assert!((back.b as i32 - c.b as i32).abs() <= 1);
+        assert!((back.a as i32 - c.a as i32).abs() <= 1);
+    }
+
+    // --- Color::color_to_hsv / color_from_hsv round-trip ---
+
+    #[test]
+    fn hsv_roundtrip_red() {
+        // Pure red: H=0, S=1, V=1
+        let c = Color::new(255, 0, 0, 255);
+        let hsv = c.color_to_hsv();
+        // hue should be ~0 (or 360), saturation and value ~1.0
+        assert!(
+            (hsv.y - 1.0).abs() < 1e-3,
+            "saturation should be 1.0, got {}",
+            hsv.y
+        );
+        assert!(
+            (hsv.z - 1.0).abs() < 1e-3,
+            "value should be 1.0, got {}",
+            hsv.z
+        );
+
+        let back = Color::color_from_hsv(hsv.x, hsv.y, hsv.z);
+        assert_eq!((back.r, back.g, back.b), (255, 0, 0));
+    }
+
+    #[test]
+    fn color_from_hsv_white() {
+        // H=any, S=0, V=1 → white
+        let c = Color::color_from_hsv(0.0, 0.0, 1.0);
+        assert_eq!((c.r, c.g, c.b), (255, 255, 255));
+    }
+
+    // --- Color::alpha ---
+
+    #[test]
+    fn alpha_fully_transparent() {
+        let c = Color::new(255, 0, 0, 255).alpha(0.0);
+        assert_eq!(c.a, 0);
+    }
+
+    #[test]
+    fn alpha_fully_opaque() {
+        let c = Color::new(255, 0, 0, 0).alpha(1.0);
+        assert_eq!(c.a, 255);
+    }
+
+    // --- PartialEq ---
+
+    #[test]
+    fn color_equality() {
+        let a = Color::new(1, 2, 3, 4);
+        let b = Color::new(1, 2, 3, 4);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn color_inequality() {
+        let a = Color::new(1, 2, 3, 4);
+        let b = Color::new(5, 6, 7, 8);
+        assert_ne!(a, b);
+    }
+}
+
 use crate::ffi;
 use std::ffi::CString;
 use std::marker::PhantomData;

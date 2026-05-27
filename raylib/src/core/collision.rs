@@ -165,3 +165,219 @@ pub fn get_ray_collision_quad(
         ffi::GetRayCollisionQuad(ray.into(), p1.into(), p2.into(), p3.into(), p4.into()).into()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::math::{Vector2, Vector3};
+
+    // --- check_collision_circles ---
+
+    #[test]
+    fn circles_overlap() {
+        // centers 1 apart, radii sum = 4 → overlapping
+        assert!(check_collision_circles(
+            Vector2::new(0.0, 0.0),
+            2.0,
+            Vector2::new(1.0, 0.0),
+            2.0
+        ));
+    }
+
+    #[test]
+    fn circles_separate() {
+        // centers 10 apart, radii sum = 2 → no collision
+        assert!(!check_collision_circles(
+            Vector2::new(0.0, 0.0),
+            1.0,
+            Vector2::new(10.0, 0.0),
+            1.0
+        ));
+    }
+
+    #[test]
+    fn circles_touching_boundary() {
+        // circles just touching (distance == sum of radii); raylib treats this as collision
+        assert!(check_collision_circles(
+            Vector2::new(0.0, 0.0),
+            1.0,
+            Vector2::new(2.0, 0.0),
+            1.0
+        ));
+    }
+
+    // --- check_collision_circle_line ---
+
+    #[test]
+    fn circle_line_intersects() {
+        // horizontal line y=0 from (-5,0) to (5,0), circle at (0,0.5) radius 1 → intersects
+        assert!(check_collision_circle_line(
+            Vector2::new(0.0, 0.5),
+            1.0,
+            Vector2::new(-5.0, 0.0),
+            Vector2::new(5.0, 0.0),
+        ));
+    }
+
+    #[test]
+    fn circle_line_misses() {
+        // horizontal line y=0, circle at (0,5) radius 1 → no intersection
+        assert!(!check_collision_circle_line(
+            Vector2::new(0.0, 5.0),
+            1.0,
+            Vector2::new(-5.0, 0.0),
+            Vector2::new(5.0, 0.0),
+        ));
+    }
+
+    // --- check_collision_point_circle ---
+
+    #[test]
+    fn point_inside_circle() {
+        assert!(check_collision_point_circle(
+            Vector2::new(0.5, 0.5),
+            Vector2::new(0.0, 0.0),
+            2.0,
+        ));
+    }
+
+    #[test]
+    fn point_outside_circle() {
+        assert!(!check_collision_point_circle(
+            Vector2::new(10.0, 10.0),
+            Vector2::new(0.0, 0.0),
+            1.0,
+        ));
+    }
+
+    // --- check_collision_point_triangle ---
+
+    #[test]
+    fn point_inside_triangle() {
+        // right triangle with vertices (0,0),(4,0),(0,4); centroid (4/3,4/3) is inside
+        assert!(check_collision_point_triangle(
+            Vector2::new(1.0, 1.0),
+            Vector2::new(0.0, 0.0),
+            Vector2::new(4.0, 0.0),
+            Vector2::new(0.0, 4.0),
+        ));
+    }
+
+    #[test]
+    fn point_outside_triangle() {
+        assert!(!check_collision_point_triangle(
+            Vector2::new(5.0, 5.0),
+            Vector2::new(0.0, 0.0),
+            Vector2::new(4.0, 0.0),
+            Vector2::new(0.0, 4.0),
+        ));
+    }
+
+    // --- check_collision_point_poly ---
+
+    #[test]
+    fn point_inside_square_poly() {
+        // unit square CCW: (0,0),(1,0),(1,1),(0,1)
+        let square = vec![
+            Vector2::new(0.0, 0.0),
+            Vector2::new(1.0, 0.0),
+            Vector2::new(1.0, 1.0),
+            Vector2::new(0.0, 1.0),
+        ];
+        assert!(check_collision_point_poly(Vector2::new(0.5, 0.5), &square));
+    }
+
+    #[test]
+    fn point_outside_square_poly() {
+        let square = vec![
+            Vector2::new(0.0, 0.0),
+            Vector2::new(1.0, 0.0),
+            Vector2::new(1.0, 1.0),
+            Vector2::new(0.0, 1.0),
+        ];
+        assert!(!check_collision_point_poly(Vector2::new(2.0, 2.0), &square));
+    }
+
+    // --- check_collision_point_line ---
+
+    #[test]
+    fn point_on_line_within_threshold() {
+        // point (1,0) lies exactly on line from (0,0) to (10,0), threshold 1
+        assert!(check_collision_point_line(
+            Vector2::new(1.0, 0.0),
+            Vector2::new(0.0, 0.0),
+            Vector2::new(10.0, 0.0),
+            1,
+        ));
+    }
+
+    #[test]
+    fn point_far_from_line() {
+        // point (5,5) is 5 units from line y=0, threshold 1 → no collision
+        assert!(!check_collision_point_line(
+            Vector2::new(5.0, 5.0),
+            Vector2::new(0.0, 0.0),
+            Vector2::new(10.0, 0.0),
+            1,
+        ));
+    }
+
+    // --- check_collision_lines ---
+
+    #[test]
+    fn lines_cross() {
+        // diagonal lines that cross at (0,0)
+        let result = check_collision_lines(
+            Vector2::new(-1.0, -1.0),
+            Vector2::new(1.0, 1.0),
+            Vector2::new(-1.0, 1.0),
+            Vector2::new(1.0, -1.0),
+        );
+        assert!(result.is_some());
+        let pt = result.unwrap();
+        assert!(
+            (pt.x).abs() < 1e-4,
+            "intersection x should be ~0, got {}",
+            pt.x
+        );
+        assert!(
+            (pt.y).abs() < 1e-4,
+            "intersection y should be ~0, got {}",
+            pt.y
+        );
+    }
+
+    #[test]
+    fn lines_parallel_no_collision() {
+        // two parallel horizontal lines → None
+        let result = check_collision_lines(
+            Vector2::new(0.0, 0.0),
+            Vector2::new(10.0, 0.0),
+            Vector2::new(0.0, 1.0),
+            Vector2::new(10.0, 1.0),
+        );
+        assert!(result.is_none());
+    }
+
+    // --- check_collision_spheres ---
+
+    #[test]
+    fn spheres_overlap_3d() {
+        assert!(check_collision_spheres(
+            Vector3::new(0.0, 0.0, 0.0),
+            2.0,
+            Vector3::new(1.0, 0.0, 0.0),
+            2.0,
+        ));
+    }
+
+    #[test]
+    fn spheres_separate_3d() {
+        assert!(!check_collision_spheres(
+            Vector3::new(0.0, 0.0, 0.0),
+            1.0,
+            Vector3::new(10.0, 0.0, 0.0),
+            1.0,
+        ));
+    }
+}
