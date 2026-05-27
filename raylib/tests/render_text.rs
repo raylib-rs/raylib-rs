@@ -3,6 +3,8 @@
 use raylib::prelude::*;
 use raylib::test_harness::{render_frame, with_headless};
 
+// One `#[test]` per file: `with_headless` calls `InitWindow`, which raylib permits
+// only once per process.
 #[test]
 fn text_draws_foreground_pixels() {
     with_headless(120, 32, |rl, thread| {
@@ -20,8 +22,10 @@ fn text_draws_foreground_pixels() {
                 }
             }
         }
+        // "Hi" at size 20 in the default font yields ~96 near-white pixels; a blank
+        // frame yields 0. Require well above a degenerate handful but safely under 96.
         assert!(
-            white > 10,
+            white > 40,
             "expected drawn glyph pixels, found {white} near-white"
         );
     });

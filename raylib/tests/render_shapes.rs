@@ -20,6 +20,8 @@
 use raylib::prelude::*;
 use raylib::test_harness::{assert_pixel, render_frame, with_headless};
 
+// One `#[test]` per file: `with_headless` calls `InitWindow`, which raylib permits
+// only once per process, so every probe shares a single headless context.
 #[test]
 fn shapes_render_expected_pixels() {
     // Canvas is 64×64. rlsw image-space: y_img = 63 - y_screen; R↔B channels swapped.
@@ -39,11 +41,13 @@ fn shapes_render_expected_pixels() {
         assert_pixel(&img, 16, 47, Color::BLUE, 16);
 
         // Circle centre: screen (48,48) → image (48,15).
-        // Color::GREEN {0,128,0} — R=B=0 so R↔B swap is a no-op; stays {0,128,0}.
+        // Color::GREEN is {0,128,0} in this crate (not raylib's {0,228,48}); R=B=0,
+        // so the R↔B swap is a no-op and it stays {0,128,0}.
         assert_pixel(&img, 48, 15, Color::GREEN, 16);
 
-        // Line near top: screen (32,0) → image (32,62).
-        // rlsw R↔B swap: drawn Color::BLUE {0,0,255} → image pixel {255,0,0} = Color::RED.
+        // Line near top: drawn at screen y=0 but reads back at image y=62, not the
+        // formula's 63 — rlsw places the topmost line one row in, and image y=63 reads
+        // empty. rlsw R↔B swap: drawn Color::BLUE {0,0,255} → image {255,0,0} = Color::RED.
         assert_pixel(&img, 32, 62, Color::RED, 16);
     });
 }
