@@ -70,8 +70,12 @@ pub fn pixel_at(img: &Image, x: i32, y: i32) -> Px {
     }
 }
 
-/// Assert that pixel `(x, y)` in `img` matches `expected` within a
-/// per-channel tolerance of `tol`.
+/// Assert that pixel `(x, y)` in `img` matches `expected` within a per-channel
+/// tolerance of `tol`.
+///
+/// Only the R, G, and B channels are compared. Alpha is intentionally ignored:
+/// the Memory-platform framebuffer readback can report alpha values that don't
+/// match an opaque `Color`'s `a`, which would make probes fail spuriously.
 ///
 /// Panics with a descriptive message showing the actual vs expected pixel and
 /// position on failure.
@@ -79,22 +83,17 @@ pub fn pixel_at(img: &Image, x: i32, y: i32) -> Px {
 pub fn assert_pixel(img: &Image, x: i32, y: i32, expected: Color, tol: u8) {
     let actual = pixel_at(img, x, y);
     let close = |a: u8, b: u8| a.abs_diff(b) <= tol;
-    if !close(actual.r, expected.r)
-        || !close(actual.g, expected.g)
-        || !close(actual.b, expected.b)
-        || !close(actual.a, expected.a)
+    if !close(actual.r, expected.r) || !close(actual.g, expected.g) || !close(actual.b, expected.b)
     {
         panic!(
-            "pixel ({x}, {y}): expected ({r}, {g}, {b}, {a}) ± {tol}, \
-             got ({ar}, {ag}, {ab}, {aa})",
+            "pixel ({x}, {y}): expected ~({r}, {g}, {b}) ± {tol}, \
+             got ({ar}, {ag}, {ab})",
             r = expected.r,
             g = expected.g,
             b = expected.b,
-            a = expected.a,
             ar = actual.r,
             ag = actual.g,
             ab = actual.b,
-            aa = actual.a,
         );
     }
 }
