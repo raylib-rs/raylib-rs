@@ -1,11 +1,21 @@
 //! WS4b Tier-2: software-rendered shapes land the expected pixels. Headless, no GPU.
 //!
-//! # rlsw rendering notes (Windows Memory platform)
+//! # rlsw readback notes (deterministic on every OS — these are compile-time, not platform, effects)
 //!
-//! rlsw on Windows stores pixels in BGR(A) byte order, so R and B channels
-//! are swapped relative to what was drawn. `LoadImageFromScreen` does NOT flip
-//! y on the Memory platform, so image y-axis is inverted: `y_img = (h-1) - y_screen`.
-//! Probe coordinates and expected colors below reflect these observed behaviours.
+//! Two characteristics of the software-renderer readback shape the probes below.
+//! Both are baked into rlsw's pure-C source, so they are identical on Linux,
+//! macOS, and Windows — do NOT special-case them per platform.
+//!
+//! 1. **Channel order:** rlsw is built with its upstream default
+//!    `SW_FRAMEBUFFER_OUTPUT_BGRA = true` (`external/rlsw.h`), so the color
+//!    buffer is emitted BGRA. `rlReadScreenPixels` (`rlgl.h`) labels it
+//!    `PIXELFORMAT_UNCOMPRESSED_R8G8B8A8` without reordering, so the R and B
+//!    channels read back swapped relative to what was drawn.
+//! 2. **Y orientation:** `rlReadScreenPixels` flips vertically unconditionally,
+//!    which combined with rlsw's buffer origin leaves the image y-axis inverted
+//!    relative to screen space: `y_img = (h - 1) - y_screen`.
+//!
+//! Probe coordinates and expected colors below reflect these confirmed behaviours.
 #![cfg(feature = "software_renderer")]
 use raylib::prelude::*;
 use raylib::test_harness::{assert_pixel, render_frame, with_headless};
