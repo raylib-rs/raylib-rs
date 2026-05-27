@@ -197,8 +197,8 @@ fn build_with_cmake(src_path: &str) {
         }
         Platform::Memory => conf.define("PLATFORM", "Memory"),
         Platform::Web => conf.define("PLATFORM", "Web"),
-        Platform::DRM => conf.define("PLATFORM", "DRM"),
-        Platform::RPI => conf.define("PLATFORM", "Raspberry Pi"),
+        Platform::Drm => conf.define("PLATFORM", "DRM"),
+        Platform::Rpi => conf.define("PLATFORM", "Raspberry Pi"),
         Platform::Android => {
             // get required env variables
             let android_ndk_home = env::var("ANDROID_NDK_HOME")
@@ -288,8 +288,8 @@ fn gen_bindings() {
     let plat = match platform {
         Platform::Desktop => "-DPLATFORM_DESKTOP",
         Platform::Memory => "-DPLATFORM_MEMORY",
-        Platform::DRM => "-DPLATFORM_DRM",
-        Platform::RPI => "-DPLATFORM_RPI",
+        Platform::Drm => "-DPLATFORM_DRM",
+        Platform::Rpi => "-DPLATFORM_RPI",
         Platform::Android => "-DPLATFORM_ANDROID",
         Platform::Web => "-DPLATFORM_WEB",
     };
@@ -436,7 +436,7 @@ fn link(platform: Platform, platform_os: PlatformOS) {
                 println!("cargo:rustc-link-lib=glfw"); // Link against locally installed glfw
             }
         }
-        PlatformOS::OSX => {
+        PlatformOS::Osx => {
             println!("cargo:rustc-link-search=native=/usr/local/lib");
             println!("cargo:rustc-link-lib=framework=OpenGL");
             println!("cargo:rustc-link-lib=framework=Cocoa");
@@ -448,11 +448,11 @@ fn link(platform: Platform, platform_os: PlatformOS) {
     }
     if platform == Platform::Web {
         println!("cargo:rustc-link-lib=glfw");
-    } else if platform == Platform::DRM {
+    } else if platform == Platform::Drm {
         println!("cargo:rustc-link-lib=EGL");
         println!("cargo:rustc-link-lib=drm");
         println!("cargo:rustc-link-lib=gbm");
-    } else if platform == Platform::RPI {
+    } else if platform == Platform::Rpi {
         println!("cargo:rustc-link-search=/opt/vc/lib");
         println!("cargo:rustc-link-lib=bcm_host");
         println!("cargo:rustc-link-lib=brcmEGL");
@@ -541,9 +541,9 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
     let platform = if cfg!(feature = "software_renderer") {
         Platform::Memory
     } else if cfg!(feature = "drm") {
-        Platform::DRM
+        Platform::Drm
     } else if cfg!(feature = "legacy_rpi") {
-        Platform::RPI
+        Platform::Rpi
     } else if target.contains("wasm") {
         Platform::Web
     } else if target.contains("android") {
@@ -568,15 +568,15 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
             let un: &str = &uname();
             match un {
                 "Linux" => PlatformOS::Linux,
-                "FreeBSD" => PlatformOS::BSD,
-                "OpenBSD" => PlatformOS::BSD,
-                "NetBSD" => PlatformOS::BSD,
-                "DragonFly" => PlatformOS::BSD,
-                "Darwin" => PlatformOS::OSX,
+                "FreeBSD" => PlatformOS::Bsd,
+                "OpenBSD" => PlatformOS::Bsd,
+                "NetBSD" => PlatformOS::Bsd,
+                "DragonFly" => PlatformOS::Bsd,
+                "Darwin" => PlatformOS::Osx,
                 _ => panic!("Unknown platform {}", uname()),
             }
         }
-    } else if matches!(platform, Platform::DRM | Platform::RPI | Platform::Android) {
+    } else if matches!(platform, Platform::Drm | Platform::Rpi | Platform::Android) {
         let un: &str = &uname();
         if un == "Linux" {
             PlatformOS::Linux
@@ -607,8 +607,8 @@ enum Platform {
     Web,
     Desktop,
     Android,
-    DRM,
-    RPI,    // legacy raspberry pi
+    Drm,
+    Rpi,    // legacy raspberry pi
     Memory, // raylib 6.0 windowless software-render platform (PLATFORM=Memory)
 }
 
@@ -616,8 +616,8 @@ enum Platform {
 enum PlatformOS {
     Windows,
     Linux,
-    BSD,
-    OSX,
+    Bsd,
+    Osx,
     Unknown,
 }
 
