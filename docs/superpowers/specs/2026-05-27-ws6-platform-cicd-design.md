@@ -61,7 +61,7 @@ WS6-prep is sequenced first because the soundness PRs (#277/#257/#256/#118) chan
 **Blocker fixes (required for clippy `-Dwarnings`):**
 
 1. **`build.rs` upper_case_acronyms** — `enum Platform` variants `DRM`/`RPI` (lines ~606-616) and `enum PlatformOS` variants `BSD`/`OSX` (lines ~616-620) trip `clippy::upper_case_acronyms`. Fix: rename to `Drm`/`Rpi`/`Bsd`/`Osx` (update all match arms), **or** `#[allow(clippy::upper_case_acronyms)]` on the enums. Recommendation: rename — it's the idiomatic fix and `build.rs` isn't a public API.
-2. **`custom_audio_stream_callback` deprecation** — `raylib/src/core/callbacks.rs:131-132` defines a `#[deprecated]` trampoline still invoked internally at `callbacks.rs:362`, producing a self-deprecation warning; a non-deprecated replacement already lives in `core/callbacks/audio_stream_callback.rs`. There is a standing TODO (`callbacks.rs:130`) to finalize the deprecated callbacks. Recommendation: since 6.0 is a major bump and the live path is the new `audio_stream_callback` module, **remove the dead deprecated trampoline + its `RaylibHandle` method** (the deprecation note already points users at the replacement). If removal proves source-breaking beyond the intended courtesy window, fall back to `#[allow(deprecated)]` on the internal call site. (The `MintVec*` deprecations in `lib.rs:79-94` are intentional one-release bridges and stay.)
+2. **`custom_audio_stream_callback` deprecation** — `raylib/src/core/callbacks.rs:131-132` defines a `#[deprecated]` trampoline still invoked internally at `callbacks.rs:362`, producing a self-deprecation warning; a non-deprecated replacement already lives in `core/callbacks/audio_stream_callback.rs`. There is a standing TODO (`callbacks.rs:130`) to finalize the deprecated callbacks. **Decision (owner-confirmed): remove it outright** — delete the dead deprecated trampoline + its `RaylibHandle` method (and any sibling `#[deprecated]` callback methods in that block the TODO covers, once confirmed dead). No courtesy bridge; 6.0 is a major bump and the live path is the new `audio_stream_callback` module. Verify nothing else in the workspace/tests references the removed items before deleting. (The `MintVec*` deprecations in `lib.rs:79-94` are a separate, intentional one-release bridge and stay.)
 
 **Deferred PR fold-in (cherry-pick with attribution per `inventory.md`):**
 
@@ -220,7 +220,7 @@ From `inventory.md`, WS6-targeted items touched here:
 1. **emsdk-in-CI friction** (spike-flagged). *Mitigation:* ubuntu-only, pin + cache a known-good emsdk version; build-verify only, so a transient toolchain issue doesn't block the desktop matrix.
 2. **Crate-wide `deny(missing_docs)` volume.** *Mitigation:* per-module subagent tasks; minimal correct lines now, prose in WS7.
 3. **Soundness PR fold-in may conflict with the WS3 rewrite.** *Mitigation:* re-validate each PR against the current surface; "already covered" is an acceptable outcome; Mesh PRs applied as one coherent pass.
-4. **Removing the deprecated audio callback could be source-breaking.** *Mitigation:* `#[allow(deprecated)]` fallback keeps the courtesy bridge if removal is too aggressive.
+4. **Removing the deprecated audio callback is a hard break.** *Mitigation:* acceptable under a 6.0 major bump; verify nothing in the workspace/tests references the removed items before deleting, and note the removal in `CHANGELOG.md` for WS7/WS8.
 5. **xvfb integration tests flakiness** (real windows, nightly). *Mitigation:* `xvfb-run -a`; Linux-only; if persistently flaky, mark the leg non-required and keep the software_renderer render tests as the gating headless coverage.
 6. **clippy on `raylib-sys` with `full`.** *Mitigation:* `raylib-sys` can't combine `full` with `software_renderer`; clippy the safe crate with `full` and lint `raylib-sys` separately per backend.
 
@@ -229,6 +229,5 @@ From `inventory.md`, WS6-targeted items touched here:
 ## 13. Open questions (resolve during planning / execution)
 
 - Exact emsdk version to pin for `web.yml` caching (pick the latest that builds raylib 6.0; record it).
-- Whether the deprecated audio callback is removed outright or `#[allow(deprecated)]`-bridged (decided in WS6-prep once the source impact is measured).
 - Whether aarch64 / cross-compile legs are added now or recorded as deferred (depends on hosted-runner availability).
 - Final `deny.toml` license allowlist contents (finalized empirically in WS6a).
