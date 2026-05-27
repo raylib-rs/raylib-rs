@@ -1,0 +1,37 @@
+name: web
+
+on:
+  push:
+    branches: [6.0-rc]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  # Required by raylib-sys/build.rs for the emscripten target (it panics without it).
+  EMCC_CFLAGS: "-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1"
+
+jobs:
+  wasm-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Linux build deps
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake
+      - name: Set up emsdk
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.64
+          actions-cache-folder: emsdk-cache
+      - name: Verify emcc on PATH
+        run: emcc --version
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-emscripten
+      - name: Build raylib-sys (wasm)
+        run: cargo build -p raylib-sys --target wasm32-unknown-emscripten
+      - name: Build raylib (wasm)
+        run: cargo build -p raylib --target wasm32-unknown-emscripten
+      - name: Build raylib (wasm, software_renderer)
+        run: cargo build -p raylib --target wasm32-unknown-emscripten --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT
