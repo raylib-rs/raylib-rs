@@ -91,3 +91,9 @@ jobs:
         run: cargo build -p raylib --no-default-features --features software_renderer
       - name: Headless smoke test
         run: cargo test -p raylib-sys --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES --test software_renderer_smoke
+      # Tier-2 pixel-probe render tests through the safe-crate harness. The safe
+      # `raylib` crate compiles all five SUPPORT_MODULE_* modules, so the test
+      # binary references rshapes/rtextures/rtext/rmodels/raudio symbols and they
+      # must all be enabled or it fails to link (notably on the MSVC linker).
+      - name: Tier-2 headless render tests
+        run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO --test render_shapes --test render_text -- --test-threads=1
