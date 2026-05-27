@@ -11,7 +11,6 @@
 
 mod immediate;
 mod matrix;
-mod state;
 
 pub use immediate::{DrawMode, RlImmediate};
 pub use matrix::{MatrixMode, RlMatrix};
