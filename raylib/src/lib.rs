@@ -63,6 +63,7 @@ pub mod ease;
 pub mod prelude;
 #[cfg(not(feature = "nobuild"))]
 pub mod rgui;
+pub mod rlgl;
 /// Headless software-render test harness (enabled by the `software_renderer` feature).
 #[cfg(feature = "software_renderer")]
 pub mod test_harness;

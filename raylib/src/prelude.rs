@@ -52,5 +52,6 @@ pub use crate::core::*;
 
 #[cfg(not(feature = "nobuild"))]
 pub use crate::rgui::*;
+pub use crate::rlgl::*;
 
 pub use crate::*;
