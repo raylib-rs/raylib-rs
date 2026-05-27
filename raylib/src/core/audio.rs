@@ -330,18 +330,6 @@ impl Wave<'_> {
     }
 }
 
-impl AsRef<ffi::AudioStream> for Sound<'_> {
-    fn as_ref(&self) -> &ffi::AudioStream {
-        &self.0.stream
-    }
-}
-
-impl AsMut<ffi::AudioStream> for Sound<'_> {
-    fn as_mut(&mut self) -> &mut ffi::AudioStream {
-        &mut self.0.stream
-    }
-}
-
 impl Sound<'_> {
     /// Checks if a sound is valid (data loaded and buffers initialized)
     #[inline]
