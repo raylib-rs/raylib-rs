@@ -1,10 +1,6 @@
 use crate::error::Base64Error;
 use crate::{databuf::DataBuf, error::CompressionError, ffi};
-use std::{
-    ffi::{CStr, CString, c_char},
-    mem::MaybeUninit,
-    path::Path,
-};
+use std::{ffi::CString, mem::MaybeUninit, path::Path};
 
 /// Compress data (DEFLATE algorithm)
 /// ```rust

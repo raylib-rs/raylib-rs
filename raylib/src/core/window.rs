@@ -405,7 +405,7 @@ pub fn get_camera_matrix(camera: impl Into<ffi::Camera>) -> Matrix {
 /// fn main() {
 ///     let c = Camera2D::default();
 ///     let m = get_camera_matrix2D(&c);
-///     let mut check = Matrix::zero();
+///     let mut check = Matrix::default();
 ///     check.m10 = 1.0;
 ///     check.m15 = 1.0;
 ///     assert_eq!(m, check);
