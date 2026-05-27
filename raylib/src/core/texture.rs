@@ -1158,7 +1158,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     #[inline]
     #[must_use]
     fn mipmaps(&self) -> i32 {
-        self.as_ref().width
+        self.as_ref().mipmaps
     }
 
     /// Data format (PixelFormat type)
