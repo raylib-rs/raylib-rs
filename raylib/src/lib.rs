@@ -63,6 +63,9 @@ pub mod ease;
 pub mod prelude;
 #[cfg(not(feature = "nobuild"))]
 pub mod rgui;
+/// Headless software-render test harness (enabled by the `software_renderer` feature).
+#[cfg(feature = "software_renderer")]
+pub mod test_harness;
 
 /// The raw, unsafe FFI binding, in case you need that escape hatch or the safe layer doesn't provide something you need.
 pub mod ffi {
