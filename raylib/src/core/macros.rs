@@ -6,6 +6,7 @@ macro_rules! make_thin_wrapper {
         $(#[$attrs])*
         #[repr(transparent)]
         #[derive(Debug)]
+        #[allow(missing_docs)]
         pub struct $name(pub(crate) $t);
 
         impl_wrapper!($name, $t, $dropfunc, 0);
@@ -15,6 +16,7 @@ macro_rules! make_thin_wrapper {
         $(#[$attrs])*
         #[repr(transparent)]
         #[derive(Debug)]
+        #[allow(missing_docs)]
         pub struct $name(pub(crate) $t);
 
         impl_wrapper!($name, $t, $dropfunc, 0);
@@ -28,13 +30,17 @@ macro_rules! make_thin_wrapper_lifetime {
         make_thin_wrapper_lifetime!($name, $t1, $t2, $dropfunc, true);
     };
     ($(#[$attrs:meta])* $name:ident, $t1:ty, $t2:ty,$dropfunc:expr, false) => {
+        $(#[$attrs])*
         #[derive(Debug)]
+        #[allow(missing_docs)]
         pub struct $name<'a>(pub(crate) $t1, &'a $t2);
 
         impl_wrapper!($name, $t1, $dropfunc, 0);
     };
     ($(#[$attrs:meta])* $name:ident, $t1:ty, $t2:ty, $dropfunc:expr, true) => {
+        $(#[$attrs])*
         #[derive(Debug)]
+        #[allow(missing_docs)]
         pub struct $name<'a>(pub(crate) $t1, &'a $t2);
 
         impl_wrapper!($name<'a>, $t1, $dropfunc, 0);
@@ -132,6 +138,7 @@ macro_rules! make_rslice {
         $(#[$attrs])*
         #[repr(transparent)]
         #[derive(Debug)]
+        #[allow(missing_docs)]
         pub struct $name(pub(crate) std::mem::ManuallyDrop<std::boxed::Box<[$t]>>);
 
         impl_rslice!($name, std::boxed::Box<[$t]>, $dropfunc, 0);

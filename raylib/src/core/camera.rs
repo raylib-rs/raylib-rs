@@ -95,6 +95,7 @@ impl From<&mut Camera3D> for *mut ffi::Camera3D {
 }
 
 impl Camera3D {
+    /// Returns the camera projection type (perspective or orthographic).
     #[must_use]
     #[inline(always)]
     pub fn camera_type(&self) -> CameraProjection {
@@ -125,43 +126,51 @@ impl Camera3D {
         c
     }
 
+    /// Returns the camera's forward (look) direction vector.
     #[must_use]
     #[inline(always)]
     pub fn forward(&self) -> Vector3 {
         unsafe { ffi::GetCameraForward(self as *const _ as *mut _) }
     }
 
+    /// Returns the camera's up direction vector.
     #[must_use]
     #[inline(always)]
     pub fn up(&self) -> Vector3 {
         unsafe { ffi::GetCameraUp(self as *const _ as *mut _) }
     }
 
+    /// Moves the camera forward (or backward if negative) by `distance`; optionally constrained to the world plane.
     #[inline(always)]
     pub fn move_forward(&mut self, distance: f32, in_world_plane: bool) {
         unsafe { ffi::CameraMoveForward(self.into(), distance, in_world_plane) }
     }
 
+    /// Moves the camera upward (or downward if negative) by `distance`.
     #[inline(always)]
     pub fn move_up(&mut self, distance: f32) {
         unsafe { ffi::CameraMoveUp(self.into(), distance) }
     }
 
+    /// Moves the camera right (or left if negative) by `distance`; optionally constrained to the world plane.
     #[inline(always)]
     pub fn move_right(&mut self, distance: f32, in_world_plane: bool) {
         unsafe { ffi::CameraMoveRight(self.into(), distance, in_world_plane) }
     }
 
+    /// Moves the camera closer to or farther from its target by `delta`.
     #[inline(always)]
     pub fn move_to_target(&mut self, delta: f32) {
         unsafe { ffi::CameraMoveToTarget(self.into(), delta) }
     }
 
+    /// Rotates the camera around its up axis by `angle` radians; optionally rotates around the target instead of the position.
     #[inline(always)]
     pub fn yaw(&mut self, angle: f32, rotate_around_target: bool) {
         unsafe { ffi::CameraYaw(self.into(), angle, rotate_around_target) }
     }
 
+    /// Rotates the camera around its right axis (pitch) by `angle` radians.
     #[inline(always)]
     pub fn pitch(
         &mut self,
@@ -181,16 +190,19 @@ impl Camera3D {
         }
     }
 
+    /// Rotates the camera around its forward axis (roll) by `angle` radians.
     #[inline(always)]
     pub fn roll(&mut self, angle: f32) {
         unsafe { ffi::CameraRoll(self.into(), angle) }
     }
 
+    /// Returns the camera's view (world-to-camera) matrix.
     #[must_use]
     #[inline(always)]
     pub fn view_matrix(&self) -> Matrix {
         unsafe { ffi::GetCameraViewMatrix(self as *const _ as *mut _) }
     }
+    /// Returns the camera's projection matrix for the given viewport `aspect` ratio.
     #[must_use]
     #[inline(always)]
     pub fn projection_matrix(&self, aspect: f32) -> Matrix {
@@ -201,6 +213,7 @@ impl Camera3D {
     pub fn update_camera(&mut self, mode: CameraMode) {
         unsafe { ffi::UpdateCamera(self.into(), mode as i32) }
     }
+    /// Updates camera position for the selected mode with explicit movement, rotation, and zoom inputs.
     #[inline(always)]
     pub fn update_camera_pro(
         &mut self,

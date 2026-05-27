@@ -44,6 +44,7 @@ impl RaylibHandle {
     }
 }
 
+/// RAII draw handle returned by [`RaylibHandle::begin_drawing`] — calls `EndDrawing` on drop.
 pub struct RaylibDrawHandle<'a>(&'a mut RaylibHandle);
 
 impl RaylibDrawHandle<'_> {
@@ -90,6 +91,7 @@ impl RaylibDraw for RaylibDrawHandle<'_> {}
 // Additionally: the texture is not actually *used* by this wrapper after construction, only the previous draw mode.
 // Some space can be saved by using a phantom instead of copying the actual reference.
 // The PhantomData will ensure that the borrow checker still analyzes as though the mutable texture reference was held, without physically storing it in the runtime memory.
+/// RAII draw handle for rendering to a `RenderTexture2D` — calls `EndTextureMode` on drop.
 pub struct RaylibTextureMode<'a, 'b, T: 'a>(&'a mut T, PhantomData<&'b mut ffi::RenderTexture2D>);
 
 impl<'a, T: 'a> Drop for RaylibTextureMode<'a, '_, T> {
@@ -111,6 +113,7 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibTextureMode<'a, '_, T> {
 }
 // framebuffer: &'a mut ffi::RenderTexture2D,
 
+/// Extension trait providing render-texture mode entry on draw handles.
 pub trait RaylibTextureModeExt
 where
     Self: Sized,
@@ -150,6 +153,7 @@ impl<'a, T: 'a> RaylibDraw for RaylibTextureMode<'a, '_, T> {}
 // VR Stuff
 
 // Lifetime 'a is duplicatively stored in a PhantomData so that the borrow checker knows T is being held *exclusively* for the lifetime of the mode, without giving the false impression that it can actually be mutated by the library.
+/// RAII draw handle for VR stereo rendering — calls `EndVrStereoMode` on drop.
 pub struct RaylibVRMode<'a, 'b, T: 'a>(
     &'a T,
     PhantomData<&'a mut T>,
@@ -168,6 +172,7 @@ impl<'a, T: 'a> std::ops::Deref for RaylibVRMode<'a, '_, T> {
     }
 }
 
+/// Extension trait providing VR stereo mode entry on draw handles.
 pub trait RaylibVRModeExt
 where
     Self: Sized,
@@ -203,6 +208,7 @@ impl<'a, T: 'a> RaylibDraw for RaylibVRMode<'a, '_, T> {}
 
 // 2D Mode
 
+/// RAII draw handle for 2D camera mode — calls `EndMode2D` on drop.
 pub struct RaylibMode2D<'a, T: 'a>(&'a mut T);
 impl<'a, T: 'a> Drop for RaylibMode2D<'a, T> {
     fn drop(&mut self) {
@@ -222,6 +228,7 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibMode2D<'a, T> {
     }
 }
 
+/// Extension trait providing 2D camera mode entry on draw handles.
 pub trait RaylibMode2DExt
 where
     Self: Sized,
@@ -261,6 +268,7 @@ impl<'a, T: 'a> RaylibDraw for RaylibMode2D<'a, T> {}
 
 // 3D Mode
 
+/// RAII draw handle for 3D camera mode — calls `EndMode3D` on drop.
 pub struct RaylibMode3D<'a, T: 'a>(&'a mut T);
 impl<'a, T: 'a> Drop for RaylibMode3D<'a, T> {
     fn drop(&mut self) {
@@ -280,6 +288,7 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibMode3D<'a, T> {
     }
 }
 
+/// Extension trait providing 3D camera mode entry on draw handles.
 pub trait RaylibMode3DExt
 where
     Self: Sized,
@@ -320,6 +329,7 @@ impl<'a, T: 'a> RaylibDraw3D for RaylibMode3D<'a, T> {}
 
 // shader Mode
 
+/// RAII draw handle for custom shader mode — calls `EndShaderMode` on drop.
 pub struct RaylibShaderMode<'a, 'b, T: 'a>(&'a mut T, PhantomData<&'b mut Shader>);
 
 impl<'a, T: 'a> Drop for RaylibShaderMode<'a, '_, T> {
@@ -340,6 +350,7 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibShaderMode<'a, '_, T> {
     }
 }
 
+/// Extension trait providing custom shader mode entry on draw handles.
 pub trait RaylibShaderModeExt
 where
     Self: Sized,
@@ -375,6 +386,7 @@ impl<'a, T: 'a> RaylibDraw3D for RaylibShaderMode<'a, '_, T> {}
 
 // Blend Mode
 
+/// RAII draw handle for a blend mode scope — calls `EndBlendMode` on drop.
 pub struct RaylibBlendMode<'a, T: 'a>(&'a mut T);
 impl<'a, T: 'a> Drop for RaylibBlendMode<'a, T> {
     fn drop(&mut self) {
@@ -394,6 +406,7 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibBlendMode<'a, T> {
     }
 }
 
+/// Extension trait providing blend mode entry on draw handles.
 pub trait RaylibBlendModeExt
 where
     Self: Sized,
@@ -429,6 +442,7 @@ impl<'a, T: 'a> RaylibDraw3D for RaylibBlendMode<'a, T> {}
 
 // Scissor Mode stuff
 
+/// RAII draw handle for a scissor (clipping rectangle) mode — calls `EndScissorMode` on drop.
 pub struct RaylibScissorMode<'a, T: 'a>(&'a mut T);
 impl<'a, T: 'a> Drop for RaylibScissorMode<'a, T> {
     fn drop(&mut self) {
@@ -448,6 +462,7 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibScissorMode<'a, T> {
     }
 }
 
+/// Extension trait providing scissor mode entry on draw handles.
 pub trait RaylibScissorModeExt
 where
     Self: Sized,
@@ -489,6 +504,7 @@ impl<'a, T: 'a + RaylibDraw3D> RaylibDraw3D for RaylibScissorMode<'a, T> {}
 
 // Actual drawing functions
 
+/// Drawing methods available within an active drawing or mode block (2D shapes, textures, text).
 pub trait RaylibDraw {
     /// Sets background color (framebuffer clear color.into()).
     #[inline]
@@ -1605,6 +1621,7 @@ pub trait RaylibDraw {
     }
 }
 
+/// Drawing methods available within an active 3D camera mode block.
 pub trait RaylibDraw3D {
     /// Draw a point in 3D space, actually a small line
     #[allow(non_snake_case)]

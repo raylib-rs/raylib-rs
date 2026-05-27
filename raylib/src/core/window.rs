@@ -12,14 +12,21 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MonitorInfo {
+    /// Monitor width in pixels (virtual/logical).
     pub width: i32,
+    /// Monitor height in pixels (virtual/logical).
     pub height: i32,
+    /// Monitor physical width in millimetres.
     pub physical_width: i32,
+    /// Monitor physical height in millimetres.
     pub physical_height: i32,
+    /// Monitor name reported by the OS.
     pub name: String,
+    /// Monitor position on the virtual desktop.
     pub position: Vector2,
 }
 
+/// Bitmask of [`ffi::ConfigFlags`] representing the current or desired window state.
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct WindowState(i32);

@@ -101,39 +101,49 @@ impl Tween {
     }
 }
 
+/// Linear interpolation with no easing phase — constant rate from `b` over `c` at time `t` of duration `d`.
 pub fn linear_none(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+/// Linear ease-in interpolation — constant rate from `b` over `c` at time `t` of duration `d`.
 pub fn linear_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+/// Linear ease-out interpolation — constant rate from `b` over `c` at time `t` of duration `d`.
 pub fn linear_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+/// Linear ease-in-out interpolation — constant rate from `b` over `c` at time `t` of duration `d`.
 pub fn linear_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
 
+/// Sine ease-in interpolation — slow start, from `b` over `c` at time `t` of duration `d`.
 pub fn sine_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     -c * (t / d * (PI / 2.0)).cos() + c + b
 }
+/// Sine ease-out interpolation — slow end, from `b` over `c` at time `t` of duration `d`.
 pub fn sine_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * (t / d * (PI / 2.0)).sin() + b
 }
+/// Sine ease-in-out interpolation — slow start and end, from `b` over `c` at time `t` of duration `d`.
 pub fn sine_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     -c / 2.0 * ((PI * t / d).cos() - 1.0) + b
 }
 
+/// Circular ease-in interpolation — accelerates from zero using a circular arc, from `b` over `c` at time `t` of duration `d`.
 pub fn circ_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     -c * ((1.0 - td * td).sqrt() - 1.0) + b
 }
 
+/// Circular ease-out interpolation — decelerates to zero using a circular arc, from `b` over `c` at time `t` of duration `d`.
 pub fn circ_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d - 1.0;
     c * (1.0 - td * td).sqrt() + b
 }
 
+/// Circular ease-in-out interpolation — slow start and end using a circular arc, from `b` over `c` at time `t` of duration `d`.
 pub fn circ_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
     if td < 1.0 {
@@ -144,16 +154,19 @@ pub fn circ_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Cubic ease-in interpolation — accelerates from zero using a cubic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn cubic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     c * td * td * td + b
 }
 
+/// Cubic ease-out interpolation — decelerates to zero using a cubic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn cubic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d - 1.0;
     c * (td * td * td + 1.0) + b
 }
 
+/// Cubic ease-in-out interpolation — slow start and end using a cubic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn cubic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
     if td < 1.0 {
@@ -164,16 +177,19 @@ pub fn cubic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Quadratic ease-in interpolation — accelerates from zero using a quadratic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn quad_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     c * td * td + b
 }
 
+/// Quadratic ease-out interpolation — decelerates to zero using a quadratic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn quad_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     -c * td * (td - 2.0) + b
 }
 
+/// Quadratic ease-in-out interpolation — slow start and end using a quadratic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn quad_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / (d / 2.0);
     if td < 1.0 {
@@ -183,6 +199,7 @@ pub fn quad_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Exponential ease-in interpolation — accelerates from zero using a base-2 exponential, from `b` over `c` at time `t` of duration `d`.
 pub fn expo_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == 0.0 {
         b
@@ -191,6 +208,7 @@ pub fn expo_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Exponential ease-out interpolation — decelerates to zero using a base-2 exponential, from `b` over `c` at time `t` of duration `d`.
 pub fn expo_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == d {
         b + c
@@ -199,6 +217,7 @@ pub fn expo_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Exponential ease-in-out interpolation — slow start and end using a base-2 exponential, from `b` over `c` at time `t` of duration `d`.
 pub fn expo_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == 0.0 {
         return b;
@@ -214,18 +233,21 @@ pub fn expo_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Back ease-in interpolation — overshoots slightly before moving forward, from `b` over `c` at time `t` of duration `d`.
 pub fn back_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let s = 1.70158f32;
     let postfix = t / d;
     c * postfix * postfix * ((s + 1.0) * postfix - s) + b
 }
 
+/// Back ease-out interpolation — overshoots past the target before settling, from `b` over `c` at time `t` of duration `d`.
 pub fn back_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let s = 1.70158f32;
     let td = t / d - 1.0;
     c * (td * td * ((s + 1.0) * td + s) + 1.0) + b
 }
 
+/// Back ease-in-out interpolation — overshoots at both ends, from `b` over `c` at time `t` of duration `d`.
 pub fn back_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut s = 1.70158f32;
     let td = t / (d / 2.0);
@@ -239,6 +261,7 @@ pub fn back_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Bounce ease-out interpolation — decelerates with bouncing at the end, from `b` over `c` at time `t` of duration `d`.
 pub fn bounce_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / d;
     if td < (1.0 / 2.75) {
@@ -255,10 +278,12 @@ pub fn bounce_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Bounce ease-in interpolation — accelerates with bouncing at the start, from `b` over `c` at time `t` of duration `d`.
 pub fn bounce_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c - bounce_out(d - t, 0.0, c, d) + b
 }
 
+/// Bounce ease-in-out interpolation — bounces at both start and end, from `b` over `c` at time `t` of duration `d`.
 pub fn bounce_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t < (d / 2.0) {
         (bounce_in(t * 2.0, 0.0, c, d) * 0.5) + b
@@ -267,6 +292,7 @@ pub fn bounce_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Elastic ease-in interpolation — accelerates with a spring-like oscillation at the start, from `b` over `c` at time `t` of duration `d`.
 pub fn elastic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / d;
 
@@ -284,6 +310,7 @@ pub fn elastic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Elastic ease-out interpolation — decelerates with a spring-like oscillation at the end, from `b` over `c` at time `t` of duration `d`.
 pub fn elastic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
 
@@ -299,6 +326,7 @@ pub fn elastic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Elastic ease-in-out interpolation — spring-like oscillation at both ends, from `b` over `c` at time `t` of duration `d`.
 pub fn elastic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
 

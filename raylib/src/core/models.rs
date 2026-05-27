@@ -269,6 +269,7 @@ impl Model {
     }
 }
 
+/// Methods for querying and mutating a loaded 3D model's meshes, materials, bones, and transform.
 pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     #[inline]
     #[must_use]
@@ -277,6 +278,7 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
         unsafe { std::mem::transmute(&self.as_ref().transform) }
     }
 
+    /// Sets the model's local transform matrix.
     #[inline]
     fn set_transform(&mut self, mat: &Matrix) {
         self.as_mut().transform = *mat;
@@ -293,7 +295,7 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
             )
         }
     }
-    // Meshes array
+    /// Meshes array (mutable)
     #[inline]
     #[must_use]
     fn meshes_mut(&mut self) -> &mut [WeakMesh] {
@@ -431,6 +433,7 @@ impl Mesh {
         m
     }
 }
+/// Methods for querying and mutating mesh vertex data, uploading to GPU, and generating mesh shapes.
 pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// Upload mesh vertex data in GPU and provide VAO/VBO ids
     ///
@@ -782,6 +785,7 @@ impl Material {
 impl RaylibMaterial for WeakMaterial {}
 impl RaylibMaterial for Material {}
 
+/// Methods for querying and mutating a material's shader, texture maps, and validity.
 pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     /// Material shader
     #[must_use]
@@ -838,6 +842,7 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     }
 }
 
+/// An iterator over the per-frame bone transform slices of a model animation (immutable).
 #[derive(Debug, Clone)]
 pub struct FramePoseIter<'a> {
     iter: std::slice::Iter<'a, Option<&'a [Transform]>>,
@@ -915,6 +920,7 @@ impl ExactSizeIterator for FramePoseIter<'_> {
         self.iter.len()
     }
 }
+/// An iterator over the per-frame bone transform slices of a model animation (mutable).
 #[derive(Debug)]
 pub struct FramePoseIterMut<'a> {
     iter: std::slice::IterMut<'a, Option<&'a mut [Transform]>>,
@@ -1011,6 +1017,7 @@ impl ModelAnimation {
     }
 }
 
+/// Methods for accessing keyframe pose data from a model animation.
 pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAnimation> {
     #[must_use]
     /// Poses array by frame
@@ -1029,6 +1036,7 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
 
         top
     }
+    /// Returns an iterator over each frame's bone transform slice (immutable).
     #[must_use]
     fn frame_poses_iter(&self) -> FramePoseIter<'_> {
         let anim = self.as_ref();
@@ -1058,6 +1066,7 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
 
         top
     }
+    /// Returns an iterator over each frame's bone transform slice (mutable).
     #[must_use]
     fn frame_poses_iter_mut(&mut self) -> FramePoseIterMut<'_> {
         let anim = self.as_ref();
@@ -1151,6 +1160,7 @@ impl RaylibHandle {
     }
 }
 
+/// Builder for constructing a custom [`Mesh`] from vertex data before uploading to the GPU.
 #[derive(Debug, Clone)]
 #[must_use]
 pub struct MeshBuilder<'a> {

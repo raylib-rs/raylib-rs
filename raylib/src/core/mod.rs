@@ -2,16 +2,20 @@
 mod macros;
 
 pub mod audio;
+/// Automation event recording and playback.
 pub mod automation;
+/// Custom callback hooks for audio streams and logging.
 pub mod callbacks;
 #[cfg(not(feature = "nobuild"))]
 pub mod camera;
 
 pub mod collision;
+/// Color type and color-manipulation helpers, re-exporting [`crate::ffi::Color`].
 pub mod color {
     #[allow(unused_imports)]
     pub use crate::ffi::Color;
 }
+/// Low-level data utilities (compression, encoding, hashing).
 pub mod data;
 pub mod databuf;
 pub mod drawing;
@@ -162,6 +166,7 @@ use std::ffi::CString;
 use std::marker::PhantomData;
 
 // shamelessly stolen from imgui
+/// Create a `&CStr` literal at compile time, or a `CString` from a format string, avoiding per-frame heap allocations in GUI draw calls.
 #[macro_export]
 macro_rules! rstr {
     ($e:tt) => ({
