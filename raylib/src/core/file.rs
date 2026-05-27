@@ -27,7 +27,6 @@ impl<'a> FilePathIter<'a> {
     ///     ];
     ///     let mut list = ManuallyDrop::new(unsafe {
     ///         FilePathList::from_raw(ffi::FilePathList {
-    ///             capacity: 1,
     ///             count: 1,
     ///             paths: paths.as_mut_ptr(),
     ///         })
@@ -49,7 +48,6 @@ impl<'a> FilePathIter<'a> {
     /// ];
     /// let mut list = ManuallyDrop::new(unsafe {
     ///     FilePathList::from_raw(ffi::FilePathList {
-    ///         capacity: 1,
     ///         count: 1,
     ///         paths: paths.as_mut_ptr(),
     ///     })
@@ -130,11 +128,6 @@ impl FilePathList {
     pub const fn count(&self) -> u32 {
         self.0.count
     }
-    /// The amount of files that can be held in this list.
-    #[inline]
-    pub const fn capacity(&self) -> u32 {
-        self.0.capacity
-    }
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
     pub fn paths(&self) -> Vec<&str> {
@@ -154,11 +147,6 @@ impl DroppedFilePathList {
     #[inline]
     pub const fn count(&self) -> u32 {
         self.0.count
-    }
-    /// The amount of files that can be held in this list.
-    #[inline]
-    pub const fn capacity(&self) -> u32 {
-        self.0.capacity
     }
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
@@ -275,7 +263,6 @@ mod tests {
     #[should_panic(expected = "file path array cannot be null")]
     fn test_null_list() {
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 0,
             count: 0,
             paths: std::ptr::null_mut(),
         }));
@@ -288,7 +275,6 @@ mod tests {
     fn test_null_item() {
         let mut paths = [std::ptr::null_mut()];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 1,
             count: 1,
             paths: paths.as_mut_ptr(),
         }));
@@ -302,7 +288,6 @@ mod tests {
     fn test_null_item_double_ended() {
         let mut paths = [std::ptr::null_mut()];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 1,
             count: 1,
             paths: paths.as_mut_ptr(),
         }));
@@ -336,7 +321,6 @@ mod tests {
                 .cast_mut(),
         ];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 5,
             count: 5,
             paths: paths.as_mut_ptr(),
         }));
@@ -380,7 +364,6 @@ mod tests {
                 .cast_mut(),
         ];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 5,
             count: 5,
             paths: paths.as_mut_ptr(),
         }));
