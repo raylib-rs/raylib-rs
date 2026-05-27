@@ -35,15 +35,15 @@ impl From<ffi::Camera2D> for Camera2D {
     }
 }
 
-impl Into<ffi::Camera2D> for Camera2D {
-    fn into(self) -> ffi::Camera2D {
-        unsafe { std::mem::transmute(self) }
+impl From<Camera2D> for ffi::Camera2D {
+    fn from(v: Camera2D) -> Self {
+        unsafe { std::mem::transmute(v) }
     }
 }
 
-impl Into<ffi::Camera2D> for &Camera2D {
-    fn into(self) -> ffi::Camera2D {
-        unsafe { std::mem::transmute(*self) }
+impl From<&Camera2D> for ffi::Camera2D {
+    fn from(v: &Camera2D) -> Self {
+        unsafe { std::mem::transmute(*v) }
     }
 }
 
@@ -71,21 +71,21 @@ impl From<ffi::Camera3D> for Camera3D {
     }
 }
 
-impl Into<ffi::Camera3D> for Camera3D {
-    fn into(self) -> ffi::Camera3D {
-        unsafe { std::mem::transmute(self) }
+impl From<Camera3D> for ffi::Camera3D {
+    fn from(v: Camera3D) -> Self {
+        unsafe { std::mem::transmute(v) }
     }
 }
 
-impl Into<ffi::Camera3D> for &Camera3D {
-    fn into(self) -> ffi::Camera3D {
-        unsafe { std::mem::transmute(*self) }
+impl From<&Camera3D> for ffi::Camera3D {
+    fn from(v: &Camera3D) -> Self {
+        unsafe { std::mem::transmute(*v) }
     }
 }
 
-impl Into<ffi::Camera3D> for &mut Camera3D {
-    fn into(self) -> ffi::Camera3D {
-        unsafe { std::mem::transmute(*self) }
+impl From<&mut Camera3D> for ffi::Camera3D {
+    fn from(v: &mut Camera3D) -> Self {
+        unsafe { std::mem::transmute(*v) }
     }
 }
 impl From<&mut Camera3D> for *mut ffi::Camera3D {
