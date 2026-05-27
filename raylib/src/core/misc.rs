@@ -40,6 +40,7 @@ impl<'a> IntoIterator for RandomSequence<'a> {
         RandSeqIterator(self, 0)
     }
 }
+/// An iterator that walks a [`RandomSequence`] in order, yielding each `i32` value once.
 pub struct RandSeqIterator<'a>(RandomSequence<'a>, usize);
 
 impl Iterator for RandSeqIterator<'_> {
@@ -110,8 +111,9 @@ impl RaylibHandle {
     }
 }
 
-// lossy conversion to an f32
+/// Lossy conversion of a numeric primitive to `f32`.
 pub trait AsF32: Copy {
+    /// Convert this value to an `f32`, potentially with precision loss.
     fn as_f32(self) -> f32;
 }
 

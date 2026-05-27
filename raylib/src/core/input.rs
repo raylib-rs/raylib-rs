@@ -392,6 +392,7 @@ impl RaylibHandle {
     }
 }
 
+/// Convert a raw integer keycode into a typed [`KeyboardKey`](crate::consts::KeyboardKey), returning `None` for unknown values.
 #[must_use]
 pub fn key_from_i32(key: i32) -> Option<crate::consts::KeyboardKey> {
     use crate::consts::KeyboardKey::*;

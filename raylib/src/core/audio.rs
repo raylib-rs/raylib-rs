@@ -41,6 +41,7 @@ make_thin_wrapper_lifetime!(
     ffi::UnloadAudioStream
 );
 
+/// Owned buffer of decoded PCM samples for a [`Wave`], freed via `UnloadWaveSamples` on drop.
 pub struct WaveSamples(*mut f32, usize);
 
 impl AsRef<[f32]> for WaveSamples {
@@ -751,4 +752,5 @@ impl<'bind> Sound<'bind> {
     }
 }
 
+/// A lightweight alias handle to a [`Sound`] that shares the same audio buffer without owning it.
 pub struct SoundAlias<'snd, 'bind>(ffi::Sound, PhantomData<&'snd Sound<'bind>>);

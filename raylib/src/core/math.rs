@@ -76,6 +76,7 @@ impl From<&Ray> for ffi::Ray {
 }
 
 impl Ray {
+    /// Constructs a new `Ray` with the given origin `position` and `direction`.
     #[must_use]
     #[inline]
     pub const fn new(position: Vector3, direction: Vector3) -> Self {
@@ -86,6 +87,7 @@ impl Ray {
     }
 }
 
+/// Axis-aligned 2D rectangle defined by its top-left position and dimensions; re-exported from `raylib-sys`.
 pub type Rectangle = ffi::Rectangle;
 
 optional_serde_struct! {
@@ -99,6 +101,7 @@ optional_serde_struct! {
 }
 
 impl BoundingBox {
+    /// Constructs a new `BoundingBox` from its minimum and maximum corner vertices.
     #[must_use]
     #[inline]
     pub fn new(min: Vector3, max: Vector3) -> BoundingBox {

@@ -60,6 +60,7 @@ where
     Ok(())
 }
 
+/// Remove any previously registered audio stream callback from the given [`AudioStream`] and free its state.
 pub fn unset_audio_stream_callback(stream: &AudioStream) {
     unsafe { ffi::SetAudioStreamCallback(stream.0, None) }
     let raw_ptr_for_callback = AUDIO_STREAM_CALLBACK_SLOT.swap(null_mut(), Ordering::AcqRel);

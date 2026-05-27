@@ -27,6 +27,7 @@ make_thin_wrapper!(
     no_drop
 );
 
+/// An owned slice of [`GlyphInfo`] data allocated by raylib, freed via `UnloadFontData` on drop.
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct RSliceGlyphInfo(pub(crate) std::mem::ManuallyDrop<std::boxed::Box<[GlyphInfo]>>);
@@ -287,6 +288,7 @@ impl RaylibHandle {
 impl RaylibFont for WeakFont {}
 impl RaylibFont for Font {}
 
+/// Extension methods for types that wrap a raylib `Font` (both owned [`Font`] and [`WeakFont`]).
 pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     /// Base size (default chars height)
     #[inline]
@@ -370,6 +372,7 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
 }
 
 impl Font {
+    /// Converts this `Font` into a [`WeakFont`] that does not run `UnloadFont` on drop.
     #[inline]
     #[must_use]
     pub fn make_weak(self) -> WeakFont {

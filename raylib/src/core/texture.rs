@@ -151,6 +151,7 @@ impl RenderTexture2D {
     }
 }
 
+/// Extension methods for types that wrap a raylib `RenderTexture2D` (both owned and weak variants).
 pub trait RaylibRenderTexture2D: AsRef<ffi::RenderTexture2D> + AsMut<ffi::RenderTexture2D> {
     /// OpenGL framebuffer object id
     #[inline]
@@ -984,7 +985,7 @@ impl Image {
         }
     }
 
-    // Generates an image with text
+    /// Generates an image with the given `text` rendered at the specified pixel dimensions.
     #[must_use]
     #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_text(width: i32, height: i32, text: &str) -> Image {
@@ -1145,6 +1146,7 @@ impl Texture2D {
     }
 }
 
+/// Extension methods for types that wrap a raylib `Texture2D` (both owned [`Texture2D`] and [`WeakTexture2D`]).
 pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     /// Texture base width
     #[inline]

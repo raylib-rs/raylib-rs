@@ -102,7 +102,9 @@ impl RaylibHandle {
     }
 }
 
+/// A Rust value that can be uploaded as a shader uniform variable.
 pub trait ShaderV {
+    /// The raylib [`ShaderUniformDataType`] that corresponds to this Rust type.
     const UNIFORM_TYPE: ShaderUniformDataType;
     /// Returns a raw pointer to the shader value for use in FFI calls.
     ///
@@ -280,6 +282,7 @@ impl Shader {
 impl RaylibShader for WeakShader {}
 impl RaylibShader for Shader {}
 
+/// Extension methods for types that wrap a raylib `Shader` (both owned [`Shader`] and [`WeakShader`]).
 pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]

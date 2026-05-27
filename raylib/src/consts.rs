@@ -21,7 +21,9 @@ pub use ffi::TextureFilter;
 pub use ffi::TextureWrap;
 pub use ffi::TraceLogLevel;
 // TODO Fix when rlgl bindings are in
+/// Maximum number of material maps per `Material` (matches `MAX_MATERIAL_MAPS` in raylib's `config.h`).
 pub const MAX_MATERIAL_MAPS: u32 = 12;
+/// Maximum number of shader locations tracked per `Shader` (matches `RL_MAX_SHADER_LOCATIONS`).
 pub const MAX_SHADER_LOCATIONS: u32 = 32;
 
 pub use ffi::MouseCursor;

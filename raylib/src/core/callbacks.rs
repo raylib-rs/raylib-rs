@@ -12,6 +12,7 @@ use std::{
     slice::from_raw_parts_mut,
     sync::atomic::{AtomicUsize, Ordering},
 };
+/// Low-level per-stream audio callback registration for [`AudioStream`].
 pub mod audio_stream_callback;
 mod stream_processor_with_user_data_wrapper;
 use super::audio::Music;
@@ -121,6 +122,7 @@ extern "C" fn custom_load_file_text_callback(a: *const c_char) -> *mut c_char {
     oh.as_ptr() as *mut c_char
 }
 
+/// Error returned when a callback registration fails because a callback of that type is already set.
 #[derive(Debug)]
 pub struct SetLogError<'a>(&'a str);
 
@@ -271,6 +273,7 @@ where
 
 // endregion: -- AudioStreamProcessorCallback --
 
+/// Attach an audio stream processor closure to a [`Music`] stream, returning a pinned guard that detaches on drop.
 pub fn attach_audio_stream_processor_to_music<'a, F>(
     music: &'a Music<'a>,
     processor: &'a mut F,

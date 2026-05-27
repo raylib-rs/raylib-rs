@@ -4,6 +4,7 @@ use crate::ffi;
 use crate::core::RaylibHandle;
 use std::ffi::{CStr, CString, OsString, c_char};
 
+/// An iterator over the file paths stored in a [`FilePathList`].
 #[derive(Debug, Clone)]
 pub struct FilePathIter<'a> {
     iter: std::slice::Iter<'a, Option<&'a c_char>>,

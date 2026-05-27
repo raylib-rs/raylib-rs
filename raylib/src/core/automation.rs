@@ -6,6 +6,7 @@ use std::{
 
 use crate::{RaylibHandle, ffi};
 
+/// An iterator over the [`ffi::AutomationEvent`] entries in a loaded automation event list.
 #[derive(Debug, Clone)]
 pub struct AutomationEventIter<'a> {
     iter: std::slice::Iter<'a, ffi::AutomationEvent>,

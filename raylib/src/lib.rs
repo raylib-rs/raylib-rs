@@ -57,6 +57,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 #![allow(dead_code)]
 #![warn(missing_docs)]
 pub mod consts;
+/// Core raylib functionality — window, drawing, input, audio, and other subsystems.
 pub mod core;
 pub mod ease;
 pub mod prelude;
