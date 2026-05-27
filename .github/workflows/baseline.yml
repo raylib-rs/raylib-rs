@@ -95,9 +95,10 @@ jobs:
       # `raylib` crate compiles all five SUPPORT_MODULE_* modules, so the test
       # binary references rshapes/rtextures/rtext/rmodels/raudio symbols and they
       # must all be enabled or it fails to link (notably on the MSVC linker).
-      # SUPPORT_IMAGE_GENERATION is required because texture.rs exposes
-      # gen_image_perlin_noise / gen_image_text unconditionally in Rust; without
-      # this flag the C symbols are omitted from raylib.lib and the MSVC linker
-      # errors on LNK2019 (GNU/Mach-O linkers are more permissive with dead code).
+      # SUPPORT_IMAGE_GENERATION is included for image-gen coverage; as of WS5a the
+      # gen_image_* fns are cfg-gated behind it, so it is no longer required to link.
       - name: Tier-2 headless render tests
         run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION --test render_shapes --test render_text -- --test-threads=1
+      # Tier-2 render test for raygui controls (adds the raygui feature).
+      - name: Tier-2 raygui render tests
+        run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,raygui --test render_gui -- --test-threads=1

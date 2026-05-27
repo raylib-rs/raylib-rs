@@ -760,9 +760,11 @@ Legend: `[x]` wrapped · `[~]` intentionally skipped (Rust std / see reason) · 
 
 ## raygui.h — RAYGUIAPI surface
 
-_Raygui parity is tracked here for visibility; full raygui work is WS5._
+_Raygui parity completed in WS5a (broad rework: `impl AsRef<str>` + scratch-buffer convention, module split into grouped sub-traits)._
 
-_48 implemented · 0 wont-impl · 9 TODO of 57 RAYGUIAPI fns._
+_57 implemented · 0 wont-impl · 0 TODO of 57 RAYGUIAPI fns._
+
+_Deferred: `GuiLoadStyleFromMemory` (PR #296) — the symbol is absent from the vendored `raylib-sys/binding/raygui.h`; revisit when the vendored raygui advances (per `inventory.md`)._
 
 ### Global gui state control functions
 
@@ -799,10 +801,10 @@ _48 implemented · 0 wont-impl · 9 TODO of 57 RAYGUIAPI fns._
 ### Icons functionality
 
 - [x] `GuiIconText`
-- [ ] `GuiSetIconScale`
-- [ ] `GuiGetIcons`
-- [ ] `GuiLoadIcons`
-- [ ] `GuiDrawIcon`
+- [x] `GuiSetIconScale`
+- [x] `GuiGetIcons` — raw `*mut c_uint` via `gui_get_icons_raw` (`unsafe`, `# Safety`); safe abstraction deferred
+- [x] `GuiLoadIcons` — raw `*mut *mut c_char` via `gui_load_icons_raw` (`unsafe`, `# Safety`); safe abstraction deferred
+- [x] `GuiDrawIcon`
 
 ### Container/separator controls, useful for controls organization
 
@@ -810,7 +812,7 @@ _48 implemented · 0 wont-impl · 9 TODO of 57 RAYGUIAPI fns._
 - [x] `GuiGroupBox`
 - [x] `GuiLine`
 - [x] `GuiPanel`
-- [ ] `GuiTabBar`
+- [x] `GuiTabBar`
 - [x] `GuiScrollPanel`
 
 ### Basic controls set
@@ -826,7 +828,7 @@ _48 implemented · 0 wont-impl · 9 TODO of 57 RAYGUIAPI fns._
 - [x] `GuiDropdownBox`
 - [x] `GuiSpinner`
 - [x] `GuiValueBox`
-- [ ] `GuiValueBoxFloat`
+- [x] `GuiValueBoxFloat`
 - [x] `GuiTextBox`
 - [x] `GuiSlider`
 - [x] `GuiSliderBar`
@@ -842,8 +844,8 @@ _48 implemented · 0 wont-impl · 9 TODO of 57 RAYGUIAPI fns._
 - [x] `GuiMessageBox`
 - [x] `GuiTextInputBox`
 - [x] `GuiColorPicker`
-- [ ] `GuiColorPanel`
+- [x] `GuiColorPanel`
 - [x] `GuiColorBarAlpha`
 - [x] `GuiColorBarHue`
-- [ ] `GuiColorPickerHSV`
-- [ ] `GuiColorPanelHSV`
+- [x] `GuiColorPickerHSV`
+- [x] `GuiColorPanelHSV`
