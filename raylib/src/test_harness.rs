@@ -40,10 +40,9 @@ pub fn with_headless<F: FnOnce(&mut RaylibHandle, &RaylibThread)>(w: i32, h: i32
 /// `EndDrawing`-on-drop flushes rlsw into the memory framebuffer before
 /// [`load_image_from_screen`](RaylibHandle::load_image_from_screen) reads it.
 ///
-/// Uses the scoped [`begin_drawing`](RaylibHandle::begin_drawing) handle rather
-/// than the closure-form [`draw`](RaylibHandle::draw): wrapping `draw` in a
-/// generic helper would require a higher-ranked closure bound, and the explicit
-/// scope keeps the "flush before readback" ordering visible.
+/// Uses the scoped [`begin_drawing`](RaylibHandle::begin_drawing) handle so the
+/// `EndDrawing` flush on drop is guaranteed to complete before the readback on
+/// the line below.
 #[inline]
 #[must_use]
 pub fn render_frame<F: FnOnce(&mut RaylibDrawHandle<'_>)>(
@@ -61,8 +60,11 @@ pub fn render_frame<F: FnOnce(&mut RaylibDrawHandle<'_>)>(
 /// A single RGBA pixel read from a framebuffer [`Image`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Px {
+    /// Red channel.
     pub r: u8,
+    /// Green channel.
     pub g: u8,
+    /// Blue channel.
     pub b: u8,
     /// Alpha as reported by the framebuffer. On the Memory platform this may
     /// not match the drawn `Color`'s alpha, so [`assert_pixel`] ignores it;
