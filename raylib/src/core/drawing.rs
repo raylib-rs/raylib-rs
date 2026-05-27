@@ -678,11 +678,19 @@ pub trait RaylibDraw {
         center_x: i32,
         center_y: i32,
         radius: f32,
-        color1: impl Into<ffi::Color>,
-        color2: impl Into<ffi::Color>,
+        inner: impl Into<ffi::Color>,
+        outer: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::DrawCircleGradient(center_x, center_y, radius, color1.into(), color2.into());
+            ffi::DrawCircleGradient(
+                Vector2 {
+                    x: center_x as f32,
+                    y: center_y as f32,
+                },
+                radius,
+                inner.into(),
+                outer.into(),
+            );
         }
     }
 
