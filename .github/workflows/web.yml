@@ -37,5 +37,8 @@ jobs:
         run: cargo build -p raylib-sys --target wasm32-unknown-emscripten
       - name: Build raylib (wasm)
         run: cargo build -p raylib --target wasm32-unknown-emscripten
-      - name: Build raylib (wasm, software_renderer)
-        run: cargo build -p raylib --target wasm32-unknown-emscripten --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT
+      # NOTE: software_renderer (Platform::Memory/rlsw) is a CPU-only headless path
+      # for desktop testing; it is mutually incompatible with wasm32-unknown-emscripten
+      # (platform_from_target returns Memory before the wasm check, so the cc-compiled
+      # C shims are built as native x86 objects and the bindgen sysroot is wrong).
+      # Headless wasm CI tests are not meaningful — wasm uses WebGL (GLES2), not rlsw.
