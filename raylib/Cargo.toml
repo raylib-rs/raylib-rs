@@ -48,6 +48,10 @@ nobuild = ["raylib-sys/nobuild"]
 # useful when bindgen doesn't generate correctly on esoteric platforms and need manual auidting
 nobindgen = ["raylib-sys/nobindgen"]
 
+# Headless CPU software renderer (raylib-sys PLATFORM=Memory). Mutually exclusive
+# with the opengl_* backends. Enables the WS4b headless render-test harness.
+software_renderer = ["raylib-sys/software_renderer"]
+
 # opengl stuff
 opengl_11 = ["raylib-sys/opengl_11"]       # buggy? might not work with wayland
 opengl_21 = ["raylib-sys/opengl_21"]
