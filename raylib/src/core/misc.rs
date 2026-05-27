@@ -4,7 +4,7 @@ use crate::core::texture::Image;
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi;
 use std::ffi::CString;
-use std::ops::{Deref, DerefMut, Range};
+use std::ops::{Deref, DerefMut, Range, RangeInclusive};
 use std::usize;
 
 /// Struct for holding the result of RaylibHandle::load_random_sequence.
@@ -102,8 +102,8 @@ impl RaylibHandle {
     ///     let r = rl.get_random_value(0, 10);
     ///     println!("random value: {}", r);
     /// }
-    pub fn get_random_value<T: From<i32>>(&self, num: Range<i32>) -> T {
-        unsafe { (ffi::GetRandomValue(num.start, num.end.into()) as i32).into() }
+    pub fn get_random_value<T: From<i32>>(&self, num: RangeInclusive<i32>) -> T {
+        unsafe { (ffi::GetRandomValue(*num.start(), *num.end()) as i32).into() }
     }
 
     /// Set the seed for random number generation
