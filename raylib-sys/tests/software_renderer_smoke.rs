@@ -24,7 +24,12 @@ fn memory_platform_inits_and_reads_back() {
         assert_eq!(GetScreenHeight(), 240);
 
         BeginDrawing();
-        ClearBackground(Color { r: 255, g: 0, b: 0, a: 255 });
+        ClearBackground(Color {
+            r: 255,
+            g: 0,
+            b: 0,
+            a: 255,
+        });
         EndDrawing();
 
         let img = LoadImageFromScreen();

@@ -632,8 +632,16 @@ fn features_from_env(cmake: &mut Config) {
     cmake.define("WITH_PIC", bstr(cfg!(feature = "WITH_PIC")));
     cmake.define("BUILD_SHARED_LIBS", bstr(cfg!(feature = "BUILD_SHARED_LIBS")));
     cmake.define("USE_EXTERNAL_GLFW", bstr(cfg!(feature = "USE_EXTERNAL_GLFW")));
+    // PLATFORM=Memory neither builds nor links GLFW, but raylib's top-level CMake still
+    // FATAL_ERRORs on Linux ("Cannot disable both Wayland and X11") for any non-DRM/non-Web
+    // platform when both GLFW backends are off. Force X11 on under software_renderer to
+    // satisfy that guard — the GLFW X11 backend is not compiled for the Memory platform.
+    let force_x11 = cfg!(feature = "software_renderer");
     cmake.define("GLFW_BUILD_WAYLAND", bstr(cfg!(feature = "GLFW_BUILD_WAYLAND") && !is_android));
-    cmake.define("GLFW_BUILD_X11", bstr(cfg!(feature = "GLFW_BUILD_X11") && !is_android));
+    cmake.define(
+        "GLFW_BUILD_X11",
+        bstr((cfg!(feature = "GLFW_BUILD_X11") || force_x11) && !is_android),
+    );
     cmake.define("INCLUDE_EVERYTHING", bstr(cfg!(feature = "INCLUDE_EVERYTHING")));
     cmake.define("USE_AUDIO", bstr(cfg!(feature = "USE_AUDIO")));
     cmake.define("SUPPORT_MODULE_RSHAPES", bstr(cfg!(feature = "SUPPORT_MODULE_RSHAPES")));
