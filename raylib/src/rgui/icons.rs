@@ -53,7 +53,9 @@ pub trait RaylibGuiIcons {
     /// # Safety
     /// Ownership and length of the returned `char**` follow raygui's contract
     /// (RAYGUI_ICON_MAX_ICONS entries); the caller is responsible for freeing it
-    /// per raygui. Prefer not to use unless porting raygui icon tooling.
+    /// per raygui. Prefer not to use unless porting raygui icon tooling. `file_name`
+    /// is passed via the thread-local scratch buffer and is only valid for the
+    /// synchronous duration of this call (raygui opens it immediately with `fopen`).
     #[inline]
     unsafe fn gui_load_icons_raw(
         &mut self,

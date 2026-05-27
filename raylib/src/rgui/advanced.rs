@@ -65,11 +65,12 @@ pub trait RaylibGuiAdvanced {
         text_max_size: i32,
         secret_view_active: &mut bool,
     ) -> i32 {
-        text.reserve(text_max_size as usize);
         // title/message/buttons must all stay valid across the C call.
         let (t, m, b) = scratch_txt_three(title, message, buttons);
         let mut result = 0;
-        gui_edit_string(text, |ptr, cap| unsafe {
+        // GuiTextInputBox honors the `cap` (textMaxSize) we pass; ensure the buffer
+        // is at least `text_max_size` so the caller's requested edit room exists.
+        gui_edit_string(text, text_max_size.max(0) as usize, |ptr, cap| unsafe {
             result = ffi::GuiTextInputBox(bounds.into(), t, m, b, ptr, cap, secret_view_active);
             true
         });

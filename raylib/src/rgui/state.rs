@@ -1,7 +1,14 @@
 use crate::core::text::WeakFont;
 use crate::ffi;
-use crate::rgui::scratch::scratch_txt;
+use std::cell::RefCell;
 use std::ffi::CString;
+
+thread_local! {
+    /// Holds the current tooltip string. `GuiSetTooltip` stores the raw pointer and
+    /// dereferences it on later control draws, so the owning `CString` must outlive
+    /// the call — it lives here until the next `gui_set_tooltip` on this thread.
+    static TOOLTIP: RefCell<Option<CString>> = const { RefCell::new(None) };
+}
 
 /// raygui global state, style, font and tooltip controls. Implemented for the
 /// draw-handle types (call during drawing) and for [`RaylibHandle`] (call during
@@ -104,10 +111,20 @@ pub trait RaylibGuiState {
     fn gui_disable_tooltip(&mut self) {
         unsafe { ffi::GuiDisableTooltip() }
     }
-    /// Set tooltip string (per-frame text via the scratch buffer)
+    /// Set tooltip string. The string is retained until the next call, because
+    /// raygui stores the pointer and reads it on later control draws.
     #[inline]
     fn gui_set_tooltip(&mut self, tooltip: impl AsRef<str>) {
-        unsafe { ffi::GuiSetTooltip(scratch_txt(tooltip)) }
+        let c = CString::new(tooltip.as_ref()).unwrap_or_default();
+        TOOLTIP.with(|cell| {
+            let mut slot = cell.borrow_mut();
+            *slot = Some(c);
+            let ptr = slot.as_ref().unwrap().as_ptr();
+            // SAFETY: GuiSetTooltip stores `ptr` and dereferences it during later
+            // control draws; the owning CString is retained in TOOLTIP, so the
+            // pointer stays valid until the next gui_set_tooltip on this thread.
+            unsafe { ffi::GuiSetTooltip(ptr) };
+        });
     }
 }
 

@@ -190,7 +190,9 @@ pub trait RaylibGuiControls {
         buffer: &mut String,
         edit_mode: bool,
     ) -> bool {
-        gui_edit_string(buffer, |ptr, cap| unsafe {
+        // GuiTextBox honors the `cap` (textSize) we pass, so the caller's reserved
+        // capacity bounds editing; no extra minimum is required (0).
+        gui_edit_string(buffer, 0, |ptr, cap| unsafe {
             ffi::GuiTextBox(bounds.into(), ptr, cap, edit_mode) > 0
         })
     }
@@ -205,32 +207,57 @@ pub trait RaylibGuiControls {
         edit_mode: bool,
     ) -> bool {
         let label = scratch_txt(text);
-        gui_edit_string(text_value, |ptr, _cap| unsafe {
+        // GuiValueBoxFloat ignores any size and writes up to RAYGUI_VALUEBOX_MAX_CHARS
+        // (+ NUL), so the buffer MUST be at least that large to avoid an overrun.
+        gui_edit_string(text_value, RAYGUI_VALUEBOX_MAX_CHARS + 1, |ptr, _cap| unsafe {
             ffi::GuiValueBoxFloat(bounds.into(), label, ptr, value, edit_mode) > 0
         })
     }
 }
 
-/// Shared helper for the `&mut String` editable-buffer controls: null-terminate
-/// in place, hand C the buffer pointer + capacity, then truncate the String back
-/// to the C string's length. (Extracted from the duplicated logic that was in
-/// `gui_text_box` / `gui_text_input_box`.)
+/// Largest buffer `GuiValueBoxFloat` may write: it takes no size argument and is
+/// bounded internally by raygui's `RAYGUI_VALUEBOX_MAX_CHARS`, so callers must
+/// supply at least this many bytes + 1 for the NUL or C overruns the buffer.
+pub(crate) const RAYGUI_VALUEBOX_MAX_CHARS: usize = 32;
+
+/// Shared helper for the `&mut String` editable-buffer controls. Guarantees the
+/// backing buffer holds at least `min_capacity` bytes (and room for a NUL) and
+/// that its ENTIRE capacity is initialized, so C may edit in place up to that
+/// size and the result can be scanned back as bytes soundly. Hands C the pointer
+/// and capacity via `call`, then truncates the String to the resulting C string.
+/// (Extracted from the duplicated logic in `gui_text_box` / `gui_text_input_box`.)
 pub(crate) fn gui_edit_string(
     buffer: &mut String,
+    min_capacity: usize,
     call: impl FnOnce(*mut c_char, i32) -> bool,
 ) -> bool {
-    buffer.push('\0');
-    let (ptr, capacity) = (buffer.as_mut_ptr(), buffer.capacity());
-    let res = call(ptr as *mut c_char, capacity as i32);
-    let cap = buffer.capacity();
-    // SAFETY: viewing the String's buffer (incl. spare capacity) as bytes to find
-    // the C NUL terminator. NUL never appears inside a UTF-8 scalar, so the first
-    // 0 byte is the true end; we set_len to it. If absent, leave len unchanged.
-    let buf = unsafe { std::slice::from_raw_parts(buffer.as_ptr(), cap) };
-    if let Some(len) = buf.iter().position(|x| *x == b'\0') {
-        // SAFETY: `len` is the position of the first NUL byte; valid UTF-8 content
-        // ends there and the resulting length is within the buffer's allocated capacity.
-        unsafe { buffer.as_mut_vec().set_len(len) };
+    // Ensure capacity >= max(min_capacity, len + 1): room for the content plus a
+    // trailing NUL, and enough for controls (e.g. GuiValueBoxFloat) that write a
+    // fixed amount regardless of the size we pass.
+    let needed = min_capacity.max(buffer.len() + 1);
+    if buffer.capacity() < needed {
+        buffer.reserve(needed - buffer.len());
     }
+    let capacity = buffer.capacity();
+    // SAFETY: zero-fill the spare capacity (NUL is a valid UTF-8 byte) and grow the
+    // length to the full capacity, so [0..capacity] is entirely initialized and the
+    // String stays valid UTF-8 (original text followed by NUL bytes). This makes the
+    // post-call byte scan over the whole buffer sound; C then edits in place.
+    unsafe {
+        let v = buffer.as_mut_vec();
+        for slot in v.spare_capacity_mut() {
+            slot.write(0);
+        }
+        v.set_len(capacity);
+    }
+    let ptr = buffer.as_mut_ptr() as *mut c_char;
+    let res = call(ptr, capacity as i32);
+    // SAFETY: every byte in [0..capacity] was initialized above (and C only writes
+    // initialized bytes over it), so this shared byte view is sound.
+    let scanned = unsafe { std::slice::from_raw_parts(buffer.as_ptr(), capacity) };
+    let len = scanned.iter().position(|&b| b == 0).unwrap_or(capacity);
+    // SAFETY: `len <= capacity`; bytes [0..len] contain no NUL and are valid UTF-8
+    // as written originally or by raygui's (UTF-8 codepoint) text editing.
+    unsafe { buffer.as_mut_vec().set_len(len) };
     res
 }
