@@ -255,6 +255,7 @@ impl RaylibHandle {
         sdf: i32,
     ) -> Option<GlyphInfo> {
         unsafe {
+            let mut glyph_count: i32 = 0;
             let glyph_info = match chars {
                 Some(c) => {
                     let mut co = self.load_codepoints(c);
@@ -265,6 +266,7 @@ impl RaylibHandle {
                         co.0.as_mut_ptr(),
                         co.0.len().try_into().expect(TOO_MANY_CODEPOINTS),
                         sdf,
+                        &mut glyph_count,
                     )
                 }
                 None => ffi::LoadFontData(
@@ -274,6 +276,7 @@ impl RaylibHandle {
                     std::ptr::null_mut(),
                     0,
                     sdf,
+                    &mut glyph_count,
                 ),
             };
             if glyph_info.is_null() {
