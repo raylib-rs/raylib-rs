@@ -102,3 +102,6 @@ jobs:
       # Tier-2 render test for raygui controls (adds the raygui feature).
       - name: Tier-2 raygui render tests
         run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,raygui --test render_gui -- --test-threads=1
+      # Tier-2 render test for rlgl immediate-mode + matrix stack.
+      - name: Tier-2 rlgl render tests
+        run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION --test render_rlgl -- --test-threads=1
