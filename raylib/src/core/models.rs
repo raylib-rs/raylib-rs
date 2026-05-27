@@ -464,111 +464,174 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     #[must_use]
     fn vertices(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().vertices as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
+        let m = self.as_ref();
+        if m.vertices.is_null() || m.vertexCount == 0 {
+            return &[];
         }
+        // SAFETY: vertices is non-null, points to vertexCount * Vector3 (3 × f32),
+        // raylib-allocated and valid for the lifetime of this borrow.
+        unsafe { std::slice::from_raw_parts(m.vertices as *const Vector3, m.vertexCount as usize) }
     }
     /// Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
     #[inline]
     #[must_use]
     fn vertices_mut(&mut self) -> &mut [Vector3] {
+        let m = self.as_mut();
+        if m.vertices.is_null() || m.vertexCount == 0 {
+            return &mut [];
+        }
+        // SAFETY: vertices is non-null, exclusively borrowed, valid for vertexCount elements.
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().vertices as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
+            std::slice::from_raw_parts_mut(m.vertices as *mut Vector3, m.vertexCount as usize)
         }
     }
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
     #[must_use]
     fn normals(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().normals as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
+        let m = self.as_ref();
+        if m.normals.is_null() || m.vertexCount == 0 {
+            return &[];
         }
+        // SAFETY: normals is non-null, points to vertexCount * Vector3, valid for this borrow.
+        unsafe { std::slice::from_raw_parts(m.normals as *const Vector3, m.vertexCount as usize) }
     }
     /// Vertex normals (XYZ - 3 components per vertex) (shader-location = 2)
     #[inline]
     #[must_use]
     fn normals_mut(&mut self) -> &mut [Vector3] {
+        let m = self.as_mut();
+        if m.normals.is_null() || m.vertexCount == 0 {
+            return &mut [];
+        }
+        // SAFETY: normals is non-null, exclusively borrowed, valid for vertexCount elements.
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().normals as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
+            std::slice::from_raw_parts_mut(m.normals as *mut Vector3, m.vertexCount as usize)
+        }
+    }
+    /// Vertex texture coordinates (UV - 2 components per vertex) (shader-location = 1)
+    #[inline]
+    #[must_use]
+    fn texcoords(&self) -> &[Vector2] {
+        let m = self.as_ref();
+        if m.texcoords.is_null() || m.vertexCount == 0 {
+            return &[];
+        }
+        // SAFETY: texcoords is non-null, points to vertexCount * Vector2 (2 × f32),
+        // raylib-allocated and valid for this borrow's lifetime.
+        unsafe {
+            std::slice::from_raw_parts(m.texcoords as *const Vector2, m.vertexCount as usize)
+        }
+    }
+    /// Vertex texture coordinates (UV - 2 components per vertex) (shader-location = 1)
+    #[inline]
+    #[must_use]
+    fn texcoords_mut(&mut self) -> &mut [Vector2] {
+        let m = self.as_mut();
+        if m.texcoords.is_null() || m.vertexCount == 0 {
+            return &mut [];
+        }
+        // SAFETY: texcoords is non-null, exclusively borrowed, valid for vertexCount elements.
+        unsafe {
+            std::slice::from_raw_parts_mut(m.texcoords as *mut Vector2, m.vertexCount as usize)
+        }
+    }
+    /// Vertex texture second coordinates (UV - 2 components per vertex) (shader-location = 5)
+    #[inline]
+    #[must_use]
+    fn texcoords2(&self) -> &[Vector2] {
+        let m = self.as_ref();
+        if m.texcoords2.is_null() || m.vertexCount == 0 {
+            return &[];
+        }
+        // SAFETY: texcoords2 is non-null, points to vertexCount * Vector2, valid for this borrow.
+        unsafe {
+            std::slice::from_raw_parts(m.texcoords2 as *const Vector2, m.vertexCount as usize)
+        }
+    }
+    /// Vertex texture second coordinates (UV - 2 components per vertex) (shader-location = 5)
+    #[inline]
+    #[must_use]
+    fn texcoords2_mut(&mut self) -> &mut [Vector2] {
+        let m = self.as_mut();
+        if m.texcoords2.is_null() || m.vertexCount == 0 {
+            return &mut [];
+        }
+        // SAFETY: texcoords2 is non-null, exclusively borrowed, valid for vertexCount elements.
+        unsafe {
+            std::slice::from_raw_parts_mut(m.texcoords2 as *mut Vector2, m.vertexCount as usize)
         }
     }
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
     #[must_use]
     fn tangents(&self) -> &[Vector3] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().tangents as *const Vector3,
-                self.as_ref().vertexCount as usize,
-            )
+        let m = self.as_ref();
+        if m.tangents.is_null() || m.vertexCount == 0 {
+            return &[];
         }
+        // SAFETY: tangents is non-null, points to vertexCount * Vector3, valid for this borrow.
+        unsafe { std::slice::from_raw_parts(m.tangents as *const Vector3, m.vertexCount as usize) }
     }
     /// Vertex tangents (XYZW - 4 components per vertex) (shader-location = 4)
     #[inline]
     #[must_use]
     fn tangents_mut(&mut self) -> &mut [Vector3] {
+        let m = self.as_mut();
+        if m.tangents.is_null() || m.vertexCount == 0 {
+            return &mut [];
+        }
+        // SAFETY: tangents is non-null, exclusively borrowed, valid for vertexCount elements.
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().tangents as *mut Vector3,
-                self.as_mut().vertexCount as usize,
-            )
+            std::slice::from_raw_parts_mut(m.tangents as *mut Vector3, m.vertexCount as usize)
         }
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
     #[must_use]
     fn colors(&self) -> &[Color] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().colors as *const Color,
-                self.as_ref().vertexCount as usize,
-            )
+        let m = self.as_ref();
+        if m.colors.is_null() || m.vertexCount == 0 {
+            return &[];
         }
+        // SAFETY: colors is non-null, points to vertexCount * Color (4 × u8), valid for this borrow.
+        unsafe { std::slice::from_raw_parts(m.colors as *const Color, m.vertexCount as usize) }
     }
     /// Vertex colors (RGBA - 4 components per vertex) (shader-location = 3)
     #[inline]
     #[must_use]
     fn colors_mut(&mut self) -> &mut [Color] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().colors as *mut Color,
-                self.as_mut().vertexCount as usize,
-            )
+        let m = self.as_mut();
+        if m.colors.is_null() || m.vertexCount == 0 {
+            return &mut [];
         }
+        // SAFETY: colors is non-null, exclusively borrowed, valid for vertexCount elements.
+        unsafe { std::slice::from_raw_parts_mut(m.colors as *mut Color, m.vertexCount as usize) }
     }
-    /// Vertex indices (in case vertex data comes indexed)
+    /// Vertex indices (in case vertex data comes indexed) — triangleCount * 3 entries
     #[inline]
     #[must_use]
     fn indices(&self) -> &[u16] {
+        let m = self.as_ref();
+        if m.indices.is_null() || m.triangleCount == 0 {
+            return &[];
+        }
+        // SAFETY: indices is non-null, points to triangleCount * 3 u16 entries,
+        // raylib-allocated and valid for this borrow's lifetime.
         unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().indices as *const u16,
-                self.as_ref().vertexCount as usize,
-            )
+            std::slice::from_raw_parts(m.indices as *const u16, m.triangleCount as usize * 3)
         }
     }
-    /// Vertex indices (in case vertex data comes indexed)
+    /// Vertex indices (in case vertex data comes indexed) — triangleCount * 3 entries
     #[inline]
     #[must_use]
     fn indices_mut(&mut self) -> &mut [u16] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().indices,
-                self.as_mut().vertexCount as usize,
-            )
+        let m = self.as_mut();
+        if m.indices.is_null() || m.triangleCount == 0 {
+            return &mut [];
         }
+        // SAFETY: indices is non-null, exclusively borrowed, triangleCount * 3 u16 entries.
+        unsafe { std::slice::from_raw_parts_mut(m.indices, m.triangleCount as usize * 3) }
     }
 
     /// Generate polygonal mesh
@@ -1331,5 +1394,26 @@ impl<'a> MeshBuilder<'a> {
             mesh.upload(false);
         }
         Ok(mesh)
+    }
+}
+
+#[cfg(test)]
+mod mesh_soundness {
+    use super::*;
+
+    #[test]
+    fn null_field_accessors_are_empty_not_ub() {
+        // SAFETY: a zeroed ffi::Mesh has null data pointers + zero counts.
+        // Accessors must return empty slices, not call slice::from_raw_parts(null, _).
+        // We use WeakMesh (no-drop) so no UnloadMesh is called on a null-pointer mesh.
+        let ffi_mesh: ffi::Mesh = unsafe { std::mem::zeroed() };
+        let m = WeakMesh(ffi_mesh);
+        assert!(m.vertices().is_empty(), "vertices() on null ptr must be empty");
+        assert!(m.normals().is_empty(), "normals() on null ptr must be empty");
+        assert!(m.texcoords().is_empty(), "texcoords() on null ptr must be empty");
+        assert!(m.tangents().is_empty(), "tangents() on null ptr must be empty");
+        assert!(m.colors().is_empty(), "colors() on null ptr must be empty");
+        assert!(m.indices().is_empty(), "indices() on null ptr must be empty");
+        // WeakMesh does not call UnloadMesh on drop, so no cleanup needed.
     }
 }
