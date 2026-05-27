@@ -80,6 +80,23 @@ impl ParseCallbacks for TypeOverrideCallback {
     }
 }
 
+#[cfg(all(
+    feature = "software_renderer",
+    any(
+        feature = "opengl_11",
+        feature = "opengl_21",
+        feature = "opengl_33",
+        feature = "opengl_43",
+        feature = "opengl_es_20",
+        feature = "opengl_es_30",
+        feature = "drm",
+    )
+))]
+compile_error!(
+    "feature `software_renderer` (PLATFORM=Memory) is mutually exclusive with the \
+     opengl_* backends and `drm`; enable it with default-features = false."
+);
+
 #[cfg(feature = "nobuild")]
 fn build_with_cmake(_src_path: &str) {}
 
@@ -178,6 +195,7 @@ fn build_with_cmake(src_path: &str) {
                 conf.define("PLATFORM", "Desktop")
             }
         }
+        Platform::Memory => conf.define("PLATFORM", "Memory"),
         Platform::Web => conf.define("PLATFORM", "Web"),
         Platform::DRM => conf.define("PLATFORM", "DRM"),
         Platform::RPI => conf.define("PLATFORM", "Raspberry Pi"),
@@ -269,6 +287,7 @@ fn gen_bindings() {
 
     let plat = match platform {
         Platform::Desktop => "-DPLATFORM_DESKTOP",
+        Platform::Memory => "-DPLATFORM_MEMORY",
         Platform::DRM => "-DPLATFORM_DRM",
         Platform::RPI => "-DPLATFORM_RPI",
         Platform::Android => "-DPLATFORM_ANDROID",
@@ -387,6 +406,13 @@ fn link(_platform: Platform, _platform_os: PlatformOS) {
 
 #[cfg(not(feature = "nobuild"))]
 fn link(platform: Platform, platform_os: PlatformOS) {
+    if platform == Platform::Memory {
+        if platform_os == PlatformOS::Windows {
+            println!("cargo:rustc-link-lib=dylib=winmm");
+        }
+        println!("cargo:rustc-link-lib=static=raylib");
+        return;
+    }
     match platform_os {
         PlatformOS::Windows => {
             println!("cargo:rustc-link-lib=dylib=winmm");
@@ -512,7 +538,9 @@ fn is_directory_empty(path: &str) -> bool {
 }
 
 fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
-    let platform = if cfg!(feature = "drm") {
+    let platform = if cfg!(feature = "software_renderer") {
+        Platform::Memory
+    } else if cfg!(feature = "drm") {
         Platform::DRM
     } else if cfg!(feature = "legacy_rpi") {
         Platform::RPI
@@ -524,7 +552,7 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
         Platform::Desktop
     };
 
-    let platform_os = if platform == Platform::Desktop {
+    let platform_os = if matches!(platform, Platform::Desktop | Platform::Memory) {
         // Determine PLATFORM_OS in case PLATFORM_DESKTOP selected
         if env::var("OS")
             .unwrap_or("".to_owned())
@@ -580,7 +608,8 @@ enum Platform {
     Desktop,
     Android,
     DRM,
-    RPI, // legacy raspberry pi
+    RPI,    // legacy raspberry pi
+    Memory, // raylib 6.0 windowless software-render platform (PLATFORM=Memory)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -95,6 +95,9 @@ sdl = []
 wayland = []
 legacy_rpi = []
 drm = []
+# CPU software renderer + windowless Memory platform (raylib 6.0 PLATFORM=Memory).
+# Mutually exclusive with every opengl_* backend and with `drm` (enforced in build.rs).
+software_renderer = []
 
 # extra build profiles:
 release_with_debug_info = []
