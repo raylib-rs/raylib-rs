@@ -26,6 +26,10 @@ jobs:
           actions-cache-folder: emsdk-cache
       - name: Verify emcc on PATH
         run: emcc --version
+      - name: Export bindgen sysroot for wasm32-emscripten
+        # bindgen uses host clang; without this it finds /usr/include/math.h (glibc) instead
+        # of the emscripten wasm sysroot, causing a fatal 'bits/libc-header-start.h' not found error.
+        run: echo "BINDGEN_EXTRA_CLANG_ARGS=--sysroot=$EMSDK/upstream/emscripten/cache/sysroot" >> $GITHUB_ENV
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-emscripten
