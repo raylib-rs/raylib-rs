@@ -79,64 +79,64 @@ impl Color {
     /// Returns color normalized as float [0..1]
     #[inline]
     pub fn color_normalize(&self) -> Vector4 {
-        unsafe { super::ColorNormalize(self.into()).into() }
+        unsafe { super::ColorNormalize(self.into()) }
     }
 
     /// Returns HSV values for a Color
     #[inline]
     pub fn color_to_hsv(&self) -> Vector3 {
-        unsafe { super::ColorToHSV(self.into()).into() }
+        unsafe { super::ColorToHSV(self.into()) }
     }
 
     /// Returns a Color from HSV values
     #[inline]
     pub fn color_from_hsv(hue: f32, saturation: f32, value: f32) -> Color {
-        unsafe { super::ColorFromHSV(hue, saturation, value).into() }
+        unsafe { super::ColorFromHSV(hue, saturation, value) }
     }
 
     /// Returns color from normalized values [0..1]
     #[inline]
     pub fn color_from_normalized(normalized: Vector4) -> Color {
-        unsafe { super::ColorFromNormalized(normalized.into()).into() }
+        unsafe { super::ColorFromNormalized(normalized) }
     }
 
     /// Returns a Color struct from hexadecimal value
     #[inline]
     pub fn get_color(hex_value: u32) -> Color {
-        unsafe { super::GetColor(hex_value).into() }
+        unsafe { super::GetColor(hex_value) }
     }
 
     /// Get color multiplied with another color
     #[inline]
     pub fn tint(&self, color: Self) -> Self {
-        unsafe { super::ColorTint(self.into(), color.into()).into() }
+        unsafe { super::ColorTint(self.into(), color) }
     }
     /// Get color with brightness correction, brightness factor goes from -1.0f to 1.0f
     #[inline]
     pub fn brightness(&self, factor: f32) -> Self {
-        unsafe { super::ColorBrightness(self.into(), factor).into() }
+        unsafe { super::ColorBrightness(self.into(), factor) }
     }
     /// Get color with contrast correction, contrast values between -1.0f and 1.0f
     #[inline]
     pub fn contrast(&self, factor: f32) -> Self {
-        unsafe { super::ColorContrast(self.into(), factor).into() }
+        unsafe { super::ColorContrast(self.into(), factor) }
     }
     /// Get color with alpha applied, alpha goes from 0.0f to 1.0f
     #[inline]
     pub fn alpha(&self, alpha: f32) -> Self {
-        unsafe { super::ColorAlpha(self.into(), alpha).into() }
+        unsafe { super::ColorAlpha(self.into(), alpha) }
     }
 
     /// Get color with alpha applied, alpha goes from 0.0f to 1.0f
     #[deprecated = "Use Color::alpha instead"]
     pub fn fade(&self, alpha: f32) -> Self {
-        unsafe { super::Fade(self.into(), alpha).into() }
+        unsafe { super::Fade(self.into(), alpha) }
     }
 
     /// Color fade-in or fade-out, alpha goes from 0.0f to 1.0f
     #[inline]
     pub fn color_alpha_blend(dst: &Color, src: &Color, tint: &Color) -> Color {
-        unsafe { super::ColorAlphaBlend(dst.into(), src.into(), tint.into()).into() }
+        unsafe { super::ColorAlphaBlend(dst.into(), src.into(), tint.into()) }
     }
     /// Check if color is equal to another.
     #[inline]
@@ -147,7 +147,7 @@ impl Color {
     /// Get color lerp interpolation between two colors, factor [0.0f..1.0f]
     #[inline]
     pub fn lerp(&self, rhs: Color, factor: f32) -> Color {
-        unsafe { super::ColorLerp(self.into(), rhs.into(), factor).into() }
+        unsafe { super::ColorLerp(self.into(), rhs, factor) }
     }
 }
 
@@ -155,7 +155,7 @@ impl Color {
 /// change or do anything different, but in the ultra rare case that it does, we want to mimic Raylib's behavior.
 impl PartialEq for Color {
     fn eq(&self, other: &Self) -> bool {
-        return self.is_equal(other);
+        self.is_equal(other)
     }
 }
 impl Eq for Color {}

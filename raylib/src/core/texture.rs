@@ -8,7 +8,6 @@ use crate::ffi;
 use std::convert::TryInto;
 use std::ffi::CString;
 use std::mem::{ManuallyDrop, MaybeUninit};
-use std::ptr::null_mut;
 
 use super::error::{InvalidImageError, LoadTextureError, UpdateTextureError};
 
@@ -48,7 +47,7 @@ impl From<NPatchInfo> for ffi::NPatchInfo {
 impl From<&NPatchInfo> for ffi::NPatchInfo {
     fn from(v: &NPatchInfo) -> Self {
         ffi::NPatchInfo {
-            source: v.source.into(),
+            source: v.source,
             left: v.left,
             top: v.top,
             right: v.right,
@@ -72,6 +71,7 @@ make_thin_wrapper!(
     ffi::UnloadTexture
 );
 make_thin_wrapper!(WeakTexture2D, ffi::Texture2D, no_drop);
+#[allow(clippy::derivable_impls)] // Cannot use #[derive(Default)] on a macro-generated struct
 impl Default for WeakTexture2D {
     fn default() -> Self {
         Self(ffi::Texture::default())
@@ -131,6 +131,10 @@ impl AsMut<ffi::Texture2D> for WeakRenderTexture2D {
 }
 
 impl RenderTexture2D {
+    /// # Safety
+    ///
+    /// The caller becomes responsible for ensuring the underlying `ffi::RenderTexture2D` is
+    /// eventually unloaded. The returned `WeakRenderTexture2D` does not call `UnloadRenderTexture` on drop.
     #[inline]
     #[must_use]
     pub unsafe fn make_weak(self) -> WeakRenderTexture2D {
@@ -197,6 +201,11 @@ impl Image {
         self.0.mipmaps
     }
     /// Image raw data
+    ///
+    /// # Safety
+    ///
+    /// The returned pointer is only valid for the lifetime of `self` and the image's backing
+    /// buffer. The caller must not use the pointer after the image is dropped or reallocated.
     #[inline]
     #[must_use]
     pub unsafe fn data(&self) -> *mut ::std::os::raw::c_void {
@@ -217,17 +226,17 @@ impl Image {
     #[inline]
     #[must_use]
     pub fn get_color(&self, x: i32, y: i32) -> Color {
-        Color::from(unsafe { ffi::GetImageColor(self.0, x, y) })
+        unsafe { ffi::GetImageColor(self.0, x, y) }
     }
     /// Draw circle outline within an image
     #[inline]
     pub fn draw_circle_lines(&mut self, center_x: i32, center_y: i32, radius: i32, color: Color) {
-        unsafe { ffi::ImageDrawCircleLines(&mut self.0, center_x, center_y, radius, color.into()) }
+        unsafe { ffi::ImageDrawCircleLines(&mut self.0, center_x, center_y, radius, color) }
     }
     /// Draw circle outline within an image (Vector version)
     #[inline]
     pub fn draw_circle_lines_v(&mut self, center: impl Into<Vector2>, center_y: i32, color: Color) {
-        unsafe { ffi::ImageDrawCircleLinesV(&mut self.0, center.into(), center_y, color.into()) }
+        unsafe { ffi::ImageDrawCircleLinesV(&mut self.0, center.into(), center_y, color) }
     }
 
     /// Data format (PixelFormat type)
@@ -445,7 +454,7 @@ impl Image {
     /// Get image alpha border rectangle
     #[inline]
     pub fn get_image_alpha_border(&self, threshold: f32) -> Rectangle {
-        unsafe { ffi::GetImageAlphaBorder(self.0, threshold).into() }
+        unsafe { ffi::GetImageAlphaBorder(self.0, threshold) }
     }
 
     /// Clear image background with given color
@@ -467,8 +476,8 @@ impl Image {
             ffi::ImageDraw(
                 &mut self.0,
                 src.0,
-                src_rec.into(),
-                dst_rec.into(),
+                src_rec,
+                dst_rec,
                 tint.into(),
             );
         }
@@ -695,7 +704,7 @@ impl Image {
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::ImageDrawRectangleLines(&mut self.0, rec.into(), thickness, color.into());
+            ffi::ImageDrawRectangleLines(&mut self.0, rec, thickness, color.into());
         }
     }
 
@@ -828,7 +837,6 @@ impl Image {
     }
 
     /// Export image to memory buffer.
-    #[must_use]
     pub fn export_image_to_memory(
         &self,
         file_type: &str,
@@ -839,7 +847,7 @@ impl Image {
         if self.height == 0 {
             return Err(InvalidImageError::ZeroHeight);
         }
-        if self.data == null_mut() {
+        if self.data.is_null() {
             return Err(InvalidImageError::NullData);
         }
 
@@ -857,7 +865,6 @@ impl Image {
 
     /// Apply custom square convolution kernel to image
     /// NOTE: The convolution kernel matrix is expected to be square
-    #[must_use]
     pub fn kernel_convolution(&mut self, kernel: &[f32]) -> Result<(), InvalidImageError> {
         if self.width == 0 {
             return Err(InvalidImageError::ZeroWidth);
@@ -865,7 +872,7 @@ impl Image {
         if self.height == 0 {
             return Err(InvalidImageError::ZeroHeight);
         }
-        if self.data == null_mut() {
+        if self.data.is_null() {
             return Err(InvalidImageError::NullData);
         }
 
@@ -1019,7 +1026,6 @@ impl Image {
     ///
     /// NOTE: Only available on Windows. Do not use if you plan to compile to other platforms.
     #[cfg(target_os = "windows")]
-    #[must_use]
     pub fn get_clipboard_image(&mut self) -> Result<Image, InvalidImageError> {
         let i = unsafe { ffi::GetClipboardImage() };
         if i.data.is_null() {
@@ -1029,7 +1035,6 @@ impl Image {
     }
 
     /// Loads image from file into CPU memory (RAM).
-    #[must_use]
     pub fn load_image(filename: &str) -> Result<Image, InvalidImageError> {
         let c_filename = CString::new(filename).unwrap();
         let i = unsafe { ffi::LoadImage(c_filename.as_ptr()) };
@@ -1042,7 +1047,6 @@ impl Image {
     /// Loads image from a given memory buffer
     /// The input data is expected to be in a supported file format such as png. Which formats are
     /// supported depend on the build flags used for the raylib (C) library.
-    #[must_use]
     pub fn load_image_from_mem(filetype: &str, bytes: &[u8]) -> Result<Image, InvalidImageError> {
         let c_filetype = CString::new(filetype).unwrap();
         let data_size = bytes.len().try_into().unwrap();
@@ -1084,7 +1088,6 @@ impl Image {
     }
 
     /// Loads image from RAW file data.
-    #[must_use]
     pub fn load_image_raw(
         filename: &str,
         width: i32,
@@ -1145,6 +1148,10 @@ impl RaylibTexture2D for WeakRenderTexture2D {}
 impl RaylibTexture2D for RenderTexture2D {}
 
 impl Texture2D {
+    /// # Safety
+    ///
+    /// The caller becomes responsible for ensuring the underlying `ffi::Texture2D` is eventually
+    /// unloaded. The returned `WeakTexture2D` does not call `UnloadTexture` on drop.
     pub unsafe fn make_weak(self) -> WeakTexture2D {
         let m = WeakTexture2D(self.0);
         std::mem::forget(self);
@@ -1253,7 +1260,6 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     /// Gets pixel data from GPU texture and returns an `Image`.
     /// Fairly sure this would never fail. If it does wrap in result.
     #[inline]
-    #[must_use]
     fn load_image(&self) -> Result<Image, InvalidImageError> {
         let i = unsafe { ffi::LoadImageFromTexture(*self.as_ref()) };
         if i.data.is_null() {
@@ -1301,7 +1307,6 @@ pub fn get_pixel_data_size(width: i32, height: i32, format: ffi::PixelFormat) ->
 
 impl RaylibHandle {
     /// Loads texture from file into GPU memory (VRAM).
-    #[must_use]
     pub fn load_texture(
         &mut self,
         _: &RaylibThread,
@@ -1318,7 +1323,6 @@ impl RaylibHandle {
     }
 
     /// Load cubemap from image, multiple image cubemap layouts supported
-    #[must_use]
     pub fn load_texture_cubemap(
         &mut self,
         _: &RaylibThread,
@@ -1334,7 +1338,6 @@ impl RaylibHandle {
 
     /// Loads texture from image data.
     #[inline]
-    #[must_use]
     pub fn load_texture_from_image(
         &mut self,
         _: &RaylibThread,
@@ -1351,7 +1354,6 @@ impl RaylibHandle {
     }
 
     /// Loads texture for rendering (framebuffer).
-    #[must_use]
     pub fn load_render_texture(
         &mut self,
         _: &RaylibThread,
@@ -1367,14 +1369,20 @@ impl RaylibHandle {
 }
 
 impl RaylibHandle {
-    /// Weak Textures will leak memory if they are not unloaded
-    /// Unload textures from GPU memory (VRAM)
+    /// Unload texture from GPU memory (VRAM).
+    ///
+    /// # Safety
+    ///
+    /// `texture` must not be used after this call. Weak textures will leak memory if not unloaded.
     #[inline]
     pub unsafe fn unload_texture(&mut self, _: &RaylibThread, texture: WeakTexture2D) {
         unsafe { ffi::UnloadTexture(*texture.as_ref()) }
     }
-    /// Weak RenderTextures will leak memory if they are not unloaded
-    /// Unload RenderTextures from GPU memory (VRAM)
+    /// Unload render texture from GPU memory (VRAM).
+    ///
+    /// # Safety
+    ///
+    /// `texture` must not be used after this call. Weak render textures will leak if not unloaded.
     #[inline]
     pub unsafe fn unload_render_texture(&mut self, _: &RaylibThread, texture: WeakRenderTexture2D) {
         unsafe { ffi::UnloadRenderTexture(*texture.as_ref()) }

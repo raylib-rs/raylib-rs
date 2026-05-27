@@ -27,6 +27,7 @@ pub use math::*;
 pub use matrix_quat_math::{matrix_decompose, quaternion_to_axis_angle};
 pub use vector_math::vector3_ortho_normalize;
 
+#[allow(clippy::derivable_impls)] // LOG_INFO != discriminant 0 (LOG_ALL); derived Default would return LOG_ALL
 impl Default for TraceLogLevel {
     fn default() -> Self {
         TraceLogLevel::LOG_INFO

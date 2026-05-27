@@ -344,7 +344,6 @@ pub fn get_monitor_physical_height(monitor: i32) -> i32 {
 /// Get name of monitor
 /// Only checks that monitor index is in range in debug mode
 #[inline]
-#[must_use]
 pub fn get_monitor_name(monitor: i32) -> Result<String, IntoStringError> {
     let len = get_monitor_count();
     debug_assert!(monitor < len && monitor >= 0, "monitor index out of range");
@@ -363,7 +362,7 @@ pub fn get_monitor_position(monitor: i32) -> Vector2 {
     let len = get_monitor_count();
     debug_assert!(monitor < len && monitor >= 0, "monitor index out of range");
 
-    unsafe { ffi::GetMonitorPosition(monitor).into() }
+    unsafe { ffi::GetMonitorPosition(monitor) }
 }
 
 /// Gets the attributes of the monitor as well as the name
@@ -379,7 +378,6 @@ pub fn get_monitor_position(monitor: i32) -> Vector2 {
 ///     Ok(())
 /// }
 /// ```
-#[must_use]
 pub fn get_monitor_info(monitor: i32) -> Result<MonitorInfo, IntoStringError> {
     let len = get_monitor_count();
     debug_assert!(monitor < len && monitor >= 0, "monitor index out of range");
@@ -397,42 +395,37 @@ pub fn get_monitor_info(monitor: i32) -> Result<MonitorInfo, IntoStringError> {
 /// Returns camera transform matrix (view matrix)
 /// ```rust
 /// use raylib::prelude::*;
-/// fn main() {
-///     let c = Camera::perspective(
-///            Vector3::new(0.0, 0.0, 0.0),
-///            Vector3::new(0.0, 0.0, -1.0),
-///            Vector3::new(0.0, 1.0, 0.0),
-///            90.0,
-///        );
-///        let m = get_camera_matrix(&c);
-///        assert_eq!(m, Matrix::identity());
-/// }
+/// let c = Camera::perspective(
+///        Vector3::new(0.0, 0.0, 0.0),
+///        Vector3::new(0.0, 0.0, -1.0),
+///        Vector3::new(0.0, 1.0, 0.0),
+///        90.0,
+///    );
+///    let m = get_camera_matrix(&c);
+///    assert_eq!(m, Matrix::identity());
 /// ```
 #[must_use]
 pub fn get_camera_matrix(camera: impl Into<ffi::Camera>) -> Matrix {
-    unsafe { ffi::GetCameraMatrix(camera.into()).into() }
+    unsafe { ffi::GetCameraMatrix(camera.into()) }
 }
 
 /// Returns camera 2D transform matrix (view matrix)
 /// ```rust
 /// use raylib::prelude::*;
-/// fn main() {
-///     let c = Camera2D::default();
-///     let m = get_camera_matrix2D(&c);
-///     let mut check = Matrix::default();
-///     check.m10 = 1.0;
-///     check.m15 = 1.0;
-///     assert_eq!(m, check);
-/// }
+/// let c = Camera2D::default();
+/// let m = get_camera_matrix2D(&c);
+/// let mut check = Matrix::default();
+/// check.m10 = 1.0;
+/// check.m15 = 1.0;
+/// assert_eq!(m, check);
 /// ```
 #[allow(non_snake_case)]
 #[must_use]
 pub fn get_camera_matrix2D(camera: impl Into<ffi::Camera2D>) -> Matrix {
-    unsafe { ffi::GetCameraMatrix2D(camera.into()).into() }
+    unsafe { ffi::GetCameraMatrix2D(camera.into()) }
 }
 
 impl RaylibHandle {
-    #[must_use]
     /// Get clipboard text content
     pub fn get_clipboard_text(&self) -> Result<String, std::str::Utf8Error> {
         unsafe {
@@ -488,7 +481,7 @@ impl RaylibHandle {
         position: impl Into<Vector3>,
         camera: impl Into<ffi::Camera>,
     ) -> Vector2 {
-        unsafe { ffi::GetWorldToScreen(position.into(), camera.into()).into() }
+        unsafe { ffi::GetWorldToScreen(position.into(), camera.into()) }
     }
 
     /// Returns the screen space position for a 2d camera world space position
@@ -500,7 +493,7 @@ impl RaylibHandle {
         position: impl Into<Vector2>,
         camera: impl Into<ffi::Camera2D>,
     ) -> Vector2 {
-        unsafe { ffi::GetWorldToScreen2D(position.into(), camera.into()).into() }
+        unsafe { ffi::GetWorldToScreen2D(position.into(), camera.into()) }
     }
 
     /// Returns size position for a 3d world space position
@@ -513,7 +506,7 @@ impl RaylibHandle {
         width: i32,
         height: i32,
     ) -> Vector2 {
-        unsafe { ffi::GetWorldToScreenEx(position.into(), camera.into(), width, height).into() }
+        unsafe { ffi::GetWorldToScreenEx(position.into(), camera.into(), width, height) }
     }
 
     /// Returns the world space position for a 2d camera screen space position
@@ -525,7 +518,7 @@ impl RaylibHandle {
         position: impl Into<Vector2>,
         camera: impl Into<ffi::Camera2D>,
     ) -> Vector2 {
-        unsafe { ffi::GetScreenToWorld2D(position.into(), camera.into()).into() }
+        unsafe { ffi::GetScreenToWorld2D(position.into(), camera.into()) }
     }
 }
 
@@ -642,7 +635,7 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_window_scale_dpi(&self) -> Vector2 {
-        unsafe { ffi::GetWindowScaleDPI().into() }
+        unsafe { ffi::GetWindowScaleDPI() }
     }
 
     /// Check if cursor is on the current screen.
@@ -833,7 +826,7 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_window_position(&self) -> Vector2 {
-        unsafe { ffi::GetWindowPosition().into() }
+        unsafe { ffi::GetWindowPosition() }
     }
 
     /// Toggle window state: borderless windowed (only on desktop platforms).
@@ -891,6 +884,11 @@ impl RaylibHandle {
     }
 
     /// Get native window handle
+    ///
+    /// # Safety
+    ///
+    /// The returned pointer is platform-specific and only valid as long as the window is open.
+    /// The caller must not use the pointer after the raylib window is closed.
     #[inline]
     #[must_use]
     pub unsafe fn get_window_handle(&mut self) -> *mut ::std::os::raw::c_void {

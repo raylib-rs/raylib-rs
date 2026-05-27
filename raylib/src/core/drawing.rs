@@ -46,7 +46,7 @@ impl RaylibHandle {
 
 pub struct RaylibDrawHandle<'a>(&'a mut RaylibHandle);
 
-impl<'a> RaylibDrawHandle<'a> {
+impl RaylibDrawHandle<'_> {
     #[deprecated = "Calling begin_drawing within RaylibDrawHandle will result in a runtime error."]
     #[doc(hidden)]
     pub fn begin_drawing(&'_ mut self, _: &RaylibThread) -> RaylibDrawHandle<'_> {
@@ -59,7 +59,7 @@ impl<'a> RaylibDrawHandle<'a> {
     }
 }
 
-impl<'a> Drop for RaylibDrawHandle<'a> {
+impl Drop for RaylibDrawHandle<'_> {
     fn drop(&mut self) {
         unsafe {
             ffi::EndDrawing();
@@ -67,20 +67,20 @@ impl<'a> Drop for RaylibDrawHandle<'a> {
     }
 }
 
-impl<'a> std::ops::Deref for RaylibDrawHandle<'a> {
+impl std::ops::Deref for RaylibDrawHandle<'_> {
     type Target = RaylibHandle;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 
-impl<'a> std::ops::DerefMut for RaylibDrawHandle<'a> {
+impl std::ops::DerefMut for RaylibDrawHandle<'_> {
     fn deref_mut(&mut self) -> &mut RaylibHandle {
         self.0
     }
 }
-impl<'a> RaylibDraw for RaylibDrawHandle<'a> {}
+impl RaylibDraw for RaylibDrawHandle<'_> {}
 
 // Texture2D Stuff
 
@@ -92,19 +92,19 @@ impl<'a> RaylibDraw for RaylibDrawHandle<'a> {}
 // The PhantomData will ensure that the borrow checker still analyzes as though the mutable texture reference was held, without physically storing it in the runtime memory.
 pub struct RaylibTextureMode<'a, 'b, T: 'a>(&'a mut T, PhantomData<&'b mut ffi::RenderTexture2D>);
 
-impl<'a, 'b, T: 'a> Drop for RaylibTextureMode<'a, 'b, T> {
+impl<'a, T: 'a> Drop for RaylibTextureMode<'a, '_, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndTextureMode() }
     }
 }
-impl<'a, 'b, T: 'a> std::ops::Deref for RaylibTextureMode<'a, 'b, T> {
+impl<'a, T: 'a> std::ops::Deref for RaylibTextureMode<'a, '_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
-impl<'a, 'b, T: 'a> std::ops::DerefMut for RaylibTextureMode<'a, 'b, T> {
+impl<'a, T: 'a> std::ops::DerefMut for RaylibTextureMode<'a, '_, T> {
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }
@@ -143,9 +143,9 @@ where
 }
 
 // Only the DrawHandle and the RaylibHandle can start a texture
-impl<'a> RaylibTextureModeExt for RaylibDrawHandle<'a> {}
+impl RaylibTextureModeExt for RaylibDrawHandle<'_> {}
 impl RaylibTextureModeExt for RaylibHandle {}
-impl<'a, 'b, T: 'a> RaylibDraw for RaylibTextureMode<'a, 'b, T> {}
+impl<'a, T: 'a> RaylibDraw for RaylibTextureMode<'a, '_, T> {}
 
 // VR Stuff
 
@@ -155,16 +155,16 @@ pub struct RaylibVRMode<'a, 'b, T: 'a>(
     PhantomData<&'a mut T>,
     PhantomData<&'b mut VrStereoConfig>,
 );
-impl<'a, 'b, T: 'a> Drop for RaylibVRMode<'a, 'b, T> {
+impl<'a, T: 'a> Drop for RaylibVRMode<'a, '_, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndVrStereoMode() }
     }
 }
-impl<'a, 'b, T: 'a> std::ops::Deref for RaylibVRMode<'a, 'b, T> {
+impl<'a, T: 'a> std::ops::Deref for RaylibVRMode<'a, '_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 
@@ -199,7 +199,7 @@ where
 }
 
 impl<D: RaylibDraw> RaylibVRModeExt for D {}
-impl<'a, 'b, T: 'a> RaylibDraw for RaylibVRMode<'a, 'b, T> {}
+impl<'a, T: 'a> RaylibDraw for RaylibVRMode<'a, '_, T> {}
 
 // 2D Mode
 
@@ -213,7 +213,7 @@ impl<'a, T: 'a> std::ops::Deref for RaylibMode2D<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 impl<'a, T: 'a> std::ops::DerefMut for RaylibMode2D<'a, T> {
@@ -271,7 +271,7 @@ impl<'a, T: 'a> std::ops::Deref for RaylibMode3D<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 impl<'a, T: 'a> std::ops::DerefMut for RaylibMode3D<'a, T> {
@@ -322,19 +322,19 @@ impl<'a, T: 'a> RaylibDraw3D for RaylibMode3D<'a, T> {}
 
 pub struct RaylibShaderMode<'a, 'b, T: 'a>(&'a mut T, PhantomData<&'b mut Shader>);
 
-impl<'a, 'b, T: 'a> Drop for RaylibShaderMode<'a, 'b, T> {
+impl<'a, T: 'a> Drop for RaylibShaderMode<'a, '_, T> {
     fn drop(&mut self) {
         unsafe { ffi::EndShaderMode() }
     }
 }
-impl<'a, 'b, T: 'a> std::ops::Deref for RaylibShaderMode<'a, 'b, T> {
+impl<'a, T: 'a> std::ops::Deref for RaylibShaderMode<'a, '_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
-impl<'a, 'b, T: 'a> std::ops::DerefMut for RaylibShaderMode<'a, 'b, T> {
+impl<'a, T: 'a> std::ops::DerefMut for RaylibShaderMode<'a, '_, T> {
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }
@@ -370,8 +370,8 @@ where
 }
 
 impl<D: RaylibDraw> RaylibShaderModeExt for D {}
-impl<'a, 'b, T: 'a> RaylibDraw for RaylibShaderMode<'a, 'b, T> {}
-impl<'a, 'b, T: 'a> RaylibDraw3D for RaylibShaderMode<'a, 'b, T> {}
+impl<'a, T: 'a> RaylibDraw for RaylibShaderMode<'a, '_, T> {}
+impl<'a, T: 'a> RaylibDraw3D for RaylibShaderMode<'a, '_, T> {}
 
 // Blend Mode
 
@@ -385,7 +385,7 @@ impl<'a, T: 'a> std::ops::Deref for RaylibBlendMode<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 impl<'a, T: 'a> std::ops::DerefMut for RaylibBlendMode<'a, T> {
@@ -439,7 +439,7 @@ impl<'a, T: 'a> std::ops::Deref for RaylibScissorMode<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 impl<'a, T: 'a> std::ops::DerefMut for RaylibScissorMode<'a, T> {
@@ -766,6 +766,7 @@ pub trait RaylibDraw {
 
     /// Draw ring
     #[inline]
+    #[allow(clippy::too_many_arguments)]
     fn draw_ring(
         &mut self,
         center: impl Into<Vector2>,
@@ -791,6 +792,7 @@ pub trait RaylibDraw {
 
     /// Draw ring lines
     #[inline]
+    #[allow(clippy::too_many_arguments)]
     fn draw_ring_lines(
         &mut self,
         center: impl Into<Vector2>,
@@ -1273,6 +1275,7 @@ pub trait RaylibDraw {
 
     /// Draw text using Font and pro parameters (rotation)
     #[inline]
+    #[allow(clippy::too_many_arguments)]
     fn draw_text_pro(
         &mut self,
         font: impl AsRef<ffi::Font>,
@@ -1543,7 +1546,7 @@ pub trait RaylibDraw {
         end_pos: impl Into<Vector2>,
         t: f32,
     ) -> Vector2 {
-        unsafe { ffi::GetSplinePointLinear(start_pos.into(), end_pos.into(), t).into() }
+        unsafe { ffi::GetSplinePointLinear(start_pos.into(), end_pos.into(), t) }
     }
 
     /// Get (evaluate) spline point: B-Spline
@@ -1557,7 +1560,7 @@ pub trait RaylibDraw {
         p4: impl Into<Vector2>,
         t: f32,
     ) -> Vector2 {
-        unsafe { ffi::GetSplinePointBasis(p1.into(), p2.into(), p3.into(), p4.into(), t).into() }
+        unsafe { ffi::GetSplinePointBasis(p1.into(), p2.into(), p3.into(), p4.into(), t) }
     }
 
     /// Get (evaluate) spline point: Catmull-Rom
@@ -1572,7 +1575,7 @@ pub trait RaylibDraw {
         t: f32,
     ) -> Vector2 {
         unsafe {
-            ffi::GetSplinePointCatmullRom(p1.into(), p2.into(), p3.into(), p4.into(), t).into()
+            ffi::GetSplinePointCatmullRom(p1.into(), p2.into(), p3.into(), p4.into(), t)
         }
     }
 
@@ -1586,7 +1589,7 @@ pub trait RaylibDraw {
         p3: impl Into<Vector2>,
         t: f32,
     ) -> Vector2 {
-        unsafe { ffi::GetSplinePointBezierQuad(p1.into(), c2.into(), p3.into(), t).into() }
+        unsafe { ffi::GetSplinePointBezierQuad(p1.into(), c2.into(), p3.into(), t) }
     }
 
     /// Get (evaluate) spline point: Cubic Bezier
@@ -1601,7 +1604,7 @@ pub trait RaylibDraw {
         t: f32,
     ) -> Vector2 {
         unsafe {
-            ffi::GetSplinePointBezierCubic(p1.into(), c2.into(), c3.into(), p4.into(), t).into()
+            ffi::GetSplinePointBezierCubic(p1.into(), c2.into(), c3.into(), p4.into(), t)
         }
     }
 }
@@ -1755,7 +1758,7 @@ pub trait RaylibDraw3D {
             ffi::DrawMeshInstanced(
                 *mesh.as_ref(),
                 material.0,
-                transforms.as_ptr() as *const Matrix,
+                transforms.as_ptr(),
                 transforms.len() as i32,
             )
         }
@@ -2097,6 +2100,7 @@ pub trait RaylibDraw3D {
 
     /// Draw a billboard texture defined by source and rotation
     #[inline]
+    #[allow(clippy::too_many_arguments)]
     fn draw_billboard_pro(
         &mut self,
         camera: impl Into<ffi::Camera>,

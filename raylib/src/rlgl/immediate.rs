@@ -19,7 +19,7 @@ pub enum DrawMode {
 /// called outside a `rlBegin`/`rlEnd` block.
 pub struct RlImmediate<'a, T: RaylibDraw>(#[allow(dead_code)] &'a mut T);
 
-impl<'a, T: RaylibDraw> Drop for RlImmediate<'a, T> {
+impl<T: RaylibDraw> Drop for RlImmediate<'_, T> {
     fn drop(&mut self) {
         // SAFETY: paired with the `rlBegin` that created this guard; raylib's
         // rlgl tolerates rlEnd after rlBegin on the active batch.

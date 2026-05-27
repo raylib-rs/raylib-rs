@@ -74,7 +74,6 @@ pub struct RaylibAudio(PhantomData<()>);
 impl RaylibAudio {
     /// Initializes audio device and context.
     #[inline]
-    #[must_use]
     pub fn init_audio_device() -> Result<RaylibAudio, AudioInitError> {
         unsafe {
             if ffi::IsAudioDeviceReady() {
@@ -118,7 +117,6 @@ impl RaylibAudio {
 
     /// Loads a new sound from file.
     #[inline]
-    #[must_use]
     pub fn new_sound<'aud>(&'aud self, filename: &str) -> Result<Sound<'aud>, LoadSoundError> {
         let c_filename = CString::new(filename).unwrap();
         let s = unsafe { ffi::LoadSound(c_filename.as_ptr()) };
@@ -133,7 +131,6 @@ impl RaylibAudio {
 
     /// Loads sound from wave data.
     #[inline]
-    #[must_use]
     pub fn new_sound_from_wave<'aud>(
         &'aud self,
         wave: &Wave,
@@ -146,7 +143,6 @@ impl RaylibAudio {
     }
     /// Loads wave data from file into RAM.
     #[inline]
-    #[must_use]
     pub fn new_wave<'aud>(&'aud self, filename: &str) -> Result<Wave<'aud>, LoadSoundError> {
         let c_filename = CString::new(filename).unwrap();
         let w = unsafe { ffi::LoadWave(c_filename.as_ptr()) };
@@ -160,7 +156,6 @@ impl RaylibAudio {
 
     /// Load wave from memory buffer, fileType refers to extension: i.e. '.wav'
     #[inline]
-    #[must_use]
     pub fn new_wave_from_memory<'aud>(
         &'aud self,
         filetype: &str,
@@ -178,7 +173,6 @@ impl RaylibAudio {
 
     /// Loads music stream from file.
     #[inline]
-    #[must_use]
     pub fn new_music<'aud>(&'aud self, filename: &str) -> Result<Music<'aud>, LoadSoundError> {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadMusicStream(c_filename.as_ptr()) };
@@ -192,11 +186,10 @@ impl RaylibAudio {
 
     /// Load music stream from data
     #[inline]
-    #[must_use]
     pub fn new_music_from_memory<'aud>(
         &'aud self,
         filetype: &str,
-        bytes: &Vec<u8>,
+        bytes: &[u8],
     ) -> Result<Music<'aud>, LoadSoundError> {
         let c_filetype = CString::new(filetype).unwrap();
         let w = unsafe {
@@ -211,12 +204,12 @@ impl RaylibAudio {
     /// Initializes audio stream (to stream raw PCM data).
     #[inline]
     #[must_use]
-    pub fn new_audio_stream<'aud>(
-        &'aud self,
+    pub fn new_audio_stream(
+        &self,
         sample_rate: u32,
         sample_size: u32,
         channels: u32,
-    ) -> AudioStream<'aud> {
+    ) -> AudioStream<'_> {
         unsafe {
             AudioStream(
                 ffi::LoadAudioStream(sample_rate, sample_size, channels),
@@ -226,14 +219,14 @@ impl RaylibAudio {
     }
 }
 
-impl<'aud> Drop for RaylibAudio {
+impl Drop for RaylibAudio {
     #[inline]
     fn drop(&mut self) {
         unsafe { ffi::CloseAudioDevice() }
     }
 }
 
-impl<'aud> Wave<'aud> {
+impl Wave<'_> {
     /// Total number of frames (considering channels)
     #[inline]
     #[must_use]
@@ -258,6 +251,9 @@ impl<'aud> Wave<'aud> {
     pub const fn channels(&self) -> u32 {
         self.0.channels
     }
+    /// # Safety
+    ///
+    /// Caller takes ownership of the raw wave data and must free it via `UnloadWave`.
     #[inline]
     #[must_use]
     pub unsafe fn inner(self) -> ffi::Wave {
@@ -275,7 +271,6 @@ impl<'aud> Wave<'aud> {
 
     /// Export wave file. Extension must be .wav or .raw
     #[inline]
-    #[must_use]
     pub fn export(&self, filename: impl AsRef<Path>) -> Result<(), ExportWaveError> {
         let c_filename = CString::new(filename.as_ref().to_string_lossy().as_bytes()).unwrap();
         let success = unsafe { ffi::ExportWave(self.0, c_filename.as_ptr()) };
@@ -335,19 +330,19 @@ impl<'aud> Wave<'aud> {
     }
 }
 
-impl<'aud> AsRef<ffi::AudioStream> for Sound<'aud> {
+impl AsRef<ffi::AudioStream> for Sound<'_> {
     fn as_ref(&self) -> &ffi::AudioStream {
         &self.0.stream
     }
 }
 
-impl<'aud> AsMut<ffi::AudioStream> for Sound<'aud> {
+impl AsMut<ffi::AudioStream> for Sound<'_> {
     fn as_mut(&mut self) -> &mut ffi::AudioStream {
         &mut self.0.stream
     }
 }
 
-impl<'aud> Sound<'aud> {
+impl Sound<'_> {
     /// Checks if a sound is valid (data loaded and buffers initialized)
     #[inline]
     #[must_use]
@@ -361,6 +356,9 @@ impl<'aud> Sound<'aud> {
     pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
+    /// # Safety
+    ///
+    /// Caller takes ownership of the raw sound data and must free it via `UnloadSound`.
     #[inline]
     #[must_use]
     pub unsafe fn inner(self) -> ffi::Sound {
@@ -458,7 +456,7 @@ impl<'aud> Sound<'aud> {
     }
 }
 
-impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
+impl SoundAlias<'_, '_> {
     /// Checks if a sound is valid (data loaded and buffers initialized)
     #[inline]
     #[must_use]
@@ -472,6 +470,9 @@ impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
     pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
+    /// # Safety
+    ///
+    /// Caller takes ownership of the raw sound alias data and must free it via `UnloadSoundAlias`.
     #[must_use]
     pub unsafe fn inner(self) -> ffi::Sound {
         let inner = self.0;
@@ -535,7 +536,7 @@ impl Drop for SoundAlias<'_, '_> {
     }
 }
 
-impl<'aud> Music<'aud> {
+impl Music<'_> {
     /// Starts music playing.
     #[inline]
     pub fn play_stream(&self) {
@@ -619,7 +620,7 @@ impl<'aud> Music<'aud> {
     }
 }
 
-impl<'aud> AudioStream<'aud> {
+impl AudioStream<'_> {
     /// Checks if an audio stream is valid (buffers initialized)
     #[inline]
     #[must_use]
@@ -645,6 +646,9 @@ impl<'aud> AudioStream<'aud> {
         self.0.channels
     }
 
+    /// # Safety
+    ///
+    /// Caller takes ownership of the raw audio stream and must free it via `UnloadAudioStream`.
     #[must_use]
     pub unsafe fn inner(self) -> ffi::AudioStream {
         let inner = self.0;
@@ -750,7 +754,6 @@ impl<'aud> AudioStream<'aud> {
 impl<'bind> Sound<'bind> {
     /// Clone sound from existing sound data, clone does not own wave data
     // NOTE: Wave data must be unallocated manually and will be shared across all clones
-    #[must_use]
     pub fn alias<'snd>(&'snd self) -> Result<SoundAlias<'snd, 'bind>, LoadSoundError> {
         let s = unsafe { ffi::LoadSoundAlias(self.0) };
         if s.stream.buffer.is_null() {

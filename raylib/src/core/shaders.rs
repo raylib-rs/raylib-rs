@@ -80,14 +80,14 @@ impl RaylibHandle {
     #[must_use]
     #[inline]
     pub fn get_matrix_modelview(&self) -> Matrix {
-        unsafe { ffi::rlGetMatrixModelview().into() }
+        unsafe { ffi::rlGetMatrixModelview() }
     }
 
     /// Gets internal projection matrix.
     #[inline]
     #[must_use]
     pub fn get_matrix_projection(&self) -> Matrix {
-        unsafe { ffi::rlGetMatrixProjection().into() }
+        unsafe { ffi::rlGetMatrixProjection() }
     }
     #[inline]
     #[must_use]
@@ -104,6 +104,12 @@ impl RaylibHandle {
 
 pub trait ShaderV {
     const UNIFORM_TYPE: ShaderUniformDataType;
+    /// Returns a raw pointer to the shader value for use in FFI calls.
+    ///
+    /// # Safety
+    ///
+    /// The returned pointer is only valid for the lifetime of `self`. The caller must not
+    /// dereference or use the pointer after `self` is dropped.
     unsafe fn value(&self) -> *const c_void;
 }
 
@@ -204,6 +210,10 @@ impl ShaderV for &[i32] {
 }
 
 impl Shader {
+    /// # Safety
+    ///
+    /// The caller becomes responsible for ensuring the underlying `ffi::Shader` is eventually
+    /// unloaded. The returned `WeakShader` does not call `UnloadShader` on drop.
     #[inline]
     #[must_use]
     pub unsafe fn make_weak(self) -> WeakShader {

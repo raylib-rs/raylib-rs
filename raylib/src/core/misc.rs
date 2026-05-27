@@ -5,14 +5,13 @@ use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi;
 use std::ffi::CString;
 use std::ops::{Deref, DerefMut, Range, RangeInclusive};
-use std::usize;
 
 /// Struct for holding the result of RaylibHandle::load_random_sequence.
 /// This is a thin wrapper for an array of i32. The reason it exists is because Raylib expects you
 /// to unload the sequence it creates manually, and this struct does it for you.
 pub struct RandomSequence<'a>(&'a mut [i32]);
 
-impl<'a> Deref for RandomSequence<'a> {
+impl Deref for RandomSequence<'_> {
     type Target = [i32];
 
     fn deref(&self) -> &Self::Target {
@@ -20,13 +19,13 @@ impl<'a> Deref for RandomSequence<'a> {
     }
 }
 
-impl<'a> DerefMut for RandomSequence<'a> {
+impl DerefMut for RandomSequence<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        self.0
     }
 }
 
-impl<'a> Drop for RandomSequence<'a> {
+impl Drop for RandomSequence<'_> {
     fn drop(&mut self) {
         unsafe { ffi::UnloadRandomSequence(self.0.as_mut_ptr()) }
     }
@@ -43,16 +42,13 @@ impl<'a> IntoIterator for RandomSequence<'a> {
 }
 pub struct RandSeqIterator<'a>(RandomSequence<'a>, usize);
 
-impl<'a> Iterator for RandSeqIterator<'a> {
+impl Iterator for RandSeqIterator<'_> {
     type Item = i32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let ret = self.0.get(self.1);
+        let ret = self.0.get(self.1).copied();
         self.1 += 1;
-        match ret {
-            Some(a) => Some(*a),
-            None => None,
-        }
+        ret
     }
 }
 
@@ -74,7 +70,7 @@ impl RaylibHandle {
     /// Load random values sequence, no values repeated
     pub fn load_random_sequence<'a>(&self, num: Range<i32>, count: u32) -> RandomSequence<'a> {
         unsafe {
-            let ptr = ffi::LoadRandomSequence(count, num.start, num.end.into());
+            let ptr = ffi::LoadRandomSequence(count, num.start, num.end);
             RandomSequence(std::slice::from_raw_parts_mut(ptr, count as usize))
         }
     }

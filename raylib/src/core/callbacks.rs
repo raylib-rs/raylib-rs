@@ -58,6 +58,9 @@ fn load_file_text_callback() -> Option<RustLoadFileTextCallback> {
 }
 
 #[unsafe(no_mangle)]
+/// # Safety
+///
+/// `text` must be a valid C string pointer or null.
 pub unsafe extern "C" fn custom_trace_log_callback(level: TraceLogLevel, text: *const c_char) {
     if let Some(trace_log) = trace_log_callback() {
         let text = if text.is_null() {
@@ -121,13 +124,13 @@ extern "C" fn custom_load_file_text_callback(a: *const c_char) -> *mut c_char {
 #[derive(Debug)]
 pub struct SetLogError<'a>(&'a str);
 
-impl<'a> std::fmt::Display for SetLogError<'a> {
+impl std::fmt::Display for SetLogError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("There is a {} callback already set.", self.0))
     }
 }
 
-impl<'a> std::error::Error for SetLogError<'a> {}
+impl std::error::Error for SetLogError<'_> {}
 
 macro_rules! safe_callback_set_func {
     ($cb:expr, $target_cb:expr, $rawsetter:expr, $ogfunc:expr, $ty:literal) => {
@@ -203,7 +206,7 @@ pub fn set_load_file_text_callback<'a>(cb: fn(&str) -> String) -> Result<(), Set
 /// should not be moved again! -> use Pin<..>)
 pub struct AudioStreamProcessorCallback<'a, F>
 where
-    F: FnMut(&mut [f32], u32) -> (),
+    F: FnMut(&mut [f32], u32),
 {
     rust_callback: &'a mut F,
     nb_channels: u32,
@@ -212,7 +215,7 @@ where
 
 impl<'a, F> AudioStreamProcessorCallback<'a, F>
 where
-    F: FnMut(&mut [f32], u32) -> (),
+    F: FnMut(&mut [f32], u32),
 {
     fn new(closure: &'a mut F, nb_channels_from_music: u32) -> Self {
         Self {
@@ -223,7 +226,7 @@ where
     }
 
     fn get_as_user_data(&mut self) -> *mut ::std::os::raw::c_void {
-        return self as *mut Self as *mut ::std::os::raw::c_void;
+        self as *mut Self as *mut ::std::os::raw::c_void
     }
 
     fn get_c_callback(
@@ -240,7 +243,7 @@ where
         user_data: *mut ::std::os::raw::c_void,
         data_ptr: *mut ::std::os::raw::c_void,
         frame_count: ::std::os::raw::c_uint,
-    ) -> () {
+    ) {
         unsafe {
             let stream_processor_callback: &mut Self = user_data.cast::<Self>().as_mut().unwrap();
             let f32_ptr = data_ptr as *mut f32;
@@ -255,9 +258,9 @@ where
     }
 }
 
-impl<'a, F> Drop for AudioStreamProcessorCallback<'a, F>
+impl<F> Drop for AudioStreamProcessorCallback<'_, F>
 where
-    F: FnMut(&mut [f32], u32) -> (),
+    F: FnMut(&mut [f32], u32),
 {
     fn drop(&mut self) {
         if let Some(index) = self.callback_index {
@@ -273,7 +276,7 @@ pub fn attach_audio_stream_processor_to_music<'a, F>(
     processor: &'a mut F,
 ) -> Pin<Box<AudioStreamProcessorCallback<'a, F>>>
 where
-    F: FnMut(&mut [f32], u32) -> () + Send + 'static, // static because the function is executed in another thread
+    F: FnMut(&mut [f32], u32) + Send + 'static, // static because the function is executed in another thread
 {
     let mut stream_processor_callback =
         Box::new(AudioStreamProcessorCallback::<'a, F>::new(processor, 2));
@@ -309,7 +312,7 @@ impl RaylibHandle {
     ///
     /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
     #[deprecated = "Decoupled from RaylibHandle. Use [set_load_file_data_callback](core::callbacks::set_load_file_data_callback) instead."]
-    pub fn set_load_file_data_callback<'b>(
+    pub fn set_load_file_data_callback(
         &'_ mut self,
         cb: fn(&str) -> Vec<u8>,
     ) -> Result<(), SetLogError<'_>> {

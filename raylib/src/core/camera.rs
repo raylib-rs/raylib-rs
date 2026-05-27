@@ -25,7 +25,7 @@ impl Camera2D {
     #[inline(always)]
     #[allow(dead_code)]
     fn get_camera_matrix_2d(camera: impl Into<ffi::Camera2D>) -> Matrix {
-        unsafe { ffi::GetCameraMatrix2D(camera.into()).into() }
+        unsafe { ffi::GetCameraMatrix2D(camera.into()) }
     }
 }
 
@@ -90,7 +90,7 @@ impl From<&mut Camera3D> for ffi::Camera3D {
 }
 impl From<&mut Camera3D> for *mut ffi::Camera3D {
     fn from(val: &mut Camera3D) -> Self {
-        unsafe { std::mem::transmute(val) }
+        val as *mut Camera3D as *mut ffi::Camera3D
     }
 }
 
@@ -128,13 +128,13 @@ impl Camera3D {
     #[must_use]
     #[inline(always)]
     pub fn forward(&self) -> Vector3 {
-        unsafe { ffi::GetCameraForward(self as *const _ as *mut _).into() }
+        unsafe { ffi::GetCameraForward(self as *const _ as *mut _) }
     }
 
     #[must_use]
     #[inline(always)]
     pub fn up(&self) -> Vector3 {
-        unsafe { ffi::GetCameraUp(self as *const _ as *mut _).into() }
+        unsafe { ffi::GetCameraUp(self as *const _ as *mut _) }
     }
 
     #[inline(always)]
@@ -189,12 +189,12 @@ impl Camera3D {
     #[must_use]
     #[inline(always)]
     pub fn view_matrix(&self) -> Matrix {
-        unsafe { ffi::GetCameraViewMatrix(self as *const _ as *mut _).into() }
+        unsafe { ffi::GetCameraViewMatrix(self as *const _ as *mut _) }
     }
     #[must_use]
     #[inline(always)]
     pub fn projection_matrix(&self, aspect: f32) -> Matrix {
-        unsafe { ffi::GetCameraProjectionMatrix(self as *const _ as *mut _, aspect).into() }
+        unsafe { ffi::GetCameraProjectionMatrix(self as *const _ as *mut _, aspect) }
     }
     /// Updates camera position for selected mode.
     #[inline(always)]

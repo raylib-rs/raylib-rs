@@ -19,21 +19,21 @@ pub enum MatrixMode {
 /// [`RaylibRlgl`](crate::rlgl::RaylibRlgl) trait.
 pub struct RlMatrix<'a, T: RaylibDraw>(&'a mut T);
 
-impl<'a, T: RaylibDraw> Drop for RlMatrix<'a, T> {
+impl<T: RaylibDraw> Drop for RlMatrix<'_, T> {
     fn drop(&mut self) {
         // SAFETY: paired with the `rlPushMatrix` that created this guard.
         unsafe { ffi::rlPopMatrix() }
     }
 }
 
-impl<'a, T: RaylibDraw> std::ops::Deref for RlMatrix<'a, T> {
+impl<T: RaylibDraw> std::ops::Deref for RlMatrix<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         self.0
     }
 }
 
-impl<'a, T: RaylibDraw> std::ops::DerefMut for RlMatrix<'a, T> {
+impl<T: RaylibDraw> std::ops::DerefMut for RlMatrix<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         self.0
     }

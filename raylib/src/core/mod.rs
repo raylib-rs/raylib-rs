@@ -327,7 +327,7 @@ impl RaylibBuilder {
         }
 
         unsafe {
-            ffi::SetConfigFlags(flags as u32);
+            ffi::SetConfigFlags(flags);
         }
 
         unsafe {

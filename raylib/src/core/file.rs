@@ -99,7 +99,7 @@ impl<'a> Iterator for FilePathIter<'a> {
         self.iter.nth(n).map(Self::func)
     }
 }
-impl<'a> DoubleEndedIterator for FilePathIter<'a> {
+impl DoubleEndedIterator for FilePathIter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.next_back().map(Self::func)
     }
@@ -108,7 +108,7 @@ impl<'a> DoubleEndedIterator for FilePathIter<'a> {
         self.iter.nth_back(n).map(Self::func)
     }
 }
-impl<'a> ExactSizeIterator for FilePathIter<'a> {
+impl ExactSizeIterator for FilePathIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.iter.len()
@@ -137,7 +137,7 @@ impl FilePathList {
             .collect()
     }
     /// An iterator over the paths held in this list.
-    pub fn iter<'a>(&'a self) -> FilePathIter<'a> {
+    pub fn iter(&self) -> FilePathIter<'_> {
         unsafe { FilePathIter::new(self.0.paths, self.count()) }
     }
 }
@@ -157,7 +157,7 @@ impl DroppedFilePathList {
             .collect()
     }
     /// An iterator over the paths held in this list.
-    pub fn iter<'a>(&'a self) -> FilePathIter<'a> {
+    pub fn iter(&self) -> FilePathIter<'_> {
         unsafe { FilePathIter::new(self.0.paths, self.count()) }
     }
 }

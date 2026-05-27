@@ -6,10 +6,12 @@ use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
+type AudioCallbackFn = Box<dyn FnMut(&mut [u8]) + Send>;
+
 struct AudioCallbackWrapper {
     channels: u16,
     bytes_per_sample: usize,
-    callback_fn: Box<dyn FnMut(&mut [u8]) + Send>,
+    callback_fn: AudioCallbackFn,
 }
 
 static AUDIO_STREAM_CALLBACK_SLOT: AtomicPtr<AudioCallbackWrapper> = AtomicPtr::new(null_mut());
@@ -37,7 +39,7 @@ where
     }
     let channels = u16::try_from(stream.channels()).expect("channels should fit in u16");
     let bytes_per_sample = size_of::<T>();
-    let callback_fn: Box<dyn FnMut(&mut [u8]) + Send> = Box::new({
+    let callback_fn: AudioCallbackFn = Box::new({
         let mut closure_captured = cb;
         move |bytes: &mut [u8]| {
             let byte_len = bytes.len() / bytes_per_sample;

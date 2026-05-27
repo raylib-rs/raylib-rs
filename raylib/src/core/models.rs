@@ -154,7 +154,6 @@ impl Drop for ModelAnimations {
 }
 
 impl RaylibHandle {
-    #[must_use]
     /// Loads model from files (mesh and material).
     // #[inline]
     pub fn load_model(
@@ -177,7 +176,6 @@ impl RaylibHandle {
         Ok(Model(m))
     }
 
-    #[must_use]
     /// Loads model from a generated mesh
     pub fn load_model_from_mesh(
         &mut self,
@@ -193,7 +191,6 @@ impl RaylibHandle {
         Ok(Model(m))
     }
 
-    #[must_use]
     /// Load model animations from file
     pub fn load_model_animations(
         &mut self,
@@ -233,6 +230,7 @@ impl RaylibHandle {
     /// New in raylib 6.0. `blend` (0.0..=1.0) interpolates between the pose of
     /// `anim_a` at `frame_a` and `anim_b` at `frame_b`.
     #[inline]
+    #[allow(clippy::too_many_arguments)] // mirrors the raylib C API exactly; no natural grouping
     pub fn update_model_animation_ex(
         &mut self,
         _: &RaylibThread,
@@ -260,6 +258,10 @@ impl RaylibModel for WeakModel {}
 impl RaylibModel for Model {}
 
 impl Model {
+    /// # Safety
+    ///
+    /// The caller becomes responsible for ensuring the underlying `ffi::Model` is eventually
+    /// unloaded. The returned `WeakModel` does not call `UnloadModel` on drop.
     pub unsafe fn make_weak(self) -> WeakModel {
         let m = WeakModel(self.0);
         std::mem::forget(self);
@@ -277,7 +279,7 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
 
     #[inline]
     fn set_transform(&mut self, mat: &Matrix) {
-        self.as_mut().transform = (*mat).into();
+        self.as_mut().transform = *mat;
     }
 
     /// Meshes array
@@ -361,7 +363,9 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
         if self.as_ref().skeleton.bindPose.is_null() {
             return None;
         }
-        Some(unsafe { std::mem::transmute(self.as_ref().skeleton.bindPose) })
+        // SAFETY: bindPose is non-null (checked above) and points to a valid ffi::Transform.
+        // Transform is #[repr(C)] over ffi::Transform, so the cast is sound.
+        Some(unsafe { &*(self.as_ref().skeleton.bindPose as *const Transform) })
     }
     #[inline]
     #[must_use]
@@ -370,7 +374,9 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
         if self.as_ref().skeleton.bindPose.is_null() {
             return None;
         }
-        Some(unsafe { std::mem::transmute(self.as_mut().skeleton.bindPose) })
+        // SAFETY: bindPose is non-null (checked above) and points to a valid ffi::Transform.
+        // Transform is #[repr(C)] over ffi::Transform, so the cast is sound.
+        Some(unsafe { &mut *(self.as_mut().skeleton.bindPose as *mut Transform) })
     }
     #[inline]
     #[must_use]
@@ -415,6 +421,10 @@ impl RaylibMesh for WeakMesh {}
 impl RaylibMesh for Mesh {}
 
 impl Mesh {
+    /// # Safety
+    ///
+    /// The caller becomes responsible for ensuring the underlying `ffi::Mesh` is eventually
+    /// unloaded. The returned `WeakMesh` does not call `UnloadMesh` on drop.
     pub unsafe fn make_weak(self) -> WeakMesh {
         let m = WeakMesh(self.0);
         std::mem::forget(self);
@@ -423,11 +433,21 @@ impl Mesh {
 }
 pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// Upload mesh vertex data in GPU and provide VAO/VBO ids
+    ///
+    /// # Safety
+    ///
+    /// The mesh must have valid vertex data (vertices and texcoords at minimum). The mesh
+    /// must not already have GPU buffers allocated (i.e., `vaoId` and all `vboId` must be 0).
     #[inline]
     unsafe fn upload(&mut self, dynamic: bool) {
         unsafe { ffi::UploadMesh(self.as_mut(), dynamic) };
     }
     /// Update mesh vertex data in GPU for a specific buffer index
+    ///
+    /// # Safety
+    ///
+    /// `index` must be a valid VBO index for this mesh (0..=6). The mesh must already be
+    /// uploaded to the GPU. `data` must be a valid byte slice for the buffer at `index`.
     #[inline]
     unsafe fn update_buffer<A>(&mut self, index: i32, data: &[u8], offset: i32) {
         unsafe {
@@ -545,7 +565,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     fn indices_mut(&mut self) -> &mut [u16] {
         unsafe {
             std::slice::from_raw_parts_mut(
-                self.as_mut().indices as *mut u16,
+                self.as_mut().indices,
                 self.as_mut().vertexCount as usize,
             )
         }
@@ -668,7 +688,10 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
 }
 
 impl Material {
-    #[must_use]
+    /// # Safety
+    ///
+    /// The caller becomes responsible for ensuring the underlying `ffi::Material` is eventually
+    /// unloaded. The returned `WeakMaterial` does not call `UnloadMaterial` on drop.
     #[inline]
     pub unsafe fn make_weak(self) -> WeakMaterial {
         let m = WeakMaterial(self.0);
@@ -677,7 +700,6 @@ impl Material {
     }
 
     /// Load materials from model file
-    #[must_use]
     pub fn load_materials(filename: &str) -> Result<Vec<Material>, LoadMaterialError> {
         let c_filename = CString::new(filename).unwrap();
         let mut m_size = 0;
@@ -815,7 +837,7 @@ impl<'a> Iterator for FramePoseIter<'a> {
         self.iter.nth(n).map(move |tf| Self::func(tf, bone_count))
     }
 }
-impl<'a> DoubleEndedIterator for FramePoseIter<'a> {
+impl DoubleEndedIterator for FramePoseIter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let bone_count = self.bone_count;
         self.iter
@@ -830,7 +852,7 @@ impl<'a> DoubleEndedIterator for FramePoseIter<'a> {
             .map(move |tf| Self::func(tf, bone_count))
     }
 }
-impl<'a> ExactSizeIterator for FramePoseIter<'a> {
+impl ExactSizeIterator for FramePoseIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.iter.len()
@@ -893,7 +915,7 @@ impl<'a> Iterator for FramePoseIterMut<'a> {
         self.iter.nth(n).map(move |tf| Self::func(tf, bone_count))
     }
 }
-impl<'a> DoubleEndedIterator for FramePoseIterMut<'a> {
+impl DoubleEndedIterator for FramePoseIterMut<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let bone_count = self.bone_count;
         self.iter
@@ -908,7 +930,7 @@ impl<'a> DoubleEndedIterator for FramePoseIterMut<'a> {
             .map(move |tf| Self::func(tf, bone_count))
     }
 }
-impl<'a> ExactSizeIterator for FramePoseIterMut<'a> {
+impl ExactSizeIterator for FramePoseIterMut<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.iter.len()
@@ -919,6 +941,10 @@ impl RaylibModelAnimation for ModelAnimation {}
 impl RaylibModelAnimation for WeakModelAnimation {}
 
 impl ModelAnimation {
+    /// # Safety
+    ///
+    /// The caller becomes responsible for ensuring the underlying `ffi::ModelAnimation` is
+    /// eventually unloaded. The returned `WeakModelAnimation` does not call any unload fn on drop.
     #[inline]
     #[must_use]
     pub unsafe fn make_weak(self) -> WeakModelAnimation {
@@ -947,7 +973,7 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
         top
     }
     #[must_use]
-    fn frame_poses_iter<'a>(&'a self) -> FramePoseIter<'a> {
+    fn frame_poses_iter(&self) -> FramePoseIter<'_> {
         let anim = self.as_ref();
         unsafe {
             FramePoseIter::new(
@@ -976,7 +1002,7 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
         top
     }
     #[must_use]
-    fn frame_poses_iter_mut<'a>(&'a mut self) -> FramePoseIterMut<'a> {
+    fn frame_poses_iter_mut(&mut self) -> FramePoseIterMut<'_> {
         let anim = self.as_ref();
         unsafe {
             FramePoseIterMut::new(
@@ -1037,22 +1063,31 @@ impl RaylibHandle {
         WeakMaterial(unsafe { ffi::LoadMaterialDefault() })
     }
 
-    /// Weak materials will leak memory if they are not unlaoded
     /// Unload material from GPU memory (VRAM)
+    ///
+    /// # Safety
+    ///
+    /// `material` must not be used after this call. Weak materials will leak memory if not unloaded.
     #[inline]
     pub unsafe fn unload_material(&mut self, _: &RaylibThread, material: WeakMaterial) {
         unsafe { ffi::UnloadMaterial(*material.as_ref()) }
     }
 
-    /// Weak models will leak memory if they are not unlaoded
     /// Unload model from GPU memory (VRAM)
+    ///
+    /// # Safety
+    ///
+    /// `model` must not be used after this call. Weak models will leak memory if not unloaded.
     #[inline]
     pub unsafe fn unload_model(&mut self, _: &RaylibThread, model: WeakModel) {
         unsafe { ffi::UnloadModel(*model.as_ref()) }
     }
 
-    /// Weak meshs will leak memory if they are not unlaoded
     /// Unload mesh from GPU memory (VRAM)
+    ///
+    /// # Safety
+    ///
+    /// `mesh` must not be used after this call. Weak meshes will leak memory if not unloaded.
     #[inline]
     pub unsafe fn unload_mesh(&mut self, _: &RaylibThread, mesh: WeakMesh) {
         unsafe { ffi::UnloadMesh(*mesh.as_ref()) }

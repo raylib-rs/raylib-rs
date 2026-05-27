@@ -32,7 +32,7 @@ impl AudioCallbackWithUserData {
         raw_callback: RawAudioCallbackWithUserData,
     ) -> Self {
         AudioCallbackWithUserData {
-            user_data: user_data,
+            user_data,
             callback: Some(raw_callback),
         }
     }

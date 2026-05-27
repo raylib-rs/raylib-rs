@@ -48,7 +48,7 @@ pub fn check_collision_point_poly(point: impl Into<ffi::Vector2>, points: &[Vect
     unsafe {
         ffi::CheckCollisionPointPoly(
             point.into(),
-            std::mem::transmute(points.as_ptr()),
+            points.as_ptr(),
             points.len() as i32,
         )
     }
@@ -99,9 +99,9 @@ pub fn check_collision_lines(
         )
     };
     if collision {
-        return Some(out.into());
+        Some(out)
     } else {
-        return None;
+        None
     }
 }
 
