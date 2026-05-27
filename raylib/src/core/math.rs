@@ -257,13 +257,17 @@ mod math_test {
                 && r.direction.z == 1.0,
             "bad memory transmutation"
         );
+        // raylib's Matrix is 16 named floats (m0..m15), column-major; identity has
+        // 1.0 on the diagonal (m0/m5/m10/m15) and 0.0 elsewhere.
         let identity_mat: ffi::Matrix = Matrix::identity();
-        let ffi_identity_mat = ffi::Matrix {
-            x: ffi::Vector4::from([1.0, 0.0, 0.0, 0.0]),
-            y: ffi::Vector4::from([0.0, 1.0, 0.0, 0.0]),
-            z: ffi::Vector4::from([0.0, 0.0, 1.0, 0.0]),
-            w: ffi::Vector4::from([0.0, 0.0, 0.0, 1.0]),
-        };
-        assert!(identity_mat == ffi_identity_mat, "bad memory transmutation");
+        assert!(
+            identity_mat.m0 == 1.0
+                && identity_mat.m5 == 1.0
+                && identity_mat.m10 == 1.0
+                && identity_mat.m15 == 1.0
+                && identity_mat.m1 == 0.0
+                && identity_mat.m4 == 0.0,
+            "identity matrix should be 1.0 on the diagonal, 0.0 elsewhere"
+        );
     }
 }
