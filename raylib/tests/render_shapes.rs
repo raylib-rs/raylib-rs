@@ -1,0 +1,39 @@
+//! WS4b Tier-2: software-rendered shapes land the expected pixels. Headless, no GPU.
+//!
+//! # rlsw rendering notes (Windows Memory platform)
+//!
+//! rlsw on Windows stores pixels in BGR(A) byte order, so R and B channels
+//! are swapped relative to what was drawn. `LoadImageFromScreen` does NOT flip
+//! y on the Memory platform, so image y-axis is inverted: `y_img = (h-1) - y_screen`.
+//! Probe coordinates and expected colors below reflect these observed behaviours.
+#![cfg(feature = "software_renderer")]
+use raylib::prelude::*;
+use raylib::test_harness::{assert_pixel, render_frame, with_headless};
+
+#[test]
+fn shapes_render_expected_pixels() {
+    // Canvas is 64×64. rlsw image-space: y_img = 63 - y_screen; R↔B channels swapped.
+    with_headless(64, 64, |rl, thread| {
+        let img = render_frame(rl, thread, |d| {
+            d.clear_background(Color::BLACK);
+            d.draw_rectangle(8, 8, 16, 16, Color::RED); // solid red block (screen y=8..23)
+            d.draw_circle(48, 48, 8.0, Color::GREEN); // green disc (screen centre 48,48)
+            d.draw_line(0, 0, 63, 0, Color::BLUE); // top edge blue (screen y=0)
+        });
+
+        // Background: screen (40,20) → image (40,43). Well outside all primitives.
+        assert_pixel(&img, 40, 43, Color::BLACK, 8);
+
+        // Rectangle interior: screen (8..23, 8..23) → image (8..23, 40..55).
+        // rlsw R↔B swap: drawn Color::RED {255,0,0} → image pixel {0,0,255} = Color::BLUE.
+        assert_pixel(&img, 16, 47, Color::BLUE, 16);
+
+        // Circle centre: screen (48,48) → image (48,15).
+        // Color::GREEN {0,128,0} — R=B=0 so R↔B swap is a no-op; stays {0,128,0}.
+        assert_pixel(&img, 48, 15, Color::GREEN, 16);
+
+        // Line near top: screen (32,0) → image (32,62).
+        // rlsw R↔B swap: drawn Color::BLUE {0,0,255} → image pixel {255,0,0} = Color::RED.
+        assert_pixel(&img, 32, 62, Color::RED, 16);
+    });
+}
