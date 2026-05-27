@@ -179,7 +179,7 @@ pub fn quad_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if td < 1.0 {
         ((c / 2.0) * (td * td)) + b
     } else {
-        -c / 2.0 * (((td - 2.0) * (td - 1.0)) - 1.0) + b
+        -c / 2.0 * (((td - 1.0) * (td - 3.0)) - 1.0) + b
     }
 }
 
@@ -395,22 +395,7 @@ mod tests {
     fn quad_boundaries() {
         assert_boundaries(quad_in, "quad_in");
         assert_boundaries(quad_out, "quad_out");
-        // quad_in_out has a known formula quirk inherited from Penner's original:
-        // at t=d, the in-out variant returns b + c/2 rather than b + c.
-        // The start boundary (t=0 → b) is still correct.
-        let (b, c, d) = (5.0_f32, 10.0_f32, 1.0_f32);
-        let at_start = quad_in_out(0.0, b, c, d);
-        assert!(
-            (at_start - b).abs() < EPS,
-            "quad_in_out: at t=0 expected {b}, got {at_start}"
-        );
-        let at_end = quad_in_out(d, b, c, d);
-        // known output: b + c/2
-        let expected_end = b + c / 2.0;
-        assert!(
-            (at_end - expected_end).abs() < EPS,
-            "quad_in_out: at t=d expected {expected_end} (b+c/2 quirk), got {at_end}"
-        );
+        assert_boundaries(quad_in_out, "quad_in_out");
     }
 
     // --- Expo family ---
