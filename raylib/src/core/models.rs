@@ -1,6 +1,5 @@
 //! 3D Model, Mesh, and Animation
 
-use crate::MintVec3;
 use crate::core::databuf::DataBuf;
 use crate::core::math::BoundingBox;
 use crate::core::math::Matrix;
@@ -537,7 +536,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// Generates heightmap mesh from image data.
     #[inline]
     #[must_use]
-    fn gen_mesh_heightmap(_: &RaylibThread, heightmap: &Image, size: impl Into<MintVec3>) -> Mesh {
+    fn gen_mesh_heightmap(_: &RaylibThread, heightmap: &Image, size: impl Into<Vector3>) -> Mesh {
         unsafe { Mesh(ffi::GenMeshHeightmap(heightmap.0, size.into())) }
     }
 
@@ -547,7 +546,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     fn gen_mesh_cubicmap(
         _: &RaylibThread,
         cubicmap: &Image,
-        cube_size: impl Into<MintVec3>,
+        cube_size: impl Into<Vector3>,
     ) -> Mesh {
         unsafe { Mesh(ffi::GenMeshCubicmap(cubicmap.0, cube_size.into())) }
     }

@@ -2,7 +2,6 @@
 use raylib_sys::CameraMode;
 use std::mem::transmute;
 
-use crate::MintVec3;
 use crate::ffi::{self, CameraProjection};
 use crate::math::{Vector2, Vector3};
 
@@ -205,8 +204,8 @@ impl Camera3D {
     #[inline(always)]
     pub fn update_camera_pro(
         &mut self,
-        movement: impl Into<MintVec3>,
-        rotation: impl Into<MintVec3>,
+        movement: impl Into<Vector3>,
+        rotation: impl Into<Vector3>,
         zoom: f32,
     ) {
         unsafe { ffi::UpdateCameraPro(self.into(), movement.into(), rotation.into(), zoom) }

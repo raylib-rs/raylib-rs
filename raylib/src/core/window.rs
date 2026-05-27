@@ -1,7 +1,7 @@
 //! Window manipulation functions
-use crate::core::math::{Matrix, Ray, Vector2};
+use crate::core::math::{Matrix, Ray, Vector2, Vector3};
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::{MintVec2, MintVec3, ffi};
+use crate::ffi;
 use std::ffi::{CStr, CString, IntoStringError, NulError};
 use std::os::raw::c_char;
 
@@ -445,7 +445,7 @@ impl RaylibHandle {
     #[must_use]
     pub fn get_screen_to_world_ray(
         &self,
-        mouse_position: impl Into<MintVec2>,
+        mouse_position: impl Into<Vector2>,
         camera: impl Into<ffi::Camera>,
     ) -> Ray {
         unsafe { ffi::GetScreenToWorldRay(mouse_position.into(), camera.into()).into() }
@@ -456,7 +456,7 @@ impl RaylibHandle {
     #[must_use]
     pub fn get_screen_to_world_ray_ex(
         &self,
-        mouse_position: impl Into<MintVec2>,
+        mouse_position: impl Into<Vector2>,
         camera: impl Into<ffi::Camera>,
         width: i32,
         height: i32,
@@ -471,7 +471,7 @@ impl RaylibHandle {
     #[must_use]
     pub fn get_world_to_screen(
         &self,
-        position: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
         camera: impl Into<ffi::Camera>,
     ) -> Vector2 {
         unsafe { ffi::GetWorldToScreen(position.into(), camera.into()).into() }
@@ -483,7 +483,7 @@ impl RaylibHandle {
     #[must_use]
     pub fn get_world_to_screen2D(
         &self,
-        position: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
         camera: impl Into<ffi::Camera2D>,
     ) -> Vector2 {
         unsafe { ffi::GetWorldToScreen2D(position.into(), camera.into()).into() }
@@ -494,7 +494,7 @@ impl RaylibHandle {
     #[must_use]
     pub fn get_world_to_screen_ex(
         &self,
-        position: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
         camera: impl Into<ffi::Camera>,
         width: i32,
         height: i32,
@@ -508,7 +508,7 @@ impl RaylibHandle {
     #[must_use]
     pub fn get_screen_to_world2D(
         &self,
-        position: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
         camera: impl Into<ffi::Camera2D>,
     ) -> Vector2 {
         unsafe { ffi::GetScreenToWorld2D(position.into(), camera.into()).into() }

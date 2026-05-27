@@ -1,8 +1,8 @@
 use crate::core::RaylibHandle;
 use crate::core::drawing::RaylibDraw;
 use crate::core::text::WeakFont;
+use crate::ffi;
 use crate::ffi::{Color, Rectangle, Vector2};
-use crate::{MintVec2, ffi};
 
 use std::ffi::{CStr, CString, c_char};
 
@@ -233,7 +233,7 @@ pub trait RaylibDrawGui {
         bounds: impl Into<ffi::Rectangle>,
         text: &str,
         content: impl Into<ffi::Rectangle>,
-        scroll: impl Into<MintVec2>,
+        scroll: impl Into<Vector2>,
         view: impl Into<ffi::Rectangle>,
     ) -> (bool, Rectangle, Vector2) {
         let mut scroll = scroll.into();
@@ -502,7 +502,7 @@ pub trait RaylibDrawGui {
         subdivs: i32,
     ) -> (bool, Vector2) {
         let c_text = CString::new(text).unwrap();
-        let mut mouse_cell = MintVec2 { x: 0.0, y: 0.0 };
+        let mut mouse_cell = Vector2 { x: 0.0, y: 0.0 };
         (
             unsafe {
                 ffi::GuiGrid(

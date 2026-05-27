@@ -5,12 +5,11 @@ use raylib_sys::Rectangle;
 use crate::core::texture::Texture2D;
 use crate::core::vr::VrStereoConfig;
 use crate::core::{RaylibHandle, RaylibThread};
+use crate::ffi;
 use crate::math::Matrix;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::models::WeakMaterial;
-use crate::{MintMatrix, MintVec2};
-use crate::{MintVec3, ffi};
 use std::ffi::CString;
 use std::{convert::AsRef, marker::PhantomData};
 
@@ -539,7 +538,7 @@ pub trait RaylibDraw {
 
     /// Draws a pixel (Vector version).
     #[inline]
-    fn draw_pixel_v(&mut self, position: impl Into<MintVec2>, color: impl Into<ffi::Color>) {
+    fn draw_pixel_v(&mut self, position: impl Into<Vector2>, color: impl Into<ffi::Color>) {
         unsafe {
             ffi::DrawPixelV(position.into(), color.into());
         }
@@ -564,8 +563,8 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_line_v(
         &mut self,
-        start_pos: impl Into<MintVec2>,
-        end_pos: impl Into<MintVec2>,
+        start_pos: impl Into<Vector2>,
+        end_pos: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -577,8 +576,8 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_line_ex(
         &mut self,
-        start_pos: impl Into<MintVec2>,
-        end_pos: impl Into<MintVec2>,
+        start_pos: impl Into<Vector2>,
+        end_pos: impl Into<Vector2>,
         thick: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -591,8 +590,8 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_line_bezier(
         &mut self,
-        start_pos: impl Into<MintVec2>,
-        end_pos: impl Into<MintVec2>,
+        start_pos: impl Into<Vector2>,
+        end_pos: impl Into<Vector2>,
         thick: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -630,7 +629,7 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_circle_sector(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         radius: f32,
         start_angle: f32,
         end_angle: f32,
@@ -653,7 +652,7 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_circle_sector_lines(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         radius: f32,
         start_angle: f32,
         end_angle: f32,
@@ -691,7 +690,7 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_circle_v(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         radius: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -718,7 +717,7 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_circle_lines_v(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         radius: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -761,7 +760,7 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_ring(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         inner_radius: f32,
         outer_radius: f32,
         start_angle: f32,
@@ -786,7 +785,7 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_ring_lines(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         inner_radius: f32,
         outer_radius: f32,
         start_angle: f32,
@@ -826,8 +825,8 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_rectangle_v(
         &mut self,
-        position: impl Into<MintVec2>,
-        size: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
+        size: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -848,7 +847,7 @@ pub trait RaylibDraw {
     fn draw_rectangle_pro(
         &mut self,
         rec: impl Into<ffi::Rectangle>,
-        origin: impl Into<MintVec2>,
+        origin: impl Into<Vector2>,
         rotation: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -995,9 +994,9 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_triangle(
         &mut self,
-        v1: impl Into<MintVec2>,
-        v2: impl Into<MintVec2>,
-        v3: impl Into<MintVec2>,
+        v1: impl Into<Vector2>,
+        v2: impl Into<Vector2>,
+        v3: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -1009,9 +1008,9 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_triangle_lines(
         &mut self,
-        v1: impl Into<MintVec2>,
-        v2: impl Into<MintVec2>,
-        v3: impl Into<MintVec2>,
+        v1: impl Into<Vector2>,
+        v2: impl Into<Vector2>,
+        v3: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -1047,7 +1046,7 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_poly(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         sides: i32,
         radius: f32,
         rotation: f32,
@@ -1062,7 +1061,7 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_poly_lines(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         sides: i32,
         radius: f32,
         rotation: f32,
@@ -1092,7 +1091,7 @@ pub trait RaylibDraw {
     fn draw_texture_v(
         &mut self,
         texture: impl AsRef<ffi::Texture2D>,
-        position: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -1105,7 +1104,7 @@ pub trait RaylibDraw {
     fn draw_texture_ex(
         &mut self,
         texture: impl AsRef<ffi::Texture2D>,
-        position: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
         rotation: f32,
         scale: f32,
         tint: impl Into<ffi::Color>,
@@ -1127,7 +1126,7 @@ pub trait RaylibDraw {
         &mut self,
         texture: impl AsRef<ffi::Texture2D>,
         source_rec: impl Into<ffi::Rectangle>,
-        position: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -1147,7 +1146,7 @@ pub trait RaylibDraw {
         texture: impl AsRef<ffi::Texture2D>,
         source_rec: impl Into<ffi::Rectangle>,
         dest_rec: impl Into<ffi::Rectangle>,
-        origin: impl Into<MintVec2>,
+        origin: impl Into<Vector2>,
         rotation: f32,
         tint: impl Into<ffi::Color>,
     ) {
@@ -1170,7 +1169,7 @@ pub trait RaylibDraw {
         texture: impl AsRef<ffi::Texture2D>,
         n_patch_info: impl Into<ffi::NPatchInfo>,
         dest_rec: impl Into<ffi::Rectangle>,
-        origin: impl Into<MintVec2>,
+        origin: impl Into<Vector2>,
         rotation: f32,
         tint: impl Into<ffi::Color>,
     ) {
@@ -1218,7 +1217,7 @@ pub trait RaylibDraw {
         &mut self,
         font: impl AsRef<ffi::Font>,
         text: &str,
-        position: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
         font_size: f32,
         spacing: f32,
         tint: impl Into<ffi::Color>,
@@ -1246,7 +1245,7 @@ pub trait RaylibDraw {
         &mut self,
         font: impl AsRef<ffi::Font>,
         text: &str,
-        position: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
         font_size: f32,
         spacing: f32,
         tint: impl Into<ffi::Color>,
@@ -1270,8 +1269,8 @@ pub trait RaylibDraw {
         &mut self,
         font: impl AsRef<ffi::Font>,
         text: &str,
-        position: impl Into<MintVec2>,
-        origin: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
+        origin: impl Into<Vector2>,
         rotation: f32,
         font_size: f32,
         spacing: f32,
@@ -1298,7 +1297,7 @@ pub trait RaylibDraw {
         &mut self,
         font: impl AsRef<ffi::Font>,
         codepoint: i32,
-        position: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
         scale: f32,
         tint: impl Into<ffi::Color>,
     ) {
@@ -1329,7 +1328,7 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_poly_lines_ex(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         sides: i32,
         radius: f32,
         rotation: f32,
@@ -1429,8 +1428,8 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_spline_segment_linear(
         &mut self,
-        p1: impl Into<MintVec2>,
-        p2: impl Into<MintVec2>,
+        p1: impl Into<Vector2>,
+        p2: impl Into<Vector2>,
         thick: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -1441,10 +1440,10 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_spline_segment_basis(
         &mut self,
-        p1: impl Into<MintVec2>,
-        p2: impl Into<MintVec2>,
-        p3: impl Into<MintVec2>,
-        p4: impl Into<MintVec2>,
+        p1: impl Into<Vector2>,
+        p2: impl Into<Vector2>,
+        p3: impl Into<Vector2>,
+        p4: impl Into<Vector2>,
         thick: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -1464,10 +1463,10 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_spline_segment_catmull_rom(
         &mut self,
-        p1: impl Into<MintVec2>,
-        p2: impl Into<MintVec2>,
-        p3: impl Into<MintVec2>,
-        p4: impl Into<MintVec2>,
+        p1: impl Into<Vector2>,
+        p2: impl Into<Vector2>,
+        p3: impl Into<Vector2>,
+        p4: impl Into<Vector2>,
         thick: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -1487,9 +1486,9 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_spline_segment_bezier_quadratic(
         &mut self,
-        p1: impl Into<MintVec2>,
-        c2: impl Into<MintVec2>,
-        p3: impl Into<MintVec2>,
+        p1: impl Into<Vector2>,
+        c2: impl Into<Vector2>,
+        p3: impl Into<Vector2>,
         thick: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -1508,10 +1507,10 @@ pub trait RaylibDraw {
     #[inline]
     fn draw_spline_segment_bezier_cubic(
         &mut self,
-        p1: impl Into<MintVec2>,
-        c2: impl Into<MintVec2>,
-        c3: impl Into<MintVec2>,
-        p4: impl Into<MintVec2>,
+        p1: impl Into<Vector2>,
+        c2: impl Into<Vector2>,
+        c3: impl Into<Vector2>,
+        p4: impl Into<Vector2>,
         thick: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -1532,8 +1531,8 @@ pub trait RaylibDraw {
     #[must_use]
     fn get_spline_point_linear(
         &mut self,
-        start_pos: impl Into<MintVec2>,
-        end_pos: impl Into<MintVec2>,
+        start_pos: impl Into<Vector2>,
+        end_pos: impl Into<Vector2>,
         t: f32,
     ) -> Vector2 {
         unsafe { ffi::GetSplinePointLinear(start_pos.into(), end_pos.into(), t).into() }
@@ -1544,10 +1543,10 @@ pub trait RaylibDraw {
     #[must_use]
     fn get_spline_point_basis(
         &mut self,
-        p1: impl Into<MintVec2>,
-        p2: impl Into<MintVec2>,
-        p3: impl Into<MintVec2>,
-        p4: impl Into<MintVec2>,
+        p1: impl Into<Vector2>,
+        p2: impl Into<Vector2>,
+        p3: impl Into<Vector2>,
+        p4: impl Into<Vector2>,
         t: f32,
     ) -> Vector2 {
         unsafe { ffi::GetSplinePointBasis(p1.into(), p2.into(), p3.into(), p4.into(), t).into() }
@@ -1558,10 +1557,10 @@ pub trait RaylibDraw {
     #[must_use]
     fn get_spline_point_catmull_rom(
         &mut self,
-        p1: impl Into<MintVec2>,
-        p2: impl Into<MintVec2>,
-        p3: impl Into<MintVec2>,
-        p4: impl Into<MintVec2>,
+        p1: impl Into<Vector2>,
+        p2: impl Into<Vector2>,
+        p3: impl Into<Vector2>,
+        p4: impl Into<Vector2>,
         t: f32,
     ) -> Vector2 {
         unsafe {
@@ -1574,9 +1573,9 @@ pub trait RaylibDraw {
     #[must_use]
     fn get_spline_point_bezier_quad(
         &mut self,
-        p1: impl Into<MintVec2>,
-        c2: impl Into<MintVec2>,
-        p3: impl Into<MintVec2>,
+        p1: impl Into<Vector2>,
+        c2: impl Into<Vector2>,
+        p3: impl Into<Vector2>,
         t: f32,
     ) -> Vector2 {
         unsafe { ffi::GetSplinePointBezierQuad(p1.into(), c2.into(), p3.into(), t).into() }
@@ -1587,10 +1586,10 @@ pub trait RaylibDraw {
     #[must_use]
     fn get_spline_point_bezier_cubic(
         &mut self,
-        p1: impl Into<MintVec2>,
-        c2: impl Into<MintVec2>,
-        c3: impl Into<MintVec2>,
-        p4: impl Into<MintVec2>,
+        p1: impl Into<Vector2>,
+        c2: impl Into<Vector2>,
+        c3: impl Into<Vector2>,
+        p4: impl Into<Vector2>,
         t: f32,
     ) -> Vector2 {
         unsafe {
@@ -1603,7 +1602,7 @@ pub trait RaylibDraw3D {
     /// Draw a point in 3D space, actually a small line
     #[allow(non_snake_case)]
     #[inline]
-    fn draw_point3D(&mut self, position: impl Into<MintVec3>, color: impl Into<ffi::Color>) {
+    fn draw_point3D(&mut self, position: impl Into<Vector3>, color: impl Into<ffi::Color>) {
         unsafe {
             ffi::DrawPoint3D(position.into(), color.into());
         }
@@ -1614,9 +1613,9 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_triangle3D(
         &mut self,
-        v1: impl Into<MintVec3>,
-        v2: impl Into<MintVec3>,
-        v3: impl Into<MintVec3>,
+        v1: impl Into<Vector3>,
+        v2: impl Into<Vector3>,
+        v3: impl Into<Vector3>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -1638,8 +1637,8 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_line3D(
         &mut self,
-        start_pos: impl Into<MintVec3>,
-        end_pos: impl Into<MintVec3>,
+        start_pos: impl Into<Vector3>,
+        end_pos: impl Into<Vector3>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -1652,9 +1651,9 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_circle3D(
         &mut self,
-        center: impl Into<MintVec3>,
+        center: impl Into<Vector3>,
         radius: f32,
-        rotation_axis: impl Into<MintVec3>,
+        rotation_axis: impl Into<Vector3>,
         rotation_angle: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -1673,7 +1672,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_cube(
         &mut self,
-        position: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
         width: f32,
         height: f32,
         length: f32,
@@ -1688,8 +1687,8 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_cube_v(
         &mut self,
-        position: impl Into<MintVec3>,
-        size: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
+        size: impl Into<Vector3>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -1701,7 +1700,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_cube_wires(
         &mut self,
-        position: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
         width: f32,
         height: f32,
         length: f32,
@@ -1716,8 +1715,8 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_cube_wires_v(
         &mut self,
-        position: impl Into<MintVec3>,
-        size: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
+        size: impl Into<Vector3>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -1748,7 +1747,7 @@ pub trait RaylibDraw3D {
             ffi::DrawMeshInstanced(
                 *mesh.as_ref(),
                 material.0,
-                transforms.as_ptr() as *const MintMatrix,
+                transforms.as_ptr() as *const Matrix,
                 transforms.len() as i32,
             )
         }
@@ -1758,7 +1757,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_sphere(
         &mut self,
-        center_pos: impl Into<MintVec3>,
+        center_pos: impl Into<Vector3>,
         radius: f32,
         color: impl Into<ffi::Color>,
     ) {
@@ -1771,7 +1770,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_sphere_ex(
         &mut self,
-        center_pos: impl Into<MintVec3>,
+        center_pos: impl Into<Vector3>,
         radius: f32,
         rings: i32,
         slices: i32,
@@ -1786,7 +1785,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_sphere_wires(
         &mut self,
-        center_pos: impl Into<MintVec3>,
+        center_pos: impl Into<Vector3>,
         radius: f32,
         rings: i32,
         slices: i32,
@@ -1801,7 +1800,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_cylinder(
         &mut self,
-        position: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
         radius_top: f32,
         radius_bottom: f32,
         height: f32,
@@ -1824,8 +1823,8 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_cylinder_ex(
         &mut self,
-        start_position: impl Into<MintVec3>,
-        end_position: impl Into<MintVec3>,
+        start_position: impl Into<Vector3>,
+        end_position: impl Into<Vector3>,
         radius_start: f32,
         radius_end: f32,
         slices: i32,
@@ -1847,7 +1846,7 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_cylinder_wires(
         &mut self,
-        position: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
         radius_top: f32,
         radius_bottom: f32,
         height: f32,
@@ -1870,8 +1869,8 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_cylinder_wires_ex(
         &mut self,
-        start_position: impl Into<MintVec3>,
-        end_position: impl Into<MintVec3>,
+        start_position: impl Into<Vector3>,
+        end_position: impl Into<Vector3>,
         radius_start: f32,
         radius_end: f32,
         slices: i32,
@@ -1893,8 +1892,8 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_capsule(
         &mut self,
-        start_pos: impl Into<MintVec3>,
-        end_pos: impl Into<MintVec3>,
+        start_pos: impl Into<Vector3>,
+        end_pos: impl Into<Vector3>,
         radius: f32,
         slices: i32,
         rings: i32,
@@ -1916,8 +1915,8 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_capsule_wires(
         &mut self,
-        start_pos: impl Into<MintVec3>,
-        end_pos: impl Into<MintVec3>,
+        start_pos: impl Into<Vector3>,
+        end_pos: impl Into<Vector3>,
         radius: f32,
         slices: i32,
         rings: i32,
@@ -1939,8 +1938,8 @@ pub trait RaylibDraw3D {
     #[inline]
     fn draw_plane(
         &mut self,
-        center_pos: impl Into<MintVec3>,
-        size: impl Into<MintVec2>,
+        center_pos: impl Into<Vector3>,
+        size: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -1969,7 +1968,7 @@ pub trait RaylibDraw3D {
     fn draw_model(
         &mut self,
         model: impl AsRef<ffi::Model>,
-        position: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
         scale: f32,
         tint: impl Into<ffi::Color>,
     ) {
@@ -1983,10 +1982,10 @@ pub trait RaylibDraw3D {
     fn draw_model_ex(
         &mut self,
         model: impl AsRef<ffi::Model>,
-        position: impl Into<MintVec3>,
-        rotation_axis: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
+        rotation_axis: impl Into<Vector3>,
         rotation_angle: f32,
-        scale: impl Into<MintVec3>,
+        scale: impl Into<Vector3>,
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -2006,7 +2005,7 @@ pub trait RaylibDraw3D {
     fn draw_model_wires(
         &mut self,
         model: impl AsRef<ffi::Model>,
-        position: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
         scale: f32,
         tint: impl Into<ffi::Color>,
     ) {
@@ -2020,10 +2019,10 @@ pub trait RaylibDraw3D {
     fn draw_model_wires_ex(
         &mut self,
         model: impl AsRef<ffi::Model>,
-        position: impl Into<MintVec3>,
-        rotation_axis: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
+        rotation_axis: impl Into<Vector3>,
         rotation_angle: f32,
-        scale: impl Into<MintVec3>,
+        scale: impl Into<Vector3>,
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -2056,7 +2055,7 @@ pub trait RaylibDraw3D {
         &mut self,
         camera: impl Into<ffi::Camera3D>,
         texture: &Texture2D,
-        center: impl Into<MintVec3>,
+        center: impl Into<Vector3>,
         size: f32,
         tint: impl Into<ffi::Color>,
     ) {
@@ -2072,8 +2071,8 @@ pub trait RaylibDraw3D {
         camera: impl Into<ffi::Camera3D>,
         texture: &Texture2D,
         source_rec: impl Into<ffi::Rectangle>,
-        center: impl Into<MintVec3>,
-        size: impl Into<MintVec2>,
+        center: impl Into<Vector3>,
+        size: impl Into<Vector2>,
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -2095,10 +2094,10 @@ pub trait RaylibDraw3D {
         camera: impl Into<ffi::Camera>,
         texture: impl Into<ffi::Texture2D>,
         source: impl Into<ffi::Rectangle>,
-        position: impl Into<MintVec3>,
-        up: impl Into<MintVec3>,
-        size: impl Into<MintVec2>,
-        origin: impl Into<MintVec2>,
+        position: impl Into<Vector3>,
+        up: impl Into<Vector3>,
+        size: impl Into<Vector2>,
+        origin: impl Into<Vector2>,
         rotation: f32,
         tint: impl Into<ffi::Color>,
     ) {
@@ -2122,7 +2121,7 @@ pub trait RaylibDraw3D {
     fn draw_model_points(
         &mut self,
         model: impl Into<ffi::Model>,
-        position: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
         scale: f32,
         tint: impl Into<ffi::Color>,
     ) {
@@ -2136,10 +2135,10 @@ pub trait RaylibDraw3D {
     fn draw_model_points_ex(
         &mut self,
         model: impl Into<ffi::Model>,
-        position: impl Into<MintVec3>,
-        rotation_axis: impl Into<MintVec3>,
+        position: impl Into<Vector3>,
+        rotation_axis: impl Into<Vector3>,
         angle: f32,
-        scale: impl Into<MintVec3>,
+        scale: impl Into<Vector3>,
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {

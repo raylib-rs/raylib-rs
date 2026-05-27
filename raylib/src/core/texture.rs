@@ -1,7 +1,7 @@
 //! Image and texture related functions
 
-use crate::MintVec2;
 use crate::core::ffi::{Color, Rectangle};
+use crate::core::math::Vector2;
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi;
 use std::convert::TryInto;
@@ -225,12 +225,7 @@ impl Image {
     }
     /// Draw circle outline within an image (Vector version)
     #[inline]
-    pub fn draw_circle_lines_v(
-        &mut self,
-        center: impl Into<MintVec2>,
-        center_y: i32,
-        color: Color,
-    ) {
+    pub fn draw_circle_lines_v(&mut self, center: impl Into<Vector2>, center_y: i32, color: Color) {
         unsafe { ffi::ImageDrawCircleLinesV(&mut self.0, center.into(), center_y, color.into()) }
     }
 
@@ -486,7 +481,7 @@ impl Image {
 
     /// Draw pixel within an image (Vector version)
     #[inline]
-    pub fn draw_pixel_v(&mut self, position: impl Into<MintVec2>, color: impl Into<ffi::Color>) {
+    pub fn draw_pixel_v(&mut self, position: impl Into<Vector2>, color: impl Into<ffi::Color>) {
         unsafe { ffi::ImageDrawPixelV(&mut self.0, position.into(), color.into()) }
     }
 
@@ -516,8 +511,8 @@ impl Image {
     #[inline]
     pub fn draw_line_ex(
         &mut self,
-        start_pos: impl Into<MintVec2>,
-        end_pos: impl Into<MintVec2>,
+        start_pos: impl Into<Vector2>,
+        end_pos: impl Into<Vector2>,
         thick: i32,
         color: impl Into<ffi::Color>,
     ) {
@@ -536,8 +531,8 @@ impl Image {
     #[inline]
     pub fn draw_line_v(
         &mut self,
-        start: impl Into<MintVec2>,
-        end: impl Into<MintVec2>,
+        start: impl Into<Vector2>,
+        end: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe { ffi::ImageDrawLineV(&mut self.0, start.into(), end.into(), color.into()) }
@@ -547,9 +542,9 @@ impl Image {
     #[inline]
     pub fn draw_triangle(
         &mut self,
-        v1: impl Into<MintVec2>,
-        v2: impl Into<MintVec2>,
-        v3: impl Into<MintVec2>,
+        v1: impl Into<Vector2>,
+        v2: impl Into<Vector2>,
+        v3: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -561,9 +556,9 @@ impl Image {
     #[inline]
     pub fn draw_triangle_ex(
         &mut self,
-        v1: impl Into<MintVec2>,
-        v2: impl Into<MintVec2>,
-        v3: impl Into<MintVec2>,
+        v1: impl Into<Vector2>,
+        v2: impl Into<Vector2>,
+        v3: impl Into<Vector2>,
         c1: impl Into<ffi::Color>,
         c2: impl Into<ffi::Color>,
         c3: impl Into<ffi::Color>,
@@ -585,9 +580,9 @@ impl Image {
     #[inline]
     pub fn draw_triangle_lines(
         &mut self,
-        v1: impl Into<MintVec2>,
-        v2: impl Into<MintVec2>,
-        v3: impl Into<MintVec2>,
+        v1: impl Into<Vector2>,
+        v2: impl Into<Vector2>,
+        v3: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -604,7 +599,7 @@ impl Image {
         unsafe {
             ffi::ImageDrawTriangleFan(
                 &mut self.0,
-                points.as_ptr() as *mut MintVec2,
+                points.as_ptr() as *mut Vector2,
                 points.len() as i32,
                 color.into(),
             )
@@ -620,7 +615,7 @@ impl Image {
         unsafe {
             ffi::ImageDrawTriangleStrip(
                 &mut self.0,
-                points.as_ptr() as *mut MintVec2,
+                points.as_ptr() as *mut Vector2,
                 points.len() as i32,
                 color.into(),
             )
@@ -643,7 +638,7 @@ impl Image {
     #[inline]
     pub fn draw_circle_v(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         radius: i32,
         color: impl Into<ffi::Color>,
     ) {
@@ -669,8 +664,8 @@ impl Image {
     #[inline]
     pub fn draw_rectangle_v(
         &mut self,
-        position: impl Into<MintVec2>,
-        size: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
+        size: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -732,7 +727,7 @@ impl Image {
         &mut self,
         font: impl AsRef<ffi::Font>,
         text: &str,
-        position: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
         font_size: f32,
         spacing: f32,
         color: impl Into<ffi::Color>,

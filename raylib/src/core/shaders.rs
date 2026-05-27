@@ -4,7 +4,7 @@ use crate::consts::ShaderUniformDataType;
 use crate::core::math::Matrix;
 use crate::core::math::{Vector2, Vector3, Vector4};
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::{MintMatrix, ffi};
+use crate::ffi;
 use std::ffi::CString;
 use std::os::raw::c_void;
 
@@ -62,7 +62,7 @@ impl RaylibHandle {
 
     /// Sets a custom projection matrix (replaces internal projection matrix).
     #[inline]
-    pub fn set_matrix_projection(&mut self, _: &RaylibThread, proj: impl Into<MintMatrix>) {
+    pub fn set_matrix_projection(&mut self, _: &RaylibThread, proj: impl Into<Matrix>) {
         unsafe {
             ffi::rlSetMatrixProjection(proj.into());
         }
@@ -70,7 +70,7 @@ impl RaylibHandle {
 
     /// Sets a custom modelview matrix (replaces internal modelview matrix).
     #[inline]
-    pub fn set_matrix_modelview(&mut self, _: &RaylibThread, view: impl Into<MintMatrix>) {
+    pub fn set_matrix_modelview(&mut self, _: &RaylibThread, view: impl Into<Matrix>) {
         unsafe {
             ffi::rlSetMatrixModelview(view.into());
         }
@@ -248,7 +248,7 @@ impl Shader {
 
     /// Sets shader uniform value (matrix 4x4).
     #[inline]
-    pub fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<MintMatrix>) {
+    pub fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<Matrix>) {
         unsafe {
             ffi::SetShaderValueMatrix(self.0, uniform_loc, mat.into());
         }
@@ -330,7 +330,7 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
 
     /// Sets shader uniform value (matrix 4x4).
     #[inline]
-    fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<MintMatrix>) {
+    fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<Matrix>) {
         unsafe {
             ffi::SetShaderValueMatrix(*self.as_mut(), uniform_loc, mat.into());
         }

@@ -137,7 +137,7 @@ impl BoundingBox {
     #[must_use]
     pub fn check_collision_box_sphere(
         &self,
-        center_sphere: impl Into<crate::MintVec3>,
+        center_sphere: impl Into<Vector3>,
         radius_sphere: f32,
     ) -> bool {
         unsafe { ffi::CheckCollisionBoxSphere(self.into(), center_sphere.into(), radius_sphere) }
