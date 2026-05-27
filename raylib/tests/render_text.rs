@@ -1,4 +1,6 @@
-//! WS4b Tier-2: drawn text produces foreground pixels within its bounds. Headless.
+//! WS4b Tier-2 (WS5-prep): drawn text produces foreground pixels within its
+//! bounds. Headless. Uses the normalized `render_frame`; the whole-image white
+//! scan is orientation/channel agnostic.
 #![cfg(feature = "software_renderer")]
 use raylib::prelude::*;
 use raylib::test_harness::{render_frame, with_headless};
