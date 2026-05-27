@@ -505,9 +505,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
             return &mut [];
         }
         // SAFETY: normals is non-null, exclusively borrowed, valid for vertexCount elements.
-        unsafe {
-            std::slice::from_raw_parts_mut(m.normals as *mut Vector3, m.vertexCount as usize)
-        }
+        unsafe { std::slice::from_raw_parts_mut(m.normals as *mut Vector3, m.vertexCount as usize) }
     }
     /// Vertex texture coordinates (UV - 2 components per vertex) (shader-location = 1)
     #[inline]
@@ -519,9 +517,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         }
         // SAFETY: texcoords is non-null, points to vertexCount * Vector2 (2 × f32),
         // raylib-allocated and valid for this borrow's lifetime.
-        unsafe {
-            std::slice::from_raw_parts(m.texcoords as *const Vector2, m.vertexCount as usize)
-        }
+        unsafe { std::slice::from_raw_parts(m.texcoords as *const Vector2, m.vertexCount as usize) }
     }
     /// Vertex texture coordinates (UV - 2 components per vertex) (shader-location = 1)
     #[inline]
@@ -618,9 +614,7 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
         }
         // SAFETY: indices is non-null, points to triangleCount * 3 u16 entries,
         // raylib-allocated and valid for this borrow's lifetime.
-        unsafe {
-            std::slice::from_raw_parts(m.indices as *const u16, m.triangleCount as usize * 3)
-        }
+        unsafe { std::slice::from_raw_parts(m.indices as *const u16, m.triangleCount as usize * 3) }
     }
     /// Vertex indices (in case vertex data comes indexed) — triangleCount * 3 entries
     #[inline]
@@ -1408,12 +1402,27 @@ mod mesh_soundness {
         // We use WeakMesh (no-drop) so no UnloadMesh is called on a null-pointer mesh.
         let ffi_mesh: ffi::Mesh = unsafe { std::mem::zeroed() };
         let m = WeakMesh(ffi_mesh);
-        assert!(m.vertices().is_empty(), "vertices() on null ptr must be empty");
-        assert!(m.normals().is_empty(), "normals() on null ptr must be empty");
-        assert!(m.texcoords().is_empty(), "texcoords() on null ptr must be empty");
-        assert!(m.tangents().is_empty(), "tangents() on null ptr must be empty");
+        assert!(
+            m.vertices().is_empty(),
+            "vertices() on null ptr must be empty"
+        );
+        assert!(
+            m.normals().is_empty(),
+            "normals() on null ptr must be empty"
+        );
+        assert!(
+            m.texcoords().is_empty(),
+            "texcoords() on null ptr must be empty"
+        );
+        assert!(
+            m.tangents().is_empty(),
+            "tangents() on null ptr must be empty"
+        );
         assert!(m.colors().is_empty(), "colors() on null ptr must be empty");
-        assert!(m.indices().is_empty(), "indices() on null ptr must be empty");
+        assert!(
+            m.indices().is_empty(),
+            "indices() on null ptr must be empty"
+        );
         // WeakMesh does not call UnloadMesh on drop, so no cleanup needed.
     }
 }

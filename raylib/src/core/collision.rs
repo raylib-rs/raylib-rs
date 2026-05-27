@@ -45,13 +45,7 @@ pub fn check_collision_point_circle(
 #[inline]
 #[must_use]
 pub fn check_collision_point_poly(point: impl Into<ffi::Vector2>, points: &[Vector2]) -> bool {
-    unsafe {
-        ffi::CheckCollisionPointPoly(
-            point.into(),
-            points.as_ptr(),
-            points.len() as i32,
-        )
-    }
+    unsafe { ffi::CheckCollisionPointPoly(point.into(), points.as_ptr(), points.len() as i32) }
 }
 
 /// Check if point belongs to line created between two points [p1] and [p2] with defined margin in pixels [threshold]
@@ -98,11 +92,7 @@ pub fn check_collision_lines(
             &mut out,
         )
     };
-    if collision {
-        Some(out)
-    } else {
-        None
-    }
+    if collision { Some(out) } else { None }
 }
 
 /// Detects collision between two spheres.

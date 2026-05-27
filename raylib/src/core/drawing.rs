@@ -1574,9 +1574,7 @@ pub trait RaylibDraw {
         p4: impl Into<Vector2>,
         t: f32,
     ) -> Vector2 {
-        unsafe {
-            ffi::GetSplinePointCatmullRom(p1.into(), p2.into(), p3.into(), p4.into(), t)
-        }
+        unsafe { ffi::GetSplinePointCatmullRom(p1.into(), p2.into(), p3.into(), p4.into(), t) }
     }
 
     /// Get (evaluate) spline point: Quadratic Bezier
@@ -1603,9 +1601,7 @@ pub trait RaylibDraw {
         p4: impl Into<Vector2>,
         t: f32,
     ) -> Vector2 {
-        unsafe {
-            ffi::GetSplinePointBezierCubic(p1.into(), c2.into(), c3.into(), p4.into(), t)
-        }
+        unsafe { ffi::GetSplinePointBezierCubic(p1.into(), c2.into(), c3.into(), p4.into(), t) }
     }
 }
 

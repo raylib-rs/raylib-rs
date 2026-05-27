@@ -473,13 +473,7 @@ impl Image {
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::ImageDraw(
-                &mut self.0,
-                src.0,
-                src_rec,
-                dst_rec,
-                tint.into(),
-            );
+            ffi::ImageDraw(&mut self.0, src.0, src_rec, dst_rec, tint.into());
         }
     }
 

@@ -163,7 +163,9 @@ impl RaylibHandle {
     pub fn get_gamepad_button_pressed(&self) -> Option<crate::consts::GamepadButton> {
         let button = unsafe { ffi::GetGamepadButtonPressed() };
         if button != raylib_sys::GamepadButton::GAMEPAD_BUTTON_UNKNOWN as i32 {
-            return Some(unsafe { std::mem::transmute::<u32, crate::consts::GamepadButton>(button as u32) });
+            return Some(unsafe {
+                std::mem::transmute::<u32, crate::consts::GamepadButton>(button as u32)
+            });
         }
         None
     }

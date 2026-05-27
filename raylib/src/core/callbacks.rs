@@ -336,5 +336,4 @@ impl RaylibHandle {
     ) -> Result<(), SetLogError<'_>> {
         set_load_file_text_callback(cb)
     }
-
 }
