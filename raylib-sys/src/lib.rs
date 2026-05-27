@@ -2,6 +2,11 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::approx_constant)]
+// bindgen maps C `long double` to u128 on Linux (128-bit float ABI); the generated
+// extern fns for these standard-math intrinsics are never called by raylib-rs, but
+// the `improper_ctypes` lint fires on the `include!`-d bindings.rs. Suppress it
+// crate-wide since we cannot annotate the generated file directly.
+#![allow(improper_ctypes)]
 
 #[cfg(not(feature = "nobindgen"))]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
