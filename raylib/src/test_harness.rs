@@ -44,7 +44,9 @@ pub fn with_headless<F: FnOnce(&mut RaylibHandle, &RaylibThread)>(w: i32, h: i32
 /// Y-inverted (`y_img = (h - 1) - y_screen`). Prefer [`render_frame`] unless you
 /// specifically need the raw readback; see `notes/ws4b-complete.md`.
 ///
-/// `EndDrawing`-on-drop flushes rlsw into the memory framebuffer before
+/// Uses the scoped [`begin_drawing`](RaylibHandle::begin_drawing) handle so the
+/// `EndDrawing` flush on drop is guaranteed to complete (flushing rlsw into the
+/// memory framebuffer) before
 /// [`load_image_from_screen`](RaylibHandle::load_image_from_screen) reads it.
 #[inline]
 #[must_use]
@@ -80,23 +82,36 @@ pub fn render_frame<F: FnOnce(&mut RaylibDrawHandle<'_>)>(
     img
 }
 
-/// Correct the rlsw readback in place: flip vertically and swap the R/B channels,
-/// yielding a true top-left RGBA image.
+/// Correct the rlsw readback in place: flip vertically and correct the
+/// BGRA-as-RGBA byte order, yielding a true top-left RGBA image.
 fn normalize_readback(img: &mut Image) {
-    // Fix Y-inversion using the existing safe image op.
+    // Fix Y-inversion using the existing safe image op. NOTE: `flip_vertical`
+    // (ImageFlipVertical) replaces the underlying data buffer, so the raw pointer
+    // must be taken *after* this call — which it is, below.
     img.flip_vertical();
 
-    // Fix the BGRA-as-RGBA byte order by swapping byte 0 (R) and byte 2 (B) of
-    // every 4-byte pixel. The readback is always PIXELFORMAT_UNCOMPRESSED_R8G8B8A8.
+    // Correct the BGRA-as-RGBA byte order by swapping byte 0 (R) and byte 2 (B)
+    // of every 4-byte pixel. The readback is always
+    // PIXELFORMAT_UNCOMPRESSED_R8G8B8A8; the channel swap is only sound for that
+    // 4-bytes-per-pixel layout (asserted below).
     debug_assert_eq!(
         img.format(),
         crate::consts::PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
         "normalize_readback assumes 32-bit RGBA readback"
     );
     let len = (img.width() * img.height()) as usize * 4;
-    // SAFETY: `img` is a freshly loaded screen image in 32-bit RGBA8 format, so
-    // its data buffer is exactly `width * height * 4` valid, initialized bytes.
-    // We only swap two in-bounds bytes per pixel; no aliasing (single &mut slice).
+    if len == 0 {
+        // A 0×0 image leaves `data` unallocated (possibly null); skip — and avoid
+        // `from_raw_parts_mut(null, 0)`, which is UB.
+        return;
+    }
+    // SAFETY: `img.data()` is taken after `flip_vertical`, so it points at the
+    // current, freshly allocated buffer, valid for `img`'s lifetime. The readback
+    // image is PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 (debug-asserted above), so the
+    // buffer is exactly `width * height * 4 == len` valid, initialized bytes, and
+    // `len > 0` here so the pointer is non-null. `img` is not accessed through its
+    // `&mut` while `bytes` is live, so the slice is the only handle to the data
+    // (no aliasing). We only swap two in-bounds bytes per 4-byte chunk.
     unsafe {
         let bytes = std::slice::from_raw_parts_mut(img.data() as *mut u8, len);
         for px in bytes.chunks_exact_mut(4) {
