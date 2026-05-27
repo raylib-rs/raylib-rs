@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
 
-use crate::{RaylibHandle, audio::AudioStream, ffi};
+use crate::{RaylibHandle, ffi};
 pub use raylib_sys::TraceLogLevel;
 use std::{
     borrow::Cow,
@@ -27,15 +27,11 @@ type RustSaveFileDataCallback = fn(&str, &[u8]) -> bool;
 type RustLoadFileDataCallback = fn(&str) -> Vec<u8>;
 type RustSaveFileTextCallback = fn(&str, &str) -> bool;
 type RustLoadFileTextCallback = fn(&str) -> String;
-type RustAudioStreamCallback = fn(&[u8]);
-
 static TRACE_LOG_CALLBACK: AtomicUsize = AtomicUsize::new(0);
 static SAVE_FILE_DATA_CALLBACK: AtomicUsize = AtomicUsize::new(0);
 static LOAD_FILE_DATA_CALLBACK: AtomicUsize = AtomicUsize::new(0);
 static SAVE_FILE_TEXT_CALLBACK: AtomicUsize = AtomicUsize::new(0);
 static LOAD_FILE_TEXT_CALLBACK: AtomicUsize = AtomicUsize::new(0);
-static AUDIO_STREAM_CALLBACK: AtomicUsize = AtomicUsize::new(0);
-
 fn trace_log_callback() -> Option<RustTraceLogCallback> {
     debug_assert!(size_of::<RustTraceLogCallback>() == size_of::<usize>());
     unsafe { transmute(TRACE_LOG_CALLBACK.load(Ordering::Relaxed)) }
@@ -59,11 +55,6 @@ fn save_file_text_callback() -> Option<RustSaveFileTextCallback> {
 fn load_file_text_callback() -> Option<RustLoadFileTextCallback> {
     debug_assert!(size_of::<RustLoadFileTextCallback>() == size_of::<usize>());
     unsafe { transmute(LOAD_FILE_TEXT_CALLBACK.load(Ordering::Relaxed)) }
-}
-
-fn audio_stream_callback() -> Option<RustAudioStreamCallback> {
-    debug_assert!(size_of::<RustAudioStreamCallback>() == size_of::<usize>());
-    unsafe { transmute(AUDIO_STREAM_CALLBACK.load(Ordering::Relaxed)) }
 }
 
 #[unsafe(no_mangle)]
@@ -127,13 +118,6 @@ extern "C" fn custom_load_file_text_callback(a: *const c_char) -> *mut c_char {
     oh.as_ptr() as *mut c_char
 }
 
-//TODO: before any merge find out what the status of the deprecated functions are and how to best finalize removing them
-#[deprecated = "use [set_audio_stream_callback](core::callbacks::audio_stream::set_audio_stream_callback) and its trampoline instead."]
-extern "C" fn custom_audio_stream_callback(a: *mut c_void, b: u32) {
-    let audio_stream = audio_stream_callback().unwrap();
-    let a = unsafe { std::slice::from_raw_parts(a as *mut u8, b as usize) };
-    audio_stream(a);
-}
 #[derive(Debug)]
 pub struct SetLogError<'a>(&'a str);
 
@@ -350,19 +334,4 @@ impl RaylibHandle {
         set_load_file_text_callback(cb)
     }
 
-    /// Audio thread callback to request new data
-    #[deprecated = "Decoupled from RaylibHandle. Use [set_audio_stream_callback](core::callbacks::set_audio_stream_callback) instead."]
-    pub fn set_audio_stream_callback(
-        &'_ mut self,
-        stream: AudioStream,
-        cb: fn(&[u8]),
-    ) -> Result<(), SetLogError<'_>> {
-        if AUDIO_STREAM_CALLBACK.load(Ordering::Acquire) == 0 {
-            AUDIO_STREAM_CALLBACK.store(cb as _, Ordering::Release);
-            unsafe { ffi::SetAudioStreamCallback(stream.0, Some(custom_audio_stream_callback)) }
-            Ok(())
-        } else {
-            Err(SetLogError("audio stream"))
-        }
-    }
 }
