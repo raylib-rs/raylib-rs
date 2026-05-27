@@ -69,3 +69,25 @@ jobs:
         run: cargo build -p raylib --no-default-features --features GLFW_BUILD_X11
       - name: All-math-features build
         run: cargo build -p raylib --features glam,mint,serde
+
+  software-render:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Linux build deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+      - name: Install macOS build deps
+        if: runner.os == 'macOS'
+        run: brew install cmake
+      # rlsw + windowless Memory platform: no GPU/display needed.
+      - name: Build (software_renderer)
+        run: cargo build -p raylib --no-default-features --features software_renderer
+      - name: Headless smoke test
+        run: cargo test -p raylib-sys --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES --test software_renderer_smoke
