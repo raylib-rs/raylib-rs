@@ -58,7 +58,14 @@ jobs:
       # integration tests run under xvfb in WS6.
       - name: Unit + doc tests
         run: cargo test -p raylib && cargo test -p raylib --doc
-      - name: Default-features-off build
+      # default-features=false drops raylib's window backend. On Linux, raylib's
+      # CMake refuses to build GLFW with both X11 and Wayland disabled, so a
+      # backend feature must be re-enabled; Windows/macOS don't use GLFW X11.
+      - name: Default-features-off build (non-Linux)
+        if: runner.os != 'Linux'
         run: cargo build -p raylib --no-default-features
+      - name: Default-features-off build (Linux re-adds an X11 backend)
+        if: runner.os == 'Linux'
+        run: cargo build -p raylib --no-default-features --features GLFW_BUILD_X11
       - name: All-math-features build
         run: cargo build -p raylib --features glam,mint,serde
