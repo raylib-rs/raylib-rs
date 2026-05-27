@@ -22,8 +22,12 @@ use crate::prelude::*;
 /// Initialise a windowless, software-rendered context of `w`×`h`, run
 /// `body` with the handle and thread token, then tear down.
 ///
-/// **Call at most once per test process.** raylib is single-init per process;
-/// calling this more than once will panic at the raylib level.
+/// **Call at most once per test process.**
+///
+/// # Panics
+///
+/// Panics if raylib has already been initialised in this process; raylib is
+/// single-init per process (enforced by `RaylibHandle`).
 pub fn with_headless<F: FnOnce(&mut RaylibHandle, &RaylibThread)>(w: i32, h: i32, body: F) {
     let (mut rl, thread) = crate::init().size(w, h).title("headless").build();
     body(&mut rl, &thread);
@@ -35,6 +39,12 @@ pub fn with_headless<F: FnOnce(&mut RaylibHandle, &RaylibThread)>(w: i32, h: i32
 ///
 /// `EndDrawing`-on-drop flushes rlsw into the memory framebuffer before
 /// [`load_image_from_screen`](RaylibHandle::load_image_from_screen) reads it.
+///
+/// Uses the scoped [`begin_drawing`](RaylibHandle::begin_drawing) handle rather
+/// than the closure-form [`draw`](RaylibHandle::draw): wrapping `draw` in a
+/// generic helper would require a higher-ranked closure bound, and the explicit
+/// scope keeps the "flush before readback" ordering visible.
+#[inline]
 #[must_use]
 pub fn render_frame<F: FnOnce(&mut RaylibDrawHandle<'_>)>(
     rl: &mut RaylibHandle,
@@ -54,6 +64,9 @@ pub struct Px {
     pub r: u8,
     pub g: u8,
     pub b: u8,
+    /// Alpha as reported by the framebuffer. On the Memory platform this may
+    /// not match the drawn `Color`'s alpha, so [`assert_pixel`] ignores it;
+    /// don't assert on this field directly.
     pub a: u8,
 }
 
