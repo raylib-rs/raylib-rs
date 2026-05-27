@@ -48,10 +48,10 @@ make_thin_wrapper!(
     no_drop
 );
 make_thin_wrapper!(
-    /// ModelAnimation
+    /// A single model animation: a non-owning view into a `ModelAnimations` collection.
     ModelAnimation,
     ffi::ModelAnimation,
-    ffi::UnloadModelAnimation
+    no_drop
 );
 make_thin_wrapper!(WeakModelAnimation, ffi::ModelAnimation, no_drop);
 make_thin_wrapper!(
@@ -86,6 +86,70 @@ impl Clone for WeakMaterial {
 impl Clone for WeakModelAnimation {
     fn clone(&self) -> WeakModelAnimation {
         WeakModelAnimation(self.0)
+    }
+}
+
+/// Owns the heap array returned by `LoadModelAnimations`. Frees it exactly once on
+/// drop via `UnloadModelAnimations` (which frees each animation's keyframe poses AND
+/// the array pointer). Individual animations are borrowed, non-owning `ModelAnimation`s.
+#[derive(Debug)]
+pub struct ModelAnimations {
+    ptr: *mut ffi::ModelAnimation,
+    count: usize,
+}
+
+impl ModelAnimations {
+    /// Number of animations in the array.
+    #[inline]
+    #[must_use]
+    pub const fn len(&self) -> usize {
+        self.count
+    }
+    /// Whether the array is empty.
+    #[inline]
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.count == 0
+    }
+    /// The animations as a borrowed slice of non-owning views.
+    #[inline]
+    #[must_use]
+    pub fn as_slice(&self) -> &[ModelAnimation] {
+        // SAFETY: ModelAnimation is #[repr(transparent)] over ffi::ModelAnimation and the
+        // array of `count` elements at `ptr` is valid for the lifetime of `self`.
+        unsafe { std::slice::from_raw_parts(self.ptr as *const ModelAnimation, self.count) }
+    }
+    /// The animations as a mutable borrowed slice of non-owning views.
+    #[inline]
+    #[must_use]
+    pub fn as_mut_slice(&mut self) -> &mut [ModelAnimation] {
+        // SAFETY: see as_slice; exclusive borrow guarantees no aliasing.
+        unsafe { std::slice::from_raw_parts_mut(self.ptr as *mut ModelAnimation, self.count) }
+    }
+}
+
+impl std::ops::Deref for ModelAnimations {
+    type Target = [ModelAnimation];
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
+    }
+}
+impl std::ops::DerefMut for ModelAnimations {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_mut_slice()
+    }
+}
+
+impl Drop for ModelAnimations {
+    fn drop(&mut self) {
+        if !self.ptr.is_null() {
+            // SAFETY: `ptr`/`count` are exactly what LoadModelAnimations returned; 6.0's
+            // UnloadModelAnimations frees each keyframePoses[i], keyframePoses, then the
+            // array. Called exactly once (this owner is the sole holder of `ptr`).
+            unsafe { ffi::UnloadModelAnimations(self.ptr, self.count as i32) }
+        }
     }
 }
 
@@ -135,25 +199,19 @@ impl RaylibHandle {
         &mut self,
         _: &RaylibThread,
         filename: &str,
-    ) -> Result<Vec<ModelAnimation>, LoadModelAnimError> {
+    ) -> Result<ModelAnimations, LoadModelAnimError> {
         let c_filename = CString::new(filename).unwrap();
         let mut m_size = 0;
         let m_ptr = unsafe { ffi::LoadModelAnimations(c_filename.as_ptr(), &mut m_size) };
-        if m_size <= 0 {
+        if m_ptr.is_null() || m_size <= 0 {
             return Err(LoadModelAnimError::NoAnimationsLoaded {
                 path: filename.into(),
             });
         }
-        let mut m_vec = Vec::with_capacity(m_size as usize);
-        for i in 0..m_size {
-            unsafe {
-                m_vec.push(ModelAnimation(*m_ptr.offset(i as isize)));
-            }
-        }
-        unsafe {
-            ffi::MemFree(m_ptr as *mut ::std::os::raw::c_void);
-        }
-        Ok(m_vec)
+        Ok(ModelAnimations {
+            ptr: m_ptr,
+            count: m_size as usize,
+        })
     }
 
     /// Update model animation pose (CPU)
@@ -163,24 +221,10 @@ impl RaylibHandle {
         _: &RaylibThread,
         mut model: impl AsMut<ffi::Model>,
         anim: impl AsRef<ffi::ModelAnimation>,
-        frame: i32,
+        frame: f32,
     ) {
         unsafe {
             ffi::UpdateModelAnimation(*model.as_mut(), *anim.as_ref(), frame);
-        }
-    }
-
-    /// Update model animation mesh bone matrices (GPU skinning)
-    #[inline]
-    pub fn update_model_animation_bones(
-        &mut self,
-        _: &RaylibThread,
-        mut model: impl AsMut<ffi::Model>,
-        anim: impl AsRef<ffi::ModelAnimation>,
-        frame: i32,
-    ) {
-        unsafe {
-            ffi::UpdateModelAnimationBones(*model.as_mut(), *anim.as_ref(), frame);
         }
     }
 }
@@ -858,40 +902,16 @@ impl ModelAnimation {
 }
 
 pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAnimation> {
-    /// Bones information (skeleton)
-    #[inline]
-    #[must_use]
-    fn bones(&self) -> &[BoneInfo] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.as_ref().bones as *const BoneInfo,
-                self.as_ref().boneCount as usize,
-            )
-        }
-    }
-
-    /// Bones information (skeleton)
-    #[inline]
-    #[must_use]
-    fn bones_mut(&mut self) -> &mut [BoneInfo] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().bones as *mut BoneInfo,
-                self.as_mut().boneCount as usize,
-            )
-        }
-    }
-
     #[must_use]
     /// Poses array by frame
     fn frame_poses(&self) -> Vec<&[Transform]> {
         let anim = self.as_ref();
-        let mut top = Vec::with_capacity(anim.frameCount as usize);
+        let mut top = Vec::with_capacity(anim.keyframeCount as usize);
 
-        for i in 0..anim.frameCount {
+        for i in 0..anim.keyframeCount {
             top.push(unsafe {
                 std::slice::from_raw_parts(
-                    *(anim.framePoses.offset(i as isize) as *const *const Transform),
+                    *(anim.keyframePoses.offset(i as isize) as *const *const Transform),
                     anim.boneCount as usize,
                 )
             });
@@ -904,8 +924,8 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
         let anim = self.as_ref();
         unsafe {
             FramePoseIter::new(
-                anim.framePoses,
-                anim.frameCount as usize,
+                anim.keyframePoses,
+                anim.keyframeCount as usize,
                 anim.boneCount as usize,
             )
         }
@@ -915,12 +935,12 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
     /// Poses array by frame
     fn frame_poses_mut(&mut self) -> Vec<&mut [Transform]> {
         let anim = self.as_ref();
-        let mut top = Vec::with_capacity(anim.frameCount as usize);
+        let mut top = Vec::with_capacity(anim.keyframeCount as usize);
 
-        for i in 0..anim.frameCount {
+        for i in 0..anim.keyframeCount {
             top.push(unsafe {
                 std::slice::from_raw_parts_mut(
-                    *(anim.framePoses.offset(i as isize) as *mut *mut Transform),
+                    *(anim.keyframePoses.offset(i as isize) as *mut *mut Transform),
                     anim.boneCount as usize,
                 )
             });
@@ -933,8 +953,8 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
         let anim = self.as_ref();
         unsafe {
             FramePoseIterMut::new(
-                anim.framePoses,
-                anim.frameCount as usize,
+                anim.keyframePoses,
+                anim.keyframeCount as usize,
                 anim.boneCount as usize,
             )
         }
@@ -1002,17 +1022,6 @@ impl RaylibHandle {
     #[inline]
     pub unsafe fn unload_model(&mut self, _: &RaylibThread, model: WeakModel) {
         unsafe { ffi::UnloadModel(*model.as_ref()) }
-    }
-
-    /// Weak model_animations will leak memory if they are not unlaoded
-    /// Unload model_animation from GPU memory (VRAM)
-    #[inline]
-    pub unsafe fn unload_model_animation(
-        &mut self,
-        _: &RaylibThread,
-        model_animation: WeakModelAnimation,
-    ) {
-        unsafe { ffi::UnloadModelAnimation(*model_animation.as_ref()) }
     }
 
     /// Weak meshs will leak memory if they are not unlaoded
