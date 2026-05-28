@@ -38,7 +38,7 @@ jobs:
       - name: Set up mdBook
         uses: peaceiris/actions-mdbook@v2
         with:
-          mdbook-version: 'latest'   # pin to a specific tag (e.g. '0.4.43') after first green run
+          mdbook-version: '0.5.3'   # pinned after first green run (was 'latest')
 
       - name: Build raylib (debug; needed by mdbook test for doctest linking)
         run: cargo build -p raylib --features full
