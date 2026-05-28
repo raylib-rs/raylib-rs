@@ -1,0 +1,14 @@
+[book]
+title = "raylib-rs 6.0"
+authors = ["raylib-rs contributors"]
+language = "en"
+src = "src"
+
+[output.html]
+git-repository-url = "https://github.com/raylib-rs/raylib-rs"
+edit-url-template = "https://github.com/raylib-rs/raylib-rs/edit/unstable/book/{path}"
+default-theme = "navy"
+preferred-dark-theme = "navy"
+
+[rust]
+edition = "2024"
