@@ -13,11 +13,11 @@
 
 # Core Concepts
 
-- [Handle and thread]()
-- [RAII and resources]()
-- [Strings and allocations]()
-- [Safety]()
-- [Features and platforms]()
+- [Handle and thread](./core-concepts/handle-and-thread.md)
+- [RAII and resources](./core-concepts/raii-and-resources.md)
+- [Strings and allocations](./core-concepts/strings-and-allocs.md)
+- [Safety](./core-concepts/safety.md)
+- [Features and platforms](./core-concepts/features.md)
 
 # Modules
 
