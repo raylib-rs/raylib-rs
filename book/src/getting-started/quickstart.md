@@ -16,6 +16,7 @@ raylib = "5.7"
 ## Open a window
 
 ```rust,no_run
+# extern crate raylib;
 use raylib::prelude::*;
 
 fn main() {

@@ -34,15 +34,4 @@ jobs:
         run: mdbook build book
 
       - name: Run book doctests
-        run: |
-          # mdbook test -L wires rustdoc to target/debug/deps, but rustdoc needs
-          # --extern raylib=<rlib> to resolve the crate by name. Because mdbook test
-          # does not support -- passthrough to rustdoc, we call rustdoc --test directly
-          # on quickstart.md (the one chapter with a compile-checked Rust block).
-          # All other chapters either have no Rust blocks or use ```text fences.
-          RAYLIB_RLIB=$(ls target/debug/deps/libraylib-*.rlib | head -1)
-          test -n "$RAYLIB_RLIB" || { echo "libraylib rlib not found in target/debug/deps; did the build step run?" >&2; exit 1; }
-          rustdoc --test book/src/getting-started/quickstart.md \
-            -L target/debug/deps \
-            --extern "raylib=$RAYLIB_RLIB" \
-            --edition 2024
+        run: mdbook test book -L target/debug/deps
