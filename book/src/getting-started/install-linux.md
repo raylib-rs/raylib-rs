@@ -16,19 +16,17 @@ raylib-rs builds on Linux using the system GCC or Clang toolchain. You need the 
 sudo apt-get update
 sudo apt-get install --no-install-recommends -y \
     cmake \
-    libglfw3-dev \
-    libwayland-dev \
-    libxkbcommon-dev \
-    libegl1-mesa-dev \
-    libgles2-mesa-dev \
+    libasound2-dev \
+    libudev-dev \
+    libx11-dev \
+    libxrandr-dev \
     libxinerama-dev \
     libxcursor-dev \
-    libxrandr-dev \
     libxi-dev \
     libgl1-mesa-dev
 ```
 
-This is the exact package list used by the CI `book.yml` workflow.
+This is the exact package list used by the CI `check.yml`, `test.yml`, and `book.yml` workflows.
 
 ## Fedora / RHEL / AlmaLinux
 
@@ -36,14 +34,14 @@ This is the exact package list used by the CI `book.yml` workflow.
 sudo dnf install -y \
     cmake \
     gcc-c++ \
+    alsa-lib-devel \
+    systemd-devel \
     libX11-devel \
-    libXcursor-devel \
-    libXinerama-devel \
     libXrandr-devel \
+    libXinerama-devel \
+    libXcursor-devel \
     libXi-devel \
-    mesa-libGL-devel \
-    wayland-devel \
-    libxkbcommon-devel
+    mesa-libGL-devel
 ```
 
 ## Arch Linux
@@ -52,14 +50,14 @@ sudo dnf install -y \
 sudo pacman -S --needed \
     cmake \
     base-devel \
+    alsa-lib \
+    systemd-libs \
     libx11 \
-    libxcursor \
-    libxinerama \
     libxrandr \
+    libxinerama \
+    libxcursor \
     libxi \
-    mesa \
-    wayland \
-    libxkbcommon
+    mesa
 ```
 
 ## Build and run
@@ -75,7 +73,10 @@ Replace `src/main.rs` with the hello-window snippet from the [Quickstart](./quic
 
 ## Wayland and DRM
 
-- **Wayland** — opt in with `--features wayland`. Requires `libwayland-dev` and `libxkbcommon-dev`.
+- **Wayland** — opt in with `--features wayland`. Additionally requires:
+  - Ubuntu/Debian: `libwayland-dev libxkbcommon-dev`
+  - Fedora: `wayland-devel libxkbcommon-devel`
+  - Arch: `wayland libxkbcommon`
 - **DRM / tty rendering** — opt in with `--features drm,opengl_es_20`. Renders directly to the framebuffer without a display server; useful for embedded/kiosk targets.
 
 ## Troubleshooting

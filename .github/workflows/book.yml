@@ -18,20 +18,7 @@ jobs:
           submodules: recursive
 
       - name: Install Linux build deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
-            cmake \
-            libglfw3-dev \
-            libwayland-dev \
-            libxkbcommon-dev \
-            libegl1-mesa-dev \
-            libgles2-mesa-dev \
-            libxinerama-dev \
-            libxcursor-dev \
-            libxrandr-dev \
-            libxi-dev \
-            libgl1-mesa-dev
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
 
       - uses: dtolnay/rust-toolchain@stable
 
