@@ -12,6 +12,10 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Force stable toolchain for all steps so cargo build and mdbook test
+      # both use the same rustc, avoiding rlib/rustdoc version mismatch.
+      RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@v4
         with:
