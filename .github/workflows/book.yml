@@ -1,0 +1,50 @@
+name: book
+
+on:
+  push:
+    branches: [6.0-rc, unstable, master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            cmake \
+            libglfw3-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            libegl1-mesa-dev \
+            libgles2-mesa-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libgl1-mesa-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: 'latest'   # pin to a specific tag (e.g. '0.4.43') after first green run
+
+      - name: Build raylib (debug; needed by mdbook test for doctest linking)
+        run: cargo build -p raylib --features full
+
+      - name: Build the book
+        run: mdbook build book
+
+      - name: Run book doctests
+        run: mdbook test book -L target/debug/deps
