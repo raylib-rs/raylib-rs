@@ -66,7 +66,7 @@ fn main() {
 ## Gotchas
 
 - **Lifetime-bound audio resources** — `Wave`, `Sound`, `Music`, and `AudioStream` are bound by
-  lifetime to an `AudioHandle`. They cannot outlive the audio device. See the
+  lifetime to a [`RaylibAudio`](https://docs.rs/raylib/latest/raylib/core/audio/struct.RaylibAudio.html). They cannot outlive the audio device. See the
   [audio chapter](../modules/audio.md).
 - **raylib-allocated buffers** — functions that return raylib-managed byte slices (e.g., exported
   image data) wrap them as `ManuallyDrop<Box<[T]>>` and free via the matching `Unload*` or

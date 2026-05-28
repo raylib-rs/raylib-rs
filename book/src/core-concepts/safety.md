@@ -4,7 +4,7 @@ raylib-rs is a safe Rust wrapper over a C library. The safe API surface — ever
 `raylib::prelude` — never requires `unsafe` from the caller. Internally, `unsafe` is used sparingly
 and always justified.
 
-The project follows two conventions (enforced by `deny(unsafe_op_in_unsafe_fn)` and code review):
+The project follows two conventions enforced by code review:
 
 - Every `unsafe fn` has a `/// # Safety` doc that states the preconditions the caller must uphold.
 - Every `unsafe { ... }` block has a `// SAFETY:` comment explaining why the specific call is
@@ -26,7 +26,7 @@ Key structural choices that influence safety:
   implement `AsRef`/`AsMut` in ways that could allow aliased mutable access (partial WS6 fix for
   #277).
 - **Audio lifetimes** — `Sound`, `Music`, and `AudioStream` carry lifetime parameters tying them
-  to the `AudioHandle` that created them; the borrow checker prevents use-after-free.
+  to the `RaylibAudio` that created them; the borrow checker prevents use-after-free.
 
 ## Example
 
@@ -75,7 +75,7 @@ preconditions on pointer provenance and allocator compatibility.
 
 ## See also
 
-- [`CONTRIBUTE.md`](../../CONTRIBUTE.md) — the full coding conventions including the `unsafe`
+- [`CONTRIBUTE.md`](https://github.com/raylib-rs/raylib-rs/blob/unstable/CONTRIBUTE.md) — the full coding conventions including the `unsafe`
   discipline.
 - [`core-concepts/raii-and-resources.md`](./raii-and-resources.md) — how RAII enforces resource
   safety.

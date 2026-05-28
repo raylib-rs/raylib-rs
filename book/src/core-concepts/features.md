@@ -51,8 +51,9 @@ raylib = { version = "5.7", features = ["glam", "serde"] }
 
 ## Gotchas
 
-- **`opengl_*` features are mutually exclusive.** The build script panics if more than one is
-  selected. Do not enable two OpenGL features in the same build.
+- **`opengl_*` features are mutually exclusive — by convention, select only one.** The build script
+  does not currently diagnose multiple selections (the last `#[cfg]` wins), so enabling more than
+  one is a footgun.
 - **`software_renderer` is mutually exclusive with `opengl_*`.** The two back-ends cannot be
   compiled into the same binary. It is also currently incompatible with
   `wasm32-unknown-emscripten` — tracked-deferred; see `notes/ws6b-complete.md`.
