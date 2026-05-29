@@ -1,11 +1,31 @@
-//! Headless render-test harness (software_renderer / Memory platform).
+//! Headless render-test harness (`software_renderer` / `Platform::Memory`
+//! backend).
 //!
-//! raylib is single-init per process, so a Tier-2 test file inits **once** via
-//! [`with_headless`], draws inside the closure, then probes the framebuffer.
+//! Tier-2 tests use this module to render frames without opening a window. The
+//! `software_renderer` feature activates the rlsw memory platform, which
+//! writes pixels into a CPU-side framebuffer instead of an on-screen surface.
+//! Because raylib is single-init per process, a test file initialises the
+//! context **once** via [`with_headless`], executes draws inside the closure,
+//! then probes pixel values with [`pixel_at`] / [`assert_pixel`].
 //!
-//! [`render_frame`] returns a **normalized** top-left RGBA image (natural draw
-//! coordinates and colors). [`render_frame_raw`] returns the raw rlsw readback
-//! (BGRA + Y-inverted) for callers that need it.
+//! ## Readback format
+//!
+//! [`render_frame`] returns a **normalised** top-left RGBA image: the harness
+//! corrects the raw rlsw readback (which is BGRA bytes and Y-inverted) so
+//! callers use natural draw coordinates and colours — a `Color::RED` rectangle
+//! drawn at screen `(x, y)` reads back as red at `(x, y)`. Use
+//! [`render_frame_raw`] if you specifically need the un-normalised BGRA +
+//! Y-inverted buffer.
+//!
+//! ## All-modules link requirement
+//!
+//! The harness links all five raylib content modules:
+//! `SUPPORT_MODULE_RTEXTURES`, `SUPPORT_MODULE_RSHAPES`,
+//! `SUPPORT_MODULE_RTEXT`, `SUPPORT_MODULE_RMODELS`, and
+//! `SUPPORT_MODULE_RAUDIO`. Omitting any of them — or omitting
+//! `SUPPORT_IMAGE_GENERATION` (required on MSVC) — produces link errors.
+//! The `software_renderer` feature in `raylib-sys` enables the correct set;
+//! do not mix `software_renderer` with individual module-disable flags.
 //!
 //! # Example
 //!
