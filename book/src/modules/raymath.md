@@ -12,17 +12,18 @@ rotation without opening a window.
 
 ## API surface
 
-- [`Vector2`](https://docs.rs/raylib/latest/raylib/math/type.Vector2.html) — 2D
+- [`Vector2`](https://docs.rs/raylib/latest/raylib/math/struct.Vector2.html) — 2D
   vector with `.dot`, `.cross`, `.normalize`, `.length`, `.length_sqr`,
   `.rotate`, and operator overloads.
-- [`Vector3`](https://docs.rs/raylib/latest/raylib/math/type.Vector3.html) — 3D
+- [`Vector3`](https://docs.rs/raylib/latest/raylib/math/struct.Vector3.html) — 3D
   vector with `.dot`, `.cross`, `.normalize`, `.length`, `.rotate_by_quaternion`,
   `.rotate_by_axis_angle`.
-- [`Vector4`](https://docs.rs/raylib/latest/raylib/math/type.Vector4.html) — 4D
+- [`Vector4`](https://docs.rs/raylib/latest/raylib/math/struct.Vector4.html) — 4D
   vector; also the FFI representation of a quaternion on the C side.
-- [`Matrix`](https://docs.rs/raylib/latest/raylib/math/type.Matrix.html) —
-  column-major 4×4 matrix; constructors `Matrix::identity`, `Matrix::translate`,
-  `Matrix::rotate`, `Matrix::rotate_x/y/z`, `Matrix::rotate_xyz/zyx`.
+- [`Matrix`](https://docs.rs/raylib/latest/raylib/math/struct.Matrix.html) —
+  row-major 4×4 matrix (row-major in memory; see Gotchas); constructors
+  `Matrix::identity`, `Matrix::translate`, `Matrix::rotate`,
+  `Matrix::rotate_x/y/z`, `Matrix::rotate_xyz/zyx`.
 - [`Quaternion`](https://docs.rs/raylib/latest/raylib/ffi/struct.Quaternion.html) —
   distinct `#[repr(C)]` struct (C aliases it to `Vector4`). Constructors:
   `Quaternion::identity`, `Quaternion::from_axis_angle`, `Quaternion::normalize`,
@@ -58,7 +59,7 @@ assert!((len - 1.0).abs() < 1e-6, "normalized vector has unit length");
 
 // Matrix identity
 let m = Matrix::identity();
-// raylib's Matrix is column-major; identity diagonal is m0/m5/m10/m15.
+// raylib's Matrix is row-major in memory; identity diagonal is m0/m5/m10/m15.
 assert_eq!(m.m0, 1.0);
 assert_eq!(m.m5, 1.0);
 assert_eq!(m.m10, 1.0);
@@ -67,7 +68,7 @@ assert_eq!(m.m1, 0.0);
 
 // Translation matrix
 let t = Matrix::translate(3.0, 0.0, 0.0);
-// m12 is the x-translation column in column-major layout.
+// m12 is the x-translation entry in raylib's row-major memory layout.
 assert_eq!(t.m12, 3.0);
 ```
 
@@ -79,9 +80,9 @@ assert_eq!(t.m12, 3.0);
   let you pass a `Vector4` where a `Quaternion` is expected.  Use
   `Quaternion::from(v4)` / `Vector4::from(q)` for explicit zero-cost conversion.
 - **`MintVec*` types are deprecated.**
-  The `MintVec2`/`MintVec3`/`MintVec4`/`MintMatrix` type aliases from 5.x are
-  still present but carry `#[deprecated(since = "6.0.0")]`.  Replace them with the
-  native `Vector2`/`Vector3`/`Vector4`/`Matrix` types.  See
+  The `MintVec2`/`MintVec3`/`MintVec4`/`MintMatrix`/`MintQuat` type aliases from
+  5.x are still present but carry `#[deprecated(since = "6.0.0")]`.  Replace them
+  with the native `Vector2`/`Vector3`/`Vector4`/`Matrix`/`Quaternion` types.  See
   [`ecosystem/glam-mint-serde.md`](../ecosystem/glam-mint-serde.md) for the
   opt-in integration story.
 - **Zero math-crate deps by default.**
@@ -89,16 +90,18 @@ assert_eq!(t.m12, 3.0);
   Enable `--features glam` / `--features mint` / `--features serde` for
   conversions/trait impls.  Never assume those features are present in library
   code.
-- **Column-major layout.**
-  `Matrix` fields are named `m0`–`m15` in column-major order, following raylib's
-  convention.  `glam`'s `Mat4` is also column-major, so the WS2b conversion
-  handles the field mapping correctly; no manual transpose is needed when using
-  `--features glam`.
+- **Row-major memory layout, semantic column-major ops.**
+  raylib's `Matrix` is **row-major in memory** — the C source (`raymath.h`)
+  writes translation into `m12/m13/m14`.  The math operations and parameter
+  naming, however, treat the matrix as column-major; the two conventions describe
+  the same data via different access patterns.  `glam::Mat4` is column-major in
+  memory, so when comparing byte layouts side-by-side they will differ — but the
+  `--features glam` adapter handles the mapping so values round-trip correctly.
 
 ## See also
 
 - [3D models](./3d-models.md) — `Matrix` transforms used in model rendering.
 - [Collision](./collision.md) — uses `Vector2`/`Vector3`/`BoundingBox`.
 - [glam, mint, serde](../ecosystem/glam-mint-serde.md) — opt-in conversions.
-- [`Vector3` docs.rs](https://docs.rs/raylib/latest/raylib/math/type.Vector3.html) /
-  [`Matrix` docs.rs](https://docs.rs/raylib/latest/raylib/math/type.Matrix.html)
+- [`Vector3` docs.rs](https://docs.rs/raylib/latest/raylib/math/struct.Vector3.html) /
+  [`Matrix` docs.rs](https://docs.rs/raylib/latest/raylib/math/struct.Matrix.html)
