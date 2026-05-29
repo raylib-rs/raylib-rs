@@ -59,13 +59,59 @@ impl From<&NPatchInfo> for ffi::NPatchInfo {
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
-    /// Image, pixel data stored in CPU memory (RAM)
+    /// CPU-side pixel buffer.
+    ///
+    /// An `Image` holds raw pixel data in system RAM. It is the starting point for most
+    /// texture-loading workflows: generate or load pixels on the CPU, manipulate them
+    /// (crop, resize, draw into, colour-fill, etc.), then upload to the GPU as a
+    /// [`Texture2D`] via [`RaylibHandle::load_texture_from_image`].
+    ///
+    /// `Image` is automatically freed via `UnloadImage` when it goes out of scope.
+    ///
+    /// # Examples
+    ///
+    /// Generate a solid-colour image and read a pixel back (no window required):
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
+    /// # {
+    /// use raylib::prelude::*;
+    /// let img = Image::gen_image_color(64, 64, Color::RED);
+    /// assert_eq!(img.width(), 64);
+    /// assert_eq!(img.height(), 64);
+    /// let pixel = img.get_color(0, 0);
+    /// assert_eq!(pixel.r, 255);
+    /// assert_eq!(pixel.g, 0);
+    /// assert_eq!(pixel.b, 0);
+    /// # }
+    /// ```
     Image,
     ffi::Image,
     ffi::UnloadImage
 );
 make_thin_wrapper!(
-    /// Texture, tex data stored in GPU memory (VRAM)
+    /// GPU-side texture stored in VRAM.
+    ///
+    /// A `Texture2D` is uploaded from an [`Image`] (or loaded directly from a file) and
+    /// lives on the graphics card. Draw it inside a drawing handle using the
+    /// `draw_texture*` family of methods.
+    ///
+    /// `Texture2D` is automatically freed via `UnloadTexture` when it goes out of scope.
+    ///
+    /// # Examples
+    ///
+    /// Load a texture from file and draw it each frame:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("texture demo").build();
+    /// let tex = rl.load_texture(&thread, "assets/sprite.png").unwrap();
+    /// while !rl.window_should_close() {
+    ///     let mut d = rl.begin_drawing(&thread);
+    ///     d.clear_background(Color::RAYWHITE);
+    ///     d.draw_texture(&tex, 0, 0, Color::WHITE);
+    /// }
+    /// ```
     Texture2D,
     ffi::Texture2D,
     ffi::UnloadTexture
@@ -78,7 +124,36 @@ impl Default for WeakTexture2D {
     }
 }
 make_thin_wrapper!(
-    /// RenderTexture, fbo for texture rendering
+    /// Off-screen GPU framebuffer for render-to-texture.
+    ///
+    /// A `RenderTexture2D` wraps an OpenGL FBO. Use `begin_texture_mode`
+    /// (or `draw_texture_mode`) on a `RaylibHandle` or `RaylibDrawHandle` to redirect
+    /// drawing into the framebuffer, then access the result via
+    /// [`RaylibRenderTexture2D::texture`] which returns a reference to the
+    /// colour-attachment [`Texture2D`].
+    ///
+    /// Freed via `UnloadRenderTexture` on drop.
+    ///
+    /// # Examples
+    ///
+    /// Render a scene off-screen then display the result on the main framebuffer:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("render-texture demo").build();
+    /// let mut rt = rl.load_render_texture(&thread, 320, 240).unwrap();
+    /// while !rl.window_should_close() {
+    ///     // Draw into the off-screen buffer.
+    ///     {
+    ///         let mut tm = rl.begin_texture_mode(&thread, &mut rt);
+    ///         tm.clear_background(Color::RED);
+    ///     }
+    ///     // Blit the render texture to the screen.
+    ///     let mut d = rl.begin_drawing(&thread);
+    ///     d.clear_background(Color::RAYWHITE);
+    ///     d.draw_texture(rt.texture(), 0, 0, Color::WHITE);
+    /// }
+    /// ```
     RenderTexture2D,
     ffi::RenderTexture2D,
     ffi::UnloadRenderTexture
@@ -882,14 +957,21 @@ impl Image {
         Ok(())
     }
 
-    /// Generates a plain `color` Image.
+    /// Generates a plain solid-colour image in CPU memory.
+    ///
+    /// Use this to create blank canvases for further pixel manipulation or as placeholder
+    /// textures before real assets are available. Requires the `SUPPORT_IMAGE_GENERATION`
+    /// feature (included in `full`).
     #[inline]
     #[must_use]
     #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_color(width: i32, height: i32, color: impl Into<ffi::Color>) -> Image {
         unsafe { Image(ffi::GenImageColor(width, height, color.into())) }
     }
-    /// Generate image: perlin noise
+    /// Generates an image containing Perlin noise in CPU memory.
+    ///
+    /// Useful for procedural terrain heightmaps, cloud textures, or any effect that
+    /// benefits from smooth stochastic variation. Requires `SUPPORT_IMAGE_GENERATION`.
     #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_perlin_noise(
         &self,
@@ -1021,7 +1103,13 @@ impl Image {
         Ok(Image(i))
     }
 
-    /// Loads image from file into CPU memory (RAM).
+    /// Loads an image from a file path into CPU memory.
+    ///
+    /// Supported formats depend on which `SUPPORT_FILEFORMAT_*` features were compiled in.
+    /// With the `full` feature, PNG, BMP, TGA, JPG, GIF, QOI, PSD, DDS, HDR, PIC, PNM,
+    /// KTX, ASTC, PKM, and PVR are all available.
+    ///
+    /// To display the image, upload it to the GPU with [`RaylibHandle::load_texture_from_image`].
     pub fn load_image(filename: &str) -> Result<Image, InvalidImageError> {
         let c_filename = CString::new(filename).unwrap();
         let i = unsafe { ffi::LoadImage(c_filename.as_ptr()) };
