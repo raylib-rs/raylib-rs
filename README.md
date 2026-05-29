@@ -11,7 +11,7 @@
 
 raylib-rs is a Rust binding for [raylib](http://www.raylib.com/) **5.5**. It currently targets Rust toolchain version 1.78 or higher.
 
-Please checkout the showcase directory to find usage examples!
+Please check out the [`showcase/`](./showcase) directory to find usage examples!
 
 Though this binding tries to stay close to the simple C API, it makes some changes to be more idiomatic for Rust.
 
@@ -96,19 +96,17 @@ Contributions are welcome to improve or fix the shell.nix!
 Cross compiling with raylib-rs can be made easier with cross. [See more on the wiki](https://github.com/raylib-rs/raylib-rs/wiki/Cross%E2%80%90compiling-using-cross)
 
 ## Running Examples
-1. `cd samples`
-2. `cargo run --bin 3d_camera_first_person`
+Runnable examples live in [`showcase/`](./showcase) — Rust ports of raylib's C examples. The WS9 finale of the 6.0 effort completes that port and publishes the gallery as a GitHub Pages site. The legacy `samples/` directory was removed in 6.0.
 
 # Extras
 - See [the wiki](https://github.com/raylib-rs/raylib-rs/wiki) for more info
 - Raylib has tons of features that are **not included by default**, such as support for various file formats like JPG, etc. We match raylibs default build configuration but this can be customized by enabling and disabling [feature flags](https://github.com/raylib-rs/raylib-rs/blob/unstable/raylib/Cargo.toml)
 - For a leaner custom build of raylib, set `default-features = false`, **but beware** that there are mandatory flags that when compiled without will break raylib(such as `SUPPORT_STANDARD_FILEIO`)
-- See how to integrate dearimgui into your project in [samples/imgui.rs](https://github.com/raylib-rs/raylib-rs/blob/unstable/samples/imgui.rs)
 
 # Contributing checklist:
 - [ ] Run `cargo test` and `cargo test --doc`  while in `raylib` safe bindings directory and make sure no tests fail
 - [ ] Test on major platforms (windows, linux)
-- [ ] Run examples: `cd samples` and `cargo run --bin <sample_name>`
+- [ ] Run examples: see [`showcase/`](./showcase) for runnable Rust ports of raylib's C examples
 - [ ] Find & replace the version numbers in every Cargo.toml "5.6.x" -> "5.6.x"
 - [ ] Update the changelog
 - [ ] Keep a lookout on tagging functions with `#[inline]` , `#[must_use]` , and `const`

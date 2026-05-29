@@ -5,7 +5,6 @@ extend-exclude = [
     "raylib-sys/binding/*",
     "docs/*",
     "showcase/*",
-    "samples/static/*",
     "*/*.png",
     "*/*.fs",
 ]

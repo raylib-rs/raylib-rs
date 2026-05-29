@@ -12,7 +12,7 @@ Cargo workspace (`Cargo.toml` at root):
   - `src/{lib,prelude,consts,ease}.rs`.
 - `raylib-sys/` — raw FFI bindings generated from `binding/` via `bindgen` (`build.rs`). Vendored raylib C source under `raylib-sys/raylib/`.
 - `raylib-test/` — integration tests that open a window. Excluded from workspace; requires nightly. Run from inside the directory.
-- `samples/` — runnable examples (excluded from workspace). **Being retired** — WS9 folds these into `showcase/`.
+- `samples/` — **removed in 6.0** (WS8); see `showcase/` for runnable Rust ports of raylib's examples.
 - `showcase/` — Rust ports of raylib's C examples (`showcase/original` → `showcase/src/example`). The 6.0 finale (WS9) ports **all** raylib examples here and deploys them as a GitHub Pages site.
 - `docs/superpowers/` — the 6.0 effort's specs, plans, inventory, and notes (the source of truth — see the 6.0 section).
 
@@ -22,7 +22,7 @@ Cargo workspace (`Cargo.toml` at root):
 - Build: `cargo build` from root.
 - Tests: `cargo test` and `cargo test --doc` from inside `raylib/`.
 - Integration tests: `cd raylib-test && cargo +nightly test` (opens a window).
-- Run a sample: `cd samples && cargo run --bin <name>` (e.g. `3d_camera_first_person`).
+- Run an example: see `showcase/` for Rust ports of raylib's C examples (legacy `samples/` was removed in 6.0).
 - Build deps: `glfw`, `cmake`, `curl`. NixOS users can `nix-shell ./shell.nix`.
 
 ## Conventions

@@ -25,6 +25,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - **`SUPPORT_*` feature flag set reconciled with raylib 6.0 `config.h`:** removed `SUPPORT_GIF_RECORDING`, `SUPPORT_IMAGE_MANIPULATION`, `SUPPORT_DEFAULT_FONT`, `SUPPORT_FONT_ATLAS_WHITE_REC`, `SUPPORT_TEXT_MANIPULATION`, `SUPPORT_STANDARD_FILEIO` (unconditional in 6.0), `SUPPORT_DISTORTION_SHADER`, `SUPPORT_FONT_TEXTURE`, `SUPPORT_VR_SIMULATOR` from the feature list; added `SUPPORT_FILEFORMAT_PNM` and `SUPPORT_GPU_SKINNING` (both default-off in 6.0).
 - **Signature changes (6.0 ABI):** `DrawCircleGradient` takes a `Vector2` center instead of separate `i32 x, y`; `UpdateModelAnimation` `frame` is now `f32`; `LoadFontData` gained a trailing `glyphCount` out-parameter; `SaveFileTextCallback` trampoline `text` is now `*const i8`; `DecodeDataBase64` input is `*const i8`.
 - `Image::gen_image_*` family is now cfg-gated on `SUPPORT_IMAGE_GENERATION` (MSVC link fix).
+- **`samples/` directory removed.** Migration: see [`showcase/`](./showcase) for runnable Rust ports of raylib's C examples. Anyone running `cd samples && cargo run --bin <name>` against the pre-release 6.0-rc branch should switch to `showcase/` instead. The WS9 finale of the 6.0 effort completes the port of all upstream examples and publishes the gallery as a GitHub Pages site.
 
 ### Added
 
@@ -65,7 +66,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - **`raylib-test` delete-or-fix** — stale integration-test suite; `integration-xvfb` CI job is non-required; decision deferred to WS9.
 - **`rlsw` on wasm32** — `software_renderer` + emscripten is currently a `compile_error!` guard; a real fix requires re-ordering `platform_from_target` in `build.rs`.
 - **UBSAN through the FFI boundary** — C-side UBSAN runtime link fails under `rust-lld`; informational only (requires `-C linker=gcc`/`libubsan`).
-- **`structopt`→`clap` / `paste` alternative** — cargo-deny flags these dev/direct deps as unmaintained; replacement is release-hygiene work at WS8.
+- **`paste` alternative** — cargo-deny flags this direct dep as unmaintained; rewrite or library swap tracked for a future workstream (accepted with rationale in `deny.toml`).
 - **Full rustdoc rewrite** of remaining 208 stub-level items — selective enrichment only in WS7; future passes can extend.
 - **Public Pages deploy** of book + showcase gallery → WS9.
 - **Custom book theme** → WS9.
@@ -77,6 +78,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - `baseline.yml` retired; replaced by layered `check`/`test`/`web`/`sanitizers`/`book` workflows.
 - Parity checklist at `docs/superpowers/parity-checklist.md` tracks every `raylib.h` RLAPI function.
 - Accepted `paste 1.0` cargo-deny unmaintained advisory (RUSTSEC-2024-0436) with rationale in `deny.toml`. Rewrite or library swap tracked for a future workstream.
+- Dropped `structopt 0.3` dev-dependency (only used by the removed `samples/` binaries); clears the cargo-deny unmaintained advisory for that crate.
 
 ## 5.7.0
 - More improved ergonomics
