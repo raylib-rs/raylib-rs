@@ -21,21 +21,83 @@ use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
-    /// Model, meshes, materials and animation data
+    /// Loaded 3-D model with its associated meshes and materials.
+    ///
+    /// A `Model` owns an array of [`Mesh`]es and an array of [`Material`]s.
+    /// Load one from a file via [`RaylibHandle::load_model`] or build it from a
+    /// generated mesh with [`RaylibHandle::load_model_from_mesh`].
+    ///
+    /// Freed via `UnloadModel` on drop (also frees the contained mesh / material arrays).
+    ///
+    /// # Examples
+    ///
+    /// Load a model from a file and draw it in a frame loop:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// use raylib::consts::CameraProjection::CAMERA_PERSPECTIVE;
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("model demo").build();
+    /// let mut model = rl.load_model(&thread, "assets/character.obj").unwrap();
+    /// let cam = Camera3D {
+    ///     position: Vector3::new(4.0, 4.0, 4.0),
+    ///     target: Vector3::zero(),
+    ///     up: Vector3::Y,
+    ///     fovy: 45.0,
+    ///     projection: CAMERA_PERSPECTIVE,
+    /// };
+    /// while !rl.window_should_close() {
+    ///     let mut d = rl.begin_drawing(&thread);
+    ///     d.clear_background(Color::RAYWHITE);
+    ///     let mut m3d = d.begin_mode3D(cam);
+    ///     m3d.draw_model(&mut model, Vector3::zero(), 1.0, Color::WHITE);
+    /// }
+    /// ```
     Model,
     ffi::Model,
     ffi::UnloadModel
 );
 make_thin_wrapper!(WeakModel, ffi::Model, no_drop);
 make_thin_wrapper!(
-    /// Mesh, vertex data and vao/vbo
+    /// Per-mesh vertex and index data uploaded to the GPU.
+    ///
+    /// A `Mesh` holds vertex positions, normals, texture-coordinates, colours, indices,
+    /// and bone weights for a single draw call. Accessor methods such as
+    /// [`RaylibMesh::vertices`] return `&[Vector3]` slices whose lengths are derived
+    /// from the C-level `vertexCount` / `triangleCount` fields, so the bounds are
+    /// raylib-guaranteed.
+    ///
+    /// Generate meshes with the `gen_mesh_*` family of functions on `RaylibHandle`
+    /// (e.g. `gen_mesh_cube`, `gen_mesh_sphere`), or load them implicitly as part of
+    /// a [`Model`].
+    ///
+    /// Freed via `UnloadMesh` on drop.
+    ///
+    /// # Examples
+    ///
+    /// Generate a unit cube mesh and inspect its vertex count:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// use raylib::core::models::RaylibMesh;
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("mesh demo").build();
+    /// let mesh = Mesh::gen_mesh_cube(&thread, 1.0, 1.0, 1.0);
+    /// // Access typed vertex data without unsafe indexing.
+    /// let verts = mesh.vertices();
+    /// println!("cube has {} vertices", verts.len());
+    /// ```
     Mesh,
     ffi::Mesh,
     |mesh: ffi::Mesh| ffi::UnloadMesh(mesh)
 );
 make_thin_wrapper!(WeakMesh, ffi::Mesh, no_drop);
 make_thin_wrapper!(
-    /// Material, includes shader and maps
+    /// Rendering material: a shader plus up to `MAX_MATERIAL_MAPS` texture maps.
+    ///
+    /// Each material references a [`Shader`](crate::core::shaders::Shader) and an array of
+    /// material maps (diffuse, specular, normal, etc.). Materials are owned by a [`Model`]
+    /// and accessed via [`RaylibModel::materials`].
+    ///
+    /// Freed via `UnloadMaterial` on drop.
     Material,
     ffi::Material,
     ffi::UnloadMaterial
@@ -89,9 +151,38 @@ impl Clone for WeakModelAnimation {
     }
 }
 
-/// Owns the heap array returned by `LoadModelAnimations`. Frees it exactly once on
-/// drop via `UnloadModelAnimations` (which frees each animation's keyframe poses AND
-/// the array pointer). Individual animations are borrowed, non-owning `ModelAnimation`s.
+/// RAII owner of the animation array returned by `LoadModelAnimations`.
+///
+/// This is the **headline 6.0 redesign** of the skeletal-animation API.  In raylib 5.x the
+/// caller had to manage a raw `*mut ModelAnimation` and call `UnloadModelAnimations`
+/// (with the exact count) manually — easy to get wrong.  In raylib-rs 6.0, `ModelAnimations`
+/// is an owned collection: it frees each animation's keyframe-pose data **and** the array
+/// pointer exactly once on drop via `UnloadModelAnimations`.
+///
+/// Individual animations inside the collection are accessed as borrowed, non-owning
+/// [`ModelAnimation`] views via [`ModelAnimations::as_slice`] or the `Deref<Target=[ModelAnimation]>`
+/// implementation.
+///
+/// Load via [`RaylibHandle::load_model_animations`]; advance via
+/// [`RaylibHandle::update_model_animation`].
+///
+/// # Examples
+///
+/// Load animations and advance the first one by one frame each tick:
+///
+/// ```rust,no_run
+/// use raylib::prelude::*;
+/// let (mut rl, thread) = raylib::init().size(640, 480).title("anim demo").build();
+/// let mut model = rl.load_model(&thread, "assets/character.glb").unwrap();
+/// let anims = rl.load_model_animations(&thread, "assets/character.glb").unwrap();
+/// let mut frame: f32 = 0.0;
+/// while !rl.window_should_close() {
+///     frame += 1.0;
+///     rl.update_model_animation(&thread, &mut model, &anims[0], frame);
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+/// }
+/// ```
 #[derive(Debug)]
 pub struct ModelAnimations {
     ptr: *mut ffi::ModelAnimation,
