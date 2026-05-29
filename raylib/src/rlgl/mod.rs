@@ -1,13 +1,28 @@
-//! Safe wrappers for rlgl's immediate-mode drawing layer (the GL abstraction
-//! beneath raylib's modules; wraps `rlgl.h`). Covers the matrix stack, immediate-
-//! mode vertex streams, a few render-state toggles, and ergonomic methods that
-//! bind the crate's safe [`Texture2D`](crate::core::texture::Texture2D) /
-//! [`Shader`](crate::core::shaders::Shader) handles. GL-object *lifecycle*
-//! (create/destroy) stays with those safe types and raw [`ffi`]; the
-//! full 161-fn rlgl surface remains available there as a power-user escape hatch.
+//! Safe wrappers for rlgl, raylib's immediate-mode OpenGL abstraction layer
+//! (`rlgl.h`). rlgl sits directly beneath raylib's higher-level drawing
+//! functions and supports OpenGL 3.3, OpenGL 2.1, OpenGL ES 2.0, and the
+//! software-renderer backend — the same source compiles for all back-ends.
 //!
-//! All entry points hang off the draw-handle types (via [`RaylibRlgl`]), so they
-//! are only callable inside a `begin_drawing` frame.
+//! This module exposes the surface most useful for custom rendering:
+//!
+//! - **Matrix stack** — [`rl_push_matrix`](RaylibRlgl::rl_push_matrix) returns
+//!   an [`RlMatrix`] RAII guard; `Drop` pops the matrix, so the stack is always
+//!   balanced even on early return.
+//! - **Immediate-mode vertex streams** —
+//!   [`rl_begin`](RaylibRlgl::rl_begin) / [`rl_draw`](RaylibRlgl::rl_draw) with
+//!   an [`RlImmediate`] RAII guard that calls `rlEnd` on drop.
+//! - **Render-state toggles** — depth test, back-face culling, etc.
+//! - **Safe bind helpers** — [`rl_set_texture`](RaylibRlgl::rl_set_texture) and
+//!   [`rl_enable_shader`](RaylibRlgl::rl_enable_shader) accept the crate's
+//!   [`Texture2D`](crate::core::texture::Texture2D) /
+//!   [`Shader`](crate::core::shaders::Shader) RAII handles instead of raw ids.
+//!
+//! GL-object *lifecycle* (create/destroy) stays with those safe types and raw
+//! [`ffi`]; the full 161-fn rlgl surface is still available there as a
+//! power-user escape hatch.
+//!
+//! All entry points are on [`RaylibRlgl`], blanket-implemented for every draw
+//! handle, so they are only callable inside a `begin_drawing` frame.
 
 mod immediate;
 mod matrix;
