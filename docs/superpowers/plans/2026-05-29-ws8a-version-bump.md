@@ -138,8 +138,8 @@ Expected: `Book built`. No `error:` lines.
 
 - [ ] **Step 2: Run mdbook doctests**
 
-Run: `cd raylib && cargo build --features full 2>&1 | tail -5 && cd .. && mdbook test book -L raylib/target/debug/deps 2>&1 | tail -20`
-Expected: doctests pass. Doctests in quickstart that reference the version literally should still compile because the version string is in a Markdown code fence, not in compilable Rust.
+Run: `cargo build -p raylib --features full 2>&1 | tail -5 && mdbook test book -L target/debug/deps 2>&1 | tail -20`
+Expected: doctests pass. Note the `-L target/debug/deps` path is the workspace-root target dir (Cargo workspaces consolidate artifacts there), not `raylib/target/debug/deps`. This matches the WS7 `book.yml` invocation. Doctests in quickstart that reference the version literally should still compile because the version string is in a Markdown code fence, not in compilable Rust.
 
 ### Task 7: Commit the version bump
 
