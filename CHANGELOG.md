@@ -76,6 +76,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - Long-lived `6.0-rc` branch; single merge to `raylib-rs/unstable` at WS8 — never piecemeal.
 - `baseline.yml` retired; replaced by layered `check`/`test`/`web`/`sanitizers`/`book` workflows.
 - Parity checklist at `docs/superpowers/parity-checklist.md` tracks every `raylib.h` RLAPI function.
+- Accepted `paste 1.0` cargo-deny unmaintained advisory (RUSTSEC-2024-0436) with rationale in `deny.toml`. Rewrite or library swap tracked for a future workstream.
 
 ## 5.7.0
 - More improved ergonomics
