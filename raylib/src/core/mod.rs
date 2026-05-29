@@ -183,19 +183,53 @@ macro_rules! rstr {
     })
 }
 
-/// This token is used to ensure certain functions are only running on the same
-/// thread raylib was initialized from. This is useful for architectures like macos
-/// where cocoa can only be called from one thread.
+/// Token proving that the current code is executing on the raylib init thread.
+///
+/// `RaylibThread` is `!Send` and `!Sync` — it **must never** be sent to another thread, stored in
+/// an `Arc`/`Mutex`, or moved out of the thread on which [`init`] was called. This invariant is
+/// required because many platforms (notably macOS via Cocoa) mandate that all window/GL calls
+/// originate from the main thread. Functions that require this guarantee accept a `&RaylibThread`
+/// parameter; the borrow checker then enforces the constraint at compile time.
+///
+/// You receive a `RaylibThread` as the second element of the pair returned by
+/// [`RaylibBuilder::build`].
+///
+/// ```rust,compile_fail
+/// use raylib::prelude::*;
+/// // RaylibThread is !Send — this must not compile:
+/// fn require_send<T: Send>() {}
+/// require_send::<RaylibThread>();
+/// ```
 #[derive(Clone, Debug)]
 pub struct RaylibThread(PhantomData<*const ()>);
 
-/// The main interface into the Raylib API.
+/// The main interface into the raylib API.
 ///
-/// This is the way in which you will use the vast majority of Raylib's functionality. A `RaylibHandle` can be constructed using the [`init_window`] function or through a [`RaylibBuilder`] obtained with the [`init`] function.
+/// `RaylibHandle` owns the raylib window and OpenGL context. All drawing, input, audio, and
+/// windowing functions are methods on this type (or on draw-mode guards borrowed from it). Obtain
+/// a `RaylibHandle` by calling [`init`] to configure options such as VSync, MSAA, fullscreen, and
+/// window title before opening the window.
 ///
-/// [`init_window`]: fn.init_window.html
-/// [`RaylibBuilder`]: struct.RaylibBuilder.html
-/// [`init`]: fn.init.html
+/// When `RaylibHandle` is dropped, raylib's `CloseWindow` is called automatically — no explicit
+/// teardown is needed.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init()
+///     .size(800, 600)
+///     .title("My Game")
+///     .vsync()
+///     .build();
+///
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     d.draw_text("Hello, raylib!", 20, 20, 24, Color::BLACK);
+/// }
+/// ```
 #[derive(Debug)]
 pub struct RaylibHandle(()); // inner field is private, preventing manual construction
 
@@ -211,7 +245,31 @@ impl Drop for RaylibHandle {
     }
 }
 
-/// A builder that allows more customization of the game window shown to the user before the `RaylibHandle` is created.
+/// Fluent builder for configuring the raylib window before it is created.
+///
+/// Obtain a `RaylibBuilder` via [`init`], chain the desired options, then call [`build`] to open
+/// the window and receive a [`(RaylibHandle, RaylibThread)`](RaylibHandle) pair.
+///
+/// [`build`]: RaylibBuilder::build
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init()
+///     .size(1280, 720)
+///     .title("My Game")
+///     .vsync()
+///     .msaa_4x()
+///     .build();
+///
+/// // rl is now ready; enter the game loop.
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+/// }
+/// ```
 #[derive(Debug, Default)]
 pub struct RaylibBuilder {
     fullscreen_mode: bool,
