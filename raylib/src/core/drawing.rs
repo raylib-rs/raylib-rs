@@ -1,4 +1,20 @@
-//! Contains code related to drawing. Types that can be set as a surface to draw will implement the [`RaylibDraw`] trait
+//! Immediate-mode drawing surfaces and RAII mode guards.
+//!
+//! All drawing in raylib-rs follows an immediate-mode model: you call [`RaylibHandle::begin_drawing`]
+//! to receive a [`RaylibDrawHandle`] guard, issue draw calls on it, then let the guard drop —
+//! which automatically calls `EndDrawing` (presenting the frame and timing). Types that can serve
+//! as a drawing surface implement the [`RaylibDraw`] trait.
+//!
+//! Additional mode guards nest inside a draw frame:
+//! - [`RaylibTextureMode`] — off-screen rendering via `begin_texture_mode` / `EndTextureMode`.
+//! - [`RaylibMode2D`] — 2D camera transform via `begin_mode2D` / `EndMode2D`.
+//! - [`RaylibMode3D`] — 3D camera via `begin_mode3D` / `EndMode3D`.
+//! - [`RaylibVRMode`] — VR stereo rendering via `begin_vr_stereo_mode`.
+//! - [`RaylibShaderMode`] — custom shader pass via `begin_shader_mode`.
+//! - [`RaylibScissorMode`] — scissor-rectangle clipping via `begin_scissor_mode`.
+//!
+//! Each guard also implements [`RaylibDraw`] (and [`RaylibDraw3D`] where applicable), so you can
+//! chain modes by calling `begin_mode3D` on a `RaylibDrawHandle`, for example.
 
 use raylib_sys::Rectangle;
 
@@ -505,6 +521,28 @@ impl<'a, T: 'a + RaylibDraw3D> RaylibDraw3D for RaylibScissorMode<'a, T> {}
 // Actual drawing functions
 
 /// Drawing methods available within an active drawing or mode block (2D shapes, textures, text).
+///
+/// This trait is implemented on [`RaylibDrawHandle`] (the guard returned by
+/// [`RaylibHandle::begin_drawing`]) and on every nested mode guard
+/// ([`RaylibTextureMode`], [`RaylibMode2D`], [`RaylibMode3D`], etc.). Call methods on the guard
+/// to issue GPU draw commands; all commands accumulate until the guard drops, at which point
+/// `EndDrawing` is called and the frame is presented.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(640, 480).title("demo").build();
+///
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     d.draw_rectangle(10, 10, 100, 50, Color::RED);
+///     d.draw_text("RaylibDraw", 10, 70, 20, Color::BLACK);
+///     // `d` drops here → EndDrawing is called automatically
+/// }
+/// ```
 pub trait RaylibDraw {
     /// Sets background color (framebuffer clear color.into()).
     #[inline]
