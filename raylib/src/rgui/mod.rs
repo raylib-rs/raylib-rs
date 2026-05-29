@@ -1,6 +1,19 @@
-//! Safe raygui bindings (behind the `raygui` feature). Controls are grouped into
-//! sub-traits, all blanket-implemented for the draw-handle types and re-exported
-//! here; global-state controls are also implemented for `RaylibHandle`.
+//! Safe raygui bindings (behind the `raygui` feature).
+//!
+//! raygui is the immediate-mode GUI library bundled with raylib. raylib-rs
+//! exposes it at **6.0 parity** (57 functions). Controls are split into grouped
+//! sub-traits — [`RaylibGuiState`], [`RaylibGuiContainers`],
+//! [`RaylibGuiControls`], [`RaylibGuiAdvanced`], [`RaylibGuiIcons`] — all
+//! blanket-implemented for the draw-handle types and re-exported here.
+//! Global-state controls are also implemented for [`RaylibHandle`].
+//!
+//! String arguments accept any `impl AsRef<str>`; the bindings convert to
+//! `CStr` via a thread-local scratch buffer to avoid per-call heap
+//! allocations during drawing.
+//!
+//! All raygui calls must happen inside a `begin_drawing` frame: call them on
+//! the draw handle returned by [`RaylibHandle::begin_drawing`]. There is no
+//! separate gui begin/end; every widget call draws immediately.
 
 mod advanced;
 mod containers;
