@@ -14,7 +14,38 @@ use std::mem::ManuallyDrop;
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
-    /// Font, font texture and GlyphInfo array data
+    /// Font: a glyph atlas texture plus per-glyph metrics.
+    ///
+    /// raylib ships a built-in default font (used when `None` or no font is specified in
+    /// draw-text calls). User-defined fonts are loaded via `RaylibHandle` methods:
+    ///
+    /// - [`RaylibHandle::load_font`] — loads the default size and full glyph set from a
+    ///   TTF/BDF/FNT file.
+    /// - [`RaylibHandle::load_font_ex`] — loads with an explicit point size and optional
+    ///   Unicode codepoint list (pass `None` for the entire set).
+    /// - [`RaylibHandle::load_font_from_image`] — XNA-style bitmap font from an image.
+    /// - [`RaylibHandle::load_font_from_memory`] — loads from an in-memory file buffer.
+    ///
+    /// Freed via `UnloadFont` on drop.
+    ///
+    /// # Examples
+    ///
+    /// Load a font with explicit size and a Latin-1 subset, then draw text:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("font demo").build();
+    /// // Load a TTF at 32 pt, restricting to printable ASCII (codepoints 32-126).
+    /// let ascii: String = (32u8..=126).map(|c| c as char).collect();
+    /// let font = rl
+    ///     .load_font_ex(&thread, "assets/Roboto.ttf", 32, Some(&ascii))
+    ///     .unwrap();
+    /// while !rl.window_should_close() {
+    ///     let mut d = rl.begin_drawing(&thread);
+    ///     d.clear_background(Color::RAYWHITE);
+    ///     d.draw_text_ex(&font, "Hello, raylib!", Vector2::new(10.0, 10.0), 32.0, 2.0, Color::BLACK);
+    /// }
+    /// ```
     Font,
     ffi::Font,
     ffi::UnloadFont
