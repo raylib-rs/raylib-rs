@@ -11,7 +11,7 @@ Builds on WS6 (`docs/superpowers/notes/ws6b-complete.md`) — layered CI green, 
 
 ## WS7a — mdBook bootstrap + `book.yml` + getting-started chapters
 
-**Commits:** `34b1d30` (spec) → `920c1b3` (final CI alignment)
+**Commits:** `7998e76` (bootstrap) → `920c1b3` (final CI alignment)
 
 **What shipped:**
 - `book/book.toml` + `book/src/SUMMARY.md` with the full 28-file chapter tree.

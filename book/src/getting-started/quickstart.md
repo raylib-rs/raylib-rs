@@ -44,4 +44,4 @@ Walking through the code:
 
 - **Install guides** — pick your platform: [Windows](./install-windows.md), [macOS](./install-macos.md), [Linux](./install-linux.md), or [Web/Wasm](./install-web.md).
 - **Core Concepts** — the Handle/Thread ownership model, RAII resources, and how strings work.
-- **Modules** — dive into [Window and drawing](), [Input](), [Shapes](), and beyond.
+- **Modules** — dive into [Window and drawing](../modules/window-and-drawing.md), [Input](../modules/input.md), [Shapes](../modules/shapes.md), and beyond.
