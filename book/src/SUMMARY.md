@@ -38,5 +38,5 @@
 
 # Ecosystem
 
-- [glam, mint, serde]()
-- [What next?]()
+- [glam, mint, serde](./ecosystem/glam-mint-serde.md)
+- [What next?](./ecosystem/what-next.md)
