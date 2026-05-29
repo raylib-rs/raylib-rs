@@ -14,14 +14,31 @@ Permission is granted to anyone to use this software for any purpose, including 
   3. This notice may not be removed or altered from any source distribution.
 */
 
-//! The raylib-rs prelude.
+//! Convenience re-export of the most commonly used raylib-rs items.
 //!
-//! This prelude module is for bringing many commonly-used types, functions, and constants into scope all at once.
+//! A single `use raylib::prelude::*;` brings into scope:
+//! - [`RaylibHandle`] and [`RaylibThread`] — the two handles returned by [`init`].
+//! - [`RaylibBuilder`] — for configuring the window before creation via [`init`].
+//! - [`RaylibDraw`] and all drawing extension traits.
+//! - [`Color`] and `Rectangle` — fundamental geometry types.
+//! - All raymath types (`Vector2`, `Vector3`, `Vector4`, `Matrix`, `Quaternion`) and their methods.
+//! - Audio, texture, model, shader, text, and GUI types.
+//! - `consts` re-exports (key codes, mouse buttons, etc.).
 //!
 //! # Example
 //!
-//! ```
+//! ```no_run
 //! use raylib::prelude::*;
+//!
+//! let (mut rl, thread) = raylib::init()
+//!     .size(640, 480)
+//!     .title("My Game")
+//!     .build();
+//!
+//! while !rl.window_should_close() {
+//!     let mut d = rl.begin_drawing(&thread);
+//!     d.clear_background(Color::RAYWHITE);
+//! }
 //! ```
 
 pub use crate::callbacks::*;

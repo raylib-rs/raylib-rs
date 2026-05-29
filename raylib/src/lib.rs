@@ -14,26 +14,32 @@ Permission is granted to anyone to use this software for any purpose, including 
   3. This notice may not be removed or altered from any source distribution.
 */
 
-//! # raylib-rs
+//! Safe Rust bindings to raylib 6.0.
 //!
-//! `raylib` is a safe Rust binding to [Raylib](https://www.raylib.com/), a C library for enjoying games programming.
+//! This crate provides idiomatic Rust access to [raylib](https://www.raylib.com/)'s full feature
+//! set: window management, 2D/3D drawing, input handling, raymath (vectors, matrices,
+//! quaternions), audio playback, raygui immediate-mode UI, safe `rlgl` OpenGL abstractions, and a
+//! headless software-renderer test harness — all without unsafe code in normal usage.
 //!
-//! To get started, take a look at the [`init_window`] function. This initializes Raylib and shows a window, and returns a [`RaylibHandle`]. This handle is very important, because it is the way in which one accesses the vast majority of Raylib's functionality. This means that it must not go out of scope until the game is ready to exit. You will also receive a !Send and !Sync [`RaylibThread`] required for thread local functions.
+//! ## Getting started
 //!
-//! For more control over the game window, the [`init`] function will return a [`RaylibBuilder`] which allows for tweaking various settings such as VSync, anti-aliasing, fullscreen, and so on. Calling [`RaylibBuilder::build`] will then provide a [`RaylibHandle`].
+//! Call [`init`] to obtain a [`RaylibBuilder`], configure it with chained methods, then call
+//! [`RaylibBuilder::build`] to receive a `(RaylibHandle, RaylibThread)` pair. Everything in the
+//! API hangs off [`RaylibHandle`]; keep it alive for the lifetime of your game loop. The
+//! [`RaylibThread`] token is `!Send` and `!Sync` — it may only be used on the thread raylib was
+//! initialised from.
 //!
-//! Some useful constants can be found in the [`consts`] module, which is also re-exported in the [`prelude`] module. In most cases you will probably want to `use raylib::prelude::*;` to make your experience more smooth.
+//! ## Feature gates
 //!
-//! [`init_window`]: fn.init_window.html
-//! [`init`]: fn.init.html
-//! [`RaylibHandle`]: struct.RaylibHandle.html
-//! [`RaylibThread`]: struct.RaylibThread.html
-//! [`RaylibBuilder`]: struct.RaylibBuilder.html
-//! [`RaylibBuilder::build`]: struct.RaylibBuilder.html#method.build
-//! [`consts`]: consts/index.html
-//! [`prelude`]: prelude/index.html
+//! - Math-crate integrations: `glam`, `mint`, `serde` (all opt-in, none default).
+//! - `software_renderer` — wires the `rlsw` memory-platform backend for windowless/headless
+//!   rendering; exposes the `test_harness` module for pixel-probe tests. Mutually exclusive with
+//!   the `opengl_*` features.
+//! - OpenGL back-end selection: `opengl_33` (default), `opengl_21`, `opengl_es_20`.
+//! - Platform targets: `drm` (DRM/KMS tty, requires `opengl_es_20`), `wayland`.
+//! - `full` — convenience alias enabling all optional API surface except back-end selectors.
 //!
-//! # Examples
+//! ## Examples
 //!
 //! The classic "Hello, world":
 //!
