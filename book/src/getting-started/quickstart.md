@@ -8,10 +8,10 @@ In your `Cargo.toml`:
 
 ```toml
 [dependencies]
-raylib = "5.7"
+raylib = "6.0"
 ```
 
-> **Note:** The crate version in this book reflects the latest published release. The `6.0-rc` branch tracks the in-progress 6.0 upgrade; the crate version bumps to `6.0` when WS8 publishes to crates.io.
+> **Note:** The crate version in this book reflects the latest published release. The 6.0 release is the current target on crates.io as of the WS8 release prep.
 
 ## Open a window
 
