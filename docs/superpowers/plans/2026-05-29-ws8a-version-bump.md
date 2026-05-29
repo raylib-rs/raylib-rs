@@ -106,15 +106,15 @@ Expected: a footnote that says something like "version bumps to 6.0 in WS8". Upd
 Run: `grep -n '5\.7' book/src/getting-started/quickstart.md`
 Expected: zero matches (or only matches in CHANGELOG-style historical references; those are fine).
 
-### Task 5: Grep sweep over install guides for version references
+### Task 5: Repo-wide grep sweep for version references
 
 **Files:**
-- Modify (if matches found): `book/src/getting-started/install-windows.md`, `install-macos.md`, `install-linux.md`, `install-web.md`
+- Modify (if matches found): `book/src/getting-started/install-*.md`, `book/src/core-concepts/features.md`, `README.md`, any other doc with active version snippets.
 
-- [ ] **Step 1: Grep all install guides for version-like strings**
+- [ ] **Step 1: Grep the whole book + README for version-like strings**
 
-Run: `grep -n '5\.7\|5\.7\.0' book/src/getting-started/install-*.md`
-Expected: zero or a small number of matches. Each match needs evaluating.
+Run: `grep -rn '5\.7\|5\.7\.0' book/src/ README.md 2>&1 | grep -v 'wsN-complete\|inventory\|specs/\|notes/\|plans/'`
+Expected: matches in `book/src/getting-started/install-*.md`, `book/src/core-concepts/features.md`, and `README.md` need evaluating. (Mdbook output under `book/book/` is gitignored — ignore it.)
 
 - [ ] **Step 2: For each match, update or leave**
 
