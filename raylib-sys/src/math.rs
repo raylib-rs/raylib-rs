@@ -1,8 +1,20 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Quaternion. C aliases this to Vector4 (`typedef Vector4 Quaternion`); we use a
-/// distinct, layout-identical #[repr(C)] struct so it has its own method namespace.
+/// A unit quaternion used for 3D rotations.
+///
+/// C aliases `Quaternion` to `Vector4` (`typedef Vector4 Quaternion`); raylib-rs
+/// uses a **distinct** `#[repr(C)]` struct so the two types have their own method
+/// namespaces. The layout is identical (`x`, `y`, `z`, `w` as `f32`), and
+/// zero-cost conversions are provided:
+/// - `Quaternion::from(v: Vector4)` — convert from a raw four-component vector.
+/// - `Vector4::from(q: Quaternion)` — convert back.
+///
+/// Build a `Quaternion` with one of the constructor functions:
+/// [`from_axis_angle`](Quaternion::from_axis_angle),
+/// [`from_euler`](Quaternion::from_euler),
+/// [`from_matrix`](Quaternion::from_matrix),
+/// or [`identity`](Quaternion::identity).
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

@@ -14,8 +14,55 @@ Permission is granted to anyone to use this software for any purpose, including 
   3. This notice may not be removed or altered from any source distribution.
 */
 
-//! Game-related math: the public `Vector*`/`Matrix`/`Quaternion` types are the
-//! native `raylib-sys` types (own their `#[repr(C)]` layout + raymath methods).
+//! Game-related math: `Vector2`, `Vector3`, `Vector4`, `Matrix`, and
+//! `Quaternion` re-exported from `raylib-sys`.
+//!
+//! All five types are `#[repr(C)]` structs whose layouts match their C
+//! counterparts. Arithmetic operators (`+`, `-`, `*`, `/`, unary `-`) and a
+//! full set of raymath methods (`dot`, `cross`, `normalize`, `length`, etc.)
+//! are available directly on the types; no math-crate dependency is needed.
+//!
+//! `mint`, `glam`, and `serde` support is available via the corresponding
+//! opt-in features.
+//!
+//! ## Memory layout note — `Matrix`
+//!
+//! raylib's `Matrix` is stored **column-major** in memory (`m0`..`m3` are
+//! column 0, `m4`..`m7` column 1, etc.) — the same convention as OpenGL and
+//! `glam::Mat4`.  The raymath functions treat it semantically as a
+//! column-major transform matrix; the `--features glam` adapter handles the
+//! round-trip without any explicit transpose.
+//!
+//! ## `Quaternion` gotcha
+//!
+//! C aliases `Quaternion` to `Vector4` (`typedef Vector4 Quaternion`).
+//! raylib-rs uses a **distinct** `#[repr(C)]` struct so the two types have
+//! separate method namespaces. Conversion is explicit:
+//! `Quaternion::from(v4)` / `Vector4::from(q)`.
+//!
+//! # Examples
+//!
+//! ```rust
+//! use raylib::math::{Vector3, Matrix, Quaternion};
+//!
+//! // Vector3 arithmetic and raymath ops
+//! let a = Vector3 { x: 1.0, y: 0.0, z: 0.0 };
+//! let b = Vector3 { x: 0.0, y: 1.0, z: 0.0 };
+//! assert_eq!(a.dot(b), 0.0);
+//! let c = a.cross(b);
+//! assert_eq!(c.z, 1.0);
+//! let n = (a + b).normalize();
+//! assert!((n.length() - 1.0).abs() < 1e-6);
+//!
+//! // Matrix identity and translate
+//! let identity = Matrix::identity();
+//! let t = Matrix::translate(1.0, 2.0, 3.0);
+//! let _ = identity * t;
+//!
+//! // Quaternion from axis-angle
+//! let q = Quaternion::from_axis_angle(Vector3::Y, std::f32::consts::FRAC_PI_2);
+//! assert!((q.length() - 1.0).abs() < 1e-6);
+//! ```
 pub use crate::ffi::{Matrix, Quaternion, Vector2, Vector3, Vector4};
 
 use crate::ffi;
