@@ -27,11 +27,12 @@ Permission is granted to anyone to use this software for any purpose, including 
 //!
 //! ## Memory layout note — `Matrix`
 //!
-//! raylib's `Matrix` is stored **column-major** in memory (`m0`..`m3` are
-//! column 0, `m4`..`m7` column 1, etc.) — the same convention as OpenGL and
-//! `glam::Mat4`.  The raymath functions treat it semantically as a
-//! column-major transform matrix; the `--features glam` adapter handles the
-//! round-trip without any explicit transpose.
+//! raylib's `Matrix` is **row-major in memory** — the C source (`raymath.h`)
+//! writes translation into `m12/m13/m14`.  The math operations and parameter
+//! naming, however, treat the matrix as column-major; the two conventions
+//! describe the same data via different access patterns.  `glam::Mat4` is
+//! column-major in memory, but the `--features glam` adapter handles the
+//! mapping so values round-trip correctly.
 //!
 //! ## `Quaternion` gotcha
 //!
@@ -307,7 +308,7 @@ mod math_test {
                 && r.direction.z == 1.0,
             "bad memory transmutation"
         );
-        // raylib's Matrix is 16 named floats (m0..m15), column-major; identity has
+        // raylib's Matrix is 16 named floats (m0..m15), row-major in memory; identity has
         // 1.0 on the diagonal (m0/m5/m10/m15) and 0.0 elsewhere.
         let identity_mat: ffi::Matrix = Matrix::identity();
         assert!(
