@@ -1,4 +1,39 @@
-//! Common collision handling code
+//! Collision detection helpers for 2D and 3D shapes.
+//!
+//! Covers rectangles, circles, points, lines, polygons, triangles (2D) and
+//! spheres, boxes, rays (3D). All functions are pure: they take value
+//! parameters and return a `bool` or an `Option` — no `RaylibHandle` needed.
+//!
+//! Rectangle-vs-rectangle and circle-vs-rectangle overlap are methods on
+//! [`Rectangle`](crate::math::Rectangle) (see `raylib_sys::Rectangle`).
+//! Everything else is a free function in this module.
+//!
+//! # Examples
+//!
+//! ```rust
+//! use raylib::prelude::*;
+//! use raylib::core::collision::{check_collision_circles, check_collision_spheres};
+//!
+//! // Rectangle collision (method on Rectangle)
+//! let a = Rectangle::new(0.0, 0.0, 10.0, 10.0);
+//! let b = Rectangle::new(5.0, 5.0, 10.0, 10.0);
+//! let c = Rectangle::new(20.0, 20.0, 10.0, 10.0);
+//! assert!(a.check_collision_recs(b));   // overlapping
+//! assert!(!a.check_collision_recs(c));  // separated
+//!
+//! // Circle collision (free function)
+//! let overlapping = check_collision_circles(
+//!     Vector2::new(0.0, 0.0), 5.0,
+//!     Vector2::new(3.0, 0.0), 5.0,
+//! );
+//! assert!(overlapping);
+//!
+//! let separated = check_collision_circles(
+//!     Vector2::new(0.0, 0.0), 1.0,
+//!     Vector2::new(20.0, 0.0), 1.0,
+//! );
+//! assert!(!separated);
+//! ```
 use crate::core::math::Vector2;
 
 use crate::ffi;
