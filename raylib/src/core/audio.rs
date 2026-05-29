@@ -11,7 +11,13 @@ use std::path::Path;
 use super::error::ExportWaveError;
 
 make_thin_wrapper_lifetime!(
-    /// Wave, audio wave data
+    /// CPU-side waveform data loaded into RAM.
+    ///
+    /// A `Wave` holds raw PCM samples (and metadata) without occupying any audio-device
+    /// resources. Convert it to a [`Sound`] via [`RaylibAudio::new_sound_from_wave`] for
+    /// repeated low-latency playback, or export it to disk with [`Wave::export`].
+    ///
+    /// Freed via `UnloadWave` on drop. Lifetime is bound to the owning [`RaylibAudio`].
     Wave,
     ffi::Wave,
     RaylibAudio,
@@ -19,7 +25,26 @@ make_thin_wrapper_lifetime!(
 );
 
 make_thin_wrapper_lifetime!(
-    /// Sound
+    /// Audio-device-ready playable sound sample.
+    ///
+    /// A `Sound` is a fully decoded, GPU/audio-card-buffered sample suitable for repeated
+    /// low-latency playback (e.g. effects and short clips). Load one from a file with
+    /// [`RaylibAudio::new_sound`] or from a [`Wave`] with
+    /// [`RaylibAudio::new_sound_from_wave`].
+    ///
+    /// Freed via `UnloadSound` on drop. Lifetime is bound to the owning [`RaylibAudio`].
+    ///
+    /// # Examples
+    ///
+    /// Load and play a sound effect:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let audio = RaylibAudio::init_audio_device().unwrap();
+    /// let sound = audio.new_sound("assets/click.wav").unwrap();
+    /// // Later, trigger playback:
+    /// unsafe { raylib::ffi::PlaySound(*sound) };
+    /// ```
     Sound,
     ffi::Sound,
     RaylibAudio,
@@ -27,14 +52,44 @@ make_thin_wrapper_lifetime!(
     true
 );
 make_thin_wrapper_lifetime!(
-    /// Music, audio stream, anything longer than ~10 seconds should be streamed
+    /// Streamed audio for long-form playback.
+    ///
+    /// `Music` streams data from disk (or memory) in chunks, making it suitable for
+    /// background music or any audio exceeding ~10 seconds. Load via
+    /// [`RaylibAudio::new_music`] and update each frame with the raylib
+    /// `UpdateMusicStream` / `PlayMusicStream` calls.
+    ///
+    /// Freed via `UnloadMusicStream` on drop. Lifetime is bound to the owning
+    /// [`RaylibAudio`].
     Music,
     ffi::Music,
     RaylibAudio,
     ffi::UnloadMusicStream
 );
 make_thin_wrapper_lifetime!(
-    /// AudioStream, custom audio stream
+    /// Low-level raw PCM streaming primitive.
+    ///
+    /// `AudioStream` lets you push arbitrary audio data to the audio device one
+    /// buffer at a time, giving full control over sample rate, bit depth, and channel
+    /// count. This is the replacement for the audio-callback API that was removed in
+    /// raylib 6.0 — instead of registering a callback you periodically check
+    /// `IsAudioStreamProcessed` and push the next buffer of samples.
+    ///
+    /// Create via [`RaylibAudio::new_audio_stream`]. Freed via `UnloadAudioStream` on
+    /// drop. Lifetime is bound to the owning [`RaylibAudio`].
+    ///
+    /// # Examples
+    ///
+    /// Create a stereo 44.1 kHz stream and push silence each frame:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let audio = RaylibAudio::init_audio_device().unwrap();
+    /// let stream = audio.new_audio_stream(44100, 16, 2);
+    /// // Push PCM data when the device is ready for more samples.
+    /// let silence: Vec<i16> = vec![0; 4096];
+    /// unsafe { raylib::ffi::UpdateAudioStream(*stream, silence.as_ptr() as *const _, silence.len() as i32) };
+    /// ```
     AudioStream,
     ffi::AudioStream,
     RaylibAudio,
@@ -67,8 +122,26 @@ mod private {
     impl AudioSample for f32 {}
 }
 
-/// This token is used to indicate audio is initialized. It's also used to create [`Wave`], [`Sound`], [`Music`], [`AudioStream`], and [`SoundAlias`].
-/// All of those have a lifetime that is bound to RaylibAudio. The compiler will disallow you from using them without ensuring that the [`RaylibAudio`] is present while doing so.
+/// Audio subsystem handle — initializes the audio device and owns all audio resources.
+///
+/// `RaylibAudio` is a separate handle from [`RaylibHandle`](crate::core::RaylibHandle).
+/// Obtain one with [`RaylibAudio::init_audio_device`].  All audio resource types
+/// ([`Wave`], [`Sound`], [`Music`], [`AudioStream`]) are lifetime-bound to the
+/// `RaylibAudio` that created them; the Rust borrow checker enforces this statically, so
+/// audio resources cannot outlive the device.
+///
+/// The audio device is closed (`CloseAudioDevice`) when the `RaylibAudio` is dropped.
+///
+/// # Examples
+///
+/// Initialize the audio device and load a sound:
+///
+/// ```rust,no_run
+/// use raylib::prelude::*;
+/// let audio = RaylibAudio::init_audio_device().expect("audio init failed");
+/// let sound = audio.new_sound("assets/click.wav").expect("sound load failed");
+/// // `sound` borrows `audio` and cannot outlive it.
+/// ```
 #[derive(Debug, Clone)]
 pub struct RaylibAudio(PhantomData<()>);
 
