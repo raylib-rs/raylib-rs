@@ -44,6 +44,30 @@ impl From<Quaternion> for crate::Vector4 {
     }
 }
 
+/// An axis-aligned rectangle defined by its top-left corner and dimensions.
+///
+/// `Rectangle` is a `#[repr(C)]` struct with four `f32` fields: `x` and `y` for the top-left
+/// corner position, and `width` / `height` for the extents. It maps directly to raylib's
+/// `Rectangle` type in C.
+///
+/// Collision and containment helpers are available as methods:
+/// [`check_collision_recs`](Rectangle::check_collision_recs),
+/// [`check_collision_point_rec`](Rectangle::check_collision_point_rec),
+/// [`get_collision_rec`](Rectangle::get_collision_rec),
+/// [`check_collision_circle_rec`](Rectangle::check_collision_circle_rec).
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib_sys::Rectangle;
+///
+/// let r1 = Rectangle::new(0.0, 0.0, 10.0, 10.0);
+/// let r2 = Rectangle::new(5.0, 5.0, 10.0, 10.0);
+/// let r3 = Rectangle::new(20.0, 20.0, 10.0, 10.0);
+///
+/// assert!(r1.check_collision_recs(r2));   // overlapping
+/// assert!(!r1.check_collision_recs(r3));  // non-overlapping
+/// ```
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

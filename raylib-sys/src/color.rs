@@ -4,7 +4,28 @@ use crate::{Vector3, Vector4};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Color, 4 components, R8G8B8A8 (32bit)
+/// A 32-bit RGBA color value with 8 bits per channel.
+///
+/// `Color` is a `#[repr(C)]` struct with fields `r`, `g`, `b`, `a` each in the range `0..=255`.
+/// It maps directly to raylib's `Color` type in C.
+///
+/// A large set of named constants is available via the bundled `Color::RED`, `Color::WHITE`,
+/// `Color::RAYWHITE`, etc. — see the impl block below for the full list. CSS color names are also
+/// available through the [`CSSPalette`] trait and raylib palette names through [`RaylibPalette`].
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib_sys::Color;
+///
+/// // Construct a color and compare against a named constant
+/// let red = Color::new(255, 0, 0, 255);
+/// assert_eq!(red, Color::RED);
+///
+/// // Use alpha() to get a semi-transparent variant
+/// let semi = Color::RED.alpha(0.5);
+/// assert!(semi.a < 200);
+/// ```
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
