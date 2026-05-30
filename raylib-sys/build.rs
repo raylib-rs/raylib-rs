@@ -537,6 +537,15 @@ fn main() {
         #[cfg(feature = "software_renderer")]
         gen_ubsan_canary();
     }
+
+    // ENABLE_UBSAN: the C side is instrumented via cmake's CompilerFlags.cmake
+    // (-fsanitize=undefined). The Rust link step needs `-lubsan` explicitly because
+    // `-Z build-std` passes `-nodefaultlibs` to gcc, suppressing its normal
+    // auto-injection of libubsan from `-fsanitize=undefined`. Emitting
+    // `cargo:rustc-link-lib=ubsan` here puts `-lubsan` in the correct position
+    // (after the rlibs that reference __ubsan_handle_*).
+    #[cfg(feature = "ENABLE_UBSAN")]
+    println!("cargo:rustc-link-lib=ubsan");
 }
 
 #[must_use]
