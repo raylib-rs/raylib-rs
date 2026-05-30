@@ -5,10 +5,10 @@
 Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024).
 
 > Release candidate 1 for the 6.0 line — the published crate versions are
-> `6.0.0-rc.1` while the post-WS8 workstreams (`pixel-pointers`, `hashes`,
-> `mixed-audio`, WS9 showcase) settle. The headings under this block
-> describe what is shipping in the eventual `6.0.0` release; `rc.N` bumps
-> capture incremental snapshots leading up to it.
+> `6.0.0-rc.1` while the post-WS8 workstreams (`mixed-audio`, WS9 showcase)
+> settle. The headings under this block describe what is shipping in the
+> eventual `6.0.0` release; `rc.N` bumps capture incremental snapshots
+> leading up to it.
 
 ### Highlights
 
@@ -56,6 +56,21 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
   - `bytes_per_pixel(format: PixelFormat) -> Option<usize>` helper (exhaustive match — adding a `PixelFormat` variant in a future raylib release fails the build)
   - `PixelColorError` (thiserror) with `InsufficientBytes` and `CompressedFormat` variants
   All four are re-exported through `raylib::prelude`. Closes the `pixel-pointers` workstream from the cheatsheet-parity audit.
+- **Hashes:** new module `raylib::core::hashes` with safe wrappers
+  over raylib's built-in hash functions:
+  - `compute_crc32(data: &[u8]) -> u32` — CRC-32/ISO-HDLC, free-thread.
+  - `compute_md5(thread: &RaylibThread, data: &[u8]) -> [u8; 16]` — MD5
+    digest in canonical byte order. Requires `&RaylibThread` to pin
+    the call to raylib's thread (the C function returns a pointer to
+    a shared static buffer that concurrent calls would race against).
+  - `compute_sha1(thread: &RaylibThread, data: &[u8]) -> [u8; 20]`
+  - `compute_sha256(thread: &RaylibThread, data: &[u8]) -> [u8; 32]`
+  All four re-exported through `raylib::prelude`. Module-level rustdoc
+  steers security-sensitive callers at the RustCrypto crates
+  (`crc32fast`, `md-5`, `sha1`, `sha2`); MD5 and SHA-1 are
+  cryptographically broken, and raylib's SHA-256 implementation is
+  not constant-time. Closes the `hashes` workstream from the
+  cheatsheet-parity audit.
 
 ### Fixed
 

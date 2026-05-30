@@ -18,14 +18,14 @@ In-scope (excluding `rtext` and the `// File system management functions`,
 `// File access custom callbacks`, `// File operations` blocks of rcore):
 
 - **Total cheatsheet functions audited: 500**
-- **Covered in safe bindings: 488**
+- **Covered in safe bindings: 492**
 - **Intentionally skipped with rationale: 1**
-- **Genuine gaps (TODO): 11**
+- **Genuine gaps (TODO): 7**
 
 Genuine gaps further categorized:
 
 - **Small fixes (≲10 lines, no design judgement): 5** — listed in §3.
-- **Medium / future workstream: 6** — listed in §4.
+- **Medium / future workstream: 2** — listed in §4.
 
 > **Important headline finding:** the existing `parity-checklist.md` lists 19
 > `[ ]` items that are actually **already wrapped** — 14 in
@@ -35,7 +35,7 @@ Genuine gaps further categorized:
 > The auto-scan in `find_unimplemented.py` only looks at `raylib/src/**`
 > and at `pub fn` top-level wrappers, so it misses these. See §5 for the
 > full reconciliation list. The genuine-gap count for the in-scope
-> sections is **11, not 49** — the remaining 30 `[ ]` entries are either
+> sections is **7, not 49** — the remaining 30 `[ ]` entries are either
 > reconcile deltas (§5) or live in the out-of-scope `rtext` /
 > file-system sections.
 
@@ -238,10 +238,10 @@ Genuine gaps further categorized:
 - ✅ `DecompressData` — `raylib/src/core/data.rs`
 - ✅ `EncodeDataBase64` — `raylib/src/core/data.rs`
 - ✅ `DecodeDataBase64` — `raylib/src/core/data.rs`
-- 🟥 `ComputeCRC32` — GAP. Action: future-workstream-hashes.
-- 🟥 `ComputeMD5` — GAP. Action: future-workstream-hashes.
-- 🟥 `ComputeSHA1` — GAP. Action: future-workstream-hashes.
-- 🟥 `ComputeSHA256` — GAP. Action: future-workstream-hashes.
+- ✅ `ComputeCRC32` — `raylib/src/core/hashes.rs::compute_crc32`
+- ✅ `ComputeMD5` — `raylib/src/core/hashes.rs::compute_md5`
+- ✅ `ComputeSHA1` — `raylib/src/core/hashes.rs::compute_sha1`
+- ✅ `ComputeSHA256` — `raylib/src/core/hashes.rs::compute_sha256`
 
 ### Section 15 (rcore): Input-related functions: keyboard
 
@@ -787,23 +787,10 @@ they are wrapped as inherent methods on `raylib-sys::Color` and
 
 ## Genuine gaps — future workstream candidates
 
-Six functions need design judgement that goes beyond a one-line wrapper
-(grouped into two workstreams):
+Two functions need design judgement that goes beyond a one-line wrapper
+(grouped into one workstream):
 
-1. **`ComputeCRC32` / `ComputeMD5` / `ComputeSHA1` / `ComputeSHA256`**
-   (workstream: `hashes`). Returning a static `unsigned int[N]` from C —
-   `MD5` returns `[u32; 4]`, `SHA1` returns `[u32; 5]`, `SHA256` returns
-   `[u32; 8]`. The wrappers should:
-   - Either return `[u32; N]` by value (Rust idiomatic — copy out
-     immediately so the C static buffer is reusable).
-   - Or expose them as `Hasher`-style helpers on a `Hash` enum/trait.
-   Also need to evaluate whether to keep these at all: Rust crates like
-   `crc32fast`, `md-5`, `sha1`, `sha2` already do this with established
-   APIs, so the bindings may be redundant unless byte-identical output to
-   raylib's C is required. Recommend bundling these with a brainstorming
-   pass before wrapping.
-
-2. **`AttachAudioMixedProcessor` / `DetachAudioMixedProcessor`**
+1. **`AttachAudioMixedProcessor` / `DetachAudioMixedProcessor`**
    (workstream: `mixed-audio`). Currently only the per-stream variant has
    a closure wrapper (`stream_processor_with_user_data_wrapper.rs`). The
    *mixed* variant is global to the audio device, so it needs a different
@@ -812,17 +799,23 @@ Six functions need design judgement that goes beyond a one-line wrapper
    also has to detach before drop to avoid the C side calling back into a
    freed closure. Worth a small RAII-handle design pass.
 
-Total: **6 functions** across **2 workstreams**.
+Total: **2 functions** across **1 workstream**.
 
-**Done (this audit):** `GetPixelColor` / `SetPixelColor` were workstream
-#1 here (`pixel-pointers`); now wrapped at
-`raylib/src/core/pixel.rs::{get_pixel_color, set_pixel_color}` (+
-`bytes_per_pixel` helper and `PixelColorError`). See the 6.0.0-rc.1
-CHANGELOG entry.
+**Done (this audit):**
+- `GetPixelColor` / `SetPixelColor` were workstream `pixel-pointers`; now
+  wrapped at `raylib/src/core/pixel.rs::{get_pixel_color, set_pixel_color}`
+  (+ `bytes_per_pixel` helper and `PixelColorError`). See the 6.0.0-rc.1
+  CHANGELOG entry.
+- `ComputeCRC32` / `ComputeMD5` / `ComputeSHA1` / `ComputeSHA256` were
+  workstream `hashes`; now wrapped at
+  `raylib/src/core/hashes.rs::{compute_crc32, compute_md5, compute_sha1,
+  compute_sha256}`. CRC32 is free-thread; the three crypto hashes take
+  `&RaylibThread` to eliminate the static-buffer concurrent-call race.
+  See the 6.0.0-rc.1 CHANGELOG entry.
 
 **Owner-locked ordering (2026-05-29):** these workstreams run
 **before WS9 showcase**, alongside four other promoted items:
-`pixel-pointers` ✅ → `hashes` ← NEXT → `mixed-audio` → `raylib-test`
+`pixel-pointers` ✅ → `hashes` ✅ → `mixed-audio` ← NEXT → `raylib-test`
 delete-or-fix → UBSAN-through-FFI → rustdoc rewrite (remaining ~200
 stubs) → safe abstractions for `GuiGetIcons`/`GuiLoadIcons` + PR #296 →
 WS9 → final-release. See
