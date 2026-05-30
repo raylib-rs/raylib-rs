@@ -83,22 +83,3 @@ jobs:
         run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,raygui --test render_gui -- --test-threads=1
       - name: Tier-2 render tests (rlgl)
         run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION --test render_rlgl -- --test-threads=1
-
-  # Window-opening integration tests (raylib-test, nightly) under a virtual
-  # framebuffer. Linux-only — macOS/Windows have no xvfb equivalent.
-  integration-xvfb:
-    runs-on: ubuntu-latest
-    # Non-required: raylib-test is stale vs the 6.0 API (a nightly test-harness
-    # API drift remains). See docs/superpowers/notes/spike-raylib-test-delete-or-fix.md.
-    # The software-render jobs are the gating headless Tier-2 coverage.
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          submodules: recursive
-      - name: Install Linux build deps + xvfb
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev xvfb
-      - uses: dtolnay/rust-toolchain@nightly
-      - name: Run raylib-test under xvfb
-        working-directory: raylib-test
-        run: xvfb-run -a cargo +nightly test
