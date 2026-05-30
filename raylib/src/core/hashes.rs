@@ -190,7 +190,12 @@ mod tests {
 
     /// Format bytes as a lowercase hex string for assertion convenience.
     fn hex(bytes: &[u8]) -> String {
-        bytes.iter().map(|b| format!("{:02x}", b)).collect()
+        use std::fmt::Write;
+        let mut s = String::with_capacity(bytes.len() * 2);
+        for b in bytes {
+            write!(&mut s, "{:02x}", b).expect("write to String never fails");
+        }
+        s
     }
 
     #[test]
