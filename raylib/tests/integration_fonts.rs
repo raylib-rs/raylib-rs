@@ -1,6 +1,10 @@
 //! Tier-2: font loading + export smoke tests.
 //! Salvaged from raylib-test/src/text.rs.
 #![cfg(feature = "software_renderer")]
+// RaylibFont trait is only needed by the PNG branch's
+// `export_font_as_code` call below; the TTF branch loads but doesn't
+// export. Scoping the import to the PNG gate avoids an unused_imports
+// warning when PNG support is off.
 #[cfg(feature = "SUPPORT_FILEFORMAT_PNG")]
 use raylib::core::text::RaylibFont;
 use raylib::test_harness::with_headless;

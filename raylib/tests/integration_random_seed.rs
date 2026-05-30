@@ -1,5 +1,18 @@
 //! Tier-2: raylib's set_random_seed contract is deterministic.
 //! Salvaged from raylib-test/src/random.rs.
+//!
+//! Note on the inclusive-Range quirk: `load_random_sequence` takes a
+//! `Range<i32>` in the Rust API, but the C ABI's `LoadRandomSequence(min,
+//! max)` treats both bounds inclusively. The test passes `1..10` and
+//! asserts every element falls in `[1, 10]` (inclusive of 10) — that
+//! matches the C behavior, not Rust's half-open `Range` convention.
+//!
+//! Note on assertion style: the 5.x raylib-test pinned specific values
+//! (`2` for `get_random_value`, `[8,7,6,4,10,3,5,1,2,9]` for the
+//! sequence). raylib 6.0's RNG implementation changed; rather than pin
+//! new arbitrary 6.0 values, this test asserts the **documented API
+//! contract** — reseeding produces reproducible output — which is what
+//! `set_random_seed` exists for.
 #![cfg(feature = "software_renderer")]
 use raylib::test_harness::with_headless;
 

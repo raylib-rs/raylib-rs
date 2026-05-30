@@ -12,7 +12,10 @@ fn window_api_smoke() {
         // platform doesn't wire SetClipboardText / GetClipboardText to a
         // real backend, so calling them causes a null-pointer dereference
         // (STATUS_ACCESS_VIOLATION on Windows) which Rust panic-unwind
-        // can't catch. They are exercised under real GLFW elsewhere.
+        // can't catch. Real-GLFW clipboard coverage is currently absent
+        // (the raylib-test crate that previously exercised it under xvfb
+        // was retired alongside this salvage). WS9's showcase port will
+        // provide real-API coverage once it lands.
         eprintln!("SKIP: clipboard not wired under software_renderer Memory platform");
 
         // Screen-space conversions (don't panic).

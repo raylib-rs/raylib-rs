@@ -83,3 +83,11 @@ jobs:
         run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,raygui --test render_gui -- --test-threads=1
       - name: Tier-2 render tests (rlgl)
         run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION --test render_rlgl -- --test-threads=1
+      - name: Tier-2 integration tests (raylib-test salvage)
+        # The 6 integration_* files preserve coverage salvaged from the
+        # retired raylib-test crate. See docs/superpowers/notes/
+        # spike-raylib-test-delete-or-fix.md for context. Each file is its
+        # own test binary (one #[test] per file per InitWindow's
+        # single-init constraint), so --test-threads=1 applies per-file
+        # internally; the cargo test driver runs the binaries in series.
+        run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_FILEFORMAT_TTF,SUPPORT_FILEFORMAT_OBJ,SUPPORT_MESH_GENERATION --test integration_window_api --test integration_image_io --test integration_random_seed --test integration_fonts --test integration_models --test integration_model_animations -- --test-threads=1

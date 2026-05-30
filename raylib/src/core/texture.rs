@@ -1468,6 +1468,10 @@ impl RaylibHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Color is only used by the SUPPORT_IMAGE_GENERATION-gated test below.
+    // Scoping the import to the same gate avoids an unused_imports warning
+    // when the feature is off (clippy -Dwarnings would fail otherwise).
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     use crate::ffi::Color;
 
     /// Salvaged from raylib-test/src/texture.rs `test_image_loading`.

@@ -141,7 +141,11 @@ The `raygui.h` file has to have this ifdef modified to point to where `raylib.h`
 
 # Testing
 
-The raylib-test crate tests the bindings by opening a window, and checking the results of various functions. It requires nightly to use.
+Two-tier test surface:
+- **Tier-1 unit tests** (window-independent): `cargo test -p raylib --lib --features full` runs the safe-crate unit tests on the default toolchain.
+- **Tier-2 integration tests** (headless rendering + windowed integration smoke): under the `software_renderer` feature, `raylib/tests/{render_shapes,render_text,render_gui,render_rlgl,integration_*}.rs` exercise rendering, raygui, rlgl, and the salvaged windowed-integration tests. Run with e.g. `cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION -- --test-threads=1`.
+
+The CI workflows in `.github/workflows/` run both tiers on every push.
 
 # Contribution & Support
 
