@@ -229,4 +229,24 @@ mod tests {
         };
         let _ = compute_crc32(fake_slice);
     }
+
+    #[cfg(feature = "software_renderer")]
+    #[test]
+    fn md5_known_vectors() {
+        crate::test_harness::with_headless(1, 1, |_rl, thread| {
+            // RFC 1321 standard test vectors.
+            assert_eq!(
+                hex(&compute_md5(thread, b"")),
+                "d41d8cd98f00b204e9800998ecf8427e",
+            );
+            assert_eq!(
+                hex(&compute_md5(thread, b"abc")),
+                "900150983cd24fb0d6963f7d28e17f72",
+            );
+            assert_eq!(
+                hex(&compute_md5(thread, b"The quick brown fox jumps over the lazy dog")),
+                "9e107d9d372bb6826bd81d3542a419d6",
+            );
+        });
+    }
 }
