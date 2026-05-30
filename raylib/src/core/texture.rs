@@ -1464,3 +1464,98 @@ impl RaylibHandle {
         unsafe { ffi::UnloadRenderTexture(*texture.as_ref()) }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ffi::Color;
+
+    /// Salvaged from raylib-test/src/texture.rs `test_image_loading`.
+    /// Image is CPU-side; no window context needed. The happy-path
+    /// load asserts only when the PNG decoder feature is enabled
+    /// (raylib's image-format support is feature-gated).
+    #[test]
+    fn image_load_from_file_happy_and_error() {
+        // Happy: load the bundled fixture. Gated on PNG support because
+        // raylib's image-format decoders are feature-gated.
+        #[cfg(feature = "SUPPORT_FILEFORMAT_PNG")]
+        {
+            let path = "tests/fixtures/billboard.png";
+            if std::path::Path::new(path).exists() {
+                let img = Image::load_image(path).expect("billboard.png loads");
+                assert!(img.width() > 0, "loaded image has non-zero width");
+                assert!(img.height() > 0, "loaded image has non-zero height");
+            } else {
+                eprintln!("SKIP: {path} not found (cargo invoked from a non-workspace-root cwd?)");
+            }
+        }
+
+        // Error: nonexistent path returns Err.
+        Image::load_image("tests/fixtures/does_not_exist.png")
+            .expect_err("nonexistent file should error");
+    }
+
+    /// Salvaged from raylib-test/src/texture.rs `test_image_manipulations`.
+    /// Exercises the Image CPU-side API without a window context.
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
+    #[test]
+    fn image_manipulations_no_segfault() {
+        let mut i = Image::gen_image_color(32, 32, Color::new(230, 41, 55, 255));
+        let mut canvas = Image::gen_image_color(32, 32, Color::new(0, 0, 0, 0));
+        let mask = Image::gen_image_checked(
+            32,
+            32,
+            8,
+            8,
+            Color::new(255, 255, 255, 255),
+            Color::new(0, 0, 0, 0),
+        );
+
+        let mut c = i.clone();
+        c.alpha_mask(&mask);
+        c.alpha_clear(Color::new(0, 0, 255, 255), 0.5);
+        c.alpha_crop(0.5);
+        c.alpha_premultiply();
+
+        let mut blurry = c.clone();
+        blurry.resize(64, 64);
+        c.resize_nn(64, 64);
+        i.resize_canvas(64, 64, 10, 10, Color::new(0, 0, 255, 255));
+
+        c.gen_mipmaps();
+        blurry.dither(128, 128, 128, 128);
+
+        let colors = c.extract_palette(100);
+        assert_eq!(
+            colors.len(),
+            2,
+            "checker-masked single-color image has 2-color palette"
+        );
+
+        canvas.draw(
+            &i,
+            Rectangle::new(0.0, 0.0, 20.0, 20.0),
+            Rectangle::new(0.0, 0.0, 20.0, 20.0),
+            Color::new(255, 255, 255, 255),
+        );
+        canvas.draw_rectangle_lines(
+            Rectangle::new(20.0, 0.0, 20.0, 20.0),
+            4,
+            Color::new(0, 228, 48, 255),
+        );
+        canvas.draw_rectangle(40, 0, 20, 20, Color::new(255, 161, 0, 255));
+
+        canvas.flip_vertical();
+        canvas.flip_horizontal();
+        canvas.rotate_cw();
+        canvas.rotate_ccw();
+
+        canvas.color_tint(Color::new(255, 109, 194, 255));
+        canvas.color_invert();
+        canvas.color_contrast(0.5);
+        canvas.color_brightness(128);
+        canvas.color_replace(Color::new(0, 228, 48, 255), Color::new(230, 41, 55, 255));
+
+        // Test reaches here = no segfault during the manipulation pipeline.
+    }
+}
