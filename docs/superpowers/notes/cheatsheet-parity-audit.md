@@ -18,14 +18,14 @@ In-scope (excluding `rtext` and the `// File system management functions`,
 `// File access custom callbacks`, `// File operations` blocks of rcore):
 
 - **Total cheatsheet functions audited: 500**
-- **Covered in safe bindings: 486**
+- **Covered in safe bindings: 488**
 - **Intentionally skipped with rationale: 1**
-- **Genuine gaps (TODO): 13**
+- **Genuine gaps (TODO): 11**
 
 Genuine gaps further categorized:
 
 - **Small fixes (≲10 lines, no design judgement): 5** — listed in §3.
-- **Medium / future workstream: 8** — listed in §4.
+- **Medium / future workstream: 6** — listed in §4.
 
 > **Important headline finding:** the existing `parity-checklist.md` lists 19
 > `[ ]` items that are actually **already wrapped** — 14 in
@@ -35,7 +35,7 @@ Genuine gaps further categorized:
 > The auto-scan in `find_unimplemented.py` only looks at `raylib/src/**`
 > and at `pub fn` top-level wrappers, so it misses these. See §5 for the
 > full reconciliation list. The genuine-gap count for the in-scope
-> sections is **13, not 49** — the remaining 30 `[ ]` entries are either
+> sections is **11, not 49** — the remaining 30 `[ ]` entries are either
 > reconcile deltas (§5) or live in the out-of-scope `rtext` /
 > file-system sections.
 
@@ -557,8 +557,8 @@ Genuine gaps further categorized:
   `raylib-sys/src/color.rs:170`.
 - ✅ `GetColor` — assoc fn `Color::get_color` at
   `raylib-sys/src/color.rs:126`.
-- 🟥 `GetPixelColor` — GAP. Action: future-workstream-pixel-pointers.
-- 🟥 `SetPixelColor` — GAP. Action: future-workstream-pixel-pointers.
+- ✅ `GetPixelColor` — `raylib/src/core/pixel.rs::get_pixel_color`.
+- ✅ `SetPixelColor` — `raylib/src/core/pixel.rs::set_pixel_color`.
 - ✅ `GetPixelDataSize` — `raylib/src/core/texture.rs:361,1381`
   (both as method and free fn).
 
@@ -787,17 +787,10 @@ they are wrapped as inherent methods on `raylib-sys::Color` and
 
 ## Genuine gaps — future workstream candidates
 
-Eight functions need design judgement that goes beyond a one-line wrapper
-(grouped into three workstreams):
+Six functions need design judgement that goes beyond a one-line wrapper
+(grouped into two workstreams):
 
-1. **`GetPixelColor` / `SetPixelColor`** (workstream: `pixel-pointers`).
-   Both take a `void *` into raw pixel memory plus a `PixelFormat`. A safe
-   wrapper has to decide how to express the pointer: a `&[u8]` /
-   `&mut [u8]` plus offset + format, or a typed `PixelData<F>` newtype, or
-   only as a method on `Image` (which already knows its `format`). All
-   three carry trade-offs; pick during a small design session.
-
-2. **`ComputeCRC32` / `ComputeMD5` / `ComputeSHA1` / `ComputeSHA256`**
+1. **`ComputeCRC32` / `ComputeMD5` / `ComputeSHA1` / `ComputeSHA256`**
    (workstream: `hashes`). Returning a static `unsigned int[N]` from C —
    `MD5` returns `[u32; 4]`, `SHA1` returns `[u32; 5]`, `SHA256` returns
    `[u32; 8]`. The wrappers should:
@@ -810,7 +803,7 @@ Eight functions need design judgement that goes beyond a one-line wrapper
    raylib's C is required. Recommend bundling these with a brainstorming
    pass before wrapping.
 
-3. **`AttachAudioMixedProcessor` / `DetachAudioMixedProcessor`**
+2. **`AttachAudioMixedProcessor` / `DetachAudioMixedProcessor`**
    (workstream: `mixed-audio`). Currently only the per-stream variant has
    a closure wrapper (`stream_processor_with_user_data_wrapper.rs`). The
    *mixed* variant is global to the audio device, so it needs a different
@@ -819,15 +812,22 @@ Eight functions need design judgement that goes beyond a one-line wrapper
    also has to detach before drop to avoid the C side calling back into a
    freed closure. Worth a small RAII-handle design pass.
 
-Total: **8 functions** across **3 workstreams**.
+Total: **6 functions** across **2 workstreams**.
 
-**Owner-locked ordering (2026-05-29):** these three workstreams run
+**Done (this audit):** `GetPixelColor` / `SetPixelColor` were workstream
+#1 here (`pixel-pointers`); now wrapped at
+`raylib/src/core/pixel.rs::{get_pixel_color, set_pixel_color}` (+
+`bytes_per_pixel` helper and `PixelColorError`). See the 6.0.0-rc.1
+CHANGELOG entry.
+
+**Owner-locked ordering (2026-05-29):** these workstreams run
 **before WS9 showcase**, alongside four other promoted items:
-`pixel-pointers` → `hashes` → `mixed-audio` → `raylib-test` delete-or-fix →
-UBSAN-through-FFI → rustdoc rewrite (remaining ~200 stubs) →
-safe abstractions for `GuiGetIcons`/`GuiLoadIcons` + PR #296 →
-WS9 → final-release. See `docs/superpowers/notes/ws8e-checkpoint-review-feedback.md`
-for the full post-checkpoint workstream queue.
+`pixel-pointers` ✅ → `hashes` ← NEXT → `mixed-audio` → `raylib-test`
+delete-or-fix → UBSAN-through-FFI → rustdoc rewrite (remaining ~200
+stubs) → safe abstractions for `GuiGetIcons`/`GuiLoadIcons` + PR #296 →
+WS9 → final-release. See
+`docs/superpowers/notes/ws8e-checkpoint-review-feedback.md` for the full
+post-checkpoint workstream queue.
 
 ---
 

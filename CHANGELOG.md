@@ -50,6 +50,12 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - Rustdoc enriched on ~25 high-traffic types: crate-level docs, `RaylibHandle`/`RaylibThread`/`RaylibBuilder`, `RaylibDraw` trait, `Color`/`Rectangle`, `Image`/`Texture2D`/`RenderTexture2D`, `Mesh`/`Model`/`Material`/`ModelAnimations`, `RaylibAudio`/`Wave`/`Sound`/`Music`/`AudioStream`, `Shader`, `Font`, `Vector2`/`Vector3`/`Vector4`/`Matrix`/`Quaternion`, collision module, `test_harness` module, rgui module, rlgl module.
 - **Shapes:** `RaylibDraw::draw_line_dashed` (dashed line; raylib 6.0 addition), `RaylibDraw::draw_ellipse_v` and `RaylibDraw::draw_ellipse_lines_v` (Vector2-center ellipse variants) — cheatsheet-audit follow-up.
 - **Input:** `RaylibHandle::get_key_name` — keyboard-layout-aware key labels (e.g. `"q"` for `KEY_A` on AZERTY); useful for HUDs and key-rebinding UIs. Returns `Option<String>` (copied out of raylib's static buffer).
+- **Color/pixel:** new module `raylib::core::pixel` with safe wrappers over raylib's pixel-pointer C functions:
+  - `get_pixel_color(bytes: &[u8], format: PixelFormat) -> Result<Color, PixelColorError>`
+  - `set_pixel_color(bytes: &mut [u8], color: Color, format: PixelFormat) -> Result<(), PixelColorError>`
+  - `bytes_per_pixel(format: PixelFormat) -> Option<usize>` helper (exhaustive match — adding a `PixelFormat` variant in a future raylib release fails the build)
+  - `PixelColorError` (thiserror) with `InsufficientBytes` and `CompressedFormat` variants
+  All four are re-exported through `raylib::prelude`. Closes the `pixel-pointers` workstream from the cheatsheet-parity audit.
 
 ### Fixed
 
