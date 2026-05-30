@@ -279,6 +279,88 @@ where
 
 // endregion: -- AudioStreamProcessorCallback --
 
+// region: -- MixedAudioProcessorCallback --
+
+/// Closure-driven processor attached to raylib's **global mixed audio
+/// bus**.
+///
+/// The processor receives every stereo frame after raylib has mixed
+/// all playing streams. Multiple `MixedAudioProcessorCallback`
+/// instances can be attached simultaneously; they form a chain in
+/// raylib's internal linked list and run in attach-order on each
+/// frame.
+///
+/// This is a guard type — drop it to detach. Users obtain one via
+/// [`attach_audio_mixed_processor`]; direct construction is not
+/// supported (no public constructor).
+pub struct MixedAudioProcessorCallback<'a, F>
+where
+    F: FnMut(&mut [f32], u32) + Send + 'static,
+{
+    rust_callback: &'a mut F,
+    /// Set after `attach_audio_mixed_processor_with_user_data` succeeds.
+    /// `None` only during the construction window before attach.
+    callback_index: Option<usize>,
+}
+
+impl<'a, F> MixedAudioProcessorCallback<'a, F>
+where
+    F: FnMut(&mut [f32], u32) + Send + 'static,
+{
+    fn new(closure: &'a mut F) -> Self {
+        Self {
+            rust_callback: closure,
+            callback_index: None,
+        }
+    }
+
+    fn get_as_user_data(&mut self) -> *mut ::std::os::raw::c_void {
+        self as *mut Self as *mut ::std::os::raw::c_void
+    }
+
+    fn get_c_callback(
+        &mut self,
+    ) -> extern "C" fn(
+        *mut ::std::os::raw::c_void,
+        *mut ::std::os::raw::c_void,
+        ::std::os::raw::c_uint,
+    ) -> () {
+        Self::c_callback
+    }
+
+    extern "C" fn c_callback(
+        user_data: *mut ::std::os::raw::c_void,
+        data_ptr: *mut ::std::os::raw::c_void,
+        frame_count: ::std::os::raw::c_uint,
+    ) {
+        // SAFETY: user_data is `*mut Self` per get_as_user_data; the
+        // wrapping Pin<Box<Self>> keeps it stable for the guard's
+        // lifetime, which outlives every callback firing per the
+        // &'a RaylibAudio borrow. data_ptr is `frame_count * 2 *
+        // sizeof(f32)` interleaved stereo bytes (mixed bus is always
+        // stereo per raylib.h:1736).
+        unsafe {
+            let cb: &mut Self = user_data.cast::<Self>().as_mut().unwrap();
+            let data =
+                std::slice::from_raw_parts_mut(data_ptr as *mut f32, frame_count as usize * 2);
+            (cb.rust_callback)(data, 2);
+        }
+    }
+}
+
+impl<F> Drop for MixedAudioProcessorCallback<'_, F>
+where
+    F: FnMut(&mut [f32], u32) + Send + 'static,
+{
+    fn drop(&mut self) {
+        if let Some(idx) = self.callback_index {
+            detach_audio_mixed_processor_with_user_data(idx);
+        }
+    }
+}
+
+// endregion: -- MixedAudioProcessorCallback --
+
 /// Attach an audio stream processor closure to a [`Music`] stream, returning a pinned guard that detaches on drop.
 pub fn attach_audio_stream_processor_to_music<'a, F>(
     music: &'a Music<'a>,
