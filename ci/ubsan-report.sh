@@ -17,7 +17,7 @@ SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
 
 # libubsan appends .pid; tests may spawn several. Match both `ubsan.log` and `ubsan.log.*`.
 shopt -s nullglob
-logs=(ubsan.log ubsan.log.*)
+logs=(ubsan.log*)
 
 if (( ${#logs[@]} == 0 )); then
     echo "## UBSAN: no findings (no log files produced)" >> "$SUMMARY"
