@@ -160,4 +160,47 @@ mod tests {
         (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R16G16B16, 6),
         (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 8),
     ];
+
+    #[test]
+    fn bytes_per_pixel_agrees_with_raylib() {
+        for &(format, expected) in UNCOMPRESSED_FORMATS {
+            let bpp = bytes_per_pixel(format)
+                .unwrap_or_else(|| panic!("{format:?} should be uncompressed"));
+            assert_eq!(bpp, expected, "{format:?}: table says {expected}, fn says {bpp}");
+
+            // raylib computes the same byte count via GetPixelDataSize(1, 1, ...).
+            let raylib_bpp = unsafe { crate::ffi::GetPixelDataSize(1, 1, format as i32) } as usize;
+            assert_eq!(
+                bpp, raylib_bpp,
+                "{format:?}: rust says {bpp}, raylib's GetPixelDataSize(1,1,...) says {raylib_bpp}"
+            );
+        }
+    }
+
+    #[test]
+    fn bytes_per_pixel_none_for_every_compressed_variant() {
+        // Listed exhaustively (no for-loop over a slice) so an enum addition
+        // surfaces as a missing arm here, matching the exhaustive-match
+        // pattern in bytes_per_pixel itself.
+        use PixelFormat::*;
+        for format in [
+            PIXELFORMAT_COMPRESSED_DXT1_RGB,
+            PIXELFORMAT_COMPRESSED_DXT1_RGBA,
+            PIXELFORMAT_COMPRESSED_DXT3_RGBA,
+            PIXELFORMAT_COMPRESSED_DXT5_RGBA,
+            PIXELFORMAT_COMPRESSED_ETC1_RGB,
+            PIXELFORMAT_COMPRESSED_ETC2_RGB,
+            PIXELFORMAT_COMPRESSED_ETC2_EAC_RGBA,
+            PIXELFORMAT_COMPRESSED_PVRT_RGB,
+            PIXELFORMAT_COMPRESSED_PVRT_RGBA,
+            PIXELFORMAT_COMPRESSED_ASTC_4x4_RGBA,
+            PIXELFORMAT_COMPRESSED_ASTC_8x8_RGBA,
+        ] {
+            assert_eq!(
+                bytes_per_pixel(format),
+                None,
+                "{format:?} should return None"
+            );
+        }
+    }
 }
