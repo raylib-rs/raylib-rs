@@ -284,4 +284,49 @@ mod tests {
             )),
         );
     }
+
+    /// True for PixelFormat variants where raylib's `SetPixelColor` has no
+    /// `case` branch (the function falls through to `default: break` and
+    /// leaves the destination unchanged). Verified against
+    /// `raylib-sys/raylib/src/rtextures.c` around line 5269: the switch
+    /// only covers GRAYSCALE, GRAY_ALPHA, R5G6B5, R5G5B5A1, R4G4B4A4,
+    /// R8G8B8, and R8G8B8A8. The 32-bit float and 16-bit half-float
+    /// formats are read-only — `GetPixelColor` handles them but
+    /// `SetPixelColor` does not. Round-trip tests must skip these.
+    fn set_pixel_color_is_unimplemented(format: PixelFormat) -> bool {
+        use PixelFormat::*;
+        matches!(
+            format,
+            PIXELFORMAT_UNCOMPRESSED_R32
+                | PIXELFORMAT_UNCOMPRESSED_R32G32B32
+                | PIXELFORMAT_UNCOMPRESSED_R32G32B32A32
+                | PIXELFORMAT_UNCOMPRESSED_R16
+                | PIXELFORMAT_UNCOMPRESSED_R16G16B16
+                | PIXELFORMAT_UNCOMPRESSED_R16G16B16A16
+        )
+    }
+
+    #[test]
+    fn round_trip_all_ff_for_every_uncompressed_format() {
+        let input = Color::new(0xFF, 0xFF, 0xFF, 0xFF);
+        for &(format, bpp) in UNCOMPRESSED_FORMATS {
+            // TODO(raylib upstream): SetPixelColor has no branch for the
+            // 32-bit float / 16-bit half-float formats — see
+            // set_pixel_color_is_unimplemented for the source reference.
+            // Skipping avoids a false-positive "round-trip diverged" failure;
+            // the error-variant tests still cover these formats.
+            if set_pixel_color_is_unimplemented(format) {
+                continue;
+            }
+            let mut bytes = vec![0u8; bpp];
+            set_pixel_color(&mut bytes, input, format)
+                .unwrap_or_else(|e| panic!("set_pixel_color({format:?}) errored: {e}"));
+            let got = get_pixel_color(&bytes, format)
+                .unwrap_or_else(|e| panic!("get_pixel_color({format:?}) errored: {e}"));
+            assert_eq!(
+                got, input,
+                "{format:?}: all-FF round-trip diverged (got {got:?}, expected {input:?})"
+            );
+        }
+    }
 }
