@@ -821,6 +821,13 @@ Eight functions need design judgement that goes beyond a one-line wrapper
 
 Total: **8 functions** across **3 workstreams**.
 
+**Owner-locked ordering (2026-05-29):** these three workstreams run
+**before WS9 showcase**, so the published 6.0 crate ships with the full
+cheatsheet surface covered. Order: `pixel-pointers` → `hashes` →
+`mixed-audio` → WS9 → final-release. See also
+`docs/superpowers/notes/ws8e-checkpoint-review-feedback.md` for the full
+post-checkpoint workstream queue.
+
 ---
 
 ## Reconciliation with existing parity-checklist.md

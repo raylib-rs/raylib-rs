@@ -141,19 +141,30 @@ exposed function.
 The roadmap originally had: **WS8 (release prep) → WS9 (showcase + Pages
 finale) → final-release (publish + canonical merge)**.
 
-Adding the post-WS8-checkpoint follow-ups, the rough ordering becomes:
+After the WS8 checkpoint review **and** the cheatsheet parity audit
+(`cheatsheet-parity-audit.md`), the ordering is:
 
-1. **WS9** — showcase rewrite + Pages deploy (the roadmap finale).
-2. **Final-release** — publish to crates.io + canonical merge + tag + GitHub release.
-3. **bevy-raylib crate** — new crate that depends on the published 6.0.0.
-4. **DataBuf + Mesh + general testing workstream** — covers comments 8 + 10
+1. **`pixel-pointers`** — wrap `GetPixelColor` / `SetPixelColor` with a safe
+   abstraction over the `void *` + `PixelFormat` (cheatsheet audit §4 #1).
+2. **`hashes`** — wrap `Compute{CRC32,MD5,SHA1,SHA256}`, or formally decline
+   in favor of Rust crates (cheatsheet audit §4 #2).
+3. **`mixed-audio`** — wrap `Attach`/`DetachAudioMixedProcessor` with a
+   RAII handle distinct from the per-stream variant
+   (cheatsheet audit §4 #3).
+4. **WS9** — showcase rewrite + Pages deploy (the roadmap finale).
+5. **Final-release** — publish to crates.io + canonical merge + tag + GitHub release.
+6. **bevy-raylib crate** — new crate that depends on the published 6.0.0.
+7. **DataBuf + Mesh + general testing workstream** — covers comments 8 + 10
    + the user's broader "more tests" intent.
-5. **thiserror migration** — comment 7.
-6. **Nobuild-mode CI matrix** — comment 4.
-7. **Color/Vector conversion ergonomics audit** — comment 5.
-8. **Symmetric apt+rust-cache adoption across remaining workflows** — extend
-   the book.yml pattern from comments 1+2 to `check.yml` / `test.yml` /
-   `web.yml` / `sanitizers.yml` if owner wants symmetric coverage.
+8. **thiserror migration** — comment 7.
+9. **Nobuild-mode CI matrix** — comment 4.
+10. **Color/Vector conversion ergonomics audit** — comment 5.
+11. **Symmetric apt+rust-cache adoption across remaining workflows** — extend
+    the book.yml pattern from comments 1+2 to `check.yml` / `test.yml` /
+    `web.yml` / `sanitizers.yml` if owner wants symmetric coverage.
 
-Ordering 4-8 is flexible — the owner can reorder when those workstreams
-actually start, depending on what's most painful at the time.
+Owner-locked ordering (2026-05-29): items 1-3 (the cheatsheet-audit gap
+workstreams) run **before WS9** so the published 6.0 crate ships with
+the full cheatsheet surface covered. Items 4-5 stay locked. Items 6+
+are flexible — the owner can reorder when each workstream actually
+starts depending on what's most painful at the time.
