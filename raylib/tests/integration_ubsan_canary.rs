@@ -9,6 +9,8 @@
 //!
 //! See docs/superpowers/specs/2026-05-30-ubsan-through-ffi-design.md §4.3.
 
+#![cfg(feature = "software_renderer")]
+
 // Pull raylib (and transitively raylib-sys) into the test binary's link line
 // so the `cargo:rustc-link-lib=static=ubsan_canary` directive emitted by
 // raylib-sys/build.rs is honored. Without any reference, rustc would skip

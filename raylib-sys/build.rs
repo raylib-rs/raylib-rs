@@ -534,6 +534,7 @@ fn main() {
     {
         gen_utils();
         gen_raymath();
+        #[cfg(feature = "software_renderer")]
         gen_ubsan_canary();
     }
 }
