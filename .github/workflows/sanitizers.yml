@@ -57,3 +57,6 @@ jobs:
           --no-default-features
           --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,ENABLE_UBSAN
           --test render_shapes --test render_text --test integration_model_animations --test integration_ubsan_canary -- --test-threads=1
+      - name: UBSAN findings report
+        if: always()
+        run: bash ci/ubsan-report.sh
