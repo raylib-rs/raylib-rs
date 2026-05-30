@@ -50,34 +50,13 @@ jobs:
         continue-on-error: true
         env:
           RUSTFLAGS: "-Clink-arg=-fsanitize=undefined"
-          UBSAN_OPTIONS: "halt_on_error=0:print_stacktrace=1:log_path=ubsan.log"
+          UBSAN_OPTIONS: "halt_on_error=0:print_stacktrace=1:log_path=${{ github.workspace }}/ubsan.log"
         run: >
           cargo +nightly test -p raylib -Z build-std
           --target x86_64-unknown-linux-gnu
           --no-default-features
           --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,ENABLE_UBSAN
           --test render_shapes --test render_text --test integration_model_animations --test integration_ubsan_canary -- --test-threads=1
-      - name: UBSAN canary diagnostics (TEMP)
-        if: always()
-        run: |
-          set +e
-          echo "=== nm on libubsan_canary.a ==="
-          find target -name 'libubsan_canary.a' -exec nm -A {} \; 2>&1 | grep -E "ubsan|canary" | head -50
-          echo
-          echo "=== ldd on integration_ubsan_canary test binary ==="
-          find target -name 'integration_ubsan_canary-*' -type f -executable -exec ldd {} \; 2>&1 | grep -E "ubsan|sanitizer" | head -20
-          echo
-          echo "=== test binary's UBSAN-related symbols ==="
-          find target -name 'integration_ubsan_canary-*' -type f -executable -exec nm -D {} \; 2>&1 | grep -i ubsan | head -20
-          echo
-          echo "=== ls of working dir for ubsan.log files ==="
-          ls -la ubsan.log* 2>&1 || echo "No ubsan.log files"
-          echo
-          echo "=== try running the test binary directly with UBSAN_OPTIONS visible ==="
-          export UBSAN_OPTIONS="halt_on_error=0:print_stacktrace=1:log_to_stderr=1"
-          find target -name 'integration_ubsan_canary-*' -type f -executable | head -1 | xargs -r -I {} sh -c 'echo "Running: {}" && {} 2>&1 | head -30'
-          echo
-          echo "DONE"
       - name: UBSAN findings report
         if: always()
         run: bash ci/ubsan-report.sh
