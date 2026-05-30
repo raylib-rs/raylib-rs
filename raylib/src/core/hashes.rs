@@ -212,4 +212,21 @@ mod tests {
             0x414FA339,
         );
     }
+
+    #[test]
+    #[should_panic(expected = "exceeds raylib's i32 dataSize limit")]
+    fn crc32_panics_on_oversize_input() {
+        // Construct a fake-length slice without allocating i32::MAX bytes.
+        // SAFETY: the assert! in compute_crc32 inspects `data.len()` BEFORE
+        // any byte is read. The FFI call never happens (assertion panics
+        // first). The backing pointer is non-null but the length we're
+        // claiming makes any dereference UB — but no dereference occurs.
+        // This trick is only safe because the function panics before
+        // reading. Do NOT replicate this pattern outside the test.
+        let real_byte = 0u8;
+        let fake_slice: &[u8] = unsafe {
+            std::slice::from_raw_parts(&real_byte as *const u8, i32::MAX as usize + 1)
+        };
+        let _ = compute_crc32(fake_slice);
+    }
 }
