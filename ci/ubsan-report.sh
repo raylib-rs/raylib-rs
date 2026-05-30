@@ -20,7 +20,7 @@ shopt -s nullglob
 logs=(ubsan.log*)
 
 if (( ${#logs[@]} == 0 )); then
-    echo "## UBSAN: no findings (no log files produced)" >> "$SUMMARY"
+    echo "## UBSAN: no findings (no log files produced)" | tee -a "$SUMMARY"
     exit 0
 fi
 
@@ -28,7 +28,7 @@ combined=$(cat "${logs[@]}" 2>/dev/null || true)
 
 # Whitespace-only check.
 if [[ -z "${combined//[[:space:]]/}" ]]; then
-    echo "## UBSAN: no findings (logs present but empty)" >> "$SUMMARY"
+    echo "## UBSAN: no findings (logs present but empty)" | tee -a "$SUMMARY"
     exit 0
 fi
 
@@ -65,11 +65,11 @@ emit_raw_log() {
         echo '```'
         echo ""
         echo "</details>"
-    } >> "$SUMMARY"
+    } | tee -a "$SUMMARY"
 }
 
 if [[ -z "$total" || "$total" == "0" ]]; then
-    echo "## UBSAN: no findings (logs present, no parseable runtime-error lines)" >> "$SUMMARY"
+    echo "## UBSAN: no findings (logs present, no parseable runtime-error lines)" | tee -a "$SUMMARY"
     emit_raw_log
     exit 0
 fi
@@ -82,7 +82,7 @@ fi
     printf "%s\n" "$parsed" | awk -F'\t' '/^ROW/ {
         printf "| %s | %s | %s |\n", $2, $3, $4;
     }'
-} >> "$SUMMARY"
+} | tee -a "$SUMMARY"
 
 emit_raw_log
 exit 0
