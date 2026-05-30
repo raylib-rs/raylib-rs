@@ -44,10 +44,7 @@ use crate::ffi;
 /// thread. The caller's `&RaylibThread` capability prevents concurrent
 /// calls from other threads. The pointer is 4-byte aligned (`static
 /// unsigned int hash[N]`).
-unsafe fn read_static_hash<const N: usize, const M: usize>(
-    ptr: *const u32,
-    be: bool,
-) -> [u8; M] {
+unsafe fn read_static_hash<const N: usize, const M: usize>(ptr: *const u32, be: bool) -> [u8; M] {
     assert_eq!(M, N * 4, "read_static_hash: M must equal N * 4");
     // SAFETY: caller guarantees ptr points at a valid `static unsigned int
     // hash[N]` from raylib; we read N u32s and convert to bytes immediately.
@@ -119,9 +116,7 @@ pub fn compute_md5(_thread: &RaylibThread, data: &[u8]) -> [u8; 16] {
     // to `static unsigned int hash[4]` (rcore.c:3213). We hold
     // `&RaylibThread` so concurrent overwrites from other threads are
     // impossible; we copy out into an owned array before this fn returns.
-    let ptr = unsafe {
-        ffi::ComputeMD5(data.as_ptr() as *mut _, data.len() as i32)
-    };
+    let ptr = unsafe { ffi::ComputeMD5(data.as_ptr() as *mut _, data.len() as i32) };
     // SAFETY: ptr is the static-hash pointer just returned; valid for the
     // immediate read. be = false → MD5 is little-endian per RFC 1321.
     unsafe { read_static_hash::<4, 16>(ptr, false) }
@@ -149,12 +144,10 @@ pub fn compute_sha1(_thread: &RaylibThread, data: &[u8]) -> [u8; 20] {
         data.len(),
     );
     // SAFETY: ComputeSHA1 takes `unsigned char *` but only reads (verified
-    // at rcore.c:3327-ish). Returns a pointer to `static unsigned int
-    // hash[5]` (rcore.c:3331). Thread witness prevents concurrent
-    // overwrites; we copy out immediately.
-    let ptr = unsafe {
-        ffi::ComputeSHA1(data.as_ptr() as *mut _, data.len() as i32)
-    };
+    // at rcore.c:3327; no write side). Returns a pointer to `static
+    // unsigned int hash[5]` (rcore.c:3331). Thread witness prevents
+    // concurrent overwrites; we copy out immediately.
+    let ptr = unsafe { ffi::ComputeSHA1(data.as_ptr() as *mut _, data.len() as i32) };
     // SAFETY: ptr is the static-hash pointer just returned. be = true →
     // SHA-1 uses big-endian word storage per FIPS 180-1.
     unsafe { read_static_hash::<5, 20>(ptr, true) }
@@ -182,12 +175,10 @@ pub fn compute_sha256(_thread: &RaylibThread, data: &[u8]) -> [u8; 32] {
         data.len(),
     );
     // SAFETY: ComputeSHA256 takes `unsigned char *` but only reads
-    // (verified at rcore.c:3458-ish). Returns a pointer to `static
-    // unsigned int hash[8]` (rcore.c:3462). Thread witness prevents
-    // concurrent overwrites; we copy out immediately.
-    let ptr = unsafe {
-        ffi::ComputeSHA256(data.as_ptr() as *mut _, data.len() as i32)
-    };
+    // (verified at rcore.c:3437; no write side). Returns a pointer to
+    // `static unsigned int hash[8]` (rcore.c:3462). Thread witness
+    // prevents concurrent overwrites; we copy out immediately.
+    let ptr = unsafe { ffi::ComputeSHA256(data.as_ptr() as *mut _, data.len() as i32) };
     // SAFETY: ptr is the static-hash pointer just returned. be = true →
     // SHA-256 uses big-endian word storage per FIPS 180-2.
     unsafe { read_static_hash::<8, 32>(ptr, true) }
@@ -224,9 +215,8 @@ mod tests {
         // This trick is only safe because the function panics before
         // reading. Do NOT replicate this pattern outside the test.
         let real_byte = 0u8;
-        let fake_slice: &[u8] = unsafe {
-            std::slice::from_raw_parts(&real_byte as *const u8, i32::MAX as usize + 1)
-        };
+        let fake_slice: &[u8] =
+            unsafe { std::slice::from_raw_parts(&real_byte as *const u8, i32::MAX as usize + 1) };
         let _ = compute_crc32(fake_slice);
     }
 
@@ -244,7 +234,10 @@ mod tests {
                 "900150983cd24fb0d6963f7d28e17f72",
             );
             assert_eq!(
-                hex(&compute_md5(thread, b"The quick brown fox jumps over the lazy dog")),
+                hex(&compute_md5(
+                    thread,
+                    b"The quick brown fox jumps over the lazy dog"
+                )),
                 "9e107d9d372bb6826bd81d3542a419d6",
             );
         });
@@ -264,7 +257,10 @@ mod tests {
                 "a9993e364706816aba3e25717850c26c9cd0d89d",
             );
             assert_eq!(
-                hex(&compute_sha1(thread, b"The quick brown fox jumps over the lazy dog")),
+                hex(&compute_sha1(
+                    thread,
+                    b"The quick brown fox jumps over the lazy dog"
+                )),
                 "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
             );
         });
@@ -284,7 +280,10 @@ mod tests {
                 "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
             );
             assert_eq!(
-                hex(&compute_sha256(thread, b"The quick brown fox jumps over the lazy dog")),
+                hex(&compute_sha256(
+                    thread,
+                    b"The quick brown fox jumps over the lazy dog"
+                )),
                 "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",
             );
         });
