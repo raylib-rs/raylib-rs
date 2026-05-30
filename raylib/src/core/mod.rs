@@ -22,6 +22,7 @@ pub mod drawing;
 pub mod error;
 pub mod file;
 
+pub mod hashes;
 pub mod input;
 pub mod logging;
 pub mod math;
