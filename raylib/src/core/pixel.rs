@@ -203,4 +203,85 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn get_returns_insufficient_bytes_on_short_slice() {
+        // R8G8B8A8 needs 4 bytes.
+        let empty = &[] as &[u8];
+        assert_eq!(
+            get_pixel_color(empty, PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8),
+            Err(PixelColorError::InsufficientBytes {
+                format: PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+                expected: 4,
+                actual: 0,
+            }),
+        );
+
+        let two_bytes = [0u8; 2];
+        assert_eq!(
+            get_pixel_color(&two_bytes, PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8),
+            Err(PixelColorError::InsufficientBytes {
+                format: PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+                expected: 4,
+                actual: 2,
+            }),
+        );
+    }
+
+    #[test]
+    fn set_returns_insufficient_bytes_on_short_slice() {
+        let mut empty: Vec<u8> = vec![];
+        assert_eq!(
+            set_pixel_color(
+                &mut empty,
+                Color::new(255, 0, 0, 255),
+                PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+            ),
+            Err(PixelColorError::InsufficientBytes {
+                format: PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+                expected: 4,
+                actual: 0,
+            }),
+        );
+
+        let mut two_bytes = [0u8; 2];
+        assert_eq!(
+            set_pixel_color(
+                &mut two_bytes,
+                Color::new(255, 0, 0, 255),
+                PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+            ),
+            Err(PixelColorError::InsufficientBytes {
+                format: PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+                expected: 4,
+                actual: 2,
+            }),
+        );
+    }
+
+    #[test]
+    fn get_returns_compressed_format_for_compressed_input() {
+        let bytes = [0u8; 8];
+        assert_eq!(
+            get_pixel_color(&bytes, PixelFormat::PIXELFORMAT_COMPRESSED_DXT1_RGB),
+            Err(PixelColorError::CompressedFormat(
+                PixelFormat::PIXELFORMAT_COMPRESSED_DXT1_RGB
+            )),
+        );
+    }
+
+    #[test]
+    fn set_returns_compressed_format_for_compressed_input() {
+        let mut bytes = [0u8; 8];
+        assert_eq!(
+            set_pixel_color(
+                &mut bytes,
+                Color::new(0, 0, 0, 0),
+                PixelFormat::PIXELFORMAT_COMPRESSED_DXT1_RGB,
+            ),
+            Err(PixelColorError::CompressedFormat(
+                PixelFormat::PIXELFORMAT_COMPRESSED_DXT1_RGB
+            )),
+        );
+    }
 }
