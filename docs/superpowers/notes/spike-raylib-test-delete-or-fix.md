@@ -46,3 +46,25 @@ Migrate the still-relevant window-dependent assertions into a small **stable** t
 ## Trigger / owner sign-off
 
 Revisit when WS9 begins (or sooner if a real-window regression is suspected). This is a deferred decision requiring explicit owner sign-off before deleting test code. Linked from `test.yml`'s `integration-xvfb` job comment.
+
+## Decision (2026-05-29)
+
+**Outcome:** Option A + salvage. The raylib-test crate is deleted;
+the still-relevant tests are migrated to the in-tree Tier-1 / Tier-2
+surface (2 Image-API unit tests in `raylib/src/core/texture.rs`;
+15 window-coupled tests grouped into 6 integration files under
+`raylib/tests/integration_*.rs`).
+
+**Sanitizers coverage preserved** via the new
+`raylib/tests/integration_model_animations.rs` target — the
+ModelAnimations RAII Drop test that the sanitizers workflow's
+WS6a comment explicitly wanted to run.
+
+**Window-real-GLFW coverage retired.** The `integration-xvfb` CI
+job is removed. The `software_renderer` Tier-2 tests (rlsw +
+Memory platform) remain the gating headless coverage. WS9's
+showcase port will provide broad real-API exercise once the
+showcase is feature-complete.
+
+**Workstream:** `docs/superpowers/specs/2026-05-29-raylib-test-delete-and-salvage-design.md`
++ `docs/superpowers/plans/2026-05-29-raylib-test-delete-and-salvage.md`.

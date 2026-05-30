@@ -124,6 +124,15 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - Parity checklist at `docs/superpowers/parity-checklist.md` tracks every `raylib.h` RLAPI function.
 - Accepted `paste 1.0` cargo-deny unmaintained advisory (RUSTSEC-2024-0436) with rationale in `deny.toml`. Rewrite or library swap tracked for a future workstream.
 - Dropped `structopt 0.3` dev-dependency (only used by the removed `samples/` binaries); clears the cargo-deny unmaintained advisory for that crate.
+- `raylib-test` crate removed in favor of in-tree integration tests at
+  `raylib/tests/integration_*.rs`. 17 salvaged tests (2 Tier-1 image
+  + 15 Tier-2 window-coupled, grouped into 6 files by topic) replace
+  the stale nightly-harness crate. Window-real-GLFW coverage via
+  xvfb retired; `software_renderer` is the gating headless coverage.
+  Sanitizers workflow now targets the new
+  `integration_model_animations.rs` directly. See
+  `docs/superpowers/notes/spike-raylib-test-delete-or-fix.md` for
+  the decision history.
 
 ## 5.7.0
 - More improved ergonomics
