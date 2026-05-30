@@ -1,8 +1,14 @@
 # raylib-rs Changelog
 
-## 6.0.0 (unreleased)
+## 6.0.0-rc.1 (unreleased)
 
 Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024).
+
+> Release candidate 1 for the 6.0 line — the published crate versions are
+> `6.0.0-rc.1` while the post-WS8 workstreams (`pixel-pointers`, `hashes`,
+> `mixed-audio`, WS9 showcase) settle. The headings under this block
+> describe what is shipping in the eventual `6.0.0` release; `rc.N` bumps
+> capture incremental snapshots leading up to it.
 
 ### Highlights
 

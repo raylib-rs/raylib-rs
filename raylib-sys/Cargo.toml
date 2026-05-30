@@ -1,6 +1,6 @@
 [package]
 name = "raylib-sys"
-version = "6.0.0"
+version = "6.0.0-rc.1"
 authors = ["raylib-rs team <https://github.com/raylib-rs/raylib-rs>"]
 license = "Zlib"
 description = "Raw FFI bindings for Raylib"
