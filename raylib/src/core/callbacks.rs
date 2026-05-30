@@ -15,7 +15,7 @@ use std::{
 /// Low-level per-stream audio callback registration for `AudioStream`.
 pub mod audio_stream_callback;
 mod stream_processor_with_user_data_wrapper;
-use super::audio::Music;
+use super::audio::{Music, RaylibAudio};
 use stream_processor_with_user_data_wrapper::*;
 
 type TraceLogCallback = unsafe extern "C" fn(*mut i8, *const i8, ...);
@@ -381,6 +381,53 @@ where
     ));
     assert!(stream_processor_callback.callback_index.is_some());
     Box::into_pin(stream_processor_callback)
+}
+
+/// Attach a closure to raylib's **global mixed audio bus**, returning
+/// a pinned guard that detaches on drop.
+///
+/// The callback fires from raylib's internal audio thread, receiving
+/// **interleaved stereo** frames (`channels == 2` always — raylib
+/// mixes all playing streams down to stereo before invoking the
+/// processor). Multiple `MixedAudioProcessorCallback` instances can
+/// be attached simultaneously and run in attach-order.
+///
+/// # Closure constraints
+///
+/// `F: FnMut(&mut [f32], u32) + Send + 'static`:
+/// - `Send + 'static` because the callback runs on raylib's audio
+///   thread.
+/// - The closure receives a mutable slice of `frame_count * 2`
+///   interleaved stereo samples plus the channel count (always `2`).
+///   Modifying the slice in-place applies the effect to the mixed
+///   bus.
+///
+/// # Slot pool exhaustion
+///
+/// The crate supports up to **30 simultaneous** audio-processor
+/// closures (shared pool across per-stream and mixed-bus consumers).
+/// Attaching a 31st processor panics with `"index out of bounds"`.
+/// Detach existing processors (drop their guards) to free slots.
+///
+/// # Thread safety
+///
+/// raylib's `AttachAudioMixedProcessor` /
+/// `DetachAudioMixedProcessor` are internally mutex-guarded; attach
+/// and drop are safe to call from any thread.
+pub fn attach_audio_mixed_processor<'a, F>(
+    _audio: &'a RaylibAudio,
+    processor: &'a mut F,
+) -> Pin<Box<MixedAudioProcessorCallback<'a, F>>>
+where
+    F: FnMut(&mut [f32], u32) + Send + 'static, // static because the function is executed in another thread
+{
+    let mut cb = Box::new(MixedAudioProcessorCallback::<'a, F>::new(processor));
+    let idx = attach_audio_mixed_processor_with_user_data(AudioCallbackWithUserData::new(
+        cb.get_as_user_data(),
+        cb.get_c_callback(),
+    ));
+    cb.callback_index = Some(idx);
+    Box::into_pin(cb)
 }
 
 impl RaylibHandle {
