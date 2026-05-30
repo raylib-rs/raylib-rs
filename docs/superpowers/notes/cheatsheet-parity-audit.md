@@ -18,14 +18,14 @@ In-scope (excluding `rtext` and the `// File system management functions`,
 `// File access custom callbacks`, `// File operations` blocks of rcore):
 
 - **Total cheatsheet functions audited: 500**
-- **Covered in safe bindings: 492**
+- **Covered in safe bindings: 494**
 - **Intentionally skipped with rationale: 1**
-- **Genuine gaps (TODO): 7**
+- **Genuine gaps (TODO): 5**
 
 Genuine gaps further categorized:
 
 - **Small fixes (≲10 lines, no design judgement): 5** — listed in §3.
-- **Medium / future workstream: 2** — listed in §4.
+- **Medium / future workstream: 0** — all medium workstreams done (Done subsection in §4).
 
 > **Important headline finding:** the existing `parity-checklist.md` lists 19
 > `[ ]` items that are actually **already wrapped** — 14 in
@@ -35,7 +35,7 @@ Genuine gaps further categorized:
 > The auto-scan in `find_unimplemented.py` only looks at `raylib/src/**`
 > and at `pub fn` top-level wrappers, so it misses these. See §5 for the
 > full reconciliation list. The genuine-gap count for the in-scope
-> sections is **7, not 49** — the remaining 30 `[ ]` entries are either
+> sections is **5, not 49** — the remaining 30 `[ ]` entries are either
 > reconcile deltas (§5) or live in the out-of-scope `rtext` /
 > file-system sections.
 
@@ -746,8 +746,8 @@ Genuine gaps further categorized:
   (The user-data wrapper has `clear_context` but never calls
   `DetachAudioStreamProcessor`, so a detached closure may still receive
   one more invocation. Pair the detach with a real FFI call.)
-- 🟥 `AttachAudioMixedProcessor` — GAP. Action: future-workstream-mixed-audio.
-- 🟥 `DetachAudioMixedProcessor` — GAP. Action: future-workstream-mixed-audio.
+- ✅ `AttachAudioMixedProcessor` — wrapped at `raylib/src/core/callbacks.rs::attach_audio_mixed_processor`.
+- ✅ `DetachAudioMixedProcessor` — wrapped via `MixedAudioProcessorCallback::Drop` in `raylib/src/core/callbacks.rs`.
 
 ---
 
@@ -787,19 +787,10 @@ they are wrapped as inherent methods on `raylib-sys::Color` and
 
 ## Genuine gaps — future workstream candidates
 
-Two functions need design judgement that goes beyond a one-line wrapper
-(grouped into one workstream):
+All medium-workstream items from this audit are done; see "Done (this
+audit)" below.
 
-1. **`AttachAudioMixedProcessor` / `DetachAudioMixedProcessor`**
-   (workstream: `mixed-audio`). Currently only the per-stream variant has
-   a closure wrapper (`stream_processor_with_user_data_wrapper.rs`). The
-   *mixed* variant is global to the audio device, so it needs a different
-   storage slot (`OnceCell<Box<dyn Fn>>` on `AudioHandle`, or one of the
-   29 pre-registered callback slots with a global flag). Closure cleanup
-   also has to detach before drop to avoid the C side calling back into a
-   freed closure. Worth a small RAII-handle design pass.
-
-Total: **2 functions** across **1 workstream**.
+Total: **0 functions** across **0 workstreams**.
 
 **Done (this audit):**
 - `GetPixelColor` / `SetPixelColor` were workstream `pixel-pointers`; now
@@ -812,13 +803,21 @@ Total: **2 functions** across **1 workstream**.
   compute_sha256}`. CRC32 is free-thread; the three crypto hashes take
   `&RaylibThread` to eliminate the static-buffer concurrent-call race.
   See the 6.0.0-rc.1 CHANGELOG entry.
+- `AttachAudioMixedProcessor` / `DetachAudioMixedProcessor` were
+  workstream `mixed-audio`; now wrapped at
+  `raylib/src/core/callbacks.rs::attach_audio_mixed_processor` with
+  `MixedAudioProcessorCallback` as the RAII guard. The guard borrows
+  `&'a RaylibAudio`; Drop detaches before clearing the slot
+  (lifecycle ordering matches the WS8e per-stream-processor fix).
+  Tier-2 lifecycle tests under `software_renderer`. See the
+  6.0.0-rc.1 CHANGELOG entry.
 
 **Owner-locked ordering (2026-05-29):** these workstreams run
 **before WS9 showcase**, alongside four other promoted items:
-`pixel-pointers` ✅ → `hashes` ✅ → `mixed-audio` ← NEXT → `raylib-test`
-delete-or-fix → UBSAN-through-FFI → rustdoc rewrite (remaining ~200
-stubs) → safe abstractions for `GuiGetIcons`/`GuiLoadIcons` + PR #296 →
-WS9 → final-release. See
+`pixel-pointers` ✅ → `hashes` ✅ → `mixed-audio` ✅ → `raylib-test`
+delete-or-fix ← NEXT → UBSAN-through-FFI → rustdoc rewrite (remaining
+~200 stubs) → safe abstractions for `GuiGetIcons`/`GuiLoadIcons` + PR
+#296 → WS9 → final-release. See
 `docs/superpowers/notes/ws8e-checkpoint-review-feedback.md` for the full
 post-checkpoint workstream queue.
 

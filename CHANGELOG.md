@@ -5,10 +5,10 @@
 Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024).
 
 > Release candidate 1 for the 6.0 line — the published crate versions are
-> `6.0.0-rc.1` while the post-WS8 workstreams (`mixed-audio`, WS9 showcase)
-> settle. The headings under this block describe what is shipping in the
-> eventual `6.0.0` release; `rc.N` bumps capture incremental snapshots
-> leading up to it.
+> `6.0.0-rc.1` while the remaining post-WS8 workstreams (WS9 showcase and
+> the final-release publish step) settle. The headings under this block
+> describe what is shipping in the eventual `6.0.0` release; `rc.N` bumps
+> capture incremental snapshots leading up to it.
 
 ### Highlights
 
@@ -71,6 +71,21 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
   cryptographically broken, and raylib's SHA-256 implementation is
   not constant-time. Closes the `hashes` workstream from the
   cheatsheet-parity audit.
+- **Mixed audio bus:** new public API for closure-driven processors on
+  raylib's global mixed audio bus:
+  - `attach_audio_mixed_processor(audio: &RaylibAudio, processor: &mut F) -> Pin<Box<MixedAudioProcessorCallback<'_, F>>>`
+    where `F: FnMut(&mut [f32], u32) + Send + 'static`.
+  - `MixedAudioProcessorCallback` — the RAII guard type. Dropping it
+    calls `DetachAudioMixedProcessor` and frees the closure slot,
+    mirroring the WS8e per-stream-processor soundness fix.
+  - Multiple mixed-bus processors can be attached simultaneously
+    (they chain in raylib's internal linked list). They share the
+    same 30-slot trampoline pool with the per-stream processors.
+  - Re-exported via `raylib::prelude`. Closes the `mixed-audio`
+    workstream from the cheatsheet-parity audit.
+
+  Also updates the "post-WS8 workstreams" note at the top of the
+  6.0.0-rc.1 block: mixed-audio drops out of the list.
 
 ### Fixed
 
