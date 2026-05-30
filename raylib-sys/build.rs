@@ -399,6 +399,15 @@ fn gen_raymath() {
         .compile("raymath_shim");
 }
 
+fn gen_ubsan_canary() {
+    cc::Build::new()
+        .files(vec!["binding/ubsan_canary.c"])
+        .include("binding")
+        .warnings(false)
+        .extra_warnings(false)
+        .compile("ubsan_canary");
+}
+
 #[cfg(feature = "nobuild")]
 fn link(_platform: Platform, _platform_os: PlatformOS) {
     println!("cargo:rustc-link-lib=dylib=raylib");
@@ -525,6 +534,7 @@ fn main() {
     {
         gen_utils();
         gen_raymath();
+        gen_ubsan_canary();
     }
 }
 
