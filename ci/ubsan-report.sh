@@ -37,7 +37,7 @@ fi
 # gawk's match() with capture-array is GNU-specific; ubuntu-latest has gawk by default.
 parsed=$(echo "$combined" | awk '
     /runtime error:/ {
-        if (match($0, /([^ :]+):([0-9]+):([0-9]+): runtime error: ([a-zA-Z0-9_-]+)/, arr)) {
+        if (match($0, /([^ :]+):([0-9]+):([0-9]+): runtime error: ([^:]+):/, arr)) {
             kind = arr[4];
             loc = arr[1] ":" arr[2] ":" arr[3];
             count[kind]++;
