@@ -476,3 +476,42 @@ impl RaylibHandle {
         set_load_file_text_callback(cb)
     }
 }
+
+#[cfg(test)]
+#[cfg(feature = "software_renderer")]
+mod mixed_audio_tests {
+    use super::*;
+    use crate::core::audio::RaylibAudio;
+
+    /// Attaching a mixed-bus processor and immediately dropping the
+    /// guard must not panic. Proves the slot pool + Drop's
+    /// DetachAudioMixedProcessor + clear_context all work together.
+    #[test]
+    fn attach_then_drop_does_not_panic() {
+        crate::test_harness::with_headless(1, 1, |_rl, _thread| {
+            let audio = RaylibAudio::init_audio_device().expect("audio init");
+            let mut closure = |_samples: &mut [f32], _ch: u32| {};
+            {
+                let _guard = attach_audio_mixed_processor(&audio, &mut closure);
+                // Guard dropped at end of scope — detach + slot clear.
+            }
+            // If we got here without panic, attach + drop both worked.
+        });
+    }
+
+    /// Multiple simultaneous processors plus out-of-order drops must
+    /// not corrupt the slot pool or raylib's linked list.
+    #[test]
+    fn multiple_processors_attach_and_drop_independently() {
+        crate::test_harness::with_headless(1, 1, |_rl, _thread| {
+            let audio = RaylibAudio::init_audio_device().expect("audio init");
+            let mut closure_a = |_s: &mut [f32], _c: u32| {};
+            let mut closure_b = |_s: &mut [f32], _c: u32| {};
+            let guard_a = attach_audio_mixed_processor(&audio, &mut closure_a);
+            let guard_b = attach_audio_mixed_processor(&audio, &mut closure_b);
+            // Drop in reverse order; both should clean up.
+            drop(guard_b);
+            drop(guard_a);
+        });
+    }
+}
