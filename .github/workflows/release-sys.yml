@@ -34,6 +34,22 @@ jobs:
       - name: cargo publish (dry-run, always)
         run: cargo publish -p raylib-sys --dry-run
 
+      - name: Verify packaged artifact excludes vendored raylib examples
+        # The raylib-sys/Cargo.toml `exclude` list omits raylib/examples/*,
+        # raylib/projects/*, raylib/templates/*. This step double-checks the
+        # actually-packaged file list — fails the build if anything from those
+        # paths sneaks into the publish artifact, so we never ship the vendored
+        # C examples on crates.io.
+        run: |
+          set -euo pipefail
+          list=$(cargo package --list -p raylib-sys --allow-dirty)
+          echo "$list" | grep -E '^(raylib/)?(examples|projects|templates)/' && {
+            echo "ERROR: raylib-sys publish artifact contains vendored example/project/template files." >&2
+            echo "       Tighten the exclude list in raylib-sys/Cargo.toml before publishing." >&2
+            exit 1
+          } || true
+          echo "OK: no vendored example/project/template files in raylib-sys publish artifact."
+
       - name: cargo publish (real)
         if: ${{ inputs.dry_run == false }}
         env:

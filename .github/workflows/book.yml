@@ -21,10 +21,18 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Linux build deps
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+      - name: Install Linux build deps (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+          version: 6.0-book-v1
 
       - uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: book
 
       - name: Set up mdBook
         uses: peaceiris/actions-mdbook@v2
