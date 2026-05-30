@@ -399,19 +399,6 @@ fn gen_raymath() {
         .compile("raymath_shim");
 }
 
-fn gen_ubsan_canary() {
-    let mut build = cc::Build::new();
-    build
-        .files(vec!["binding/ubsan_canary.c"])
-        .include("binding")
-        .warnings(false)
-        .extra_warnings(false);
-    if cfg!(feature = "ENABLE_UBSAN") {
-        build.flag("-fsanitize=undefined");
-    }
-    build.compile("ubsan_canary");
-}
-
 #[cfg(feature = "nobuild")]
 fn link(_platform: Platform, _platform_os: PlatformOS) {
     println!("cargo:rustc-link-lib=dylib=raylib");
@@ -538,8 +525,6 @@ fn main() {
     {
         gen_utils();
         gen_raymath();
-        #[cfg(feature = "software_renderer")]
-        gen_ubsan_canary();
     }
 
     // ENABLE_UBSAN: the C side is instrumented via cmake's CompilerFlags.cmake
