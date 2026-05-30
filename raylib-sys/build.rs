@@ -400,12 +400,16 @@ fn gen_raymath() {
 }
 
 fn gen_ubsan_canary() {
-    cc::Build::new()
+    let mut build = cc::Build::new();
+    build
         .files(vec!["binding/ubsan_canary.c"])
         .include("binding")
         .warnings(false)
-        .extra_warnings(false)
-        .compile("ubsan_canary");
+        .extra_warnings(false);
+    if cfg!(feature = "ENABLE_UBSAN") {
+        build.flag("-fsanitize=undefined");
+    }
+    build.compile("ubsan_canary");
 }
 
 #[cfg(feature = "nobuild")]
