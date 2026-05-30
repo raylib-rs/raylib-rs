@@ -42,15 +42,18 @@ jobs:
           --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,ENABLE_ASAN
           --test render_shapes --test render_text --test integration_model_animations -- --test-threads=1
       - name: UBSAN — software_renderer render tests
-        # rustc's -Zsanitizer does not support 'undefined' on the current nightly
-        # (valid values: address, cfi, hwaddress, leak, memory, thread, realtime, …).
-        # UBSAN coverage comes from the C side: ENABLE_UBSAN passes -fsanitize=undefined
-        # to the cmake raylib build, which is where all the FFI-boundary C code lives.
-        # No Rust-side RUSTFLAGS needed; drop them to avoid a fatal rustc arg error.
+        # C side is instrumented via ENABLE_UBSAN (CompilerFlags.cmake:37 adds
+        # -fsanitize=undefined). The Rust-side link step needs to pull libubsan
+        # so the __ubsan_handle_* symbols resolve — that's what -Clink-arg does
+        # below. UBSAN_OPTIONS log_path captures per-process diagnostics for
+        # the report step that follows.
         continue-on-error: true
+        env:
+          RUSTFLAGS: "-Clink-arg=-fsanitize=undefined"
+          UBSAN_OPTIONS: "halt_on_error=0:print_stacktrace=1:log_path=ubsan.log"
         run: >
           cargo +nightly test -p raylib -Z build-std
           --target x86_64-unknown-linux-gnu
           --no-default-features
           --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,ENABLE_UBSAN
-          --test render_shapes --test render_text --test integration_model_animations -- --test-threads=1
+          --test render_shapes --test render_text --test integration_model_animations --test integration_ubsan_canary -- --test-threads=1
