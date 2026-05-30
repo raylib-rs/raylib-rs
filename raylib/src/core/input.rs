@@ -77,6 +77,26 @@ impl RaylibHandle {
         None
     }
 
+    /// Get the name of a key in keyboard-layout-aware form.
+    ///
+    /// e.g. on an AZERTY keyboard, `KeyboardKey::KEY_A` returns `"q"`. The C
+    /// function returns a `const char*` into a static internal buffer; we copy
+    /// it into an owned `String` immediately. Returns `None` if the pointer is
+    /// null or the resulting string is empty / not valid UTF-8.
+    #[inline]
+    #[must_use]
+    pub fn get_key_name(&self, key: crate::consts::KeyboardKey) -> Option<String> {
+        let ptr = unsafe { ffi::GetKeyName((key as u32) as i32) };
+        if ptr.is_null() {
+            return None;
+        }
+        let cstr = unsafe { CStr::from_ptr(ptr) };
+        match cstr.to_str() {
+            Ok(s) if !s.is_empty() => Some(s.to_owned()),
+            _ => None,
+        }
+    }
+
     /// Sets a custom key to exit program (default is ESC).
     // #[inline]
     pub fn set_exit_key(&mut self, key: Option<crate::consts::KeyboardKey>) {

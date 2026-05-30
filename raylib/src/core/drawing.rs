@@ -654,6 +654,30 @@ pub trait RaylibDraw {
         }
     }
 
+    /// Draw a dashed line.
+    ///
+    /// `dash_size` is the length of each painted segment; `space_size` is the
+    /// gap between segments. Both are in pixels.
+    #[inline]
+    fn draw_line_dashed(
+        &mut self,
+        start: impl Into<Vector2>,
+        end: impl Into<Vector2>,
+        dash_size: i32,
+        space_size: i32,
+        color: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawLineDashed(
+                start.into(),
+                end.into(),
+                dash_size,
+                space_size,
+                color.into(),
+            );
+        }
+    }
+
     /// Draw lines sequence
     #[inline]
     fn draw_line_strip(&mut self, points: &[Vector2], color: impl Into<ffi::Color>) {
@@ -803,6 +827,20 @@ pub trait RaylibDraw {
         }
     }
 
+    /// Draws ellipse using a Vector2 center.
+    #[inline]
+    fn draw_ellipse_v(
+        &mut self,
+        center: impl Into<Vector2>,
+        radius_h: f32,
+        radius_v: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawEllipseV(center.into(), radius_h, radius_v, color.into());
+        }
+    }
+
     /// Draws ellipse.
     #[inline]
     fn draw_ellipse_lines(
@@ -815,6 +853,20 @@ pub trait RaylibDraw {
     ) {
         unsafe {
             ffi::DrawEllipseLines(center_x, center_y, radius_h, radius_v, color.into());
+        }
+    }
+
+    /// Draws ellipse outline using a Vector2 center.
+    #[inline]
+    fn draw_ellipse_lines_v(
+        &mut self,
+        center: impl Into<Vector2>,
+        radius_h: f32,
+        radius_v: f32,
+        color: impl Into<ffi::Color>,
+    ) {
+        unsafe {
+            ffi::DrawEllipseLinesV(center.into(), radius_h, radius_v, color.into());
         }
     }
 

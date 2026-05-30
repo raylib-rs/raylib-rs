@@ -212,6 +212,11 @@ where
 {
     rust_callback: &'a mut F,
     nb_channels: u32,
+    /// The `AudioStream` the trampoline was attached to. Stored so `Drop` can
+    /// call `DetachAudioStreamProcessor` with the matching stream + trampoline
+    /// pointer, ensuring raylib actually removes the entry from its processor
+    /// list (the slot-clear alone leaves a dangling iteration on the C side).
+    stream: Option<raylib_sys::AudioStream>,
     callback_index: Option<usize>,
 }
 
@@ -223,6 +228,7 @@ where
         Self {
             rust_callback: closure,
             nb_channels: nb_channels_from_music,
+            stream: None,
             callback_index: None,
         }
     }
@@ -265,8 +271,8 @@ where
     F: FnMut(&mut [f32], u32),
 {
     fn drop(&mut self) {
-        if let Some(index) = self.callback_index {
-            detach_audio_stream_processor_with_user_data(index);
+        if let (Some(stream), Some(index)) = (self.stream, self.callback_index) {
+            detach_audio_stream_processor_with_user_data(stream, index);
         }
     }
 }
@@ -283,6 +289,7 @@ where
 {
     let mut stream_processor_callback =
         Box::new(AudioStreamProcessorCallback::<'a, F>::new(processor, 2));
+    stream_processor_callback.stream = Some(music.stream);
     stream_processor_callback.callback_index = Some(attach_audio_stream_processor_with_user_data(
         music.stream,
         AudioCallbackWithUserData::new(

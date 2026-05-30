@@ -1,5 +1,5 @@
 use paste::paste;
-use raylib_sys::{AttachAudioStreamProcessor, AudioStream};
+use raylib_sys::{AttachAudioStreamProcessor, AudioStream, DetachAudioStreamProcessor};
 use seq_macro::seq;
 use std::sync::{LazyLock, Mutex};
 
@@ -150,6 +150,17 @@ pub fn attach_audio_stream_processor_with_user_data(
     idx
 }
 
-pub fn detach_audio_stream_processor_with_user_data(index: usize) {
+/// Detach the closure-driven stream processor and clear the slot.
+///
+/// Calls the C-side `DetachAudioStreamProcessor` with the same trampoline
+/// pointer that was registered for `index`, so raylib's internal processor
+/// list-search matches and the entry is actually removed. The slot is only
+/// cleared after the C side has stopped iterating it — without this the
+/// closure could still receive one more invocation against freed state.
+pub fn detach_audio_stream_processor_with_user_data(stream: AudioStream, index: usize) {
+    let trampoline = get_callback(index);
+    unsafe {
+        DetachAudioStreamProcessor(stream, Some(trampoline));
+    }
     clear_context(index);
 }

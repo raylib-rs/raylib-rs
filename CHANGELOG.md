@@ -42,6 +42,8 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - `deny.toml` — cargo-deny license allowlist + RUSTSEC vulnerability/unsound gates.
 - `book/` — mdBook with 28 chapters: introduction, quickstart, 4 platform install guides, 5 Core Concepts, 14 Modules, 2 Ecosystem chapters.
 - Rustdoc enriched on ~25 high-traffic types: crate-level docs, `RaylibHandle`/`RaylibThread`/`RaylibBuilder`, `RaylibDraw` trait, `Color`/`Rectangle`, `Image`/`Texture2D`/`RenderTexture2D`, `Mesh`/`Model`/`Material`/`ModelAnimations`, `RaylibAudio`/`Wave`/`Sound`/`Music`/`AudioStream`, `Shader`, `Font`, `Vector2`/`Vector3`/`Vector4`/`Matrix`/`Quaternion`, collision module, `test_harness` module, rgui module, rlgl module.
+- **Shapes:** `RaylibDraw::draw_line_dashed` (dashed line; raylib 6.0 addition), `RaylibDraw::draw_ellipse_v` and `RaylibDraw::draw_ellipse_lines_v` (Vector2-center ellipse variants) — cheatsheet-audit follow-up.
+- **Input:** `RaylibHandle::get_key_name` — keyboard-layout-aware key labels (e.g. `"q"` for `KEY_A` on AZERTY); useful for HUDs and key-rebinding UIs. Returns `Option<String>` (copied out of raylib's static buffer).
 
 ### Fixed
 
@@ -58,6 +60,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - **Docs: logging module-doc** — `logging.rs` outer doc comment corrected (PR #273, AmityWilder).
 - **Issue #291** — broken `RaylibHandle::draw` API in docs: resolved by PR #152 (already merged before 6.0 work); confirmed by `RUSTDOCFLAGS=-Dwarnings` CI gate.
 - **Issue #290** — broken docs.rs links: resolved by MSRV bump to Rust 1.85 (rustdoc re-export path fix) + `RUSTDOCFLAGS=-Dwarnings` CI gate.
+- **Audio:** `DetachAudioStreamProcessor` lifecycle — the user-data audio stream processor wrapper (`stream_processor_with_user_data_wrapper.rs`) now calls the C-side `DetachAudioStreamProcessor` with the matching trampoline pointer *before* clearing the closure slot. Previously only the slot was freed, leaving raylib iterating its processor list against dangling state.
 
 ### Deferred (tracked, not in 6.0.0)
 
