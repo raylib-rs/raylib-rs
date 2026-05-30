@@ -1,3 +1,25 @@
+//! Shared trampoline-slot pool for closure-driven audio callbacks.
+//!
+//! raylib's C-side audio processors (`AttachAudioStreamProcessor`,
+//! `AttachAudioMixedProcessor`) accept only a function pointer — no
+//! user-data parameter. To thread closure state through, we
+//! pre-register **30 trampolines** (named `callback_0` through
+//! `callback_29`), each with its own
+//! `LazyLock<Mutex<AudioCallbackWithUserData>>` slot. A consumer
+//! reserves a free slot via [`set_context`], the trampoline for that
+//! slot looks up the closure context, and [`clear_context`] frees the
+//! slot.
+//!
+//! Consumers:
+//! - Per-stream: [`attach_audio_stream_processor_with_user_data`] /
+//!   [`detach_audio_stream_processor_with_user_data`].
+//! - Mixed bus: [`attach_audio_mixed_processor_with_user_data`] /
+//!   [`detach_audio_mixed_processor_with_user_data`].
+//!
+//! Both consumers share the same 30-slot pool. The file is named
+//! `stream_processor_with_user_data_wrapper.rs` for historical
+//! reasons; it now covers both kinds of audio processors.
+
 use paste::paste;
 use raylib_sys::{AttachAudioStreamProcessor, AudioStream, DetachAudioStreamProcessor};
 use seq_macro::seq;
@@ -69,7 +91,7 @@ macro_rules! generate_functions {
           /// Function to set our context
           /// and returns the slot used to store the context.
           #[allow(unpredictable_function_pointer_comparisons)]
-          fn set_context(audio_callback: AudioCallbackWithUserData) -> usize {
+          pub(crate) fn set_context(audio_callback: AudioCallbackWithUserData) -> usize {
               $(
                   {
                       let mut guard = [< CLOSURE_ $n >].lock().unwrap();
@@ -84,7 +106,7 @@ macro_rules! generate_functions {
 
           /// Function to clear our context given the slot of the context.
           #[allow(unpredictable_function_pointer_comparisons)]
-          fn clear_context(index: usize) {
+          pub(crate) fn clear_context(index: usize) {
               $(
                   if index == $n {
                       let mut guard = [< CLOSURE_ $n >].lock().unwrap();
@@ -119,7 +141,7 @@ macro_rules! generate_functions {
 
           /// Function to get the callback for a given context
           /// given the slot of the context.
-          fn get_callback(index: usize) -> extern "C" fn(data_ptr: *mut ::std::os::raw::c_void, frames: u32) {
+          pub(crate) fn get_callback(index: usize) -> extern "C" fn(data_ptr: *mut ::std::os::raw::c_void, frames: u32) {
             $(
                 if index == $n {
                     return [< callback_ $n >];
