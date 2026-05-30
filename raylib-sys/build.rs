@@ -406,9 +406,23 @@ fn gen_ubsan_canary() {
         .include("binding")
         .warnings(false)
         .extra_warnings(false);
+
+    // DIAGNOSTIC: print to confirm the cfg evaluates correctly and the flag is applied.
     if cfg!(feature = "ENABLE_UBSAN") {
+        eprintln!(
+            "DIAG-CANARY: cfg!(feature = \"ENABLE_UBSAN\") = true; applying -fsanitize=undefined"
+        );
         build.flag("-fsanitize=undefined");
+        build.flag("-v"); // DIAGNOSTIC: make gcc print its full command line
+    } else {
+        eprintln!(
+            "DIAG-CANARY: cfg!(feature = \"ENABLE_UBSAN\") = false; canary will run uninstrumented"
+        );
     }
+    // Force cc-rs to print the actual compiler command it invokes.
+    // This shows whether -fsanitize=undefined makes it onto the gcc command line.
+    eprintln!("DIAG-CANARY: invoking cc::Build::compile for ubsan_canary");
+
     build.compile("ubsan_canary");
 }
 
