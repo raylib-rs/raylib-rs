@@ -186,3 +186,45 @@ pub fn detach_audio_stream_processor_with_user_data(stream: AudioStream, index: 
     }
     clear_context(index);
 }
+
+/// Attach a closure-driven processor to raylib's global mixed audio
+/// bus. Reserves a slot from the shared 30-slot pool and calls the
+/// C-side `AttachAudioMixedProcessor` with that slot's trampoline.
+///
+/// Returns the slot index — pass it to
+/// [`detach_audio_mixed_processor_with_user_data`] when the consumer
+/// drops.
+pub(crate) fn attach_audio_mixed_processor_with_user_data(
+    callback: AudioCallbackWithUserData,
+) -> usize {
+    let idx = set_context(callback);
+    // SAFETY: get_callback(idx) returns the trampoline matching the
+    // slot we just reserved; raylib copies the fn pointer into its
+    // linked-list entry. We hold the slot until drop calls detach +
+    // clear_context.
+    unsafe {
+        raylib_sys::AttachAudioMixedProcessor(Some(get_callback(idx)));
+    }
+    idx
+}
+
+/// Detach the closure-driven mixed-bus processor and clear the slot.
+///
+/// Calls the C-side `DetachAudioMixedProcessor` with the same
+/// trampoline pointer registered for `index`, so raylib's internal
+/// list-search matches and the entry is removed. The slot is only
+/// cleared AFTER the C side has stopped iterating it — without this
+/// the closure could still receive one more invocation against freed
+/// state (same lifecycle ordering as the per-stream sibling fixed in
+/// WS8e).
+pub(crate) fn detach_audio_mixed_processor_with_user_data(index: usize) {
+    let trampoline = get_callback(index);
+    // SAFETY: trampoline is the same fn pointer raylib stored at
+    // attach time; the C-side list-search matches and removes the
+    // entry. clear_context runs AFTER detach completes so raylib has
+    // stopped iterating before the closure context disappears.
+    unsafe {
+        raylib_sys::DetachAudioMixedProcessor(Some(trampoline));
+    }
+    clear_context(index);
+}
