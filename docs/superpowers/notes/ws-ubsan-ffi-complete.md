@@ -57,15 +57,22 @@ Carried out of this workstream:
 3. **UBSAN suppression file** — not needed today (zero hits). Add if hit volume becomes unmanageable later.
 4. **Upstream fixes for UBSAN findings** — none needed today (zero hits). Triage if/when findings appear.
 5. **Spec/plan update on the actual UBSAN wire-up pattern** — neither artifact described the four cascading issues correctly. Future sanitizer workstreams should reference this done-note for the actual working recipe.
+6. **`check` workflow pre-existing failure** — pre-existing clippy errors (`unused_imports`/`unused_variables`) in `raylib/tests/integration_models.rs` and `raylib/tests/integration_fonts.rs`, both salvaged Tier-2 tests from the previous raylib-test workstream. Out of scope for UBSAN; should be a small follow-up workstream or fixed inline by the next person touching these tests.
 
-## CI inventory (all green on the fork, branch `6.0-rc`)
+## CI inventory (4 of 5 green on the fork, branch `6.0-rc`)
 
 | Workflow      | Jobs                                          | Status                                  |
 |---------------|-----------------------------------------------|-----------------------------------------|
-| `check`       | fmt, clippy, docs, cargo-deny, msrv           | ✅                                       |
+| `check`       | fmt, clippy, docs, cargo-deny, msrv           | ❌ pre-existing — see note below         |
 | `test`        | unit ×6, no-default ×3, software-render ×3    | ✅                                       |
 | `web`         | wasm-build (sys + safe)                       | ✅                                       |
 | `sanitizers`  | asan-ubsan (informational)                    | ✅ (ASAN clean; UBSAN now actually wired) |
 | `book`        | mdbook build                                  | ✅                                       |
+
+### `check` workflow pre-existing failure
+
+`check` (clippy `-D warnings`) has been red on `6.0-rc` since the raylib-test salvage workstream landed (specifically commit `26690047134`, prior to UBSAN-through-FFI starting). The failures are `unused_imports` and `unused_variables` in `raylib/tests/integration_models.rs` and `raylib/tests/integration_fonts.rs` — both salvaged Tier-2 tests from the deleted `raylib-test/` crate. The UBSAN workstream did not cause these and did not fix them (out of scope). Status verified by stashing UBSAN changes and re-running clippy on the pristine pre-workstream HEAD per T1 implementer's report.
+
+Adding to tracked-deferred follow-ups below: a small clippy cleanup pass on the salvaged integration tests (likely a 5-minute fix — add `#[allow(unused)]` or actually use the variables) to unblock the `check` gate. Whoever picks this up should also confirm the failures don't extend to other paths.
 
 **UBSAN ✅. Next: rustdoc rewrite (remaining ~200 stubs) → safe-abstractions for GuiGetIcons/GuiLoadIcons + PR #296 → WS9 showcase → final-release.**
