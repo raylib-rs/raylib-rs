@@ -192,3 +192,24 @@ pub fn compute_sha256(_thread: &RaylibThread, data: &[u8]) -> [u8; 32] {
     // SHA-256 uses big-endian word storage per FIPS 180-2.
     unsafe { read_static_hash::<8, 32>(ptr, true) }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Format bytes as a lowercase hex string for assertion convenience.
+    fn hex(bytes: &[u8]) -> String {
+        bytes.iter().map(|b| format!("{:02x}", b)).collect()
+    }
+
+    #[test]
+    fn crc32_known_vectors() {
+        // CRC-32/ISO-HDLC (zlib / PNG / gzip / Ethernet).
+        assert_eq!(compute_crc32(b""), 0x00000000);
+        assert_eq!(compute_crc32(b"123456789"), 0xCBF43926);
+        assert_eq!(
+            compute_crc32(b"The quick brown fox jumps over the lazy dog"),
+            0x414FA339,
+        );
+    }
+}
