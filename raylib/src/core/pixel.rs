@@ -166,7 +166,10 @@ mod tests {
         for &(format, expected) in UNCOMPRESSED_FORMATS {
             let bpp = bytes_per_pixel(format)
                 .unwrap_or_else(|| panic!("{format:?} should be uncompressed"));
-            assert_eq!(bpp, expected, "{format:?}: table says {expected}, fn says {bpp}");
+            assert_eq!(
+                bpp, expected,
+                "{format:?}: table says {expected}, fn says {bpp}"
+            );
 
             // raylib computes the same byte count via GetPixelDataSize(1, 1, ...).
             let raylib_bpp = unsafe { crate::ffi::GetPixelDataSize(1, 1, format as i32) } as usize;
@@ -474,7 +477,12 @@ mod tests {
 
         assert_eq!(&long_out[..4], &exact_out, "first 4 bytes must match");
         for (i, &b) in long_out[4..].iter().enumerate() {
-            assert_eq!(b, sentinel, "byte {} past the pixel must be untouched", i + 4);
+            assert_eq!(
+                b,
+                sentinel,
+                "byte {} past the pixel must be untouched",
+                i + 4
+            );
         }
     }
 }
