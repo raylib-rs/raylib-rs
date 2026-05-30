@@ -822,11 +822,12 @@ Eight functions need design judgement that goes beyond a one-line wrapper
 Total: **8 functions** across **3 workstreams**.
 
 **Owner-locked ordering (2026-05-29):** these three workstreams run
-**before WS9 showcase**, so the published 6.0 crate ships with the full
-cheatsheet surface covered. Order: `pixel-pointers` → `hashes` →
-`mixed-audio` → WS9 → final-release. See also
-`docs/superpowers/notes/ws8e-checkpoint-review-feedback.md` for the full
-post-checkpoint workstream queue.
+**before WS9 showcase**, alongside four other promoted items:
+`pixel-pointers` → `hashes` → `mixed-audio` → `raylib-test` delete-or-fix →
+UBSAN-through-FFI → rustdoc rewrite (remaining ~200 stubs) →
+safe abstractions for `GuiGetIcons`/`GuiLoadIcons` + PR #296 →
+WS9 → final-release. See `docs/superpowers/notes/ws8e-checkpoint-review-feedback.md`
+for the full post-checkpoint workstream queue.
 
 ---
 

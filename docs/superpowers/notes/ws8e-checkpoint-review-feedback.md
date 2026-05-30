@@ -144,27 +144,62 @@ finale) → final-release (publish + canonical merge)**.
 After the WS8 checkpoint review **and** the cheatsheet parity audit
 (`cheatsheet-parity-audit.md`), the ordering is:
 
-1. **`pixel-pointers`** — wrap `GetPixelColor` / `SetPixelColor` with a safe
-   abstraction over the `void *` + `PixelFormat` (cheatsheet audit §4 #1).
-2. **`hashes`** — wrap `Compute{CRC32,MD5,SHA1,SHA256}`, or formally decline
-   in favor of Rust crates (cheatsheet audit §4 #2).
-3. **`mixed-audio`** — wrap `Attach`/`DetachAudioMixedProcessor` with a
-   RAII handle distinct from the per-stream variant
-   (cheatsheet audit §4 #3).
-4. **WS9** — showcase rewrite + Pages deploy (the roadmap finale).
-5. **Final-release** — publish to crates.io + canonical merge + tag + GitHub release.
-6. **bevy-raylib crate** — new crate that depends on the published 6.0.0.
-7. **DataBuf + Mesh + general testing workstream** — covers comments 8 + 10
-   + the user's broader "more tests" intent.
-8. **thiserror migration** — comment 7.
-9. **Nobuild-mode CI matrix** — comment 4.
-10. **Color/Vector conversion ergonomics audit** — comment 5.
-11. **Symmetric apt+rust-cache adoption across remaining workflows** — extend
-    the book.yml pattern from comments 1+2 to `check.yml` / `test.yml` /
-    `web.yml` / `sanitizers.yml` if owner wants symmetric coverage.
+### Pre-WS9 queue (owner-locked 2026-05-29)
 
-Owner-locked ordering (2026-05-29): items 1-3 (the cheatsheet-audit gap
-workstreams) run **before WS9** so the published 6.0 crate ships with
-the full cheatsheet surface covered. Items 4-5 stay locked. Items 6+
-are flexible — the owner can reorder when each workstream actually
-starts depending on what's most painful at the time.
+Quality / audit / test workstreams ship **before** the WS9 showcase
+deploy finale, so the published 6.0 crate covers the full cheatsheet
+surface AND has the soundness / coverage debt paid down before users
+start consuming the gallery examples.
+
+1. **`pixel-pointers`** — wrap `GetPixelColor` / `SetPixelColor` with a
+   safe abstraction over the `void *` + `PixelFormat`
+   (cheatsheet audit §4 #1).
+2. **`hashes`** — wrap `Compute{CRC32,MD5,SHA1,SHA256}`, or formally
+   decline in favor of Rust crates (cheatsheet audit §4 #2).
+3. **`mixed-audio`** — wrap `Attach`/`DetachAudioMixedProcessor` with
+   a RAII handle distinct from the per-stream variant
+   (cheatsheet audit §4 #3).
+4. **`raylib-test` delete-or-fix** — promoted from long-tail by owner
+   directive (2026-05-29). The `integration-xvfb` job in `test.yml`
+   is non-required; decide whether to fix the window-opening
+   integration tests under xvfb or delete the crate entirely.
+5. **UBSAN-through-FFI** — promoted from long-tail. The current
+   sanitizers workflow runs ASAN; UBSAN through the FFI boundary
+   needs `-C linker=gcc` + `libubsan` wiring. Currently informational
+   only; make it green if not gating.
+6. **Rustdoc rewrite** — promoted from long-tail. The remaining ~200
+   stub-level items WS7 didn't enrich. Improve baseline doc quality
+   crate-wide before public publish.
+7. **Safe abstractions for `GuiGetIcons`/`GuiLoadIcons`** + PR #296
+   (`GuiLoadStyleFromMemory`) — promoted from long-tail. Currently
+   `unsafe` + `# Safety` doc; replace with proper safe wrappers.
+8. **WS9** — showcase rewrite + Pages deploy (the roadmap finale).
+9. **Final-release** — publish to crates.io + canonical merge + tag +
+   GitHub release.
+
+### Post-release queue (flexible)
+
+10. **bevy-raylib crate** — new crate depending on published `6.0.0`
+    (owner intent saved as `post-release-bevy-raylib` memory).
+11. **DataBuf + Mesh + general testing workstream** — covers PR
+    review comments 8 + 10 + the user's broader "more tests" intent.
+12. **thiserror migration** — PR review comment 7.
+13. **Nobuild-mode CI matrix** — PR review comment 4.
+14. **Color/Vector conversion ergonomics audit** — PR review comment 5.
+15. **Symmetric apt+rust-cache adoption** across `check.yml` /
+    `test.yml` / `web.yml` / `sanitizers.yml` — PR review comments 1+2.
+16. **`paste` rewrite or library swap** — from WS8d Fold-in 2.
+17. **Full PR #277 wrapper-soundness refactor** — macro-generated
+    `AsRef`/`AsMut`/`Deref`/`DerefMut` on pointer-owning wrappers
+    (WS3-scale).
+
+### Long-tail
+
+- **`get_gamepad_button_pressed` transmute** — fold opportunistically
+  if another workstream touches `input.rs`.
+- **`rlsw` on wasm32** — `build.rs` `platform_from_target` reordering.
+- **Custom book theme / brand styling** — pairs with WS9.
+
+Items 10+ are flexible — owner can reorder when each starts based on
+what's most painful at the time. The pre-WS9 queue (items 1-9) is
+owner-locked.
