@@ -1,7 +1,7 @@
 //! Contains code related to audio. [`RaylibAudio`] plays sounds and music.
 
 use crate::{
-    error::{AudioInitError, LoadSoundError},
+    error::{AudioInitError, LoadSoundError, UpdateAudioStreamError},
     ffi,
 };
 use std::ffi::{CStr, CString};
@@ -11,7 +11,13 @@ use std::path::Path;
 use super::error::ExportWaveError;
 
 make_thin_wrapper_lifetime!(
-    /// Wave, audio wave data
+    /// CPU-side waveform data loaded into RAM.
+    ///
+    /// A `Wave` holds raw PCM samples (and metadata) without occupying any audio-device
+    /// resources. Convert it to a [`Sound`] via [`RaylibAudio::new_sound_from_wave`] for
+    /// repeated low-latency playback, or export it to disk with [`Wave::export`].
+    ///
+    /// Freed via `UnloadWave` on drop. Lifetime is bound to the owning [`RaylibAudio`].
     Wave,
     ffi::Wave,
     RaylibAudio,
@@ -19,7 +25,26 @@ make_thin_wrapper_lifetime!(
 );
 
 make_thin_wrapper_lifetime!(
-    /// Sound
+    /// Audio-device-ready playable sound sample.
+    ///
+    /// A `Sound` is a fully decoded, GPU/audio-card-buffered sample suitable for repeated
+    /// low-latency playback (e.g. effects and short clips). Load one from a file with
+    /// [`RaylibAudio::new_sound`] or from a [`Wave`] with
+    /// [`RaylibAudio::new_sound_from_wave`].
+    ///
+    /// Freed via `UnloadSound` on drop. Lifetime is bound to the owning [`RaylibAudio`].
+    ///
+    /// # Examples
+    ///
+    /// Load and play a sound effect:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let audio = RaylibAudio::init_audio_device().unwrap();
+    /// let sound = audio.new_sound("assets/click.wav").unwrap();
+    /// // Later, trigger playback:
+    /// unsafe { raylib::ffi::PlaySound(*sound) };
+    /// ```
     Sound,
     ffi::Sound,
     RaylibAudio,
@@ -27,20 +52,51 @@ make_thin_wrapper_lifetime!(
     true
 );
 make_thin_wrapper_lifetime!(
-    /// Music, audio stream, anything longer than ~10 seconds should be streamed
+    /// Streamed audio for long-form playback.
+    ///
+    /// `Music` streams data from disk (or memory) in chunks, making it suitable for
+    /// background music or any audio exceeding ~10 seconds. Load via
+    /// [`RaylibAudio::new_music`] and update each frame with the raylib
+    /// `UpdateMusicStream` / `PlayMusicStream` calls.
+    ///
+    /// Freed via `UnloadMusicStream` on drop. Lifetime is bound to the owning
+    /// [`RaylibAudio`].
     Music,
     ffi::Music,
     RaylibAudio,
     ffi::UnloadMusicStream
 );
 make_thin_wrapper_lifetime!(
-    /// AudioStream, custom audio stream
+    /// Low-level raw PCM streaming primitive.
+    ///
+    /// `AudioStream` lets you push arbitrary audio data to the audio device one
+    /// buffer at a time, giving full control over sample rate, bit depth, and channel
+    /// count. This is the replacement for the audio-callback API that was removed in
+    /// raylib 6.0 — instead of registering a callback you periodically check
+    /// `IsAudioStreamProcessed` and push the next buffer of samples.
+    ///
+    /// Create via [`RaylibAudio::new_audio_stream`]. Freed via `UnloadAudioStream` on
+    /// drop. Lifetime is bound to the owning [`RaylibAudio`].
+    ///
+    /// # Examples
+    ///
+    /// Create a stereo 44.1 kHz stream and push silence each frame:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let audio = RaylibAudio::init_audio_device().unwrap();
+    /// let stream = audio.new_audio_stream(44100, 16, 2);
+    /// // Push PCM data when the device is ready for more samples.
+    /// let silence: Vec<i16> = vec![0; 4096];
+    /// unsafe { raylib::ffi::UpdateAudioStream(*stream, silence.as_ptr() as *const _, silence.len() as i32) };
+    /// ```
     AudioStream,
     ffi::AudioStream,
     RaylibAudio,
     ffi::UnloadAudioStream
 );
 
+/// Owned buffer of decoded PCM samples for a [`Wave`], freed via `UnloadWaveSamples` on drop.
 pub struct WaveSamples(*mut f32, usize);
 
 impl AsRef<[f32]> for WaveSamples {
@@ -56,20 +112,42 @@ impl Drop for WaveSamples {
 }
 
 /// A marker trait specifying an audio sample (`u8`, `i16`, or `f32`).
-pub trait AudioSample {}
-impl AudioSample for u8 {}
-impl AudioSample for i16 {}
-impl AudioSample for f32 {}
+pub trait AudioSample: private::AudioSample {}
+impl<T: private::AudioSample> AudioSample for T {}
 
-/// This token is used to indicate audio is initialized. It's also used to create [`Wave`], [`Sound`], [`Music`], [`AudioStream`], and [`SoundAlias`].
-/// All of those have a lifetime that is bound to RaylibAudio. The compiler will disallow you from using them without ensuring that the [`RaylibAudio`] is present while doing so.
+mod private {
+    pub trait AudioSample {}
+    impl AudioSample for u8 {}
+    impl AudioSample for i16 {}
+    impl AudioSample for f32 {}
+}
+
+/// Audio subsystem handle — initializes the audio device and owns all audio resources.
+///
+/// `RaylibAudio` is a separate handle from [`RaylibHandle`](crate::core::RaylibHandle).
+/// Obtain one with [`RaylibAudio::init_audio_device`].  All audio resource types
+/// ([`Wave`], [`Sound`], [`Music`], [`AudioStream`]) are lifetime-bound to the
+/// `RaylibAudio` that created them; the Rust borrow checker enforces this statically, so
+/// audio resources cannot outlive the device.
+///
+/// The audio device is closed (`CloseAudioDevice`) when the `RaylibAudio` is dropped.
+///
+/// # Examples
+///
+/// Initialize the audio device and load a sound:
+///
+/// ```rust,no_run
+/// use raylib::prelude::*;
+/// let audio = RaylibAudio::init_audio_device().expect("audio init failed");
+/// let sound = audio.new_sound("assets/click.wav").expect("sound load failed");
+/// // `sound` borrows `audio` and cannot outlive it.
+/// ```
 #[derive(Debug, Clone)]
 pub struct RaylibAudio(PhantomData<()>);
 
 impl RaylibAudio {
     /// Initializes audio device and context.
     #[inline]
-    #[must_use]
     pub fn init_audio_device() -> Result<RaylibAudio, AudioInitError> {
         unsafe {
             if ffi::IsAudioDeviceReady() {
@@ -113,7 +191,6 @@ impl RaylibAudio {
 
     /// Loads a new sound from file.
     #[inline]
-    #[must_use]
     pub fn new_sound<'aud>(&'aud self, filename: &str) -> Result<Sound<'aud>, LoadSoundError> {
         let c_filename = CString::new(filename).unwrap();
         let s = unsafe { ffi::LoadSound(c_filename.as_ptr()) };
@@ -128,7 +205,6 @@ impl RaylibAudio {
 
     /// Loads sound from wave data.
     #[inline]
-    #[must_use]
     pub fn new_sound_from_wave<'aud>(
         &'aud self,
         wave: &Wave,
@@ -141,7 +217,6 @@ impl RaylibAudio {
     }
     /// Loads wave data from file into RAM.
     #[inline]
-    #[must_use]
     pub fn new_wave<'aud>(&'aud self, filename: &str) -> Result<Wave<'aud>, LoadSoundError> {
         let c_filename = CString::new(filename).unwrap();
         let w = unsafe { ffi::LoadWave(c_filename.as_ptr()) };
@@ -155,7 +230,6 @@ impl RaylibAudio {
 
     /// Load wave from memory buffer, fileType refers to extension: i.e. '.wav'
     #[inline]
-    #[must_use]
     pub fn new_wave_from_memory<'aud>(
         &'aud self,
         filetype: &str,
@@ -173,7 +247,6 @@ impl RaylibAudio {
 
     /// Loads music stream from file.
     #[inline]
-    #[must_use]
     pub fn new_music<'aud>(&'aud self, filename: &str) -> Result<Music<'aud>, LoadSoundError> {
         let c_filename = CString::new(filename).unwrap();
         let m = unsafe { ffi::LoadMusicStream(c_filename.as_ptr()) };
@@ -187,11 +260,10 @@ impl RaylibAudio {
 
     /// Load music stream from data
     #[inline]
-    #[must_use]
     pub fn new_music_from_memory<'aud>(
         &'aud self,
         filetype: &str,
-        bytes: &Vec<u8>,
+        bytes: &[u8],
     ) -> Result<Music<'aud>, LoadSoundError> {
         let c_filetype = CString::new(filetype).unwrap();
         let w = unsafe {
@@ -206,12 +278,12 @@ impl RaylibAudio {
     /// Initializes audio stream (to stream raw PCM data).
     #[inline]
     #[must_use]
-    pub fn new_audio_stream<'aud>(
-        &'aud self,
+    pub fn new_audio_stream(
+        &self,
         sample_rate: u32,
         sample_size: u32,
         channels: u32,
-    ) -> AudioStream<'aud> {
+    ) -> AudioStream<'_> {
         unsafe {
             AudioStream(
                 ffi::LoadAudioStream(sample_rate, sample_size, channels),
@@ -221,14 +293,14 @@ impl RaylibAudio {
     }
 }
 
-impl<'aud> Drop for RaylibAudio {
+impl Drop for RaylibAudio {
     #[inline]
     fn drop(&mut self) {
         unsafe { ffi::CloseAudioDevice() }
     }
 }
 
-impl<'aud> Wave<'aud> {
+impl Wave<'_> {
     /// Total number of frames (considering channels)
     #[inline]
     #[must_use]
@@ -253,6 +325,9 @@ impl<'aud> Wave<'aud> {
     pub const fn channels(&self) -> u32 {
         self.0.channels
     }
+    /// # Safety
+    ///
+    /// Caller takes ownership of the raw wave data and must free it via `UnloadWave`.
     #[inline]
     #[must_use]
     pub unsafe fn inner(self) -> ffi::Wave {
@@ -270,16 +345,15 @@ impl<'aud> Wave<'aud> {
 
     /// Export wave file. Extension must be .wav or .raw
     #[inline]
-    #[must_use]
     pub fn export(&self, filename: impl AsRef<Path>) -> Result<(), ExportWaveError> {
         let c_filename = CString::new(filename.as_ref().to_string_lossy().as_bytes()).unwrap();
         let success = unsafe { ffi::ExportWave(self.0, c_filename.as_ptr()) };
         if success {
             Ok(())
         } else {
-            // const WAV: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".wav\0") };
-            const QOA: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".qoa\0") };
-            // const RAW: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b".raw\0") };
+            // const WAV: &CStr = c".wav";
+            const QOA: &CStr = c".qoa";
+            // const RAW: &CStr = c".raw";
             let is_qoa = unsafe { ffi::IsFileExtension(c_filename.as_ptr(), QOA.as_ptr()) };
             if is_qoa {
                 let samples = self.0.sampleSize as i32;
@@ -301,7 +375,7 @@ impl<'aud> Wave<'aud> {
     /// Copies a wave to a new wave.
     #[inline]
     #[must_use]
-    pub(crate) fn copy(&self) -> Wave {
+    pub(crate) fn copy(&'_ self) -> Wave<'_> {
         unsafe { Wave(ffi::WaveCopy(self.0), self.1) }
     }
 
@@ -330,19 +404,7 @@ impl<'aud> Wave<'aud> {
     }
 }
 
-impl<'aud> AsRef<ffi::AudioStream> for Sound<'aud> {
-    fn as_ref(&self) -> &ffi::AudioStream {
-        &self.0.stream
-    }
-}
-
-impl<'aud> AsMut<ffi::AudioStream> for Sound<'aud> {
-    fn as_mut(&mut self) -> &mut ffi::AudioStream {
-        &mut self.0.stream
-    }
-}
-
-impl<'aud> Sound<'aud> {
+impl Sound<'_> {
     /// Checks if a sound is valid (data loaded and buffers initialized)
     #[inline]
     #[must_use]
@@ -356,6 +418,9 @@ impl<'aud> Sound<'aud> {
     pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
+    /// # Safety
+    ///
+    /// Caller takes ownership of the raw sound data and must free it via `UnloadSound`.
     #[inline]
     #[must_use]
     pub unsafe fn inner(self) -> ffi::Sound {
@@ -413,21 +478,47 @@ impl<'aud> Sound<'aud> {
         unsafe { ffi::SetSoundPan(self.0, pan) }
     }
 
-    // Uncomment this when Raylib fulfills the todo comment within the original function to make the function safe.
-    // /// Updates sound buffer with new data.
-    // #[inline]
-    // pub fn update<T: AudioSample>(&mut self, data: &[T]) {
-    //     unsafe {
-    //         ffi::UpdateSound(
-    //             self.0,
-    //             data.as_ptr() as *const std::os::raw::c_void,
-    //             (data.len() * std::mem::size_of::<T>()) as i32,
-    //         );
-    //     }
-    // }}
+    /// Updates sound buffer with new data.
+    /// **Notes** (iann):
+    /// 1. raylib’s `UpdateSound` is a raw `memcpy` without size checks, we add safety checks to  here to prevent invalid memory writes.
+    ///     - potential upstream raylib discussion: "too many frames" doesn't exist for the `Sound`'s `AudioStream`
+    ///     - potential upstream raylib discussion: adding sampleSize checks for the `memcpy`
+    /// 2. raylib's `Sound`'s `AudioStream` always gets 32-bit sample size (so we always catch non-32-bit `Sound`'s with a `SampleSizeMismatch`)
+    ///     - 32-bit fixed in config here: <https://github.com/raysan5/raylib/blob/master/src/config.h#L282>
+    ///     - device format set here: <https://github.com/raysan5/raylib/blob/master/src/raudio.c#L288>
+    ///     - potential upstream raylib discussion: allowing for other samplesSizes for `Sound`
+    #[inline]
+    pub fn update<T: AudioSample>(&mut self, data: &[T]) -> Result<(), UpdateAudioStreamError> {
+        let expected_sample_size_bits =
+            usize::try_from(self.stream.sampleSize).expect("sampleSize should be 8, 16, or 32");
+        let provided_sample_size_bits = size_of::<T>() * u8::BITS as usize;
+        if provided_sample_size_bits != expected_sample_size_bits {
+            return Err(UpdateAudioStreamError::SampleSizeMismatch {
+                expected: expected_sample_size_bits,
+                provided: provided_sample_size_bits,
+            });
+        }
+        let max_frame_count = usize::try_from(self.frameCount)
+            .expect("frameCount should be a valid memory allocation size");
+        let provided_frame_count = data.len();
+        if provided_frame_count > max_frame_count {
+            return Err(UpdateAudioStreamError::TooManyFrames {
+                max: max_frame_count,
+                provided: provided_frame_count,
+            });
+        }
+        unsafe {
+            ffi::UpdateSound(
+                self.0,
+                data.as_ptr() as *const std::os::raw::c_void,
+                provided_frame_count.try_into().unwrap(),
+            );
+        }
+        Ok(())
+    }
 }
 
-impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
+impl SoundAlias<'_, '_> {
     /// Checks if a sound is valid (data loaded and buffers initialized)
     #[inline]
     #[must_use]
@@ -441,6 +532,9 @@ impl<'aud, 'bind> SoundAlias<'aud, 'bind> {
     pub const fn frame_count(&self) -> u32 {
         self.0.frameCount
     }
+    /// # Safety
+    ///
+    /// Caller takes ownership of the raw sound alias data and must free it via `UnloadSoundAlias`.
     #[must_use]
     pub unsafe fn inner(self) -> ffi::Sound {
         let inner = self.0;
@@ -504,7 +598,7 @@ impl Drop for SoundAlias<'_, '_> {
     }
 }
 
-impl<'aud> Music<'aud> {
+impl Music<'_> {
     /// Starts music playing.
     #[inline]
     pub fn play_stream(&self) {
@@ -588,7 +682,7 @@ impl<'aud> Music<'aud> {
     }
 }
 
-impl<'aud> AudioStream<'aud> {
+impl AudioStream<'_> {
     /// Checks if an audio stream is valid (buffers initialized)
     #[inline]
     #[must_use]
@@ -614,6 +708,9 @@ impl<'aud> AudioStream<'aud> {
         self.0.channels
     }
 
+    /// # Safety
+    ///
+    /// Caller takes ownership of the raw audio stream and must free it via `UnloadAudioStream`.
     #[must_use]
     pub unsafe fn inner(self) -> ffi::AudioStream {
         let inner = self.0;
@@ -623,14 +720,26 @@ impl<'aud> AudioStream<'aud> {
 
     /// Updates audio stream buffers with data.
     #[inline]
-    pub fn update<T: AudioSample>(&mut self, data: &[T]) {
+    pub fn update<T: AudioSample>(&mut self, data: &[T]) -> Result<(), UpdateAudioStreamError> {
+        let expected_sample_size =
+            usize::try_from(self.sampleSize).expect("sampleSize should be 8, 16, or 32");
+        let provided_sample_size_bits = size_of::<T>() * u8::BITS as usize;
+        if provided_sample_size_bits != expected_sample_size {
+            return Err(UpdateAudioStreamError::SampleSizeMismatch {
+                expected: expected_sample_size,
+                provided: provided_sample_size_bits,
+            });
+        }
+        let provided_frame_count = data.len();
+
         unsafe {
             ffi::UpdateAudioStream(
                 self.0,
                 data.as_ptr() as *const std::os::raw::c_void,
-                (data.len() * std::mem::size_of::<T>()) as i32,
+                provided_frame_count.try_into().unwrap(),
             );
         }
+        Ok(())
     }
 
     /// Plays audio stream.
@@ -707,7 +816,6 @@ impl<'aud> AudioStream<'aud> {
 impl<'bind> Sound<'bind> {
     /// Clone sound from existing sound data, clone does not own wave data
     // NOTE: Wave data must be unallocated manually and will be shared across all clones
-    #[must_use]
     pub fn alias<'snd>(&'snd self) -> Result<SoundAlias<'snd, 'bind>, LoadSoundError> {
         let s = unsafe { ffi::LoadSoundAlias(self.0) };
         if s.stream.buffer.is_null() {
@@ -717,4 +825,5 @@ impl<'bind> Sound<'bind> {
     }
 }
 
+/// A lightweight alias handle to a [`Sound`] that shares the same audio buffer without owning it.
 pub struct SoundAlias<'snd, 'bind>(ffi::Sound, PhantomData<&'snd Sound<'bind>>);

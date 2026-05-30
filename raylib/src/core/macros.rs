@@ -6,6 +6,7 @@ macro_rules! make_thin_wrapper {
         $(#[$attrs])*
         #[repr(transparent)]
         #[derive(Debug)]
+        #[allow(missing_docs)]
         pub struct $name(pub(crate) $t);
 
         impl_wrapper!($name, $t, $dropfunc, 0);
@@ -15,6 +16,7 @@ macro_rules! make_thin_wrapper {
         $(#[$attrs])*
         #[repr(transparent)]
         #[derive(Debug)]
+        #[allow(missing_docs)]
         pub struct $name(pub(crate) $t);
 
         impl_wrapper!($name, $t, $dropfunc, 0);
@@ -28,13 +30,17 @@ macro_rules! make_thin_wrapper_lifetime {
         make_thin_wrapper_lifetime!($name, $t1, $t2, $dropfunc, true);
     };
     ($(#[$attrs:meta])* $name:ident, $t1:ty, $t2:ty,$dropfunc:expr, false) => {
+        $(#[$attrs])*
         #[derive(Debug)]
+        #[allow(missing_docs)]
         pub struct $name<'a>(pub(crate) $t1, &'a $t2);
 
         impl_wrapper!($name, $t1, $dropfunc, 0);
     };
     ($(#[$attrs:meta])* $name:ident, $t1:ty, $t2:ty, $dropfunc:expr, true) => {
+        $(#[$attrs])*
         #[derive(Debug)]
+        #[allow(missing_docs)]
         pub struct $name<'a>(pub(crate) $t1, &'a $t2);
 
         impl_wrapper!($name<'a>, $t1, $dropfunc, 0);
@@ -46,6 +52,11 @@ macro_rules! impl_wrapper {
     ($name:ident$(<$lifetime:tt>)?, $t:ty, $dropfunc:expr, $rawfield:tt) => {
         impl$(<$lifetime>)? $name$(<$lifetime>)? {
             /// Take the raw ffi type. Must manually free memory by calling the proper unload function
+            ///
+            /// # Safety
+            ///
+            /// The caller is responsible for freeing the returned value by calling
+            /// the appropriate raylib unload function. Failure to do so will leak resources.
             pub unsafe fn unwrap(self) -> $t {
                 let inner = self.$rawfield;
                 std::mem::forget(self);
@@ -79,6 +90,12 @@ macro_rules! gen_from_raw_wrapper {
             /// converts raylib-sys object to a "safe"
             /// version. Make sure to call this function
             /// from the thread the resource was created.
+            ///
+            /// # Safety
+            ///
+            /// The caller must ensure `raw` is a valid, fully initialized raylib object
+            /// obtained from a raylib load function. Ownership is transferred to the
+            /// returned wrapper, which will call the appropriate unload function on drop.
             pub unsafe fn from_raw(raw: $t) -> Self {
                 Self(raw)
             }
@@ -121,6 +138,7 @@ macro_rules! make_rslice {
         $(#[$attrs])*
         #[repr(transparent)]
         #[derive(Debug)]
+        #[allow(missing_docs)]
         pub struct $name(pub(crate) std::mem::ManuallyDrop<std::boxed::Box<[$t]>>);
 
         impl_rslice!($name, std::boxed::Box<[$t]>, $dropfunc, 0);

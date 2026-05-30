@@ -1,0 +1,24 @@
+# mise manages non-Rust tooling and task shortcuts. The Rust toolchain itself is
+# pinned by rust-toolchain.toml (do NOT also pin rust here — it would conflict).
+[tools]
+cmake = "latest"   # raylib-sys builds raylib's C source via cmake
+
+[tasks.build]
+description = "Build the whole workspace"
+run = "cargo build"
+
+[tasks.build-sys]
+description = "Build only raylib-sys (stays green during the 6.0 bump)"
+run = "cargo build -p raylib-sys"
+
+[tasks.fmt]
+description = "Check formatting"
+run = "cargo fmt --all --check"
+
+[tasks.clippy]
+description = "Lint with warnings as errors"
+run = "cargo clippy --all-targets -- -D warnings"
+
+[tasks.test]
+description = "Run unit + doc tests"
+run = ["cargo test", "cargo test --doc"]

@@ -1,0 +1,56 @@
+name: sanitizers
+
+on:
+  push:
+    branches: [6.0-rc]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  asan-ubsan:
+    runs-on: ubuntu-latest
+    # Informational only (decision D8): the C is sanitized via ENABLE_ASAN/UBSAN +
+    # Rust via -Zsanitizer. Miri can't cross FFI, so this is the closest we get to
+    # memory-checking the FFI boundary. Never gates the matrix.
+    # NOTE: the originally-specified model_animation_raii target lives in raylib-test,
+    # which is stale vs the 6.0 API (see notes/spike-raylib-test-delete-or-fix.md);
+    # until that's resolved, ASAN/UBSAN run over the FFI-heavy software_renderer
+    # render tests instead.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install Linux build deps
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+          targets: x86_64-unknown-linux-gnu
+      - name: ASAN — software_renderer render tests
+        continue-on-error: true
+        env:
+          RUSTFLAGS: "-Zsanitizer=address"
+          RUSTDOCFLAGS: "-Zsanitizer=address"
+          ASAN_OPTIONS: "detect_leaks=0"
+        run: >
+          cargo +nightly test -p raylib -Z build-std
+          --target x86_64-unknown-linux-gnu
+          --no-default-features
+          --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,ENABLE_ASAN
+          --test render_shapes --test render_text -- --test-threads=1
+      - name: UBSAN — software_renderer render tests
+        # rustc's -Zsanitizer does not support 'undefined' on the current nightly
+        # (valid values: address, cfi, hwaddress, leak, memory, thread, realtime, …).
+        # UBSAN coverage comes from the C side: ENABLE_UBSAN passes -fsanitize=undefined
+        # to the cmake raylib build, which is where all the FFI-boundary C code lives.
+        # No Rust-side RUSTFLAGS needed; drop them to avoid a fatal rustc arg error.
+        continue-on-error: true
+        run: >
+          cargo +nightly test -p raylib -Z build-std
+          --target x86_64-unknown-linux-gnu
+          --no-default-features
+          --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,ENABLE_UBSAN
+          --test render_shapes --test render_text -- --test-threads=1

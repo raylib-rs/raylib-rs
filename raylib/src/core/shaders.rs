@@ -4,12 +4,53 @@ use crate::consts::ShaderUniformDataType;
 use crate::core::math::Matrix;
 use crate::core::math::{Vector2, Vector3, Vector4};
 use crate::core::{RaylibHandle, RaylibThread};
-use crate::{ffi, MintMatrix};
+use crate::ffi;
 use std::ffi::CString;
 use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
-make_thin_wrapper!(Shader, ffi::Shader, ffi::UnloadShader);
+make_thin_wrapper!(
+    /// GLSL shader program (vertex + fragment).
+    ///
+    /// Load a shader from files with [`RaylibHandle::load_shader`] or from in-memory
+    /// source strings with [`RaylibHandle::load_shader_from_memory`] (pass `None` for
+    /// either stage to use the default raylib shader for that stage).
+    ///
+    /// Once loaded, the typical workflow is:
+    /// 1. Query a uniform location by name with [`RaylibShader::get_shader_location`].
+    /// 2. Upload a value each frame with [`RaylibShader::set_shader_value`] (or the
+    ///    vector/matrix/texture variants).
+    /// 3. Activate the shader inside a drawing scope with `begin_shader_mode`.
+    ///
+    /// Freed via `UnloadShader` on drop.
+    ///
+    /// # Examples
+    ///
+    /// Load a custom shader and set a `float` uniform each frame:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("shader demo").build();
+    /// let mut shader = rl.load_shader(
+    ///     &thread,
+    ///     Some("assets/vs.glsl"),
+    ///     Some("assets/fs.glsl"),
+    /// );
+    /// let time_loc = shader.get_shader_location("uTime");
+    /// let mut t: f32 = 0.0;
+    /// while !rl.window_should_close() {
+    ///     t += rl.get_frame_time();
+    ///     shader.set_shader_value(time_loc, t);
+    ///     let mut d = rl.begin_drawing(&thread);
+    ///     d.clear_background(Color::BLACK);
+    ///     let _sm = d.begin_shader_mode(&mut shader);
+    ///     // draw geometry here — it will be shaded by `shader`
+    /// }
+    /// ```
+    Shader,
+    ffi::Shader,
+    ffi::UnloadShader
+);
 make_thin_wrapper!(WeakShader, ffi::Shader, no_drop);
 
 // #[cfg(feature = "nightly")]
@@ -62,7 +103,7 @@ impl RaylibHandle {
 
     /// Sets a custom projection matrix (replaces internal projection matrix).
     #[inline]
-    pub fn set_matrix_projection(&mut self, _: &RaylibThread, proj: impl Into<MintMatrix>) {
+    pub fn set_matrix_projection(&mut self, _: &RaylibThread, proj: impl Into<Matrix>) {
         unsafe {
             ffi::rlSetMatrixProjection(proj.into());
         }
@@ -70,7 +111,7 @@ impl RaylibHandle {
 
     /// Sets a custom modelview matrix (replaces internal modelview matrix).
     #[inline]
-    pub fn set_matrix_modelview(&mut self, _: &RaylibThread, view: impl Into<MintMatrix>) {
+    pub fn set_matrix_modelview(&mut self, _: &RaylibThread, view: impl Into<Matrix>) {
         unsafe {
             ffi::rlSetMatrixModelview(view.into());
         }
@@ -80,14 +121,14 @@ impl RaylibHandle {
     #[must_use]
     #[inline]
     pub fn get_matrix_modelview(&self) -> Matrix {
-        unsafe { ffi::rlGetMatrixModelview().into() }
+        unsafe { ffi::rlGetMatrixModelview() }
     }
 
     /// Gets internal projection matrix.
     #[inline]
     #[must_use]
     pub fn get_matrix_projection(&self) -> Matrix {
-        unsafe { ffi::rlGetMatrixProjection().into() }
+        unsafe { ffi::rlGetMatrixProjection() }
     }
     #[inline]
     #[must_use]
@@ -102,8 +143,16 @@ impl RaylibHandle {
     }
 }
 
+/// A Rust value that can be uploaded as a shader uniform variable.
 pub trait ShaderV {
+    /// The raylib [`ShaderUniformDataType`] that corresponds to this Rust type.
     const UNIFORM_TYPE: ShaderUniformDataType;
+    /// Returns a raw pointer to the shader value for use in FFI calls.
+    ///
+    /// # Safety
+    ///
+    /// The returned pointer is only valid for the lifetime of `self`. The caller must not
+    /// dereference or use the pointer after `self` is dropped.
     unsafe fn value(&self) -> *const c_void;
 }
 
@@ -204,6 +253,10 @@ impl ShaderV for &[i32] {
 }
 
 impl Shader {
+    /// # Safety
+    ///
+    /// The caller becomes responsible for ensuring the underlying `ffi::Shader` is eventually
+    /// unloaded. The returned `WeakShader` does not call `UnloadShader` on drop.
     #[inline]
     #[must_use]
     pub unsafe fn make_weak(self) -> WeakShader {
@@ -248,7 +301,7 @@ impl Shader {
 
     /// Sets shader uniform value (matrix 4x4).
     #[inline]
-    pub fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<MintMatrix>) {
+    pub fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<Matrix>) {
         unsafe {
             ffi::SetShaderValueMatrix(self.0, uniform_loc, mat.into());
         }
@@ -270,6 +323,7 @@ impl Shader {
 impl RaylibShader for WeakShader {}
 impl RaylibShader for Shader {}
 
+/// Extension methods for types that wrap a raylib `Shader` (both owned [`Shader`] and [`WeakShader`]).
 pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]
@@ -330,7 +384,7 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
 
     /// Sets shader uniform value (matrix 4x4).
     #[inline]
-    fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<MintMatrix>) {
+    fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<Matrix>) {
         unsafe {
             ffi::SetShaderValueMatrix(*self.as_mut(), uniform_loc, mat.into());
         }

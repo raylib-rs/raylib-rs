@@ -1,0 +1,47 @@
+# cargo-deny policy for raylib-rs. See https://embarkstudios.github.io/cargo-deny/
+[advisories]
+version = 2
+# Vulnerabilities and unsound advisories fail the build (cargo-deny v2 denies
+# these by default). Yanked crates are non-fatal (warn).
+yanked = "warn"
+# "none" means: don't escalate informational unmaintained notices to errors.
+# cargo-deny 0.19 dropped the per-level "warn" knob for unmaintained; the
+# Scope enum controls whether the check fires at all. We keep the check disabled
+# here (non-fatal intent) and rely on CI advisories for real vulnerabilities.
+unmaintained = "none"
+ignore = [
+    # RUSTSEC-2024-0436: `paste` 1.0 is unmaintained (repository archived 2024-10).
+    # Used by `raylib/src/core/callbacks/stream_processor_with_user_data_wrapper.rs`
+    # for the `with_user_data!` macro that generates audio-stream callback wrappers.
+    # Accepted for the 6.0 release; a rewrite or swap to `pastey` (drop-in) is
+    # tracked for a future workstream. The advisory is already suppressed by
+    # `unmaintained = "none"` above; this entry is forward-defensive (if the
+    # scope is re-enabled later) and serves as searchable documentation.
+    { id = "RUSTSEC-2024-0436", reason = "paste 1.0 unmaintained; rewrite/swap deferred to a future workstream" },
+]
+
+[licenses]
+version = 2
+# Allowlist seeded from the dependency tree; expand empirically below.
+allow = [
+    "Zlib",
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",  # wasip2, wit-bindgen (WASI target only)
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "Unlicense",                        # memchr (Unlicense OR MIT; MIT chosen by cargo-deny)
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

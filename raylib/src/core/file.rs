@@ -2,8 +2,9 @@
 use crate::ffi;
 
 use crate::core::RaylibHandle;
-use std::ffi::{c_char, CStr, CString, OsString};
+use std::ffi::{CStr, CString, OsString, c_char};
 
+/// An iterator over the file paths stored in a [`FilePathList`].
 #[derive(Debug, Clone)]
 pub struct FilePathIter<'a> {
     iter: std::slice::Iter<'a, Option<&'a c_char>>,
@@ -23,11 +24,10 @@ impl<'a> FilePathIter<'a> {
     /// let s;
     /// {
     ///     let mut paths = [
-    ///         CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
+    ///         c"apple".as_ptr().cast_mut(),
     ///     ];
     ///     let mut list = ManuallyDrop::new(unsafe {
     ///         FilePathList::from_raw(ffi::FilePathList {
-    ///             capacity: 1,
     ///             count: 1,
     ///             paths: paths.as_mut_ptr(),
     ///         })
@@ -45,11 +45,10 @@ impl<'a> FilePathIter<'a> {
     /// # use raylib::{ffi, file::*};
     /// # use std::{mem::ManuallyDrop, ffi::CStr};
     /// let mut paths = [
-    ///     CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
+    ///     c"apple".as_ptr().cast_mut(),
     /// ];
     /// let mut list = ManuallyDrop::new(unsafe {
     ///     FilePathList::from_raw(ffi::FilePathList {
-    ///         capacity: 1,
     ///         count: 1,
     ///         paths: paths.as_mut_ptr(),
     ///     })
@@ -101,7 +100,7 @@ impl<'a> Iterator for FilePathIter<'a> {
         self.iter.nth(n).map(Self::func)
     }
 }
-impl<'a> DoubleEndedIterator for FilePathIter<'a> {
+impl DoubleEndedIterator for FilePathIter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.next_back().map(Self::func)
     }
@@ -110,7 +109,7 @@ impl<'a> DoubleEndedIterator for FilePathIter<'a> {
         self.iter.nth_back(n).map(Self::func)
     }
 }
-impl<'a> ExactSizeIterator for FilePathIter<'a> {
+impl ExactSizeIterator for FilePathIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.iter.len()
@@ -130,11 +129,6 @@ impl FilePathList {
     pub const fn count(&self) -> u32 {
         self.0.count
     }
-    /// The amount of files that can be held in this list.
-    #[inline]
-    pub const fn capacity(&self) -> u32 {
-        self.0.capacity
-    }
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
     pub fn paths(&self) -> Vec<&str> {
@@ -144,7 +138,7 @@ impl FilePathList {
             .collect()
     }
     /// An iterator over the paths held in this list.
-    pub fn iter<'a>(&'a self) -> FilePathIter<'a> {
+    pub fn iter(&self) -> FilePathIter<'_> {
         unsafe { FilePathIter::new(self.0.paths, self.count()) }
     }
 }
@@ -155,11 +149,6 @@ impl DroppedFilePathList {
     pub const fn count(&self) -> u32 {
         self.0.count
     }
-    /// The amount of files that can be held in this list.
-    #[inline]
-    pub const fn capacity(&self) -> u32 {
-        self.0.capacity
-    }
     /// The paths held in this list.
     /// This function is NOT constant and the inner array will be copied into the returned Vec every time you call this.
     pub fn paths(&self) -> Vec<&str> {
@@ -169,7 +158,7 @@ impl DroppedFilePathList {
             .collect()
     }
     /// An iterator over the paths held in this list.
-    pub fn iter<'a>(&'a self) -> FilePathIter<'a> {
+    pub fn iter(&self) -> FilePathIter<'_> {
         unsafe { FilePathIter::new(self.0.paths, self.count()) }
     }
 }
@@ -268,14 +257,13 @@ impl RaylibHandle {
 
 #[cfg(test)]
 mod tests {
-    use std::mem::ManuallyDrop;
     use super::*;
+    use std::mem::ManuallyDrop;
 
     #[test]
     #[should_panic(expected = "file path array cannot be null")]
     fn test_null_list() {
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 0,
             count: 0,
             paths: std::ptr::null_mut(),
         }));
@@ -288,7 +276,6 @@ mod tests {
     fn test_null_item() {
         let mut paths = [std::ptr::null_mut()];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 1,
             count: 1,
             paths: paths.as_mut_ptr(),
         }));
@@ -302,7 +289,6 @@ mod tests {
     fn test_null_item_double_ended() {
         let mut paths = [std::ptr::null_mut()];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 1,
             count: 1,
             paths: paths.as_mut_ptr(),
         }));
@@ -314,14 +300,13 @@ mod tests {
     #[test]
     fn test_len() {
         let mut paths = [
-            CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"orange\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"banana\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"mango\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"pineapple\0").unwrap().as_ptr().cast_mut(),
+            c"apple".as_ptr().cast_mut(),
+            c"orange".as_ptr().cast_mut(),
+            c"banana".as_ptr().cast_mut(),
+            c"mango".as_ptr().cast_mut(),
+            c"pineapple".as_ptr().cast_mut(),
         ];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 5,
             count: 5,
             paths: paths.as_mut_ptr(),
         }));
@@ -343,14 +328,13 @@ mod tests {
     #[test]
     fn test_len_double_ended() {
         let mut paths = [
-            CStr::from_bytes_with_nul(b"apple\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"orange\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"banana\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"mango\0").unwrap().as_ptr().cast_mut(),
-            CStr::from_bytes_with_nul(b"pineapple\0").unwrap().as_ptr().cast_mut(),
+            c"apple".as_ptr().cast_mut(),
+            c"orange".as_ptr().cast_mut(),
+            c"banana".as_ptr().cast_mut(),
+            c"mango".as_ptr().cast_mut(),
+            c"pineapple".as_ptr().cast_mut(),
         ];
         let list = ManuallyDrop::new(FilePathList(ffi::FilePathList {
-            capacity: 5,
             count: 5,
             paths: paths.as_mut_ptr(),
         }));

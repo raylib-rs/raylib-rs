@@ -1,6 +1,6 @@
 [package]
 name = "raylib"
-version = "5.7.0"
+version = "6.0.0"
 authors = ["raylib-rs team <https://github.com/raylib-rs/raylib-rs>"]
 license = "Zlib"
 readme = "../README.md"
@@ -10,14 +10,18 @@ repository = "https://github.com/raylib-rs/raylib-rs"
 keywords = ["bindings", "raylib", "gamedev"]
 categories = ["api-bindings", "game-engines", "graphics"]
 edition = "2024"
+rust-version = "1.85"
 autoexamples = false
 
 [dependencies]
-raylib-sys = { version = "5.7.0", path = "../raylib-sys", default-features = false }
+raylib-sys = { version = "6.0.0", path = "../raylib-sys", default-features = false }
 serde = { version = "1.0.125", features = ["derive"], optional = true }
 serde_json = { version = "1.0.64", optional = true }
 
-glam = { version = "0.30", features = ["mint"] }
+# Math-ecosystem adapters are opt-in; the conversions live in raylib-sys behind
+# matching features. The default build pulls zero math/serialization deps.
+glam = { version = "0.30", optional = true }
+mint = { version = "0.5", optional = true }
 
 thiserror = "2.0.12"
 
@@ -25,14 +29,15 @@ paste = "1.0"
 seq-macro = "0.3.5"
 
 [dev-dependencies]
-structopt = "0.3"
 rand = "0.9"
 
 [features]
 # use raylib-sys defaults instead of setting it in dependencies so we can turn it off at the raylib crate level since `raylib-sys` is not exposed
 default = ["raylib-sys/default"]
 nightly = []
-serde = ["dep:serde", "raylib-sys/serde", "glam/serde"]
+serde = ["dep:serde", "raylib-sys/serde"]
+glam = ["dep:glam", "raylib-sys/glam"]
+mint = ["dep:mint", "raylib-sys/mint"]
 
 raygui = ["raylib-sys/raygui"]
 # ----- Copy and paste these from `raylib-sys` for easier maintance
@@ -41,6 +46,40 @@ nobuild = ["raylib-sys/nobuild"]
 # Do not autogenerate bindings, instead read an existing one specified by env RAYLIB_BINDGEN_LOCATION
 # useful when bindgen doesn't generate correctly on esoteric platforms and need manual auidting
 nobindgen = ["raylib-sys/nobindgen"]
+
+# Headless CPU software renderer (raylib-sys PLATFORM=Memory). Mutually exclusive
+# with the opengl_* backends. Enables the WS4b headless render-test harness.
+software_renderer = ["raylib-sys/software_renderer"]
+
+# Curated "max capability" set for CI lint/test + users who want everything.
+# default + ecosystem adapters + raygui + every capability flag, EXCLUDING the
+# mutually-exclusive backend selectors (opengl_*/sdl/wayland/drm/legacy_rpi/
+# software_renderer), the nobuild/nobindgen escape hatches, sanitizers, build
+# profiles, and BUILD_SHARED_LIBS/USE_EXTERNAL_GLFW. `--all-features` is invalid
+# for raylib-sys, so this alias is the canonical "everything" target.
+full = [
+    "default", "raygui", "glam", "mint", "serde",
+    "USE_AUDIO",
+    "SUPPORT_MODULE_RSHAPES", "SUPPORT_MODULE_RTEXTURES", "SUPPORT_MODULE_RTEXT",
+    "SUPPORT_MODULE_RMODELS", "SUPPORT_MODULE_RAUDIO",
+    "SUPPORT_CAMERA_SYSTEM", "SUPPORT_GESTURES_SYSTEM", "SUPPORT_RPRAND_GENERATOR",
+    "SUPPORT_MOUSE_GESTURES", "SUPPORT_COMPRESSION_API", "SUPPORT_AUTOMATION_EVENTS",
+    "SUPPORT_CUSTOM_FRAME_CONTROL", "SUPPORT_CLIPBOARD_IMAGE", "SUPPORT_QUADS_DRAW_MODE",
+    "SUPPORT_FILEFORMAT_PNG", "SUPPORT_FILEFORMAT_BMP", "SUPPORT_FILEFORMAT_TGA",
+    "SUPPORT_FILEFORMAT_JPG", "SUPPORT_FILEFORMAT_GIF", "SUPPORT_FILEFORMAT_QOI",
+    "SUPPORT_FILEFORMAT_PSD", "SUPPORT_FILEFORMAT_DDS", "SUPPORT_FILEFORMAT_HDR",
+    "SUPPORT_FILEFORMAT_PIC", "SUPPORT_FILEFORMAT_PNM", "SUPPORT_FILEFORMAT_KTX",
+    "SUPPORT_FILEFORMAT_ASTC", "SUPPORT_FILEFORMAT_PKM", "SUPPORT_FILEFORMAT_PVR",
+    "SUPPORT_IMAGE_EXPORT", "SUPPORT_IMAGE_GENERATION",
+    "SUPPORT_FILEFORMAT_TTF", "SUPPORT_FILEFORMAT_FNT", "SUPPORT_FILEFORMAT_BDF",
+    "SUPPORT_FILEFORMAT_OBJ", "SUPPORT_FILEFORMAT_MTL", "SUPPORT_FILEFORMAT_IQM",
+    "SUPPORT_FILEFORMAT_GLTF", "SUPPORT_FILEFORMAT_VOX", "SUPPORT_FILEFORMAT_M3D",
+    "SUPPORT_MESH_GENERATION", "SUPPORT_GPU_SKINNING",
+    "SUPPORT_FILEFORMAT_WAV", "SUPPORT_FILEFORMAT_OGG", "SUPPORT_FILEFORMAT_MP3",
+    "SUPPORT_FILEFORMAT_QOA", "SUPPORT_FILEFORMAT_FLAC", "SUPPORT_FILEFORMAT_XM",
+    "SUPPORT_FILEFORMAT_MOD",
+    "SUPPORT_TRACELOG", "SUPPORT_SCREEN_CAPTURE",
+]
 
 # opengl stuff
 opengl_11 = ["raylib-sys/opengl_11"]       # buggy? might not work with wayland
@@ -51,6 +90,8 @@ opengl_es_30 = ["raylib-sys/opengl_es_30"]
 opengl_es_20 = ["raylib-sys/opengl_es_20"]
 sdl = ["raylib-sys/sdl"]
 wayland = ["raylib-sys/wayland"]
+legacy_rpi = ["raylib-sys/legacy_rpi"]
+drm = ["raylib-sys/drm"]
 
 # extra build profiles:
 release_with_debug_info = ["raylib-sys/release_with_debug_info"]
@@ -80,7 +121,6 @@ SUPPORT_MOUSE_GESTURES = ["raylib-sys/SUPPORT_MOUSE_GESTURES"]
 SUPPORT_SSH_KEYBOARD_RPI = ["raylib-sys/SUPPORT_SSH_KEYBOARD_RPI"]
 SUPPORT_WINMM_HIGHRES_TIMER = ["raylib-sys/SUPPORT_WINMM_HIGHRES_TIMER"]
 SUPPORT_PARTIALBUSY_WAIT_LOOP = ["raylib-sys/SUPPORT_PARTIALBUSY_WAIT_LOOP"]
-SUPPORT_GIF_RECORDING = ["raylib-sys/SUPPORT_GIF_RECORDING"]
 SUPPORT_COMPRESSION_API = ["raylib-sys/SUPPORT_COMPRESSION_API"]
 SUPPORT_AUTOMATION_EVENTS = ["raylib-sys/SUPPORT_AUTOMATION_EVENTS"]
 SUPPORT_CUSTOM_FRAME_CONTROL = ["raylib-sys/SUPPORT_CUSTOM_FRAME_CONTROL"]
@@ -96,19 +136,16 @@ SUPPORT_FILEFORMAT_PSD = ["raylib-sys/SUPPORT_FILEFORMAT_PSD"]
 SUPPORT_FILEFORMAT_DDS = ["raylib-sys/SUPPORT_FILEFORMAT_DDS"]
 SUPPORT_FILEFORMAT_HDR = ["raylib-sys/SUPPORT_FILEFORMAT_HDR"]
 SUPPORT_FILEFORMAT_PIC = ["raylib-sys/SUPPORT_FILEFORMAT_PIC"]
+SUPPORT_FILEFORMAT_PNM = ["raylib-sys/SUPPORT_FILEFORMAT_PNM"]
 SUPPORT_FILEFORMAT_KTX = ["raylib-sys/SUPPORT_FILEFORMAT_KTX"]
 SUPPORT_FILEFORMAT_ASTC = ["raylib-sys/SUPPORT_FILEFORMAT_ASTC"]
 SUPPORT_FILEFORMAT_PKM = ["raylib-sys/SUPPORT_FILEFORMAT_PKM"]
 SUPPORT_FILEFORMAT_PVR = ["raylib-sys/SUPPORT_FILEFORMAT_PVR"]
 SUPPORT_IMAGE_EXPORT = ["raylib-sys/SUPPORT_IMAGE_EXPORT"]
 SUPPORT_IMAGE_GENERATION = ["raylib-sys/SUPPORT_IMAGE_GENERATION"]
-SUPPORT_IMAGE_MANIPULATION = ["raylib-sys/SUPPORT_IMAGE_MANIPULATION"]
-SUPPORT_DEFAULT_FONT = ["raylib-sys/SUPPORT_DEFAULT_FONT"]
 SUPPORT_FILEFORMAT_TTF = ["raylib-sys/SUPPORT_FILEFORMAT_TTF"]
 SUPPORT_FILEFORMAT_FNT = ["raylib-sys/SUPPORT_FILEFORMAT_FNT"]
 SUPPORT_FILEFORMAT_BDF = ["raylib-sys/SUPPORT_FILEFORMAT_BDF"]
-SUPPORT_TEXT_MANIPULATION = ["raylib-sys/SUPPORT_TEXT_MANIPULATION"]
-SUPPORT_FONT_ATLAS_WHITE_REC = ["raylib-sys/SUPPORT_FONT_ATLAS_WHITE_REC"]
 SUPPORT_FILEFORMAT_OBJ = ["raylib-sys/SUPPORT_FILEFORMAT_OBJ"]
 SUPPORT_FILEFORMAT_MTL = ["raylib-sys/SUPPORT_FILEFORMAT_MTL"]
 SUPPORT_FILEFORMAT_IQM = ["raylib-sys/SUPPORT_FILEFORMAT_IQM"]
@@ -116,6 +153,7 @@ SUPPORT_FILEFORMAT_GLTF = ["raylib-sys/SUPPORT_FILEFORMAT_GLTF"]
 SUPPORT_FILEFORMAT_VOX = ["raylib-sys/SUPPORT_FILEFORMAT_VOX"]
 SUPPORT_FILEFORMAT_M3D = ["raylib-sys/SUPPORT_FILEFORMAT_M3D"]
 SUPPORT_MESH_GENERATION = ["raylib-sys/SUPPORT_MESH_GENERATION"]
+SUPPORT_GPU_SKINNING = ["raylib-sys/SUPPORT_GPU_SKINNING"]
 SUPPORT_FILEFORMAT_WAV = ["raylib-sys/SUPPORT_FILEFORMAT_WAV"]
 SUPPORT_FILEFORMAT_OGG = ["raylib-sys/SUPPORT_FILEFORMAT_OGG"]
 SUPPORT_FILEFORMAT_MP3 = ["raylib-sys/SUPPORT_FILEFORMAT_MP3"]
@@ -123,12 +161,8 @@ SUPPORT_FILEFORMAT_QOA = ["raylib-sys/SUPPORT_FILEFORMAT_QOA"]
 SUPPORT_FILEFORMAT_FLAC = ["raylib-sys/SUPPORT_FILEFORMAT_FLAC"]
 SUPPORT_FILEFORMAT_XM = ["raylib-sys/SUPPORT_FILEFORMAT_XM"]
 SUPPORT_FILEFORMAT_MOD = ["raylib-sys/SUPPORT_FILEFORMAT_MOD"]
-SUPPORT_STANDARD_FILEIO = ["raylib-sys/SUPPORT_STANDARD_FILEIO"]
 SUPPORT_TRACELOG = ["raylib-sys/SUPPORT_TRACELOG"]
 SUPPORT_SCREEN_CAPTURE = ["raylib-sys/SUPPORT_SCREEN_CAPTURE"]
-SUPPORT_VR_SIMULATOR = ["raylib-sys/SUPPORT_VR_SIMULATOR"]
-SUPPORT_DISTORTION_SHADER = ["raylib-sys/SUPPORT_DISTORTION_SHADER"]
-SUPPORT_FONT_TEXTURE = ["raylib-sys/SUPPORT_FONT_TEXTURE"]
 
 [package.metadata.docs.rs]
 features = ["nobuild"]

@@ -4,13 +4,14 @@ use std::{
     ptr::null,
 };
 
-use crate::{ffi, RaylibHandle};
+use crate::{RaylibHandle, ffi};
 
+/// An iterator over the [`ffi::AutomationEvent`] entries in a loaded automation event list.
 #[derive(Debug, Clone)]
 pub struct AutomationEventIter<'a> {
     iter: std::slice::Iter<'a, ffi::AutomationEvent>,
 }
-impl<'a> AutomationEventIter<'a> {
+impl AutomationEventIter<'_> {
     #[must_use]
     unsafe fn new(events: *mut ffi::AutomationEvent, count: u32) -> Self {
         // No new items are being created that get dropped here, these are just changes in perspective of how to borrow-check the pointers.
@@ -27,7 +28,7 @@ impl<'a> AutomationEventIter<'a> {
         AutomationEvent(*e)
     }
 }
-impl<'a> Iterator for AutomationEventIter<'a> {
+impl Iterator for AutomationEventIter<'_> {
     type Item = AutomationEvent;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -52,7 +53,7 @@ impl<'a> Iterator for AutomationEventIter<'a> {
         self.iter.nth(n).map(Self::func)
     }
 }
-impl<'a> DoubleEndedIterator for AutomationEventIter<'a> {
+impl DoubleEndedIterator for AutomationEventIter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.next_back().map(Self::func)
     }
@@ -61,7 +62,7 @@ impl<'a> DoubleEndedIterator for AutomationEventIter<'a> {
         self.iter.nth_back(n).map(Self::func)
     }
 }
-impl<'a> ExactSizeIterator for AutomationEventIter<'a> {
+impl ExactSizeIterator for AutomationEventIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.iter.len()
@@ -99,7 +100,7 @@ impl AutomationEventList {
     }
     /// An iterator over the events held in this list.
     #[must_use]
-    pub fn iter<'a>(&'a self) -> AutomationEventIter<'a> {
+    pub fn iter(&self) -> AutomationEventIter<'_> {
         unsafe { AutomationEventIter::new(self.0.events, self.count()) }
     }
 

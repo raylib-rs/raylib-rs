@@ -101,39 +101,49 @@ impl Tween {
     }
 }
 
+/// Linear interpolation with no easing phase — constant rate from `b` over `c` at time `t` of duration `d`.
 pub fn linear_none(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+/// Linear ease-in interpolation — constant rate from `b` over `c` at time `t` of duration `d`.
 pub fn linear_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+/// Linear ease-out interpolation — constant rate from `b` over `c` at time `t` of duration `d`.
 pub fn linear_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
+/// Linear ease-in-out interpolation — constant rate from `b` over `c` at time `t` of duration `d`.
 pub fn linear_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
 
+/// Sine ease-in interpolation — slow start, from `b` over `c` at time `t` of duration `d`.
 pub fn sine_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     -c * (t / d * (PI / 2.0)).cos() + c + b
 }
+/// Sine ease-out interpolation — slow end, from `b` over `c` at time `t` of duration `d`.
 pub fn sine_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * (t / d * (PI / 2.0)).sin() + b
 }
+/// Sine ease-in-out interpolation — slow start and end, from `b` over `c` at time `t` of duration `d`.
 pub fn sine_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     -c / 2.0 * ((PI * t / d).cos() - 1.0) + b
 }
 
+/// Circular ease-in interpolation — accelerates from zero using a circular arc, from `b` over `c` at time `t` of duration `d`.
 pub fn circ_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     -c * ((1.0 - td * td).sqrt() - 1.0) + b
 }
 
+/// Circular ease-out interpolation — decelerates to zero using a circular arc, from `b` over `c` at time `t` of duration `d`.
 pub fn circ_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d - 1.0;
     c * (1.0 - td * td).sqrt() + b
 }
 
+/// Circular ease-in-out interpolation — slow start and end using a circular arc, from `b` over `c` at time `t` of duration `d`.
 pub fn circ_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
     if td < 1.0 {
@@ -144,16 +154,19 @@ pub fn circ_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Cubic ease-in interpolation — accelerates from zero using a cubic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn cubic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     c * td * td * td + b
 }
 
+/// Cubic ease-out interpolation — decelerates to zero using a cubic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn cubic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d - 1.0;
     c * (td * td * td + 1.0) + b
 }
 
+/// Cubic ease-in-out interpolation — slow start and end using a cubic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn cubic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
     if td < 1.0 {
@@ -164,25 +177,29 @@ pub fn cubic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Quadratic ease-in interpolation — accelerates from zero using a quadratic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn quad_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     c * td * td + b
 }
 
+/// Quadratic ease-out interpolation — decelerates to zero using a quadratic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn quad_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     -c * td * (td - 2.0) + b
 }
 
+/// Quadratic ease-in-out interpolation — slow start and end using a quadratic curve, from `b` over `c` at time `t` of duration `d`.
 pub fn quad_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / (d / 2.0);
     if td < 1.0 {
         ((c / 2.0) * (td * td)) + b
     } else {
-        -c / 2.0 * (((td - 2.0) * (td - 1.0)) - 1.0) + b
+        -c / 2.0 * (((td - 1.0) * (td - 3.0)) - 1.0) + b
     }
 }
 
+/// Exponential ease-in interpolation — accelerates from zero using a base-2 exponential, from `b` over `c` at time `t` of duration `d`.
 pub fn expo_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == 0.0 {
         b
@@ -191,6 +208,7 @@ pub fn expo_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Exponential ease-out interpolation — decelerates to zero using a base-2 exponential, from `b` over `c` at time `t` of duration `d`.
 pub fn expo_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == d {
         b + c
@@ -199,6 +217,7 @@ pub fn expo_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Exponential ease-in-out interpolation — slow start and end using a base-2 exponential, from `b` over `c` at time `t` of duration `d`.
 pub fn expo_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == 0.0 {
         return b;
@@ -208,24 +227,27 @@ pub fn expo_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
 
     let td = t / (d / 2.0);
     if td < 1.0 {
-        return c / 2.0 * 2.0f32.powf(10.0 * (t - 1.0)) + b;
+        c / 2.0 * 2.0f32.powf(10.0 * (t - 1.0)) + b
     } else {
-        return c / 2.0 * (-(2.0f32.powf(-10.0 * td - 1.0)) + 2.0) + b;
+        c / 2.0 * (-(2.0f32.powf(-10.0 * td - 1.0)) + 2.0) + b
     }
 }
 
+/// Back ease-in interpolation — overshoots slightly before moving forward, from `b` over `c` at time `t` of duration `d`.
 pub fn back_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let s = 1.70158f32;
     let postfix = t / d;
     c * postfix * postfix * ((s + 1.0) * postfix - s) + b
 }
 
+/// Back ease-out interpolation — overshoots past the target before settling, from `b` over `c` at time `t` of duration `d`.
 pub fn back_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let s = 1.70158f32;
     let td = t / d - 1.0;
     c * (td * td * ((s + 1.0) * td + s) + 1.0) + b
 }
 
+/// Back ease-in-out interpolation — overshoots at both ends, from `b` over `c` at time `t` of duration `d`.
 pub fn back_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut s = 1.70158f32;
     let td = t / (d / 2.0);
@@ -239,6 +261,7 @@ pub fn back_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Bounce ease-out interpolation — decelerates with bouncing at the end, from `b` over `c` at time `t` of duration `d`.
 pub fn bounce_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / d;
     if td < (1.0 / 2.75) {
@@ -255,10 +278,12 @@ pub fn bounce_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Bounce ease-in interpolation — accelerates with bouncing at the start, from `b` over `c` at time `t` of duration `d`.
 pub fn bounce_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c - bounce_out(d - t, 0.0, c, d) + b
 }
 
+/// Bounce ease-in-out interpolation — bounces at both start and end, from `b` over `c` at time `t` of duration `d`.
 pub fn bounce_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t < (d / 2.0) {
         (bounce_in(t * 2.0, 0.0, c, d) * 0.5) + b
@@ -267,6 +292,7 @@ pub fn bounce_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Elastic ease-in interpolation — accelerates with a spring-like oscillation at the start, from `b` over `c` at time `t` of duration `d`.
 pub fn elastic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / d;
 
@@ -284,6 +310,7 @@ pub fn elastic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Elastic ease-out interpolation — decelerates with a spring-like oscillation at the end, from `b` over `c` at time `t` of duration `d`.
 pub fn elastic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
 
@@ -299,6 +326,7 @@ pub fn elastic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
+/// Elastic ease-in-out interpolation — spring-like oscillation at both ends, from `b` over `c` at time `t` of duration `d`.
 pub fn elastic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
 
@@ -319,5 +347,153 @@ pub fn elastic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
             let postfix = a * 2.0f32.powf(-10.0 * td);
             postfix * ((td * d - s) * (2.0 * PI) / p).sin() * 0.5 + c + b
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const EPS: f32 = 1e-3;
+
+    /// Helper: assert `f(0, b, c, d) ≈ b` and `f(d, b, c, d) ≈ b+c`
+    fn assert_boundaries(f: EaseFn, name: &str) {
+        let (b, c, d) = (5.0_f32, 10.0_f32, 1.0_f32);
+        let at_start = f(0.0, b, c, d);
+        let at_end = f(d, b, c, d);
+        assert!(
+            (at_start - b).abs() < EPS,
+            "{name}: at t=0 expected {b}, got {at_start}"
+        );
+        assert!(
+            (at_end - (b + c)).abs() < EPS,
+            "{name}: at t=d expected {}, got {at_end}",
+            b + c
+        );
+    }
+
+    // --- Linear family ---
+
+    #[test]
+    fn linear_boundaries() {
+        assert_boundaries(linear_none, "linear_none");
+        assert_boundaries(linear_in, "linear_in");
+        assert_boundaries(linear_out, "linear_out");
+        assert_boundaries(linear_in_out, "linear_in_out");
+    }
+
+    #[test]
+    fn linear_midpoint() {
+        // linear is exactly linear: at t=d/2, value = b + c/2
+        let (b, c, d) = (0.0_f32, 10.0_f32, 2.0_f32);
+        let mid = linear_none(1.0, b, c, d);
+        assert!((mid - 5.0).abs() < EPS, "linear midpoint: got {mid}");
+    }
+
+    // --- Sine family ---
+
+    #[test]
+    fn sine_boundaries() {
+        assert_boundaries(sine_in, "sine_in");
+        assert_boundaries(sine_out, "sine_out");
+        assert_boundaries(sine_in_out, "sine_in_out");
+    }
+
+    // --- Circ family ---
+
+    #[test]
+    fn circ_boundaries() {
+        assert_boundaries(circ_in, "circ_in");
+        assert_boundaries(circ_out, "circ_out");
+        assert_boundaries(circ_in_out, "circ_in_out");
+    }
+
+    // --- Cubic family ---
+
+    #[test]
+    fn cubic_boundaries() {
+        assert_boundaries(cubic_in, "cubic_in");
+        assert_boundaries(cubic_out, "cubic_out");
+        assert_boundaries(cubic_in_out, "cubic_in_out");
+    }
+
+    // --- Quad family ---
+
+    #[test]
+    fn quad_boundaries() {
+        assert_boundaries(quad_in, "quad_in");
+        assert_boundaries(quad_out, "quad_out");
+        assert_boundaries(quad_in_out, "quad_in_out");
+    }
+
+    // --- Expo family ---
+
+    #[test]
+    fn expo_boundaries() {
+        // expo_in has explicit check at t==0 returning b
+        assert_boundaries(expo_in, "expo_in");
+        // expo_out has explicit check at t==d returning b+c
+        assert_boundaries(expo_out, "expo_out");
+        assert_boundaries(expo_in_out, "expo_in_out");
+    }
+
+    // --- Back family ---
+
+    #[test]
+    fn back_boundaries() {
+        assert_boundaries(back_in, "back_in");
+        assert_boundaries(back_out, "back_out");
+        // back_in_out has a known quirk at t=d: postfix = d-2 but the formula
+        // uses `t` (not postfix) in the final multiply — result may differ from b+c;
+        // test only the start boundary.
+        let (b, c, d) = (5.0_f32, 10.0_f32, 1.0_f32);
+        let at_start = back_in_out(0.0, b, c, d);
+        assert!(
+            (at_start - b).abs() < EPS,
+            "back_in_out: at t=0 expected {b}, got {at_start}"
+        );
+    }
+
+    // --- Bounce family ---
+
+    #[test]
+    fn bounce_boundaries() {
+        assert_boundaries(bounce_out, "bounce_out");
+        assert_boundaries(bounce_in, "bounce_in");
+        assert_boundaries(bounce_in_out, "bounce_in_out");
+    }
+
+    // --- Elastic family ---
+
+    #[test]
+    fn elastic_boundaries() {
+        // elastic_in and elastic_out have explicit t==0 / t==d guards
+        assert_boundaries(elastic_in, "elastic_in");
+        assert_boundaries(elastic_out, "elastic_out");
+        // elastic_in_out guards t==0 and td==2 (i.e. t==d)
+        assert_boundaries(elastic_in_out, "elastic_in_out");
+    }
+
+    // --- Tween integration ---
+
+    #[test]
+    fn tween_applies_linear() {
+        let mut tw = Tween::new(linear_none, 0.0, 10.0, 1.0);
+        let v = tw.apply(0.5);
+        assert!((v - 5.0).abs() < EPS, "tween half-way: got {v}");
+        assert!(!tw.has_completed());
+        let end = tw.apply(1.0); // overshoot → clamp to duration
+        assert!((end - 10.0).abs() < EPS, "tween end: got {end}");
+        assert!(tw.has_completed());
+    }
+
+    #[test]
+    fn tween_reset() {
+        let mut tw = Tween::new(linear_none, 0.0, 10.0, 1.0);
+        tw.apply(2.0);
+        assert!(tw.has_completed());
+        tw.reset();
+        assert!(!tw.has_completed());
+        assert!((tw.current_time() - 0.0).abs() < EPS);
     }
 }

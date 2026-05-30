@@ -1,5 +1,85 @@
 # raylib-rs Changelog
 
+## 6.0.0 (unreleased)
+
+Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024).
+
+### Highlights
+
+- raylib C source bumped to 6.0; bindings regenerated. `raylib-sys` compiles against 6.0 without modification.
+- Math types are now native `#[repr(C)]` Rust structs (`Vector2`/`Vector3`/`Vector4`, `Matrix`, `Quaternion`) with **zero math-crate dependencies by default**. `mint`, `glam`, `serde` are opt-in features.
+- Skeletal-animation API redesigned around RAII (`ModelAnimations` collection; the singular `UnloadModelAnimation` is gone in 6.0, making per-item ownership unsound).
+- New `software_renderer` feature wires raylib's `rlsw` (Platform::Memory) backend for fully headless rendering — no GPU or window required.
+- raygui at 6.0 parity (57/57 functions, module split into grouped sub-traits, `impl AsRef<str>` + thread-local scratch buffer); new safe immediate-mode `rlgl` module (`RlMatrix`/`RlImmediate` RAII guards, `&Texture2D`/`&Shader` bind helpers).
+- Layered CI: `check.yml` / `test.yml` / `web.yml` / `sanitizers.yml` / `book.yml`; quality hard-gates (fmt, clippy `-Dwarnings`, `deny(missing_docs)`, cargo-deny, MSRV 1.85) fail on violation.
+- mdBook docs at `book/` — 28 chapters covering quickstart, platform build guides, core concepts, and per-module chapters (build-only in CI; public deploy lands in WS9).
+
+### Breaking
+
+- **MSRV is now 1.85** (edition 2024).
+- `MintVec2`/`MintVec3`/`MintVec4`/`MintMatrix`/`MintQuat` are `#[deprecated]` — use the native types directly. The `mint` feature opt-in remains.
+- `glam`/`mint`/`serde` are **no longer default-on** for `raylib-sys`; enable them explicitly as optional features.
+- **raygui** module split into grouped sub-traits (`RaylibGuiState`, `RaylibGuiContainers`, `RaylibGuiControls`, `RaylibGuiAdvanced`, `RaylibGuiIcons`); control-label parameters are now `impl AsRef<str>` (no `CStr` required).
+- **Skeletal-animation loading** returns a `ModelAnimations` RAII wrapper (owns the heap array; frees all frames on drop). The old per-animation owning pattern is removed.
+- **Removed in 6.0:** `DrawModelPoints` / `DrawModelPointsEx` (no 6.0 replacement); `UpdateModelAnimationBones` (superseded by redesigned `UpdateModelAnimation(model, anim, frame: f32)`); the singular `unload_model_animation`; `FilePathList::capacity` (removed from the C struct); the `custom_audio_stream_callback` trampoline (`set_audio_stream_callback` on `RaylibHandle`; the generic callback in `callbacks/` is the live path).
+- **`SUPPORT_*` feature flag set reconciled with raylib 6.0 `config.h`:** removed `SUPPORT_GIF_RECORDING`, `SUPPORT_IMAGE_MANIPULATION`, `SUPPORT_DEFAULT_FONT`, `SUPPORT_FONT_ATLAS_WHITE_REC`, `SUPPORT_TEXT_MANIPULATION`, `SUPPORT_STANDARD_FILEIO` (unconditional in 6.0), `SUPPORT_DISTORTION_SHADER`, `SUPPORT_FONT_TEXTURE`, `SUPPORT_VR_SIMULATOR` from the feature list; added `SUPPORT_FILEFORMAT_PNM` and `SUPPORT_GPU_SKINNING` (both default-off in 6.0).
+- **Signature changes (6.0 ABI):** `DrawCircleGradient` takes a `Vector2` center instead of separate `i32 x, y`; `UpdateModelAnimation` `frame` is now `f32`; `LoadFontData` gained a trailing `glyphCount` out-parameter; `SaveFileTextCallback` trampoline `text` is now `*const i8`; `DecodeDataBase64` input is `*const i8`.
+- `Image::gen_image_*` family is now cfg-gated on `SUPPORT_IMAGE_GENERATION` (MSVC link fix).
+- **`samples/` directory removed.** Migration: see [`showcase/`](./showcase) for runnable Rust ports of raylib's C examples. Anyone running `cd samples && cargo run --bin <name>` against the pre-release 6.0-rc branch should switch to `showcase/` instead. The WS9 finale of the 6.0 effort completes the port of all upstream examples and publishes the gallery as a GitHub Pages site.
+
+### Added
+
+- `software_renderer` feature + `raylib::test_harness` module (`with_headless`, `render_frame`, `render_frame_raw`, `pixel_at`, `assert_pixel`).
+- Safe `rlgl` module (`raylib::rlgl`): `rl_begin` / `rl_draw` / `rl_push_matrix` returning RAII guards (`RlImmediate`, `RlMatrix`); render-state toggles; `&Texture2D`/`&Shader` bind helpers.
+- `Vector2::{ZERO,ONE}` / `Vector3::{ZERO,ONE,X,Y,Z}` constants.
+- `UpdateModelAnimationEx` (6.0 blended animation).
+- `export_image_to_memory` returns `DataBuf<[u8]>` (frees on drop, no leak).
+- `get_random_value` now takes `RangeInclusive` matching the FFI semantics.
+- `get_window_state` fixed; all 14 window-state setter methods are `#[must_use]`.
+- Tier-1 unit tests: 42 window-independent tests across collision (17), color (13), easing (12 + Tween).
+- Tier-2 headless render tests via `software_renderer`: `render_shapes`, `render_text`, `render_gui`, `render_rlgl`.
+- `full` feature alias — curated max-capability set for `raylib` and `raylib-sys`.
+- `deny.toml` — cargo-deny license allowlist + RUSTSEC vulnerability/unsound gates.
+- `book/` — mdBook with 28 chapters: introduction, quickstart, 4 platform install guides, 5 Core Concepts, 14 Modules, 2 Ecosystem chapters.
+- Rustdoc enriched on ~25 high-traffic types: crate-level docs, `RaylibHandle`/`RaylibThread`/`RaylibBuilder`, `RaylibDraw` trait, `Color`/`Rectangle`, `Image`/`Texture2D`/`RenderTexture2D`, `Mesh`/`Model`/`Material`/`ModelAnimations`, `RaylibAudio`/`Wave`/`Sound`/`Music`/`AudioStream`, `Shader`, `Font`, `Vector2`/`Vector3`/`Vector4`/`Matrix`/`Quaternion`, collision module, `test_harness` module, rgui module, rlgl module.
+
+### Fixed
+
+- **Mesh-accessor soundness** — all 10 `RaylibMesh` slice accessors guarded against null/zero (were `slice::from_raw_parts(null, n)`); `indices`/`indices_mut` corrected to `triangleCount * 3` (was `vertexCount`); 4 safe `texcoords`/`texcoords2` accessors added (PR #257 / #118 / #256 with attribution).
+- **Sound unsound impls** — removed `AsRef`/`AsMut<ffi::AudioStream> for Sound` which exposed raw pointer fields to safe mutation (from PR #277, partial — full refactor deferred).
+- **`c"..."` literal modernization** (PR #272, AmityWilder) — `CStr::from_bytes_with_nul` replaced by C-string literals in audio and file modules.
+- **`Into`→`From` idiom** (PR #268, AmityWilder) — 11 `impl Into<T> for U` → `impl From<U> for T` across color, camera, texture, vr modules.
+- **`AudioSample` sealed** (PR #266, AmityWilder) — `AudioSample` is now a sealed trait (closes #213).
+- **Platform enum acronyms** — `Platform::{DRM,RPI}` → `{Drm,Rpi}`, `PlatformOS::{BSD,OSX}` → `{Bsd,Osx}` to satisfy `clippy::upper_case_acronyms`.
+- **mipmaps accessor** — returned width instead of mipmap count (PR #259, AmityWilder).
+- **`ease::quad_in_out` bug** — undershot at `t=d` due to wrong term in the Penner port (surfaced by Tier-1 test).
+- **Broken intra-doc links** — 17 pre-existing broken links fixed by WS6a's `RUSTDOCFLAGS=-Dwarnings` sweep.
+- **Docs: color cheatsheet** — `color.rs` docstrings aligned with the raylib cheatsheet (PR #284, LBreede).
+- **Docs: logging module-doc** — `logging.rs` outer doc comment corrected (PR #273, AmityWilder).
+- **Issue #291** — broken `RaylibHandle::draw` API in docs: resolved by PR #152 (already merged before 6.0 work); confirmed by `RUSTDOCFLAGS=-Dwarnings` CI gate.
+- **Issue #290** — broken docs.rs links: resolved by MSRV bump to Rust 1.85 (rustdoc re-export path fix) + `RUSTDOCFLAGS=-Dwarnings` CI gate.
+
+### Deferred (tracked, not in 6.0.0)
+
+- **Full PR #277 wrapper-soundness refactor** — remove macro-generated `AsRef`/`AsMut`/`Deref`/`DerefMut` on pointer-owning wrappers; convert `impl AsRef<ffi::X>` param bounds to typed references (WS3-scale).
+- **`get_gamepad_button_pressed` transmute** (`input.rs`) — `transmute::<u32, GamepadButton>` where `GamepadButton` is `#[repr(i32)]`; latent UB on out-of-range return; small fix.
+- **`raylib-test` delete-or-fix** — stale integration-test suite; `integration-xvfb` CI job is non-required; decision deferred to WS9.
+- **`rlsw` on wasm32** — `software_renderer` + emscripten is currently a `compile_error!` guard; a real fix requires re-ordering `platform_from_target` in `build.rs`.
+- **UBSAN through the FFI boundary** — C-side UBSAN runtime link fails under `rust-lld`; informational only (requires `-C linker=gcc`/`libubsan`).
+- **`paste` alternative** — cargo-deny flags this direct dep as unmaintained; rewrite or library swap tracked for a future workstream (accepted with rationale in `deny.toml`).
+- **Full rustdoc rewrite** of remaining 208 stub-level items — selective enrichment only in WS7; future passes can extend.
+- **Public Pages deploy** of book + showcase gallery → WS9.
+- **Custom book theme** → WS9.
+- **Safe abstractions for `GuiGetIcons`/`GuiLoadIcons`** (currently `unsafe` + `# Safety`) + PR #296 (`GuiLoadStyleFromMemory`) — revisit when vendored raygui advances.
+
+### Internal
+
+- Long-lived `6.0-rc` branch; single merge to `raylib-rs/unstable` at WS8 — never piecemeal.
+- `baseline.yml` retired; replaced by layered `check`/`test`/`web`/`sanitizers`/`book` workflows.
+- Parity checklist at `docs/superpowers/parity-checklist.md` tracks every `raylib.h` RLAPI function.
+- Accepted `paste 1.0` cargo-deny unmaintained advisory (RUSTSEC-2024-0436) with rationale in `deny.toml`. Rewrite or library swap tracked for a future workstream.
+- Dropped `structopt 0.3` dev-dependency (only used by the removed `samples/` binaries); clears the cargo-deny unmaintained advisory for that crate.
+
 ## 5.7.0
 - More improved ergonomics
 - REFACTOR: Everything that interfaces with `raylib-sys` **has to use mint vectors** because as it has the most common supported interface type in the rust ecosystem. (tl;dr Replaced `ffi::Vectors -> mint::Vectors`)

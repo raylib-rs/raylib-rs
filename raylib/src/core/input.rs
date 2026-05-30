@@ -1,12 +1,12 @@
 //! Keyboard, Controller, and Mouse related functions
 use crate::consts::Gesture;
-use crate::core::math::Vector2;
 use crate::core::RaylibHandle;
+use crate::core::math::Vector2;
 use crate::{ffi, trace_log};
 use raylib_sys::TraceLogLevel;
 
-use std::ffi::c_char;
 use std::ffi::CStr;
+use std::ffi::c_char;
 
 impl RaylibHandle {
     /// Detect if a key has been pressed once.
@@ -163,7 +163,9 @@ impl RaylibHandle {
     pub fn get_gamepad_button_pressed(&self) -> Option<crate::consts::GamepadButton> {
         let button = unsafe { ffi::GetGamepadButtonPressed() };
         if button != raylib_sys::GamepadButton::GAMEPAD_BUTTON_UNKNOWN as i32 {
-            return Some(unsafe { std::mem::transmute(button as u32) });
+            return Some(unsafe {
+                std::mem::transmute::<u32, crate::consts::GamepadButton>(button as u32)
+            });
         }
         None
     }
@@ -228,14 +230,14 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_mouse_position(&self) -> Vector2 {
-        unsafe { ffi::GetMousePosition().into() }
+        unsafe { ffi::GetMousePosition() }
     }
 
     /// Returns mouse delta between frames.
     #[inline]
     #[must_use]
     pub fn get_mouse_delta(&self) -> Vector2 {
-        unsafe { ffi::GetMouseDelta().into() }
+        unsafe { ffi::GetMouseDelta() }
     }
 
     /// Sets mouse position.
@@ -275,7 +277,7 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_mouse_wheel_move_v(&self) -> Vector2 {
-        unsafe { ffi::GetMouseWheelMoveV().into() }
+        unsafe { ffi::GetMouseWheelMoveV() }
     }
 
     /// Returns touch position X for touch point 0 (relative to screen size).
@@ -296,14 +298,14 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_touch_position(&self, index: u32) -> Vector2 {
-        unsafe { ffi::GetTouchPosition(index as i32).into() }
+        unsafe { ffi::GetTouchPosition(index as i32) }
     }
 
     /// Enables a set of gestures using flags.
     #[inline]
     pub fn set_gestures_enabled(&self, gesture_flags: u32) {
         unsafe {
-            ffi::SetGesturesEnabled(gesture_flags as u32);
+            ffi::SetGesturesEnabled(gesture_flags);
         }
     }
 
@@ -365,7 +367,7 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_gesture_drag_vector(&self) -> Vector2 {
-        unsafe { ffi::GetGestureDragVector().into() }
+        unsafe { ffi::GetGestureDragVector() }
     }
 
     /// Gets gesture drag angle.
@@ -379,7 +381,7 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_gesture_pinch_vector(&self) -> Vector2 {
-        unsafe { ffi::GetGesturePinchVector().into() }
+        unsafe { ffi::GetGesturePinchVector() }
     }
 
     /// Gets gesture pinch angle.
@@ -390,6 +392,7 @@ impl RaylibHandle {
     }
 }
 
+/// Convert a raw integer keycode into a typed [`KeyboardKey`](crate::consts::KeyboardKey), returning `None` for unknown values.
 #[must_use]
 pub fn key_from_i32(key: i32) -> Option<crate::consts::KeyboardKey> {
     use crate::consts::KeyboardKey::*;

@@ -1,4 +1,4 @@
 [workspace]
 members = ["raylib", "raylib-sys"]
-exclude = ["raylib-test", "samples"]
+exclude = ["raylib-test"]
 resolver = "2"

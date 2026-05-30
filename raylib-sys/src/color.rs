@@ -1,10 +1,31 @@
 //! [`Color`] manipulation helpers
 
-use crate::math::{Vector3, Vector4};
+use crate::{Vector3, Vector4};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Color, 4 components, R8G8B8A8 (32bit)
+/// A 32-bit RGBA color value with 8 bits per channel.
+///
+/// `Color` is a `#[repr(C)]` struct with fields `r`, `g`, `b`, `a` each in the range `0..=255`.
+/// It maps directly to raylib's `Color` type in C.
+///
+/// A large set of named constants is available via the bundled `Color::RED`, `Color::WHITE`,
+/// `Color::RAYWHITE`, etc. — see the impl block below for the full list. CSS color names are also
+/// available through the [`CSSPalette`] trait and raylib palette names through [`RaylibPalette`].
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib_sys::Color;
+///
+/// // Construct a color and compare against a named constant
+/// let red = Color::new(255, 0, 0, 255);
+/// assert_eq!(red, Color::RED);
+///
+/// // Use alpha() to get a semi-transparent variant
+/// let semi = Color::RED.alpha(0.5);
+/// assert!(semi.a < 200);
+/// ```
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -21,24 +42,24 @@ pub const fn rcolor(r: u8, g: u8, b: u8, a: u8) -> Color {
     Color::new(r, g, b, a)
 }
 
-impl Into<Vector4> for Color {
-    fn into(self) -> Vector4 {
+impl From<Color> for Vector4 {
+    fn from(v: Color) -> Self {
         Vector4 {
-            x: self.r as f32 / 255.0,
-            y: self.g as f32 / 255.0,
-            z: self.b as f32 / 255.0,
-            w: self.a as f32 / 255.0,
+            x: v.r as f32 / 255.0,
+            y: v.g as f32 / 255.0,
+            z: v.b as f32 / 255.0,
+            w: v.a as f32 / 255.0,
         }
     }
 }
 
-impl Into<Color> for &Color {
-    fn into(self) -> Color {
+impl From<&Color> for Color {
+    fn from(v: &Color) -> Self {
         Color {
-            r: self.r,
-            g: self.g,
-            b: self.b,
-            a: self.a,
+            r: v.r,
+            g: v.g,
+            b: v.b,
+            a: v.a,
         }
     }
 }
@@ -70,75 +91,75 @@ impl Color {
         Color { r, g, b, a }
     }
 
-    /// Returns hexadecimal value for a Color
+    /// Get hexadecimal value for a Color (0xRRGGBBAA)
     #[inline]
     pub fn color_to_int(&self) -> i32 {
         unsafe { super::ColorToInt(self.into()) }
     }
 
-    /// Returns color normalized as float [0..1]
+    /// Get Color normalized as float [0..1]
     #[inline]
     pub fn color_normalize(&self) -> Vector4 {
-        unsafe { super::ColorNormalize(self.into()).into() }
+        unsafe { super::ColorNormalize(self.into()) }
     }
 
-    /// Returns HSV values for a Color
+    /// Get HSV values for a Color, hue [0..360], saturation/value [0..1]
     #[inline]
     pub fn color_to_hsv(&self) -> Vector3 {
-        unsafe { super::ColorToHSV(self.into()).into() }
+        unsafe { super::ColorToHSV(self.into()) }
     }
 
-    /// Returns a Color from HSV values
+    /// Get a Color from HSV values, hue [0..360], saturation/value [0..1]
     #[inline]
     pub fn color_from_hsv(hue: f32, saturation: f32, value: f32) -> Color {
-        unsafe { super::ColorFromHSV(hue, saturation, value).into() }
+        unsafe { super::ColorFromHSV(hue, saturation, value) }
     }
 
-    /// Returns color from normalized values [0..1]
+    /// Get Color from normalized values [0..1]
     #[inline]
     pub fn color_from_normalized(normalized: Vector4) -> Color {
-        unsafe { super::ColorFromNormalized(normalized.into()).into() }
+        unsafe { super::ColorFromNormalized(normalized) }
     }
 
-    /// Returns a Color struct from hexadecimal value
+    /// Get Color structure from hexadecimal value
     #[inline]
     pub fn get_color(hex_value: u32) -> Color {
-        unsafe { super::GetColor(hex_value).into() }
+        unsafe { super::GetColor(hex_value) }
     }
 
     /// Get color multiplied with another color
     #[inline]
     pub fn tint(&self, color: Self) -> Self {
-        unsafe { super::ColorTint(self.into(), color.into()).into() }
+        unsafe { super::ColorTint(self.into(), color) }
     }
     /// Get color with brightness correction, brightness factor goes from -1.0f to 1.0f
     #[inline]
     pub fn brightness(&self, factor: f32) -> Self {
-        unsafe { super::ColorBrightness(self.into(), factor).into() }
+        unsafe { super::ColorBrightness(self.into(), factor) }
     }
     /// Get color with contrast correction, contrast values between -1.0f and 1.0f
     #[inline]
     pub fn contrast(&self, factor: f32) -> Self {
-        unsafe { super::ColorContrast(self.into(), factor).into() }
+        unsafe { super::ColorContrast(self.into(), factor) }
     }
     /// Get color with alpha applied, alpha goes from 0.0f to 1.0f
     #[inline]
     pub fn alpha(&self, alpha: f32) -> Self {
-        unsafe { super::ColorAlpha(self.into(), alpha).into() }
+        unsafe { super::ColorAlpha(self.into(), alpha) }
     }
 
     /// Get color with alpha applied, alpha goes from 0.0f to 1.0f
     #[deprecated = "Use Color::alpha instead"]
     pub fn fade(&self, alpha: f32) -> Self {
-        unsafe { super::Fade(self.into(), alpha).into() }
+        unsafe { super::Fade(self.into(), alpha) }
     }
 
     /// Color fade-in or fade-out, alpha goes from 0.0f to 1.0f
     #[inline]
     pub fn color_alpha_blend(dst: &Color, src: &Color, tint: &Color) -> Color {
-        unsafe { super::ColorAlphaBlend(dst.into(), src.into(), tint.into()).into() }
+        unsafe { super::ColorAlphaBlend(dst.into(), src.into(), tint.into()) }
     }
-    /// Check if color is equal to another.
+    /// Check if two colors are equal
     #[inline]
     pub fn is_equal(&self, rhs: impl Into<super::Color>) -> bool {
         unsafe { super::ColorIsEqual(self.into(), rhs.into()) }
@@ -147,7 +168,7 @@ impl Color {
     /// Get color lerp interpolation between two colors, factor [0.0f..1.0f]
     #[inline]
     pub fn lerp(&self, rhs: Color, factor: f32) -> Color {
-        unsafe { super::ColorLerp(self.into(), rhs.into(), factor).into() }
+        unsafe { super::ColorLerp(self.into(), rhs, factor) }
     }
 }
 
@@ -155,7 +176,7 @@ impl Color {
 /// change or do anything different, but in the ultra rare case that it does, we want to mimic Raylib's behavior.
 impl PartialEq for Color {
     fn eq(&self, other: &Self) -> bool {
-        return self.is_equal(other);
+        self.is_equal(other)
     }
 }
 impl Eq for Color {}

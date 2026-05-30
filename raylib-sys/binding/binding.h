@@ -1,4 +1,5 @@
 #include "raygui.h"
+#include "../raylib/src/raymath.h"
 #include "../raylib/src/rlgl.h"
 #include "../raylib/src/rcamera.h"
 #include "utils_log.h"

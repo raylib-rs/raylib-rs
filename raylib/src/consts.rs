@@ -6,6 +6,7 @@ pub use ffi::CameraMode;
 pub use ffi::CameraProjection;
 pub use ffi::ConfigFlags;
 pub use ffi::CubemapLayout;
+pub use ffi::DEG2RAD;
 pub use ffi::GamepadAxis;
 pub use ffi::GamepadButton;
 pub use ffi::Gesture;
@@ -19,29 +20,20 @@ pub use ffi::ShaderUniformDataType;
 pub use ffi::TextureFilter;
 pub use ffi::TextureWrap;
 pub use ffi::TraceLogLevel;
-pub use ffi::DEG2RAD;
 // TODO Fix when rlgl bindings are in
+/// Maximum number of material maps per `Material` (matches `MAX_MATERIAL_MAPS` in raylib's `config.h`).
 pub const MAX_MATERIAL_MAPS: u32 = 12;
+/// Maximum number of shader locations tracked per `Shader` (matches `RL_MAX_SHADER_LOCATIONS`).
 pub const MAX_SHADER_LOCATIONS: u32 = 32;
-pub use ffi::GuiCheckBoxProperty;
-pub use ffi::GuiColorPickerProperty;
-pub use ffi::GuiComboBoxProperty;
-pub use ffi::GuiControl;
-pub use ffi::GuiControlProperty;
-pub use ffi::GuiDefaultProperty;
-pub use ffi::GuiDropdownBoxProperty;
-pub use ffi::GuiIconName;
-pub use ffi::GuiListViewProperty;
-pub use ffi::GuiProgressBarProperty;
-pub use ffi::GuiScrollBarProperty;
-pub use ffi::GuiSliderProperty;
-pub use ffi::GuiState;
-pub use ffi::GuiTextAlignment;
-pub use ffi::GuiTextAlignmentVertical;
-pub use ffi::GuiTextBoxProperty;
-pub use ffi::GuiTextWrapMode;
-pub use ffi::GuiToggleProperty;
-pub use ffi::GuiValueBoxProperty;
+
 pub use ffi::MouseCursor;
 pub use ffi::PI;
 pub use ffi::RAD2DEG;
+#[cfg(not(feature = "nobuild"))]
+pub use ffi::{
+    GuiCheckBoxProperty, GuiColorPickerProperty, GuiComboBoxProperty, GuiControl,
+    GuiControlProperty, GuiDefaultProperty, GuiDropdownBoxProperty, GuiIconName,
+    GuiListViewProperty, GuiProgressBarProperty, GuiScrollBarProperty, GuiSliderProperty, GuiState,
+    GuiTextAlignment, GuiTextAlignmentVertical, GuiTextBoxProperty, GuiTextWrapMode,
+    GuiToggleProperty, GuiValueBoxProperty,
+};
