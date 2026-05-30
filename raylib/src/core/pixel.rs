@@ -136,3 +136,28 @@ pub fn set_pixel_color(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::consts::PixelFormat;
+
+    /// Every uncompressed PixelFormat paired with its bytes-per-pixel
+    /// count. Used by the round-trip tests, the bytes_per_pixel
+    /// cross-check, and the trailing-bytes test.
+    const UNCOMPRESSED_FORMATS: &[(PixelFormat, usize)] = &[
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_GRAYSCALE, 1),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA, 2),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R5G6B5, 2),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R5G5B5A1, 2),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R4G4B4A4, 2),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8, 3),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 4),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R32, 4),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R32G32B32, 12),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R32G32B32A32, 16),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R16, 2),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R16G16B16, 6),
+        (PixelFormat::PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 8),
+    ];
+}
