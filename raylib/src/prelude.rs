@@ -60,6 +60,7 @@ pub use crate::core::logging::*;
 pub use crate::core::math::*;
 pub use crate::core::misc::*;
 pub use crate::core::models::*;
+pub use crate::core::pixel::*;
 pub use crate::core::shaders::*;
 pub use crate::core::text::*;
 pub use crate::core::texture::*;

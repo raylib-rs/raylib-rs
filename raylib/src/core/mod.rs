@@ -27,6 +27,7 @@ pub mod logging;
 pub mod math;
 pub mod misc;
 pub mod models;
+pub mod pixel;
 pub mod shaders;
 pub mod text;
 pub mod texture;
