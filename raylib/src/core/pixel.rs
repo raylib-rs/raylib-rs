@@ -432,4 +432,49 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn trailing_bytes_are_ignored() {
+        // 64-byte buffer fed to a 4-byte format must produce the same result
+        // as exactly 4 bytes.
+        let exact = [0x11, 0x22, 0x33, 0x44];
+        let long = [
+            0x11, 0x22, 0x33, 0x44, // first pixel
+            0xAA, 0xBB, 0xCC, 0xDD, // these bytes must be ignored
+            0xEE, 0xFF, 0x00, 0x11, //
+            0x22, 0x33, 0x44, 0x55, //
+        ];
+
+        let got_exact =
+            get_pixel_color(&exact, PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8).unwrap();
+        let got_long =
+            get_pixel_color(&long, PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8).unwrap();
+        assert_eq!(got_exact, got_long, "trailing bytes must not affect read");
+
+        // Symmetric check for set: writing to a too-long buffer touches
+        // only the first N bytes.
+        let mut exact_out = [0u8; 4];
+        let mut long_out = [0u8; 16];
+        let sentinel = 0xA5;
+        long_out[4..].fill(sentinel);
+        let color = Color::new(0x11, 0x22, 0x33, 0x44);
+
+        set_pixel_color(
+            &mut exact_out,
+            color,
+            PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+        )
+        .unwrap();
+        set_pixel_color(
+            &mut long_out,
+            color,
+            PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+        )
+        .unwrap();
+
+        assert_eq!(&long_out[..4], &exact_out, "first 4 bytes must match");
+        for (i, &b) in long_out[4..].iter().enumerate() {
+            assert_eq!(b, sentinel, "byte {} past the pixel must be untouched", i + 4);
+        }
+    }
 }
