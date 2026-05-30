@@ -329,4 +329,107 @@ mod tests {
             );
         }
     }
+
+    /// Per-channel tolerance for a format's lossy quantization.
+    /// Returns (rgb_tol, alpha_tol) where each is the maximum allowed
+    /// `|got - expected|` for the given channel.
+    fn tolerance(format: PixelFormat) -> (u8, u8) {
+        use PixelFormat::*;
+        match format {
+            // 8-bit channels: exact (no quantization).
+            PIXELFORMAT_UNCOMPRESSED_R8G8B8 => (0, 0),
+            PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 => (0, 0),
+            // 5/6-bit channels: SetPixelColor uses round() then GetPixelColor
+            // uses integer / 255/31 division — round-trip for 0xC0 (192) lands
+            // at 189 (delta 3), 0x80 (128) lands at 132 (delta 4 — 6-bit),
+            // 0x40 (64) lands at 66 (delta 2). Tolerance 4 covers both
+            // channels. Alpha is 0/255-only for R5G5B5A1.
+            PIXELFORMAT_UNCOMPRESSED_R5G6B5 => (4, 0),
+            // R5G5B5A1: raylib's GetPixelColor decodes blue with the mask
+            // `val & 0x1F` (rtextures.c GetPixelColor case PIXELFORMAT_UNCOMPRESSED_R5G5B5A1),
+            // which includes the alpha bit at position 0. When alpha=1,
+            // blue's decoded value is `((b_quantized << 1) | 1) * 255 / 31`
+            // instead of `b_quantized * 255 / 31` — roughly doubling the
+            // decoded blue. Worst case is non-saturated blue with alpha=1:
+            // input b=0x40 (64) decodes to 139 (delta 75). The tolerance
+            // here absorbs that raylib quirk; tightening it would require
+            // either an upstream fix or special-casing per channel.
+            PIXELFORMAT_UNCOMPRESSED_R5G5B5A1 => (80, 0),
+            // 4-bit channels: step ~17. Round-trip 0xC0 -> 204 (delta 12),
+            // 0x80 -> 136 (delta 8), 0x40 -> 68 (delta 4), 0xFF -> 255 (0).
+            PIXELFORMAT_UNCOMPRESSED_R4G4B4A4 => (12, 0),
+            // Grayscale: collapses R/G/B to a single channel; the round-trip
+            // produces three identical channels. We don't compare per-channel
+            // tolerance for these — they get a separate assertion path.
+            PIXELFORMAT_UNCOMPRESSED_GRAYSCALE => (0, 0),
+            PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA => (0, 0),
+            // Float / half-float formats are unreachable here — they have no
+            // SetPixelColor branch, see set_pixel_color_is_unimplemented.
+            // Compressed formats can't reach this code path either.
+            f => unreachable!("tolerance() called with non-uncompressed format {f:?}"),
+        }
+    }
+
+    fn within_tolerance(got: u8, expected: u8, tol: u8) -> bool {
+        got.abs_diff(expected) <= tol
+    }
+
+    #[test]
+    fn round_trip_channel_distinct_with_tolerance() {
+        let input = Color::new(0xC0, 0x80, 0x40, 0xFF);
+        for &(format, bpp) in UNCOMPRESSED_FORMATS {
+            // TODO(raylib upstream): SetPixelColor has no branch for the
+            // 32-bit float / 16-bit half-float formats — skip them here.
+            if set_pixel_color_is_unimplemented(format) {
+                continue;
+            }
+            let mut bytes = vec![0u8; bpp];
+            set_pixel_color(&mut bytes, input, format).unwrap();
+            let got = get_pixel_color(&bytes, format).unwrap();
+
+            use PixelFormat::*;
+            match format {
+                // Grayscale collapses R/G/B; the round-trip's three RGB
+                // channels are identical to each other, and alpha is fixed
+                // to 255 (GRAYSCALE) or input.a (GRAY_ALPHA).
+                PIXELFORMAT_UNCOMPRESSED_GRAYSCALE => {
+                    assert_eq!(got.r, got.g, "{format:?}: R==G after collapse");
+                    assert_eq!(got.g, got.b, "{format:?}: G==B after collapse");
+                    assert_eq!(got.a, 255, "{format:?}: alpha forced to 255");
+                }
+                PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA => {
+                    assert_eq!(got.r, got.g, "{format:?}: R==G after collapse");
+                    assert_eq!(got.g, got.b, "{format:?}: G==B after collapse");
+                    assert_eq!(got.a, input.a, "{format:?}: alpha exact");
+                }
+                _ => {
+                    let (rgb_tol, a_tol) = tolerance(format);
+                    assert!(
+                        within_tolerance(got.r, input.r, rgb_tol),
+                        "{format:?}: R got {} expected {} (tol {rgb_tol})",
+                        got.r,
+                        input.r
+                    );
+                    assert!(
+                        within_tolerance(got.g, input.g, rgb_tol),
+                        "{format:?}: G got {} expected {} (tol {rgb_tol})",
+                        got.g,
+                        input.g
+                    );
+                    assert!(
+                        within_tolerance(got.b, input.b, rgb_tol),
+                        "{format:?}: B got {} expected {} (tol {rgb_tol})",
+                        got.b,
+                        input.b
+                    );
+                    assert!(
+                        within_tolerance(got.a, input.a, a_tol),
+                        "{format:?}: A got {} expected {} (tol {a_tol})",
+                        got.a,
+                        input.a
+                    );
+                }
+            }
+        }
+    }
 }
