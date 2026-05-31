@@ -360,7 +360,27 @@ impl Model {
     }
 }
 
-/// Methods for querying and mutating a loaded 3D model's meshes, materials, bones, and transform.
+/// Extension trait that exposes the meshes, materials, skeleton, and transform of a loaded 3-D model.
+///
+/// Implemented for both [`Model`] (owning) and [`WeakModel`] (non-owning view).
+/// Bring this trait into scope to call the accessors on either variant.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("model").build();
+/// let model = rl.load_model(&thread, "assets/character.glb").unwrap();
+/// // Trait methods like `meshes()` and `materials()` come from `RaylibModel`.
+/// println!("model has {} mesh(es)", model.meshes().len());
+/// ```
+///
+/// # See also
+///
+/// - [`Model`] — the owned model type this trait extends
+/// - [`RaylibMesh`] — sibling trait for per-mesh accessors
+/// - [`RaylibMaterial`] — sibling trait for per-material accessors
 pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     #[inline]
     #[must_use]
@@ -370,6 +390,24 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     }
 
     /// Sets the model's local transform matrix.
+    ///
+    /// Replaces the per-instance transform applied before each draw. Compose translation,
+    /// rotation, and scale into a single [`Matrix`] and assign it here once per frame.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use raylib::prelude::*;
+    ///
+    /// let (mut rl, thread) = raylib::init().size(800, 600).title("xform").build();
+    /// let mut model = rl.load_model(&thread, "assets/character.glb").unwrap();
+    /// let m = Matrix::translate(2.0, 0.0, 0.0) * Matrix::rotate_y(0.5);
+    /// model.set_transform(&m);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`RaylibModel::transform`] — read the current transform
     #[inline]
     fn set_transform(&mut self, mat: &Matrix) {
         self.as_mut().transform = *mat;
@@ -386,7 +424,28 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
             )
         }
     }
-    /// Meshes array (mutable)
+    /// Mutable slice over the model's meshes.
+    ///
+    /// Returns non-owning [`WeakMesh`] views into the model's `meshCount`-long mesh array.
+    /// Mutate vertex data in place; the meshes remain owned by (and freed with) the model.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use raylib::prelude::*;
+    ///
+    /// let (mut rl, thread) = raylib::init().size(800, 600).title("meshes").build();
+    /// let mut model = rl.load_model(&thread, "assets/character.glb").unwrap();
+    /// for mesh in model.meshes_mut() {
+    ///     // e.g. recompute tangents in place
+    ///     mesh.gen_mesh_tangents(&thread);
+    /// }
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`RaylibModel::meshes`] — immutable counterpart
+    /// - [`RaylibMesh`] — mesh accessor trait
     #[inline]
     #[must_use]
     fn meshes_mut(&mut self) -> &mut [WeakMesh] {
@@ -524,7 +583,28 @@ impl Mesh {
         m
     }
 }
-/// Methods for querying and mutating mesh vertex data, uploading to GPU, and generating mesh shapes.
+/// Extension trait that exposes vertex-attribute slices, GPU upload, and mesh-generator helpers.
+///
+/// Implemented for both [`Mesh`] (owning) and [`WeakMesh`] (non-owning view). Brings typed
+/// `vertices()`, `normals()`, `texcoords()`, `colors()`, `indices()` accessors and the
+/// `gen_mesh_*` family (cube, sphere, plane, torus, knot, heightmap, cubicmap, etc.) onto
+/// the parent types.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("mesh").build();
+/// let cube = Mesh::gen_mesh_cube(&thread, 1.0, 1.0, 1.0);
+/// println!("cube has {} vertices", cube.vertices().len());
+/// ```
+///
+/// # See also
+///
+/// - [`Mesh`] — the owned mesh type this trait extends
+/// - [`MeshBuilder`] — assemble a custom mesh from typed vertex slices
+/// - [`RaylibModel`] — sibling trait for whole-model accessors
 pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// Upload mesh vertex data in GPU and provide VAO/VBO ids
     ///
@@ -876,7 +956,29 @@ impl Material {
 impl RaylibMaterial for WeakMaterial {}
 impl RaylibMaterial for Material {}
 
-/// Methods for querying and mutating a material's shader, texture maps, and validity.
+/// Extension trait that exposes a material's shader, texture maps, and validity check.
+///
+/// Implemented for both [`Material`] (owning) and [`WeakMaterial`] (non-owning view).
+/// Use it to swap textures into specific map slots (diffuse, specular, normal, etc.)
+/// or to inspect the assigned shader.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::consts::MaterialMapIndex::MATERIAL_MAP_ALBEDO;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("material").build();
+/// let mut model = rl.load_model(&thread, "assets/character.glb").unwrap();
+/// let tex = rl.load_texture(&thread, "assets/diffuse.png").unwrap();
+/// model.materials_mut()[0].set_material_texture(MATERIAL_MAP_ALBEDO, &tex);
+/// ```
+///
+/// # See also
+///
+/// - [`Material`] — the owned material type this trait extends
+/// - [`MaterialMap`] — per-slot texture / color / value triple
+/// - [`RaylibModel::materials_mut`] — borrow a model's materials
 pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     /// Material shader
     #[must_use]
@@ -933,7 +1035,28 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     }
 }
 
-/// An iterator over the per-frame bone transform slices of a model animation (immutable).
+/// Iterator over the per-frame bone-transform slices of a [`ModelAnimation`] (immutable).
+///
+/// Each `next()` call yields a `&[Transform]` of length `boneCount` — the pose of every
+/// bone at one keyframe. Construct via [`RaylibModelAnimation::frame_poses_iter`].
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("anim").build();
+/// let anims = rl.load_model_animations(&thread, "assets/character.glb").unwrap();
+/// let first = &anims[0];
+/// for (i, pose) in first.frame_poses_iter().enumerate() {
+///     println!("frame {i}: {} bones", pose.len());
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`FramePoseIterMut`] — mutable counterpart
+/// - [`ModelAnimation`] — the parent animation value
 #[derive(Debug, Clone)]
 pub struct FramePoseIter<'a> {
     iter: std::slice::Iter<'a, Option<&'a [Transform]>>,
@@ -1011,7 +1134,31 @@ impl ExactSizeIterator for FramePoseIter<'_> {
         self.iter.len()
     }
 }
-/// An iterator over the per-frame bone transform slices of a model animation (mutable).
+/// Iterator over the per-frame bone-transform slices of a [`ModelAnimation`] (mutable).
+///
+/// Each `next()` call yields a `&mut [Transform]` of length `boneCount` so callers can
+/// retarget or scale poses in place. Construct via [`RaylibModelAnimation::frame_poses_iter_mut`].
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("anim").build();
+/// let mut anims = rl.load_model_animations(&thread, "assets/character.glb").unwrap();
+/// let first = &mut anims.as_mut_slice()[0];
+/// for pose in first.frame_poses_iter_mut() {
+///     // shrink every bone's translation toward the origin
+///     for t in pose.iter_mut() {
+///         t.translation *= 0.5;
+///     }
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`FramePoseIter`] — immutable counterpart
+/// - [`ModelAnimation`] — the parent animation value
 #[derive(Debug)]
 pub struct FramePoseIterMut<'a> {
     iter: std::slice::IterMut<'a, Option<&'a mut [Transform]>>,
@@ -1108,7 +1255,31 @@ impl ModelAnimation {
     }
 }
 
-/// Methods for accessing keyframe pose data from a model animation.
+/// Extension trait that exposes per-keyframe bone-pose access on a [`ModelAnimation`].
+///
+/// Implemented for both [`ModelAnimation`] (borrowed view from a [`ModelAnimations`]
+/// collection) and [`WeakModelAnimation`]. Use the iterator variants
+/// ([`frame_poses_iter`](Self::frame_poses_iter) /
+/// [`frame_poses_iter_mut`](Self::frame_poses_iter_mut)) when you only need to walk
+/// the frames in order — they avoid the per-frame `Vec` allocation.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("anim").build();
+/// let anims = rl.load_model_animations(&thread, "assets/character.glb").unwrap();
+/// for pose in anims[0].frame_poses_iter() {
+///     // pose: &[Transform] — one entry per bone for this keyframe
+///     let _ = pose.len();
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`ModelAnimation`] — the parent animation type
+/// - [`ModelAnimations`] — RAII owner that yields `&ModelAnimation` slices
 pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAnimation> {
     #[must_use]
     /// Poses array by frame
@@ -1127,7 +1298,26 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
 
         top
     }
-    /// Returns an iterator over each frame's bone transform slice (immutable).
+    /// Returns an iterator over each frame's bone-transform slice (immutable).
+    ///
+    /// Preferred over [`frame_poses`](Self::frame_poses) when you only need a sequential
+    /// walk — yields a `&[Transform]` per keyframe without allocating an outer `Vec`.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use raylib::prelude::*;
+    ///
+    /// let (mut rl, thread) = raylib::init().size(800, 600).title("anim").build();
+    /// let anims = rl.load_model_animations(&thread, "assets/character.glb").unwrap();
+    /// let frames: usize = anims[0].frame_poses_iter().count();
+    /// println!("{frames} keyframes");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`FramePoseIter`] — the returned iterator type
+    /// - [`RaylibModelAnimation::frame_poses_iter_mut`] — mutable counterpart
     #[must_use]
     fn frame_poses_iter(&self) -> FramePoseIter<'_> {
         let anim = self.as_ref();
@@ -1157,7 +1347,29 @@ pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAni
 
         top
     }
-    /// Returns an iterator over each frame's bone transform slice (mutable).
+    /// Returns an iterator over each frame's bone-transform slice (mutable).
+    ///
+    /// Lets you rewrite the keyframe poses in place — e.g. retarget translations or
+    /// blend with another clip — without copying the whole pose grid.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use raylib::prelude::*;
+    ///
+    /// let (mut rl, thread) = raylib::init().size(800, 600).title("anim").build();
+    /// let mut anims = rl.load_model_animations(&thread, "assets/character.glb").unwrap();
+    /// for pose in anims.as_mut_slice()[0].frame_poses_iter_mut() {
+    ///     for t in pose.iter_mut() {
+    ///         t.translation *= 0.5; // halve every bone translation
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`FramePoseIterMut`] — the returned iterator type
+    /// - [`RaylibModelAnimation::frame_poses_iter`] — immutable counterpart
     #[must_use]
     fn frame_poses_iter_mut(&mut self) -> FramePoseIterMut<'_> {
         let anim = self.as_ref();
@@ -1251,7 +1463,42 @@ impl RaylibHandle {
     }
 }
 
-/// Builder for constructing a custom [`Mesh`] from vertex data before uploading to the GPU.
+/// Builder for assembling a custom [`Mesh`] from typed vertex slices, then uploading to the GPU.
+///
+/// Required inputs are `vertices` + `texcoords` (passed to [`MeshBuilder::new`] or
+/// [`Mesh::gen_mesh`]). Optional setters add a second UV channel, normals, tangents,
+/// per-vertex colors, and triangle indices — each setter may be called at most once.
+/// `build(&thread)` validates that every attribute has the correct length and uploads
+/// the result; on success you get an owned [`Mesh`] freed via `UnloadMesh` on drop.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("custom mesh").build();
+/// let verts = [
+///     Vector3::new(0.0, 0.0, 0.0),
+///     Vector3::new(1.0, 0.0, 0.0),
+///     Vector3::new(1.0, 0.0, 1.0),
+/// ];
+/// let uvs = [
+///     Vector2::new(0.0, 0.0),
+///     Vector2::new(1.0, 0.0),
+///     Vector2::new(1.0, 1.0),
+/// ];
+/// let mesh = Mesh::gen_mesh(&verts, &uvs)
+///     .colors(&[Color::RED, Color::GREEN, Color::BLUE])
+///     .build(&thread)
+///     .unwrap();
+/// println!("uploaded mesh with {} vertices", mesh.vertices().len());
+/// ```
+///
+/// # See also
+///
+/// - [`Mesh::gen_mesh`] — convenience entry point that returns a `MeshBuilder`
+/// - [`Mesh`] — the built and uploaded result
+/// - [`RaylibMesh`] — vertex-attribute accessor trait
 #[derive(Debug, Clone)]
 #[must_use]
 pub struct MeshBuilder<'a> {
