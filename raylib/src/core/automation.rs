@@ -6,7 +6,29 @@ use std::{
 
 use crate::{RaylibHandle, ffi};
 
-/// An iterator over the [`ffi::AutomationEvent`] entries in a loaded automation event list.
+/// Borrowed iterator over the [`AutomationEvent`]s in a loaded [`AutomationEventList`].
+///
+/// Returned by [`AutomationEventList::iter`]. Each yielded [`AutomationEvent`] is a copy of
+/// the underlying FFI struct — the parent list still owns the storage and frees it on drop,
+/// so the iterator's lifetime is bound to the list. Implements [`DoubleEndedIterator`] and
+/// [`ExactSizeIterator`].
+///
+/// # Panics
+///
+/// Construction via the internal `new` panics if the backing events array is null or
+/// unaligned. Iteration itself never panics — events are `Copy` and read directly.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, _thread) = raylib::init().size(640, 480).title("replay").build();
+/// let list = rl.load_automation_event_list(Some("events.txt".into()));
+/// for event in list.iter() {
+///     println!("frame {} type {}", event.frame(), event.get_type());
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct AutomationEventIter<'a> {
     iter: std::slice::Iter<'a, ffi::AutomationEvent>,

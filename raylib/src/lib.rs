@@ -63,7 +63,20 @@ Permission is granted to anyone to use this software for any purpose, including 
 #![allow(dead_code)]
 #![deny(missing_docs)]
 pub mod consts;
-/// Core raylib functionality — window, drawing, input, audio, and other subsystems.
+/// Safe, idiomatic wrappers over raylib's core subsystems — window, drawing, input, audio,
+/// math, models, textures, shaders, text, files, and more.
+///
+/// Each submodule corresponds to one slice of raylib's C API: `window` wraps `InitWindow` /
+/// `CloseWindow` and the per-frame query helpers, `drawing` provides the RAII guards
+/// returned by `begin_drawing` / `begin_mode2d` / `begin_mode3d`, `audio` wraps the audio
+/// device plus the `Wave`, `Sound`, `Music`, and `AudioStream` types, and so on. The
+/// user-facing types (`RaylibHandle`, `RaylibThread`, `RaylibBuilder`, `Color`, `Image`,
+/// `Texture2D`, ...) are re-exported by [`crate::prelude`] for the common case.
+///
+/// # See also
+///
+/// See the *Window and drawing* chapter of the book for the overall architecture and the
+/// per-subsystem chapters for individual modules.
 pub mod core;
 pub mod ease;
 pub mod prelude;

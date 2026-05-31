@@ -124,7 +124,21 @@ impl From<&Ray> for ffi::Ray {
 }
 
 impl Ray {
-    /// Constructs a new `Ray` with the given origin `position` and `direction`.
+    /// Constructs a [`Ray`] from an origin point and a direction vector.
+    ///
+    /// The `direction` argument is stored as-is — callers passing a non-unit vector should
+    /// normalise it first when the consumer expects a unit ray (e.g. picking, reflection math).
+    /// `const fn`, so usable in static initialisers.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use raylib::prelude::*;
+    ///
+    /// let r = Ray::new(Vector3::ZERO, Vector3::new(0.0, 0.0, -1.0));
+    /// assert_eq!(r.position, Vector3::ZERO);
+    /// assert_eq!(r.direction, Vector3::new(0.0, 0.0, -1.0));
+    /// ```
     #[must_use]
     #[inline]
     pub const fn new(position: Vector3, direction: Vector3) -> Self {
@@ -135,7 +149,24 @@ impl Ray {
     }
 }
 
-/// Axis-aligned 2D rectangle defined by its top-left position and dimensions; re-exported from `raylib-sys`.
+/// Axis-aligned 2-D rectangle with `x`, `y`, `width`, `height` fields — re-exported from [`ffi::Rectangle`].
+///
+/// `Rectangle` lives in `raylib-sys` (`#[repr(C)]`, matching raylib's `Rectangle` struct) so it
+/// can be passed across FFI without conversion. This alias exposes it at
+/// `raylib::core::math::Rectangle` (and `raylib::prelude::Rectangle`) for ergonomic use; the
+/// inherent helpers (`Rectangle::new`, `check_collision_recs`, …) are defined in `raylib-sys`.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::prelude::*;
+///
+/// let r = Rectangle::new(10.0, 20.0, 30.0, 40.0);
+/// assert_eq!(r.x, 10.0);
+/// assert_eq!(r.y, 20.0);
+/// assert_eq!(r.width, 30.0);
+/// assert_eq!(r.height, 40.0);
+/// ```
 pub type Rectangle = ffi::Rectangle;
 
 optional_serde_struct! {
@@ -149,7 +180,21 @@ optional_serde_struct! {
 }
 
 impl BoundingBox {
-    /// Constructs a new `BoundingBox` from its minimum and maximum corner vertices.
+    /// Constructs a [`BoundingBox`] from its minimum-corner and maximum-corner vertices.
+    ///
+    /// The caller is responsible for ensuring each component of `min` is less than or equal to
+    /// the corresponding component of `max`; raylib's collision routines (`CheckCollisionBoxes`,
+    /// `CheckCollisionBoxSphere`, ray-box intersection) assume a well-formed AABB.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use raylib::prelude::*;
+    ///
+    /// let bb = BoundingBox::new(Vector3::new(-1.0, -1.0, -1.0), Vector3::new(1.0, 1.0, 1.0));
+    /// assert_eq!(bb.min, Vector3::new(-1.0, -1.0, -1.0));
+    /// assert_eq!(bb.max, Vector3::new(1.0, 1.0, 1.0));
+    /// ```
     #[must_use]
     #[inline]
     pub fn new(min: Vector3, max: Vector3) -> BoundingBox {

@@ -412,7 +412,25 @@ impl RaylibHandle {
     }
 }
 
-/// Convert a raw integer keycode into a typed [`KeyboardKey`](crate::consts::KeyboardKey), returning `None` for unknown values.
+/// Maps a raw integer keycode (raylib's GLFW-style numeric scheme) to a typed
+/// [`KeyboardKey`](crate::consts::KeyboardKey) — returns `None` for codes outside the enum.
+///
+/// Useful when bridging FFI callbacks or persisted keybinding files into the safe enum. The
+/// match is exhaustive over every [`KeyboardKey`](crate::consts::KeyboardKey) variant; any
+/// other integer falls through to `None`. The conversion is pure and side-effect-free —
+/// safe to call before raylib is initialised.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::core::input::key_from_i32;
+/// use raylib::consts::KeyboardKey::*;
+///
+/// assert_eq!(key_from_i32(32), Some(KEY_SPACE));
+/// assert_eq!(key_from_i32(65), Some(KEY_A));
+/// assert_eq!(key_from_i32(-1), None);
+/// assert_eq!(key_from_i32(9999), None);
+/// ```
 #[must_use]
 pub fn key_from_i32(key: i32) -> Option<crate::consts::KeyboardKey> {
     use crate::consts::KeyboardKey::*;

@@ -4,7 +4,30 @@ use crate::ffi;
 use crate::core::RaylibHandle;
 use std::ffi::{CStr, CString, OsString, c_char};
 
-/// An iterator over the file paths stored in a [`FilePathList`].
+/// Borrowed iterator over the UTF-8 paths in a [`FilePathList`] or [`DroppedFilePathList`].
+///
+/// Returned by `FilePathList::iter` / `DroppedFilePathList::iter`. Yields `&str` slices that
+/// borrow the underlying raylib-allocated C strings, so the parent list must outlive the
+/// iterator — the lifetime parameter enforces this. Implements [`DoubleEndedIterator`] and
+/// [`ExactSizeIterator`].
+///
+/// # Panics
+///
+/// `next` / `next_back` / `nth` / `nth_back` / `last` panic if a path entry is null or if a
+/// path is not valid UTF-8. Construction via the internal `new` panics if the backing array
+/// is null or unaligned.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (rl, _thread) = raylib::init().size(640, 480).title("files").build();
+/// let list = rl.load_directory_files("assets");
+/// for path in list.iter() {
+///     println!("found {path}");
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct FilePathIter<'a> {
     iter: std::slice::Iter<'a, Option<&'a c_char>>,

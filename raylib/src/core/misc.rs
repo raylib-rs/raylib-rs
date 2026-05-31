@@ -40,7 +40,11 @@ impl<'a> IntoIterator for RandomSequence<'a> {
         RandSeqIterator(self, 0)
     }
 }
-/// An iterator that walks a [`RandomSequence`] in order, yielding each `i32` value once.
+/// Owning iterator that walks a [`RandomSequence`] in order, yielding each `i32` value once.
+///
+/// Returned by `RandomSequence::into_iter`. Holds the sequence, so dropping the iterator
+/// also drops the underlying raylib-allocated buffer (via [`RandomSequence`]'s `Drop`).
+/// `Iterator::next` returns `Some(value)` until the sequence is exhausted, then `None`.
 pub struct RandSeqIterator<'a>(RandomSequence<'a>, usize);
 
 impl Iterator for RandSeqIterator<'_> {
@@ -111,9 +115,32 @@ impl RaylibHandle {
     }
 }
 
-/// Lossy conversion of a numeric primitive to `f32`.
+/// Lossy `as`-style conversion from a numeric primitive to `f32`.
+///
+/// Implemented for `u8`, `u16`, `u32`, `i8`, `i16`, `i32`, and `f32`. Used by math-helper
+/// constructors such as [`rquat`](crate::core::math::rquat) so callers can pass integer
+/// literals without writing `as f32` everywhere. The conversion follows Rust's `as`
+/// semantics: values outside `f32`'s exactly-representable range lose precision.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::core::misc::AsF32;
+///
+/// assert_eq!(255u8.as_f32(), 255.0);
+/// assert_eq!((-1i32).as_f32(), -1.0);
+/// assert_eq!(1.5f32.as_f32(), 1.5);
+/// ```
 pub trait AsF32: Copy {
-    /// Convert this value to an `f32`, potentially with precision loss.
+    /// Returns `self` converted to `f32` via Rust's `as`-cast — may lose precision for
+    /// values outside `f32`'s exactly-representable range.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use raylib::core::misc::AsF32;
+    /// assert_eq!(42u32.as_f32(), 42.0);
+    /// ```
     fn as_f32(self) -> f32;
 }
 

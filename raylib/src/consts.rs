@@ -21,9 +21,31 @@ pub use ffi::TextureFilter;
 pub use ffi::TextureWrap;
 pub use ffi::TraceLogLevel;
 // TODO Fix when rlgl bindings are in
-/// Maximum number of material maps per `Material` (matches `MAX_MATERIAL_MAPS` in raylib's `config.h`).
+/// Compile-time upper bound on the number of material maps a [`Material`](crate::core::models::Material) can hold.
+///
+/// Mirrors raylib's `MAX_MATERIAL_MAPS` (`config.h`) and indexes the `Material::maps` array. The
+/// stock entries are the diffuse/specular/normal/etc. slots enumerated by
+/// [`MaterialMapIndex`]; the remaining slots are free for user-defined channels.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::consts::MAX_MATERIAL_MAPS;
+/// assert_eq!(MAX_MATERIAL_MAPS, 12);
+/// ```
 pub const MAX_MATERIAL_MAPS: u32 = 12;
-/// Maximum number of shader locations tracked per `Shader` (matches `RL_MAX_SHADER_LOCATIONS`).
+/// Compile-time upper bound on the number of cached uniform/attribute locations per [`Shader`](crate::core::shaders::Shader).
+///
+/// Mirrors raylib's `RL_MAX_SHADER_LOCATIONS` (`rlgl.h`) and sizes the `Shader::locs` array
+/// indexed by [`ShaderLocationIndex`]. Custom uniforms past the built-in slots may be stored
+/// up to this limit before raylib begins overwriting earlier entries.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::consts::MAX_SHADER_LOCATIONS;
+/// assert_eq!(MAX_SHADER_LOCATIONS, 32);
+/// ```
 pub const MAX_SHADER_LOCATIONS: u32 = 32;
 
 pub use ffi::MouseCursor;
