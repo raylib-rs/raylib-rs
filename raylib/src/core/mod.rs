@@ -10,7 +10,7 @@ pub mod audio;
 ///
 /// # See also
 ///
-/// See the *raygui* chapter of the book.
+/// See the *Input* chapter of the book for the underlying input API.
 pub mod automation;
 /// Custom callback hooks for audio streams and logging.
 ///

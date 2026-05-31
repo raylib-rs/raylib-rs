@@ -808,11 +808,13 @@ impl<'a, T: 'a> RaylibDraw3D for RaylibShaderMode<'a, '_, T> {}
 /// with_headless(64, 64, |rl, thread| {
 ///     let img = render_frame(rl, thread, |d| {
 ///         d.clear_background(Color::WHITE);
-///         // Default alpha blend: opaque RED writes are unaffected by the underlying WHITE.
+///         // Half-alpha RED over WHITE: BLEND_ALPHA mixes to roughly (255, 127, 127).
 ///         let mut b = d.begin_blend_mode(BlendMode::BLEND_ALPHA);
-///         b.draw_rectangle(0, 0, 32, 32, Color::RED);
+///         b.draw_rectangle(0, 0, 32, 32, Color::new(255, 0, 0, 128));
 ///     });
-///     assert_pixel(&img, 5, 5, Color::RED, 0);
+///     // Blended pixel: roughly half-RED over WHITE. Tolerance accommodates rounding.
+///     assert_pixel(&img, 5, 5, Color::new(255, 127, 127, 255), 2);
+///     // Outside the rectangle: still WHITE.
 ///     assert_pixel(&img, 50, 50, Color::WHITE, 0);
 /// });
 /// # }
