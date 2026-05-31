@@ -144,8 +144,48 @@ impl RaylibHandle {
 }
 
 /// A Rust value that can be uploaded as a shader uniform variable.
+///
+/// Implemented for the scalar / vector primitives raylib's GLSL bindings accept: `f32`,
+/// `i32`, `Vector2`/`Vector3`/`Vector4`, `[f32; 2..=4]`, `[i32; 2..=4]`, and the borrowed
+/// `&[i32]` flavour for `sampler2D`. Each impl pins its [`UNIFORM_TYPE`](Self::UNIFORM_TYPE)
+/// constant to the matching [`ShaderUniformDataType`] variant so callers don't pass the type
+/// tag separately. The trait powers the generic [`Shader::set_shader_value`] and
+/// [`Shader::set_shader_value_v`] methods (plus the per-uniform fast paths on
+/// [`RaylibShader`]).
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(640, 480).title("shader").build();
+/// let mut shader = rl.load_shader(&thread, None, Some("assets/tint.fs"));
+/// let loc = shader.get_shader_location("u_tint");
+/// shader.set_shader_value(loc, Vector3::new(1.0, 0.5, 0.0));
+/// ```
+///
+/// # See also
+///
+/// - [`Shader::set_shader_value`] — single-value uniform upload.
+/// - [`Shader::set_shader_value_v`] — array uniform upload.
+/// - [`RaylibShader`] — extension methods on shader handles.
 pub trait ShaderV {
     /// The raylib [`ShaderUniformDataType`] that corresponds to this Rust type.
+    ///
+    /// Read by [`Shader::set_shader_value`] (and the vector variant) so the GLSL-side type
+    /// tag matches the Rust value's layout — e.g. [`Vector3`] pins this to
+    /// [`ShaderUniformDataType::SHADER_UNIFORM_VEC3`], `i32` to
+    /// [`ShaderUniformDataType::SHADER_UNIFORM_INT`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use raylib::prelude::*;
+    /// use raylib::core::shaders::ShaderV;
+    ///
+    /// assert_eq!(<f32 as ShaderV>::UNIFORM_TYPE, ShaderUniformDataType::SHADER_UNIFORM_FLOAT);
+    /// assert_eq!(<Vector3 as ShaderV>::UNIFORM_TYPE, ShaderUniformDataType::SHADER_UNIFORM_VEC3);
+    /// ```
     const UNIFORM_TYPE: ShaderUniformDataType;
     /// Returns a raw pointer to the shader value for use in FFI calls.
     ///
@@ -324,6 +364,35 @@ impl RaylibShader for WeakShader {}
 impl RaylibShader for Shader {}
 
 /// Extension methods for types that wrap a raylib `Shader` (both owned [`Shader`] and [`WeakShader`]).
+///
+/// Implemented for [`Shader`] (RAII-owned) and [`WeakShader`] (no-drop alias from
+/// [`Shader::make_weak`]). Provides the field accessors ([`locs`](Self::locs),
+/// [`locs_mut`](Self::locs_mut)) plus uniform-location lookup
+/// ([`get_shader_location`](Self::get_shader_location),
+/// [`get_shader_location_attribute`](Self::get_shader_location_attribute)) and the matching
+/// setter family. Uniform-value setters that move into [`Shader`]'s `impl` block
+/// ([`set_shader_value`](Shader::set_shader_value),
+/// [`set_shader_value_v`](Shader::set_shader_value_v),
+/// [`set_shader_value_matrix`](Shader::set_shader_value_matrix),
+/// [`set_shader_value_texture`](Shader::set_shader_value_texture)) require `&mut Shader`
+/// directly.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::shaders::RaylibShader;
+///
+/// let (mut rl, thread) = raylib::init().size(640, 480).title("shader").build();
+/// let mut shader = rl.load_shader(&thread, None, Some("assets/tint.fs"));
+/// let loc = shader.get_shader_location("u_tint");
+/// shader.set_shader_value(loc, Vector3::new(1.0, 0.5, 0.0));
+/// ```
+///
+/// # See also
+///
+/// - [`Shader`] — owning shader handle.
+/// - [`ShaderV`] — values that can be uploaded as uniforms.
 pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]

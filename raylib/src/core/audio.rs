@@ -97,6 +97,30 @@ make_thin_wrapper_lifetime!(
 );
 
 /// Owned buffer of decoded PCM samples for a [`Wave`], freed via `UnloadWaveSamples` on drop.
+///
+/// Returned by [`Wave::load_samples`]. Values are normalised to `[-1.0, 1.0]` and always
+/// 32-bit float regardless of the source wave's `sample_size` — raylib does the conversion
+/// on load. Length is `frame_count` samples (channel interleaving follows the underlying
+/// wave's `channels`). Access the underlying slice via [`AsRef::<[f32]>::as_ref`]; the
+/// allocation is freed when this guard drops.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let audio = RaylibAudio::init_audio_device().expect("audio init");
+/// let wave = audio.new_wave("assets/click.wav").expect("wave load");
+/// let samples = wave.load_samples();
+/// let pcm: &[f32] = samples.as_ref();
+/// println!("{} samples decoded", pcm.len());
+/// // `samples` drops here → UnloadWaveSamples frees the buffer.
+/// ```
+///
+/// # See also
+///
+/// - [`Wave::load_samples`] — constructor.
+/// - [`Wave`] — owning wave handle whose samples this buffer decodes.
 pub struct WaveSamples(*mut f32, usize);
 
 impl AsRef<[f32]> for WaveSamples {
@@ -826,4 +850,30 @@ impl<'bind> Sound<'bind> {
 }
 
 /// A lightweight alias handle to a [`Sound`] that shares the same audio buffer without owning it.
+///
+/// Returned by [`Sound::alias`]. Wraps `LoadSoundAlias` — the source [`Sound`] owns the audio
+/// buffer and remains responsible for unloading it; the alias holds an independent playback
+/// head (volume, pitch, pan, play position) so multiple overlapping instances of the same
+/// sound can play concurrently without allocating a fresh decoded buffer per voice.
+///
+/// The `'snd` lifetime borrows the parent [`Sound`] (statically enforced) so the alias
+/// cannot outlive the buffer it points at; the `'bind` lifetime tracks the parent's audio
+/// device.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let audio = RaylibAudio::init_audio_device().expect("audio init");
+/// let sound = audio.new_sound("assets/click.wav").expect("sound load");
+/// let voice_a = sound.alias().expect("alias");
+/// let voice_b = sound.alias().expect("alias");
+/// // `voice_a` and `voice_b` can be played simultaneously and tuned independently.
+/// ```
+///
+/// # See also
+///
+/// - [`Sound::alias`] — constructor.
+/// - [`Sound`] — owning sound handle whose buffer this alias shares.
 pub struct SoundAlias<'snd, 'bind>(ffi::Sound, PhantomData<&'snd Sound<'bind>>);

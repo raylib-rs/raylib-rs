@@ -12,7 +12,23 @@ use std::{
     slice::from_raw_parts_mut,
     sync::atomic::{AtomicUsize, Ordering},
 };
-/// Low-level per-stream audio callback registration for `AudioStream`.
+/// Low-level per-[`AudioStream`](super::audio::AudioStream) callback registration.
+///
+/// Wraps raylib's `SetAudioStreamCallback`: a single global callback slot per process feeds
+/// raw PCM bytes (`u8` / `i16` / `f32` per the stream's sample size) into an
+/// [`AudioStream`](super::audio::AudioStream) on raylib's audio thread. Prefer the
+/// closure-based audio-mixed processor family ([`attach_audio_mixed_processor`]) for
+/// effects on the global mix bus; use this module only when you need to **source** raw
+/// samples for a specific stream.
+///
+/// Register with [`set_audio_stream_callback`](audio_stream_callback::set_audio_stream_callback)
+/// and clear with [`unset_audio_stream_callback`](audio_stream_callback::unset_audio_stream_callback).
+/// Only one callback may be set at a time — a second registration returns
+/// [`UpdateAudioStreamError::CallbackSlotBusy`](crate::error::UpdateAudioStreamError::CallbackSlotBusy).
+///
+/// # See also
+///
+/// See the *Audio* chapter of the book.
 pub mod audio_stream_callback;
 mod stream_processor_with_user_data_wrapper;
 use super::audio::{Music, RaylibAudio};
@@ -123,6 +139,27 @@ extern "C" fn custom_load_file_text_callback(a: *const c_char) -> *mut c_char {
 }
 
 /// Error returned when a callback registration fails because a callback of that type is already set.
+///
+/// Each callback slot in this module ([`set_trace_log_callback`],
+/// [`set_save_file_data_callback`], [`set_load_file_data_callback`],
+/// [`set_save_file_text_callback`], [`set_load_file_text_callback`]) holds at most one
+/// closure at a time. Calling the setter twice without intervening reset returns this error
+/// rather than overwriting silently. The inner `&str` names which callback type was already
+/// set (e.g. `"save file data"`); the `Display` impl includes it in the message.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::callbacks::{set_save_file_data_callback, SetLogError};
+///
+/// fn writer(_path: &str, _bytes: &[u8]) -> bool { true }
+/// set_save_file_data_callback(writer).expect("first install");
+/// match set_save_file_data_callback(writer) {
+///     Err(e) => eprintln!("{e}"),       // "There is a save file data callback already set."
+///     Ok(()) => unreachable!(),
+/// }
+/// ```
 #[derive(Debug)]
 pub struct SetLogError<'a>(&'a str);
 
@@ -362,6 +399,37 @@ where
 // endregion: -- MixedAudioProcessorCallback --
 
 /// Attach an audio stream processor closure to a [`Music`] stream, returning a pinned guard that detaches on drop.
+///
+/// The closure fires on raylib's audio thread for every decoded frame of the music stream,
+/// receiving a mutable slice of `frame_count * channels` interleaved `f32` samples. Modify
+/// the slice in place to apply an effect. Drop the returned `Pin<Box<...>>` to detach via
+/// `DetachAudioStreamProcessor`. Multiple processors can be attached to the same music
+/// stream and run in attach-order on each frame.
+///
+/// # Closure constraints
+///
+/// `F: FnMut(&mut [f32], u32) + Send + 'static`. `Send + 'static` is required because the
+/// callback runs on raylib's internal audio thread.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::callbacks::attach_audio_stream_processor_to_music;
+///
+/// let audio = RaylibAudio::init_audio_device().expect("audio init");
+/// let music = audio.new_music("assets/track.ogg").expect("music load");
+/// let mut gain = |samples: &mut [f32], _channels: u32| {
+///     for s in samples { *s *= 0.5; }
+/// };
+/// let _guard = attach_audio_stream_processor_to_music(&music, &mut gain);
+/// // `_guard` drops at end of scope → detach from raylib's processor list.
+/// ```
+///
+/// # See also
+///
+/// - [`attach_audio_mixed_processor`] — apply a processor to the global mix bus.
+/// - [`Music`] — the audio stream this attaches to.
 pub fn attach_audio_stream_processor_to_music<'a, F>(
     music: &'a Music<'a>,
     processor: &'a mut F,

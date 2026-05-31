@@ -227,6 +227,37 @@ impl RenderTexture2D {
 }
 
 /// Extension methods for types that wrap a raylib `RenderTexture2D` (both owned and weak variants).
+///
+/// Implemented for [`RenderTexture2D`] (RAII-owned) and `WeakRenderTexture2D` (no-drop
+/// alias). Exposes the OpenGL FBO id ([`id`](Self::id)) plus the colour-attachment
+/// texture as a borrowed [`WeakTexture2D`] ([`texture`](Self::texture),
+/// [`texture_mut`](Self::texture_mut)) so callers can sample the offscreen result with
+/// `draw_texture`, regenerate mipmaps, etc.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::texture::RaylibRenderTexture2D;
+///
+/// let (mut rl, thread) = raylib::init().size(640, 480).title("rt").build();
+/// let mut rt = rl
+///     .load_render_texture(&thread, 320, 240)
+///     .expect("render texture");
+/// {
+///     let mut tm = rl.begin_texture_mode(&thread, &mut rt);
+///     tm.clear_background(Color::RED);
+/// }
+/// // Sample the offscreen colour attachment as a regular texture.
+/// let mut d = rl.begin_drawing(&thread);
+/// d.clear_background(Color::RAYWHITE);
+/// d.draw_texture(rt.texture(), 0, 0, Color::WHITE);
+/// ```
+///
+/// # See also
+///
+/// - [`RenderTexture2D`] — owning render-texture handle.
+/// - [`RaylibTexture2D`] — companion trait for the colour-attachment texture.
 pub trait RaylibRenderTexture2D: AsRef<ffi::RenderTexture2D> + AsMut<ffi::RenderTexture2D> {
     /// OpenGL framebuffer object id
     #[inline]
@@ -1067,7 +1098,48 @@ impl Image {
         }
     }
 
-    /// Generates an image with the given `text` rendered at the specified pixel dimensions.
+    /// Generates a grayscale image whose pixel data is initialised with the raw bytes of `text`.
+    ///
+    /// Wraps raylib's `GenImageText`. The returned image is `width × height` pixels in
+    /// `PixelFormat::PIXELFORMAT_UNCOMPRESSED_GRAYSCALE` (one byte per pixel); the first
+    /// `min(text.len(), width * height)` bytes are copied from `text` and the rest are
+    /// zero. This is a low-level data-packing helper — it does **not** rasterize glyphs.
+    /// For rasterized text use [`Image::image_text`] (or the `RaylibDraw::draw_text`
+    /// family on a draw handle).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "software_renderer")] {
+    /// use raylib::prelude::*;
+    /// use raylib::test_harness::*;
+    ///
+    /// with_headless(64, 32, |rl, thread| {
+    ///     // Bytes of "HELLO" land at offsets 0..5 of the grayscale buffer.
+    ///     let img = Image::gen_image_text(64, 32, "HELLO");
+    ///     assert_eq!(img.width(), 64);
+    ///     assert_eq!(img.height(), 32);
+    ///     // First pixel is 'H' = 0x48 = 72 on every channel (grayscale → RGB).
+    ///     let p0 = img.get_color(0, 0);
+    ///     assert_eq!(p0.r, b'H');
+    ///     // Upload + draw to verify the texture round-trips through the GPU path.
+    ///     let tex = rl
+    ///         .load_texture_from_image(thread, &img)
+    ///         .expect("texture upload");
+    ///     let frame = render_frame(rl, thread, |d| {
+    ///         d.clear_background(Color::BLACK);
+    ///         d.draw_texture(&tex, 0, 0, Color::WHITE);
+    ///     });
+    ///     // Pixel (0, 0) corresponds to 'H' → grayscale 0x48 ≈ (72, 72, 72).
+    ///     assert_pixel(&frame, 0, 0, Color::new(0x48, 0x48, 0x48, 255), 4);
+    /// });
+    /// # }
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`Image::image_text`] — rasterized text into an image.
+    /// - [`Image::gen_image_color`] — solid-fill counterpart.
     #[must_use]
     #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_text(width: i32, height: i32, text: &str) -> Image {
@@ -1235,6 +1307,41 @@ impl Texture2D {
 }
 
 /// Extension methods for types that wrap a raylib `Texture2D` (both owned [`Texture2D`] and [`WeakTexture2D`]).
+///
+/// Implemented for [`Texture2D`] (RAII-owned, freed on drop) and [`WeakTexture2D`] (no-drop
+/// alias from [`Texture2D::make_weak`]). Provides the field accessors
+/// ([`width`](Self::width), [`height`](Self::height), [`mipmaps`](Self::mipmaps),
+/// [`format`](Self::format)), GPU upload helpers ([`update_texture`](Self::update_texture),
+/// [`update_texture_rec`](Self::update_texture_rec)), readback to a CPU
+/// [`Image`] ([`load_image`](Self::load_image)), mipmap generation
+/// ([`gen_texture_mipmaps`](Self::gen_texture_mipmaps)), and the sampler-state setters
+/// ([`set_texture_filter`](Self::set_texture_filter),
+/// [`set_texture_wrap`](Self::set_texture_wrap)).
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::texture::RaylibTexture2D;
+///
+/// let (mut rl, thread) = raylib::init().size(640, 480).title("tex").build();
+/// let tex = rl
+///     .load_texture(&thread, "assets/sprite.png")
+///     .expect("texture load");
+/// println!("{}x{}, mipmaps {}", tex.width(), tex.height(), tex.mipmaps());
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     d.draw_texture(&tex, 0, 0, Color::WHITE);
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`Texture2D`] — owning texture handle.
+/// - [`Image`] — CPU-side counterpart; upload with
+///   [`RaylibHandle::load_texture_from_image`].
+/// - [`RaylibRenderTexture2D`] — companion trait for offscreen render targets.
 pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     /// Texture base width
     #[inline]

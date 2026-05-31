@@ -59,6 +59,21 @@ make_thin_wrapper!(
 );
 
 /// An owned slice of [`GlyphInfo`] data allocated by raylib, freed via `UnloadFontData` on drop.
+///
+/// Wraps a raylib-allocated `Box<[GlyphInfo]>` and calls `UnloadFontData` on drop so the
+/// glyph buffer is returned to raylib's allocator rather than Rust's. Implements
+/// [`Deref`](std::ops::Deref) + [`DerefMut`](std::ops::DerefMut) to `Box<[GlyphInfo]>` so
+/// it acts like a slice: index with `slice[i]`, iterate with `slice.iter()`, or read
+/// `slice.len()` directly.
+///
+/// Constructed internally by font-loading machinery that feeds into
+/// [`Font::from_data`](Font). Never call `libc::free` on the inner data pointer — the
+/// `Drop` impl routes through `UnloadFontData` so custom allocators stay correct.
+///
+/// # See also
+///
+/// - [`GlyphInfo`] — per-codepoint metrics held in the slice.
+/// - [`Font`] — owning font built from this glyph data.
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct RSliceGlyphInfo(pub(crate) std::mem::ManuallyDrop<std::boxed::Box<[GlyphInfo]>>);
@@ -320,6 +335,35 @@ impl RaylibFont for WeakFont {}
 impl RaylibFont for Font {}
 
 /// Extension methods for types that wrap a raylib `Font` (both owned [`Font`] and [`WeakFont`]).
+///
+/// Implemented for [`Font`] (RAII-owned) and [`WeakFont`] (no-drop alias from
+/// [`Font::make_weak`]). Provides field accessors ([`base_size`](Self::base_size),
+/// [`texture`](Self::texture), [`chars`](Self::chars), [`chars_mut`](Self::chars_mut)),
+/// validity check ([`is_font_valid`](Self::is_font_valid)), glyph-table lookups
+/// ([`get_glyph_info`](Self::get_glyph_info),
+/// [`get_glyph_index`](Self::get_glyph_index),
+/// [`get_glyph_atlas_rec`](Self::get_glyph_atlas_rec)), the measurement helper
+/// [`measure_text`](Self::measure_text), and the code-export helper
+/// [`export_font_as_code`](Self::export_font_as_code).
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::text::RaylibFont;
+///
+/// let (mut rl, thread) = raylib::init().size(640, 480).title("font").build();
+/// let font = rl
+///     .load_font(&thread, "assets/font.ttf")
+///     .expect("font load");
+/// let size = font.measure_text("hello", 32.0, 1.0);
+/// println!("rendered width: {}", size.x);
+/// ```
+///
+/// # See also
+///
+/// - [`Font`] — owning font handle.
+/// - [`GlyphInfo`] — per-codepoint metrics returned by [`get_glyph_info`](Self::get_glyph_info).
 pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     /// Base size (default chars height)
     #[inline]
@@ -404,6 +448,31 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
 
 impl Font {
     /// Converts this `Font` into a [`WeakFont`] that does not run `UnloadFont` on drop.
+    ///
+    /// Use this when you want to hand a font to code that holds it by `WeakFont` (e.g. a
+    /// renderer that doesn't own the resource) **and** you take responsibility for
+    /// unloading the GPU atlas yourself. Forgets the owning `Font` so the `Drop` impl
+    /// doesn't run; the returned `WeakFont` keeps the same texture and glyph table but
+    /// will *not* free them on drop.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use raylib::prelude::*;
+    ///
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("font").build();
+    /// let font = rl
+    ///     .load_font(&thread, "assets/font.ttf")
+    ///     .expect("font load");
+    /// let weak = font.make_weak();
+    /// // `weak` is now an alias with no drop responsibility — the atlas leaks unless
+    /// // ownership is reclaimed before `weak` goes out of scope.
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`WeakFont`] — the returned no-drop alias type.
+    /// - [`Font`] — owning counterpart.
     #[inline]
     #[must_use]
     pub fn make_weak(self) -> WeakFont {
