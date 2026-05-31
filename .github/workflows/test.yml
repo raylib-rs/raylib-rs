@@ -96,10 +96,14 @@ jobs:
         # nextest run, per-test process isolation handles InitWindow's
         # single-init constraint without needing --test-threads=1.
         run: cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_FILEFORMAT_TTF,SUPPORT_FILEFORMAT_OBJ,SUPPORT_MESH_GENERATION -E 'binary(integration_window_api) + binary(integration_image_io) + binary(integration_random_seed) + binary(integration_fonts) + binary(integration_models) + binary(integration_model_animations)'
-      # Doctests (software_renderer) leg deferred to a Wave-1 task: enabling
-      # it now surfaces pre-existing breakage in core::data::compress_data /
+      # TODO(rustdoc-rewrite): Re-enable the "Doctests (software_renderer)"
+      # leg before workstream "done" (spec §1 Goal 2). Enabling it now
+      # surfaces pre-existing breakage in core::data::compress_data /
       # decompress_data / databuf::DataBuf (CompressionFailed — likely a
       # SUPPORT_COMPRESSION_API gate) and core::window::get_monitor_info
       # (SIGABRT / munmap_chunk invalid pointer under rlsw). These are out
-      # of scope for Task 1's "switch the runner" change. Re-add the step
-      # after the pre-existing doctest failures are resolved.
+      # of scope for Task 1's "switch the runner" change; tracked-deferred
+      # entry to be captured in docs/superpowers/notes/ws-rustdoc-rewrite-
+      # complete.md when the workstream closes.
+      # - name: Doctests (software_renderer)
+      #   run: cargo test -p raylib --doc --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_FILEFORMAT_TTF
