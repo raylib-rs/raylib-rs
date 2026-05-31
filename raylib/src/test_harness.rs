@@ -196,35 +196,3 @@ pub fn assert_pixel(img: &Image, x: i32, y: i32, expected: Color, tol: u8) {
         );
     }
 }
-
-#[cfg(test)]
-mod nextest_smoke {
-    //! Smoke test for the cargo-nextest switch (rustdoc-rewrite Task 1).
-    //!
-    //! With cargo test, both #[test]s below run in the same process and the
-    //! second hits raylib's "context already initialized" panic. With cargo
-    //! nextest run, each #[test] runs in its own subprocess so both pass.
-    //!
-    //! Reverted at end of Task 1 once the property is confirmed on fork CI.
-    use super::*;
-
-    #[test]
-    fn nextest_smoke_a() {
-        with_headless(32, 32, |rl, thread| {
-            let img = render_frame(rl, thread, |d| {
-                d.clear_background(crate::prelude::Color::WHITE);
-            });
-            assert_pixel(&img, 0, 0, crate::prelude::Color::WHITE, 0);
-        });
-    }
-
-    #[test]
-    fn nextest_smoke_b() {
-        with_headless(32, 32, |rl, thread| {
-            let img = render_frame(rl, thread, |d| {
-                d.clear_background(crate::prelude::Color::BLACK);
-            });
-            assert_pixel(&img, 0, 0, crate::prelude::Color::BLACK, 0);
-        });
-    }
-}
