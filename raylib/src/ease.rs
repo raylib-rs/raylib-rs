@@ -101,49 +101,177 @@ impl Tween {
     }
 }
 
-/// Linear interpolation with no easing phase — constant rate from `b` over `c` at time `t` of duration `d`.
+/// Linear interpolation — constant rate from `b` to `b + c` over duration `d`.
+///
+/// All four `linear_*` variants share the same math; the suffix exists only for
+/// API symmetry with the curved families.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::linear_none;
+///
+/// assert_eq!(linear_none(0.0, 0.0, 1.0, 1.0), 0.0);
+/// assert_eq!(linear_none(1.0, 0.0, 1.0, 1.0), 1.0);
+/// assert_eq!(linear_none(0.5, 0.0, 1.0, 1.0), 0.5);
+/// ```
 pub fn linear_none(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
-/// Linear ease-in interpolation — constant rate from `b` over `c` at time `t` of duration `d`.
+
+/// Linear interpolation — constant rate from `b` to `b + c` over duration `d`.
+///
+/// Identical math to [`linear_none`]; provided for naming symmetry with the
+/// curved `*_in` variants.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::linear_in;
+///
+/// assert_eq!(linear_in(0.0, 0.0, 1.0, 1.0), 0.0);
+/// assert_eq!(linear_in(1.0, 0.0, 1.0, 1.0), 1.0);
+/// assert_eq!(linear_in(0.5, 0.0, 1.0, 1.0), 0.5);
+/// ```
 pub fn linear_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
-/// Linear ease-out interpolation — constant rate from `b` over `c` at time `t` of duration `d`.
+
+/// Linear interpolation — constant rate from `b` to `b + c` over duration `d`.
+///
+/// Identical math to [`linear_none`]; provided for naming symmetry with the
+/// curved `*_out` variants.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::linear_out;
+///
+/// assert_eq!(linear_out(0.0, 0.0, 1.0, 1.0), 0.0);
+/// assert_eq!(linear_out(1.0, 0.0, 1.0, 1.0), 1.0);
+/// assert_eq!(linear_out(0.5, 0.0, 1.0, 1.0), 0.5);
+/// ```
 pub fn linear_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
-/// Linear ease-in-out interpolation — constant rate from `b` over `c` at time `t` of duration `d`.
+
+/// Linear interpolation — constant rate from `b` to `b + c` over duration `d`.
+///
+/// Identical math to [`linear_none`]; provided for naming symmetry with the
+/// curved `*_in_out` variants.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::linear_in_out;
+///
+/// assert_eq!(linear_in_out(0.0, 0.0, 1.0, 1.0), 0.0);
+/// assert_eq!(linear_in_out(1.0, 0.0, 1.0, 1.0), 1.0);
+/// assert_eq!(linear_in_out(0.5, 0.0, 1.0, 1.0), 0.5);
+/// ```
 pub fn linear_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * t / d + b
 }
 
-/// Sine ease-in interpolation — slow start, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in sine — slow start, fast end along a quarter-cosine curve.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::sine_in;
+///
+/// assert!((sine_in(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((sine_in(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // 1 - cos(π/4) ≈ 0.293 — slow-start signature (midpoint < 0.5).
+/// assert!(sine_in(0.5, 0.0, 1.0, 1.0) < 0.5);
+/// ```
 pub fn sine_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     -c * (t / d * (PI / 2.0)).cos() + c + b
 }
-/// Sine ease-out interpolation — slow end, from `b` over `c` at time `t` of duration `d`.
+
+/// Ease-out sine — fast start, slow end along a quarter-sine curve.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::sine_out;
+///
+/// assert!((sine_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((sine_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // sin(π/4) ≈ 0.707 — slow-end signature (midpoint > 0.5).
+/// assert!(sine_out(0.5, 0.0, 1.0, 1.0) > 0.5);
+/// ```
 pub fn sine_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c * (t / d * (PI / 2.0)).sin() + b
 }
-/// Sine ease-in-out interpolation — slow start and end, from `b` over `c` at time `t` of duration `d`.
+
+/// Ease-in-out sine — slow start and slow end along a half-cosine curve.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::sine_in_out;
+///
+/// assert!((sine_in_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((sine_in_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // Symmetric — midpoint is exactly 0.5.
+/// assert!((sine_in_out(0.5, 0.0, 1.0, 1.0) - 0.5).abs() < 1e-6);
+/// ```
 pub fn sine_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     -c / 2.0 * ((PI * t / d).cos() - 1.0) + b
 }
 
-/// Circular ease-in interpolation — accelerates from zero using a circular arc, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in circular — slow start along a circular arc.
+///
+/// The acceleration profile mirrors the lower-right quadrant of a unit circle —
+/// gentler than `expo_in` but sharper than `quad_in`.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::circ_in;
+///
+/// assert!((circ_in(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((circ_in(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // 1 - √0.75 ≈ 0.134 — slow-start signature.
+/// assert!(circ_in(0.5, 0.0, 1.0, 1.0) < 0.25);
+/// ```
 pub fn circ_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     -c * ((1.0 - td * td).sqrt() - 1.0) + b
 }
 
-/// Circular ease-out interpolation — decelerates to zero using a circular arc, from `b` over `c` at time `t` of duration `d`.
+/// Ease-out circular — slow end along a circular arc.
+///
+/// Mirrors [`circ_in`]: fast start, smoothly decelerating to `b + c`.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::circ_out;
+///
+/// assert!((circ_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((circ_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // √0.75 ≈ 0.866 — slow-end signature.
+/// assert!(circ_out(0.5, 0.0, 1.0, 1.0) > 0.75);
+/// ```
 pub fn circ_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d - 1.0;
     c * (1.0 - td * td).sqrt() + b
 }
 
-/// Circular ease-in-out interpolation — slow start and end using a circular arc, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in-out circular — slow start and slow end stitching two circular arcs.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::circ_in_out;
+///
+/// assert!((circ_in_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((circ_in_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // Symmetric — midpoint is exactly 0.5.
+/// assert!((circ_in_out(0.5, 0.0, 1.0, 1.0) - 0.5).abs() < 1e-6);
+/// ```
 pub fn circ_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
     if td < 1.0 {
@@ -154,19 +282,58 @@ pub fn circ_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Cubic ease-in interpolation — accelerates from zero using a cubic curve, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in cubic — slow start, very fast end along a `t³` curve.
+///
+/// Sharper acceleration than [`quad_in`]; use when the motion should noticeably
+/// "kick" toward the end.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::cubic_in;
+///
+/// assert!((cubic_in(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((cubic_in(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // 0.5³ = 0.125 — slow-start signature.
+/// assert!((cubic_in(0.5, 0.0, 1.0, 1.0) - 0.125).abs() < 1e-6);
+/// ```
 pub fn cubic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     c * td * td * td + b
 }
 
-/// Cubic ease-out interpolation — decelerates to zero using a cubic curve, from `b` over `c` at time `t` of duration `d`.
+/// Ease-out cubic — very fast start, slow end along a `t³` curve.
+///
+/// Sharper deceleration than [`quad_out`]; the motion arrives at `b + c` more
+/// gently after a quick initial push.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::cubic_out;
+///
+/// assert!((cubic_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((cubic_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // 1 - 0.5³ = 0.875 — slow-end signature.
+/// assert!((cubic_out(0.5, 0.0, 1.0, 1.0) - 0.875).abs() < 1e-6);
+/// ```
 pub fn cubic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d - 1.0;
     c * (td * td * td + 1.0) + b
 }
 
-/// Cubic ease-in-out interpolation — slow start and end using a cubic curve, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in-out cubic — slow start and slow end with a fast middle along `t³`.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::cubic_in_out;
+///
+/// assert!((cubic_in_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((cubic_in_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // Symmetric — midpoint is exactly 0.5.
+/// assert!((cubic_in_out(0.5, 0.0, 1.0, 1.0) - 0.5).abs() < 1e-6);
+/// ```
 pub fn cubic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
     if td < 1.0 {
@@ -177,19 +344,57 @@ pub fn cubic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Quadratic ease-in interpolation — accelerates from zero using a quadratic curve, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in quadratic — slow start, fast end along a `t²` curve.
+///
+/// Gentler than [`cubic_in`]; the standard "slight ramp-up" easing.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::quad_in;
+///
+/// assert!((quad_in(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((quad_in(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // 0.5² = 0.25 — slow-start signature.
+/// assert!((quad_in(0.5, 0.0, 1.0, 1.0) - 0.25).abs() < 1e-6);
+/// ```
 pub fn quad_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     c * td * td + b
 }
 
-/// Quadratic ease-out interpolation — decelerates to zero using a quadratic curve, from `b` over `c` at time `t` of duration `d`.
+/// Ease-out quadratic — fast start, slow end along a `t²` curve.
+///
+/// Gentler deceleration than [`cubic_out`]; use when the motion should
+/// noticeably slow but not stop abruptly.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::quad_out;
+///
+/// assert!((quad_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((quad_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // 1 - (1 - 0.5)² = 0.75 — slow-end signature.
+/// assert!((quad_out(0.5, 0.0, 1.0, 1.0) - 0.75).abs() < 1e-6);
+/// ```
 pub fn quad_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
     -c * td * (td - 2.0) + b
 }
 
-/// Quadratic ease-in-out interpolation — slow start and end using a quadratic curve, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in-out quadratic — slow start and slow end with a fast middle along `t²`.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::quad_in_out;
+///
+/// assert!((quad_in_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((quad_in_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // Symmetric — midpoint is exactly 0.5.
+/// assert!((quad_in_out(0.5, 0.0, 1.0, 1.0) - 0.5).abs() < 1e-6);
+/// ```
 pub fn quad_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / (d / 2.0);
     if td < 1.0 {
@@ -199,7 +404,22 @@ pub fn quad_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Exponential ease-in interpolation — accelerates from zero using a base-2 exponential, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in exponential — asymptotic slow start, very fast end along `2^(10·t)`.
+///
+/// Steepest acceleration of all the standard families; values stay near `b` for
+/// most of the curve before launching toward `b + c`. The `t == 0` boundary is
+/// pinned to `b` exactly.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::expo_in;
+///
+/// assert_eq!(expo_in(0.0, 0.0, 1.0, 1.0), 0.0);
+/// assert!((expo_in(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // 2^-5 ≈ 0.031 — slow-start signature.
+/// assert!(expo_in(0.5, 0.0, 1.0, 1.0) < 0.05);
+/// ```
 pub fn expo_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == 0.0 {
         b
@@ -208,7 +428,21 @@ pub fn expo_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Exponential ease-out interpolation — decelerates to zero using a base-2 exponential, from `b` over `c` at time `t` of duration `d`.
+/// Ease-out exponential — very fast start, asymptotic slow end along `1 - 2^(-10·t)`.
+///
+/// Mirror of [`expo_in`]: rapid initial change that gently approaches `b + c`.
+/// The `t == d` boundary is pinned to `b + c` exactly.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::expo_out;
+///
+/// assert!((expo_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert_eq!(expo_out(1.0, 0.0, 1.0, 1.0), 1.0);
+/// // 1 - 2^-5 ≈ 0.969 — slow-end signature.
+/// assert!(expo_out(0.5, 0.0, 1.0, 1.0) > 0.95);
+/// ```
 pub fn expo_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == d {
         b + c
@@ -217,7 +451,20 @@ pub fn expo_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Exponential ease-in-out interpolation — slow start and end using a base-2 exponential, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in-out exponential — exponential acceleration then exponential deceleration.
+///
+/// Boundaries at `t == 0` and `t == d` are pinned exactly. Interior values
+/// follow raylib's original `easings.h` formulae, which use a steeply biased
+/// midpoint (the curve crosses 0.5 much earlier than `d / 2`).
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::expo_in_out;
+///
+/// assert_eq!(expo_in_out(0.0, 0.0, 1.0, 1.0), 0.0);
+/// assert_eq!(expo_in_out(1.0, 0.0, 1.0, 1.0), 1.0);
+/// ```
 pub fn expo_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t == 0.0 {
         return b;
@@ -233,21 +480,62 @@ pub fn expo_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Back ease-in interpolation — overshoots slightly before moving forward, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in with overshoot — dips backward past `b` before accelerating to `b + c`.
+///
+/// The "back" family applies a slight pre-load before the main motion, producing
+/// a wind-up effect.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::back_in;
+///
+/// assert!((back_in(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((back_in(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // Wind-up: midpoint dips below b (≈ -0.088).
+/// assert!(back_in(0.5, 0.0, 1.0, 1.0) < 0.0);
+/// ```
 pub fn back_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let s = 1.70158f32;
     let postfix = t / d;
     c * postfix * postfix * ((s + 1.0) * postfix - s) + b
 }
 
-/// Back ease-out interpolation — overshoots past the target before settling, from `b` over `c` at time `t` of duration `d`.
+/// Ease-out with overshoot — overshoots `b + c` before settling.
+///
+/// Mirror of [`back_in`]: rapid initial motion that briefly exceeds the target
+/// before easing back to it.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::back_out;
+///
+/// assert!((back_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((back_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // Overshoot: midpoint exceeds b + c/2 (≈ 1.088).
+/// assert!(back_out(0.5, 0.0, 1.0, 1.0) > 1.0);
+/// ```
 pub fn back_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let s = 1.70158f32;
     let td = t / d - 1.0;
     c * (td * td * ((s + 1.0) * td + s) + 1.0) + b
 }
 
-/// Back ease-in-out interpolation — overshoots at both ends, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in-out with overshoot — wind-up at the start, overshoot at the end.
+///
+/// Inherits raylib's original `easings.h` formula, which has a known interior
+/// quirk: the second half mixes `t` (raw time) with the normalized parameter,
+/// so values past `d / 2` are not the mirror of the first half. Use [`back_in`]
+/// or [`back_out`] when symmetric overshoot is required.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::back_in_out;
+///
+/// assert!((back_in_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// ```
 pub fn back_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut s = 1.70158f32;
     let td = t / (d / 2.0);
@@ -261,7 +549,21 @@ pub fn back_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Bounce ease-out interpolation — decelerates with bouncing at the end, from `b` over `c` at time `t` of duration `d`.
+/// Ease-out with bouncing decay — values bounce off `b + c` with damped peaks.
+///
+/// The base of the bounce family. Reaches `b + c` exactly at `t == d` after a
+/// sequence of progressively smaller rebounds.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::bounce_out;
+///
+/// assert!((bounce_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((bounce_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // Slow-end with bouncing — past 0.5 by the midpoint.
+/// assert!(bounce_out(0.5, 0.0, 1.0, 1.0) > 0.5);
+/// ```
 pub fn bounce_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / d;
     if td < (1.0 / 2.75) {
@@ -278,12 +580,40 @@ pub fn bounce_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Bounce ease-in interpolation — accelerates with bouncing at the start, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in with bouncing accel — mirror of [`bounce_out`] applied to the start.
+///
+/// Produces a series of damped rebounds away from `b` before launching toward
+/// `b + c`.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::bounce_in;
+///
+/// assert!((bounce_in(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((bounce_in(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // Slow-start with bouncing — below 0.5 at the midpoint.
+/// assert!(bounce_in(0.5, 0.0, 1.0, 1.0) < 0.5);
+/// ```
 pub fn bounce_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     c - bounce_out(d - t, 0.0, c, d) + b
 }
 
-/// Bounce ease-in-out interpolation — bounces at both start and end, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in-out with bouncing — bounces both into and out of the curve.
+///
+/// First half is [`bounce_in`] compressed to `[0, d/2]`; second half is
+/// [`bounce_out`] compressed to `[d/2, d]`. Symmetric around the midpoint.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::bounce_in_out;
+///
+/// assert!((bounce_in_out(0.0, 0.0, 1.0, 1.0) - 0.0).abs() < 1e-6);
+/// assert!((bounce_in_out(1.0, 0.0, 1.0, 1.0) - 1.0).abs() < 1e-6);
+/// // Symmetric — midpoint is exactly 0.5.
+/// assert!((bounce_in_out(0.5, 0.0, 1.0, 1.0) - 0.5).abs() < 1e-6);
+/// ```
 pub fn bounce_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     if t < (d / 2.0) {
         (bounce_in(t * 2.0, 0.0, c, d) * 0.5) + b
@@ -292,7 +622,22 @@ pub fn bounce_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Elastic ease-in interpolation — accelerates with a spring-like oscillation at the start, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in with elastic oscillation — spring-like wind-up before launching to `b + c`.
+///
+/// Oscillates around `b` with growing amplitude as `t` approaches `d`, mimicking
+/// a stretched spring being released. The `t == 0` and `t == d` boundaries are
+/// pinned exactly.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::elastic_in;
+///
+/// assert_eq!(elastic_in(0.0, 0.0, 1.0, 1.0), 0.0);
+/// assert_eq!(elastic_in(1.0, 0.0, 1.0, 1.0), 1.0);
+/// // Slow start with oscillation — midpoint stays well below 0.5.
+/// assert!(elastic_in(0.5, 0.0, 1.0, 1.0) < 0.1);
+/// ```
 pub fn elastic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / d;
 
@@ -310,7 +655,21 @@ pub fn elastic_in(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Elastic ease-out interpolation — decelerates with a spring-like oscillation at the end, from `b` over `c` at time `t` of duration `d`.
+/// Ease-out with elastic oscillation — spring-like overshoot decaying to `b + c`.
+///
+/// Mirror of [`elastic_in`]: rapid initial motion past `b + c` followed by
+/// damped oscillation back to the target. Boundaries pinned exactly.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::elastic_out;
+///
+/// assert_eq!(elastic_out(0.0, 0.0, 1.0, 1.0), 0.0);
+/// assert_eq!(elastic_out(1.0, 0.0, 1.0, 1.0), 1.0);
+/// // Slow end with oscillation — midpoint stays well above 0.5.
+/// assert!(elastic_out(0.5, 0.0, 1.0, 1.0) > 0.9);
+/// ```
 pub fn elastic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let td = t / d;
 
@@ -326,7 +685,21 @@ pub fn elastic_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     }
 }
 
-/// Elastic ease-in-out interpolation — spring-like oscillation at both ends, from `b` over `c` at time `t` of duration `d`.
+/// Ease-in-out with elastic oscillation — spring wind-up then spring overshoot.
+///
+/// First half compresses [`elastic_in`] into `[0, d/2]`; second half compresses
+/// [`elastic_out`] into `[d/2, d]`. Symmetric around the midpoint.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::ease::elastic_in_out;
+///
+/// assert_eq!(elastic_in_out(0.0, 0.0, 1.0, 1.0), 0.0);
+/// assert_eq!(elastic_in_out(1.0, 0.0, 1.0, 1.0), 1.0);
+/// // Symmetric — midpoint is exactly 0.5.
+/// assert!((elastic_in_out(0.5, 0.0, 1.0, 1.0) - 0.5).abs() < 1e-6);
+/// ```
 pub fn elastic_in_out(t: f32, b: f32, c: f32, d: f32) -> f32 {
     let mut td = t / (d / 2.0);
 
