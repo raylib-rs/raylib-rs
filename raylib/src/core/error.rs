@@ -256,13 +256,35 @@ pub enum UpdateAudioStreamError {
 #[derive(Error, Debug)]
 pub enum AllocationError {
     /// [`MemAlloc`](crate::ffi::MemAlloc) returned null.
+    ///
+    /// **Cause:** raylib's internal allocator (or any custom allocator registered via
+    /// [`SetTraceLogCallback`](crate::ffi::SetTraceLogCallback)'s family) returned a null
+    /// pointer for the requested byte count — typically out-of-memory at the process or
+    /// platform level.
+    ///
+    /// **Recovery:** Free unused resources (drop unused `Image`/`Mesh`/`Texture` handles)
+    /// and retry, or report unrecoverable allocation failure to the caller.
     #[error("memory request exceeds capacity")]
     NullAlloc,
     /// The size of `[T; count]` in bytes exceeds [`u32::MAX`]
     /// (the largest value [`MemAlloc`](crate::ffi::MemAlloc) can be passed).
+    ///
+    /// **Cause:** The caller asked to allocate a slice whose total byte size exceeds
+    /// `u32::MAX` (~4 GiB). raylib's `MemAlloc` accepts `unsigned int` so larger
+    /// requests cannot be expressed through the FFI.
+    ///
+    /// **Recovery:** Split the allocation into smaller chunks (e.g. stream image data
+    /// in tiles), or use a Rust-side allocator (`Box`/`Vec`) for buffers raylib does
+    /// not need to own.
     #[error("memory request in bytes exceeds unsigned integer maximum")]
     IntoUIntFailed,
     /// Attempted to pass 0 to [`MemAlloc`](crate::ffi::MemAlloc).
+    ///
+    /// **Cause:** Zero-byte allocations are not meaningful and raylib's allocator
+    /// rejects them; raylib-rs catches the request before the FFI call.
+    ///
+    /// **Recovery:** Skip the call entirely for empty containers, or use a sentinel
+    /// (e.g. `Option<Box<[T]>>`) to represent "no allocation needed".
     #[error("requested zero bytes of memory")]
     ZeroBytes,
 }
@@ -577,11 +599,13 @@ pub enum SetMaterialError {
 /// # Examples
 ///
 /// ```no_run
+/// use raylib::core::models::Material;
 /// use raylib::core::error::LoadMaterialError;
 ///
-/// fn handle(e: LoadMaterialError) {
-///     match e {
-///         LoadMaterialError::NoneLoaded { path } => eprintln!("no materials in {path}"),
+/// match Material::load_materials("assets/scene.mtl") {
+///     Ok(materials) => { /* use materials */ }
+///     Err(LoadMaterialError::NoneLoaded { path }) => {
+///         eprintln!("no materials found in {path}");
 ///     }
 /// }
 /// ```
@@ -661,20 +685,18 @@ pub enum LoadFontError {
 /// # Examples
 ///
 /// ```no_run
+/// use raylib::core::texture::Image;
 /// use raylib::core::error::InvalidImageError;
 ///
-/// fn handle(e: InvalidImageError) {
-///     match e {
-///         InvalidImageError::ZeroWidth => eprintln!("width is 0"),
-///         InvalidImageError::ZeroHeight => eprintln!("height is 0"),
-///         InvalidImageError::NullData => eprintln!("data pointer is null"),
-///         InvalidImageError::NullDataFromFile => eprintln!("file missing or unsupported"),
-///         InvalidImageError::InvalidFile => eprintln!("file data malformed"),
-///         InvalidImageError::NullDataFromMemory => eprintln!("memory buffer malformed"),
-///         InvalidImageError::NullDataFromTexture => eprintln!("GPU readback failed"),
-///         InvalidImageError::UnsupportedFormat => eprintln!("pixel format not supported"),
-///         InvalidImageError::NonSquareKernel => eprintln!("kernel must be square"),
+/// match Image::load_image("assets/sprite.png") {
+///     Ok(img) => { /* use img */ }
+///     Err(InvalidImageError::NullDataFromFile) => {
+///         eprintln!("file missing or unsupported format");
 ///     }
+///     Err(InvalidImageError::InvalidFile) => {
+///         eprintln!("file data malformed");
+///     }
+///     Err(_) => eprintln!("other image-load error"),
 /// }
 /// ```
 #[derive(Error, Debug)]
