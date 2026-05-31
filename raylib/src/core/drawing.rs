@@ -61,6 +61,33 @@ impl RaylibHandle {
 }
 
 /// RAII draw handle returned by [`RaylibHandle::begin_drawing`] — calls `EndDrawing` on drop.
+///
+/// Holds an exclusive borrow of the [`RaylibHandle`] for the duration of a frame. Drop runs
+/// raylib's `EndDrawing`, which flushes the queued GPU commands, swaps buffers, presents the
+/// frame, and enforces the configured target frame rate. All [`RaylibDraw`] methods and the
+/// `begin_*` mode entries (texture / 2D / 3D / VR / shader / blend / scissor) hang off this
+/// guard via [`Deref`](std::ops::Deref) to `RaylibHandle` and the extension traits.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("demo").build();
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     d.draw_text("hello", 10, 10, 20, Color::BLACK);
+///     // `d` drops here → EndDrawing is called automatically.
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`RaylibHandle::begin_drawing`] — constructor for this guard.
+/// - [`RaylibHandle::draw`] — closure-form alternative that scopes the guard for you.
+/// - [`RaylibDraw`] — drawing methods available on the guard.
+/// - [`RaylibTextureMode`], [`RaylibMode2D`], [`RaylibMode3D`] — nested mode guards.
 pub struct RaylibDrawHandle<'a>(&'a mut RaylibHandle);
 
 impl RaylibDrawHandle<'_> {
@@ -108,6 +135,49 @@ impl RaylibDraw for RaylibDrawHandle<'_> {}
 // Some space can be saved by using a phantom instead of copying the actual reference.
 // The PhantomData will ensure that the borrow checker still analyzes as though the mutable texture reference was held, without physically storing it in the runtime memory.
 /// RAII draw handle for rendering to a `RenderTexture2D` — calls `EndTextureMode` on drop.
+///
+/// Drop runs raylib's `EndTextureMode`, unbinding the render-texture's framebuffer and
+/// restoring the default framebuffer as the active draw target. Mutates the underlying
+/// `RenderTexture2D`'s color attachment in place; the texture remains usable for sampling
+/// (e.g. via [`RaylibDraw::draw_texture`]) once the guard drops.
+///
+/// Construct via [`RaylibTextureModeExt::begin_texture_mode`] on a [`RaylibDrawHandle`] or
+/// directly on a [`RaylibHandle`]. The guard implements [`RaylibDraw`], so all 2D drawing
+/// methods are available through it.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[cfg(feature = "software_renderer")] {
+/// use raylib::prelude::*;
+/// use raylib::test_harness::*;
+///
+/// with_headless(64, 64, |rl, thread| {
+///     let mut target = rl
+///         .load_render_texture(thread, 32, 32)
+///         .expect("render texture");
+///     let img = render_frame(rl, thread, |d| {
+///         d.clear_background(Color::WHITE);
+///         {
+///             let mut t = d.begin_texture_mode(thread, &mut target);
+///             t.clear_background(Color::BLUE);
+///             t.draw_rectangle(0, 0, 32, 32, Color::RED);
+///         }
+///         d.draw_texture(target.texture(), 0, 0, Color::WHITE);
+///     });
+///     // Off-screen content blitted into the default framebuffer.
+///     assert_pixel(&img, 5, 5, Color::RED, 0);
+///     // Pixels outside the blitted region remain the WHITE clear.
+///     assert_pixel(&img, 50, 50, Color::WHITE, 0);
+/// });
+/// # }
+/// ```
+///
+/// # See also
+///
+/// - [`RaylibTextureModeExt::begin_texture_mode`] — constructor for this guard.
+/// - [`RaylibTextureModeExt::draw_texture_mode`] — closure-form alternative.
+/// - [`RaylibDraw`] — drawing methods available on this guard.
 pub struct RaylibTextureMode<'a, 'b, T: 'a>(&'a mut T, PhantomData<&'b mut ffi::RenderTexture2D>);
 
 impl<'a, T: 'a> Drop for RaylibTextureMode<'a, '_, T> {
@@ -130,6 +200,37 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibTextureMode<'a, '_, T> {
 // framebuffer: &'a mut ffi::RenderTexture2D,
 
 /// Extension trait providing render-texture mode entry on draw handles.
+///
+/// Implemented for [`RaylibDrawHandle`] (so you can begin a texture-mode pass inside a
+/// regular draw frame) and for [`RaylibHandle`] itself (off-screen renders outside an
+/// active draw frame are also valid). The trait's two methods are alternative forms of the
+/// same operation: [`begin_texture_mode`](Self::begin_texture_mode) returns a RAII guard,
+/// while [`draw_texture_mode`](Self::draw_texture_mode) takes a closure and ends the mode
+/// when the closure returns.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("demo").build();
+/// let mut target = rl
+///     .load_render_texture(&thread, 256, 256)
+///     .expect("render texture");
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.draw_texture_mode(&thread, &mut target, |mut t| {
+///         t.clear_background(Color::BLUE);
+///         t.draw_circle(128, 128, 64.0, Color::YELLOW);
+///     });
+///     d.clear_background(Color::RAYWHITE);
+///     d.draw_texture(target.texture(), 0, 0, Color::WHITE);
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`RaylibTextureMode`] — RAII guard returned by `begin_texture_mode`.
 pub trait RaylibTextureModeExt
 where
     Self: Sized,
@@ -170,6 +271,48 @@ impl<'a, T: 'a> RaylibDraw for RaylibTextureMode<'a, '_, T> {}
 
 // Lifetime 'a is duplicatively stored in a PhantomData so that the borrow checker knows T is being held *exclusively* for the lifetime of the mode, without giving the false impression that it can actually be mutated by the library.
 /// RAII draw handle for VR stereo rendering — calls `EndVrStereoMode` on drop.
+///
+/// While the guard is alive, raylib renders each draw call twice (once per eye) using the
+/// stereo projection / view matrices in the borrowed [`VrStereoConfig`]. Drop runs
+/// `EndVrStereoMode`, restoring the standard mono projection. The guard implements
+/// [`RaylibDraw`] via deref, so all 2D / 3D draw calls issued during the scope are stereo.
+///
+/// Requires a real or simulator VR backend; not exercised by the headless software
+/// renderer.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("vr-demo").build();
+/// let device = VrDeviceInfo {
+///     h_resolution: 2160,
+///     v_resolution: 1200,
+///     h_screen_size: 0.133793,
+///     v_screen_size: 0.0669,
+///     eye_to_screen_distance: 0.041,
+///     lens_separation_distance: 0.07,
+///     interpupillary_distance: 0.07,
+///     lens_distortion_values: [1.0, 0.22, 0.24, 0.0],
+///     chroma_ab_correction: [0.996, -0.004, 1.014, 0.0],
+/// };
+/// let mut config = rl.load_vr_stereo_config(&thread, device);
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     {
+///         let mut v = d.begin_vr_stereo_mode(&thread, &mut config);
+///         v.draw_rectangle(10, 10, 100, 50, Color::RED);
+///         // Drop ends stereo mode automatically.
+///     }
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`RaylibVRModeExt::begin_vr_stereo_mode`] — constructor for this guard.
+/// - [`VrStereoConfig`] — stereo projection configuration the guard borrows.
 pub struct RaylibVRMode<'a, 'b, T: 'a>(
     &'a T,
     PhantomData<&'a mut T>,
@@ -189,6 +332,45 @@ impl<'a, T: 'a> std::ops::Deref for RaylibVRMode<'a, '_, T> {
 }
 
 /// Extension trait providing VR stereo mode entry on draw handles.
+///
+/// Implemented for every [`RaylibDraw`] surface so a VR stereo pass can begin inside any
+/// active draw frame. The two methods are alternative forms of the same operation:
+/// [`begin_vr_stereo_mode`](Self::begin_vr_stereo_mode) returns a RAII guard, while
+/// [`draw_vr_stereo_mode`](Self::draw_vr_stereo_mode) takes a closure and ends the mode
+/// automatically when the closure returns.
+///
+/// # Examples
+///
+/// Closure form (preferred when the scope is small enough to fit in one block):
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("vr-demo").build();
+/// # let device = VrDeviceInfo {
+/// #     h_resolution: 2160, v_resolution: 1200,
+/// #     h_screen_size: 0.133793, v_screen_size: 0.0669,
+/// #     eye_to_screen_distance: 0.041, lens_separation_distance: 0.07,
+/// #     interpupillary_distance: 0.07,
+/// #     lens_distortion_values: [1.0, 0.22, 0.24, 0.0],
+/// #     chroma_ab_correction: [0.996, -0.004, 1.014, 0.0],
+/// # };
+/// let mut config = rl.load_vr_stereo_config(&thread, device);
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.draw_vr_stereo_mode(&mut config, |mut v| {
+///         v.clear_background(Color::RAYWHITE);
+///         v.draw_rectangle(10, 10, 100, 50, Color::RED);
+///     });
+/// }
+/// ```
+///
+/// See [`RaylibVRMode`] for the equivalent guard-form example.
+///
+/// # See also
+///
+/// - [`RaylibVRMode`] — RAII guard returned by `begin_vr_stereo_mode`.
+/// - [`VrStereoConfig`] — stereo projection / lens configuration consumed by both methods.
 pub trait RaylibVRModeExt
 where
     Self: Sized,
@@ -225,6 +407,45 @@ impl<'a, T: 'a> RaylibDraw for RaylibVRMode<'a, '_, T> {}
 // 2D Mode
 
 /// RAII draw handle for 2D camera mode — calls `EndMode2D` on drop.
+///
+/// While alive, all 2D draw calls are transformed by the camera's `offset`, `target`,
+/// `rotation`, and `zoom`. Drop runs `EndMode2D`, restoring the screen-space identity
+/// transform — subsequent draws on the parent guard render in raw screen coordinates again.
+/// Implements [`RaylibDraw`] via deref, so the full 2D drawing surface is available
+/// through the camera.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[cfg(feature = "software_renderer")] {
+/// use raylib::prelude::*;
+/// use raylib::test_harness::*;
+///
+/// with_headless(64, 64, |rl, thread| {
+///     let camera = Camera2D {
+///         offset: Vector2::new(0.0, 0.0),
+///         target: Vector2::new(10.0, 10.0), // shifts world origin
+///         rotation: 0.0,
+///         zoom: 1.0,
+///     };
+///     let img = render_frame(rl, thread, |d| {
+///         d.clear_background(Color::WHITE);
+///         let mut c = d.begin_mode2D(camera);
+///         // World rect at (10, 10) → screen (0, 0) after the camera translation.
+///         c.draw_rectangle(10, 10, 20, 20, Color::RED);
+///     });
+///     assert_pixel(&img, 5, 5, Color::RED, 0);
+///     // Outside the translated rect → still WHITE.
+///     assert_pixel(&img, 50, 50, Color::WHITE, 0);
+/// });
+/// # }
+/// ```
+///
+/// # See also
+///
+/// - [`RaylibMode2DExt::begin_mode2D`] — constructor for this guard.
+/// - [`Camera2D`](crate::core::camera::Camera2D) — the camera passed to `begin_mode2D`.
+/// - [`RaylibMode3D`] — sibling guard for 3D camera projections.
 pub struct RaylibMode2D<'a, T: 'a>(&'a mut T);
 impl<'a, T: 'a> Drop for RaylibMode2D<'a, T> {
     fn drop(&mut self) {
@@ -245,6 +466,42 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibMode2D<'a, T> {
 }
 
 /// Extension trait providing 2D camera mode entry on draw handles.
+///
+/// Implemented for every [`RaylibDraw`] surface (so 2D mode can begin inside texture-mode,
+/// scissor-mode, blend-mode, etc.). The two methods are alternative forms:
+/// [`begin_mode2D`](Self::begin_mode2D) returns a RAII guard;
+/// [`draw_mode2D`](Self::draw_mode2D) takes a closure and ends 2D mode automatically when
+/// the closure returns.
+///
+/// # Examples
+///
+/// Closure form:
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("demo").build();
+/// let camera = Camera2D {
+///     offset: Vector2::new(400.0, 300.0),
+///     target: Vector2::zero(),
+///     rotation: 0.0,
+///     zoom: 2.0,
+/// };
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     d.draw_mode2D(camera, |mut c| {
+///         c.draw_rectangle(-10, -10, 20, 20, Color::RED);
+///     });
+/// }
+/// ```
+///
+/// See [`RaylibMode2D`] for the equivalent guard-form example.
+///
+/// # See also
+///
+/// - [`RaylibMode2D`] — RAII guard returned by `begin_mode2D`.
+/// - [`Camera2D`](crate::core::camera::Camera2D) — camera passed into both methods.
 pub trait RaylibMode2DExt
 where
     Self: Sized,
@@ -285,6 +542,42 @@ impl<'a, T: 'a> RaylibDraw for RaylibMode2D<'a, T> {}
 // 3D Mode
 
 /// RAII draw handle for 3D camera mode — calls `EndMode3D` on drop.
+///
+/// While alive, draw calls use the [`Camera3D`](crate::core::camera::Camera3D)'s view + projection matrices, so 3D draw
+/// methods on [`RaylibDraw3D`] (`draw_cube`, `draw_sphere`, `draw_line_3D`, etc.) render in
+/// world space. Drop runs `EndMode3D`, restoring the 2D screen-space transform. Implements
+/// both [`RaylibDraw`] and [`RaylibDraw3D`] via deref.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("demo").build();
+/// let camera = Camera3D::perspective(
+///     Vector3::new(4.0, 4.0, 4.0),
+///     Vector3::new(0.0, 0.0, 0.0),
+///     Vector3::new(0.0, 1.0, 0.0),
+///     45.0,
+/// );
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     {
+///         let mut c = d.begin_mode3D(camera);
+///         c.draw_cube(Vector3::zero(), 2.0, 2.0, 2.0, Color::RED);
+///         c.draw_grid(10, 1.0);
+///         // Drop ends 3D mode automatically.
+///     }
+///     d.draw_text("hello 3D", 10, 10, 20, Color::BLACK);
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`RaylibMode3DExt::begin_mode3D`] — constructor for this guard.
+/// - [`Camera3D`](crate::core::camera::Camera3D) — the camera passed to `begin_mode3D`.
+/// - [`RaylibDraw3D`] — 3D-only draw methods available through this guard.
 pub struct RaylibMode3D<'a, T: 'a>(&'a mut T);
 impl<'a, T: 'a> Drop for RaylibMode3D<'a, T> {
     fn drop(&mut self) {
@@ -305,6 +598,43 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibMode3D<'a, T> {
 }
 
 /// Extension trait providing 3D camera mode entry on draw handles.
+///
+/// Implemented for every [`RaylibDraw`] surface. The two methods are alternative forms:
+/// [`begin_mode3D`](Self::begin_mode3D) returns a RAII guard;
+/// [`draw_mode3D`](Self::draw_mode3D) takes a closure and ends 3D mode automatically when
+/// the closure returns.
+///
+/// # Examples
+///
+/// Closure form:
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("demo").build();
+/// let camera = Camera3D::perspective(
+///     Vector3::new(4.0, 4.0, 4.0),
+///     Vector3::new(0.0, 0.0, 0.0),
+///     Vector3::new(0.0, 1.0, 0.0),
+///     45.0,
+/// );
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     d.draw_mode3D(camera, |mut c| {
+///         c.draw_cube(Vector3::zero(), 2.0, 2.0, 2.0, Color::RED);
+///         c.draw_grid(10, 1.0);
+///     });
+/// }
+/// ```
+///
+/// See [`RaylibMode3D`] for the equivalent guard-form example.
+///
+/// # See also
+///
+/// - [`RaylibMode3D`] — RAII guard returned by `begin_mode3D`.
+/// - [`Camera3D`](crate::core::camera::Camera3D) — camera passed into both methods.
+/// - [`RaylibDraw3D`] — 3D-only draw methods exposed by the guard.
 pub trait RaylibMode3DExt
 where
     Self: Sized,
@@ -346,6 +676,34 @@ impl<'a, T: 'a> RaylibDraw3D for RaylibMode3D<'a, T> {}
 // shader Mode
 
 /// RAII draw handle for custom shader mode — calls `EndShaderMode` on drop.
+///
+/// While alive, the borrowed [`Shader`] is bound as the active fragment / vertex program for
+/// subsequent draw calls. Drop runs `EndShaderMode`, restoring raylib's default shader.
+/// Implements [`RaylibDraw`] and [`RaylibDraw3D`] via deref, so the guard accepts both 2D
+/// and 3D draw calls — the shader applies to whichever the parent surface supports.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("demo").build();
+/// let mut shader = rl.load_shader(&thread, None, Some("grayscale.fs"));
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     {
+///         let mut s = d.begin_shader_mode(&mut shader);
+///         s.draw_rectangle(10, 10, 100, 50, Color::WHITE);
+///         // Drop ends shader mode automatically.
+///     }
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`RaylibShaderModeExt::begin_shader_mode`] — constructor for this guard.
+/// - [`Shader`] — the shader the guard borrows.
 pub struct RaylibShaderMode<'a, 'b, T: 'a>(&'a mut T, PhantomData<&'b mut Shader>);
 
 impl<'a, T: 'a> Drop for RaylibShaderMode<'a, '_, T> {
@@ -367,6 +725,36 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibShaderMode<'a, '_, T> {
 }
 
 /// Extension trait providing custom shader mode entry on draw handles.
+///
+/// Implemented for every [`RaylibDraw`] surface. The two methods are alternative forms:
+/// [`begin_shader_mode`](Self::begin_shader_mode) returns a RAII guard;
+/// [`draw_shader_mode`](Self::draw_shader_mode) takes a closure and ends shader mode
+/// automatically when the closure returns.
+///
+/// # Examples
+///
+/// Closure form:
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("demo").build();
+/// let mut shader = rl.load_shader(&thread, None, Some("grayscale.fs"));
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     d.draw_shader_mode(&mut shader, |mut s| {
+///         s.draw_rectangle(10, 10, 100, 50, Color::WHITE);
+///     });
+/// }
+/// ```
+///
+/// See [`RaylibShaderMode`] for the equivalent guard-form example.
+///
+/// # See also
+///
+/// - [`RaylibShaderMode`] — RAII guard returned by `begin_shader_mode`.
+/// - [`Shader`] — the shader bound for the duration of the mode.
 pub trait RaylibShaderModeExt
 where
     Self: Sized,
@@ -403,6 +791,37 @@ impl<'a, T: 'a> RaylibDraw3D for RaylibShaderMode<'a, '_, T> {}
 // Blend Mode
 
 /// RAII draw handle for a blend mode scope — calls `EndBlendMode` on drop.
+///
+/// While alive, the active GPU blend equation is the one specified in the constructor
+/// (`BLEND_ALPHA`, `BLEND_ADDITIVE`, `BLEND_MULTIPLIED`, `BLEND_ADD_COLORS`,
+/// `BLEND_SUBTRACT_COLORS`, `BLEND_ALPHA_PREMULTIPLY`, or `BLEND_CUSTOM`). Drop runs
+/// `EndBlendMode`, restoring the previous blend mode. Implements [`RaylibDraw`] and
+/// [`RaylibDraw3D`] via deref.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[cfg(feature = "software_renderer")] {
+/// use raylib::prelude::*;
+/// use raylib::test_harness::*;
+///
+/// with_headless(64, 64, |rl, thread| {
+///     let img = render_frame(rl, thread, |d| {
+///         d.clear_background(Color::WHITE);
+///         // Default alpha blend: opaque RED writes are unaffected by the underlying WHITE.
+///         let mut b = d.begin_blend_mode(BlendMode::BLEND_ALPHA);
+///         b.draw_rectangle(0, 0, 32, 32, Color::RED);
+///     });
+///     assert_pixel(&img, 5, 5, Color::RED, 0);
+///     assert_pixel(&img, 50, 50, Color::WHITE, 0);
+/// });
+/// # }
+/// ```
+///
+/// # See also
+///
+/// - [`RaylibBlendModeExt::begin_blend_mode`] — constructor for this guard.
+/// - [`BlendMode`](crate::consts::BlendMode) — supported blend equations.
 pub struct RaylibBlendMode<'a, T: 'a>(&'a mut T);
 impl<'a, T: 'a> Drop for RaylibBlendMode<'a, T> {
     fn drop(&mut self) {
@@ -423,6 +842,37 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibBlendMode<'a, T> {
 }
 
 /// Extension trait providing blend mode entry on draw handles.
+///
+/// Implemented for every [`RaylibDraw`] surface. The two methods are alternative forms:
+/// [`begin_blend_mode`](Self::begin_blend_mode) returns a RAII guard;
+/// [`draw_blend_mode`](Self::draw_blend_mode) takes a closure and ends the blend scope
+/// automatically when the closure returns.
+///
+/// # Examples
+///
+/// Closure form:
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("demo").build();
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::BLACK);
+///     d.draw_blend_mode(BlendMode::BLEND_ADDITIVE, |mut b| {
+///         // Additive blending: subsequent draws add to the framebuffer.
+///         b.draw_circle(200, 200, 80.0, Color::new(64, 0, 0, 255));
+///         b.draw_circle(240, 200, 80.0, Color::new(0, 64, 0, 255));
+///     });
+/// }
+/// ```
+///
+/// See [`RaylibBlendMode`] for the equivalent guard-form example.
+///
+/// # See also
+///
+/// - [`RaylibBlendMode`] — RAII guard returned by `begin_blend_mode`.
+/// - [`BlendMode`](crate::consts::BlendMode) — supported blend equations.
 pub trait RaylibBlendModeExt
 where
     Self: Sized,
@@ -459,6 +909,41 @@ impl<'a, T: 'a> RaylibDraw3D for RaylibBlendMode<'a, T> {}
 // Scissor Mode stuff
 
 /// RAII draw handle for a scissor (clipping rectangle) mode — calls `EndScissorMode` on drop.
+///
+/// While alive, the GPU discards fragments outside the rectangle `(x, y, width, height)`
+/// passed to the constructor — draws are clipped to that region. Drop runs `EndScissorMode`,
+/// removing the scissor test so subsequent draws cover the full framebuffer again.
+/// Implements [`RaylibDraw`] (and [`RaylibDraw3D`] when the parent surface does) via deref.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[cfg(feature = "software_renderer")] {
+/// use raylib::prelude::*;
+/// use raylib::test_harness::*;
+///
+/// with_headless(64, 64, |rl, thread| {
+///     let img = render_frame(rl, thread, |d| {
+///         d.clear_background(Color::WHITE);
+///         {
+///             // Clip subsequent draws to a 20×20 region at (10, 10).
+///             let mut s = d.begin_scissor_mode(10, 10, 20, 20);
+///             // Even though the rectangle is 64×64, only the clipped 20×20 paints RED.
+///             s.draw_rectangle(0, 0, 64, 64, Color::RED);
+///         }
+///     });
+///     // Inside the scissor region: RED.
+///     assert_pixel(&img, 15, 15, Color::RED, 0);
+///     // Outside the scissor region: untouched WHITE.
+///     assert_pixel(&img, 5, 5, Color::WHITE, 0);
+///     assert_pixel(&img, 40, 40, Color::WHITE, 0);
+/// });
+/// # }
+/// ```
+///
+/// # See also
+///
+/// - [`RaylibScissorModeExt::begin_scissor_mode`] — constructor for this guard.
 pub struct RaylibScissorMode<'a, T: 'a>(&'a mut T);
 impl<'a, T: 'a> Drop for RaylibScissorMode<'a, T> {
     fn drop(&mut self) {
@@ -479,6 +964,35 @@ impl<'a, T: 'a> std::ops::DerefMut for RaylibScissorMode<'a, T> {
 }
 
 /// Extension trait providing scissor mode entry on draw handles.
+///
+/// Implemented for every [`RaylibDraw`] surface. The two methods are alternative forms:
+/// [`begin_scissor_mode`](Self::begin_scissor_mode) returns a RAII guard;
+/// [`draw_scissor_mode`](Self::draw_scissor_mode) takes a closure and ends the scissor scope
+/// automatically when the closure returns.
+///
+/// # Examples
+///
+/// Closure form:
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("demo").build();
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     d.draw_scissor_mode(100, 100, 200, 150, |mut s| {
+///         // Only fragments inside (100, 100, 200, 150) survive the scissor test.
+///         s.draw_rectangle(0, 0, 800, 600, Color::RED);
+///     });
+/// }
+/// ```
+///
+/// See [`RaylibScissorMode`] for the equivalent guard-form example.
+///
+/// # See also
+///
+/// - [`RaylibScissorMode`] — RAII guard returned by `begin_scissor_mode`.
 pub trait RaylibScissorModeExt
 where
     Self: Sized,
@@ -1712,6 +2226,40 @@ pub trait RaylibDraw {
 }
 
 /// Drawing methods available within an active 3D camera mode block.
+///
+/// Implemented on guards entered through a 3D camera ([`RaylibMode3D`]) and on nested mode
+/// guards that wrap a 3D-capable parent ([`RaylibShaderMode`], [`RaylibBlendMode`],
+/// [`RaylibScissorMode`]). The methods on this trait submit 3D primitives — points, lines,
+/// triangles, cubes, spheres, cylinders, meshes — into the camera's projected world space.
+/// 2D draw methods from [`RaylibDraw`] remain callable through the guard's deref; they are
+/// projected onto the near plane and so usually render as overlays.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (mut rl, thread) = raylib::init().size(800, 600).title("demo").build();
+/// let camera = Camera3D::perspective(
+///     Vector3::new(4.0, 4.0, 4.0),
+///     Vector3::new(0.0, 0.0, 0.0),
+///     Vector3::new(0.0, 1.0, 0.0),
+///     45.0,
+/// );
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     let mut c = d.begin_mode3D(camera);
+///     c.draw_cube(Vector3::zero(), 2.0, 2.0, 2.0, Color::RED);
+///     c.draw_cube_wires(Vector3::zero(), 2.0, 2.0, 2.0, Color::MAROON);
+///     c.draw_grid(10, 1.0);
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`RaylibMode3D`] — primary guard through which this trait is exposed.
+/// - [`RaylibDraw`] — 2D drawing methods available on the same guard.
 pub trait RaylibDraw3D {
     /// Draw a point in 3D space, actually a small line
     #[allow(non_snake_case)]
