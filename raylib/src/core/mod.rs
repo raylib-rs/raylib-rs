@@ -2,20 +2,58 @@
 mod macros;
 
 pub mod audio;
-/// Automation event recording and playback.
+/// Automation event recording and playback for deterministic input replay.
+///
+/// Wraps raylib's automation-event API so input streams (key presses, mouse moves, gamepad activity)
+/// can be captured into an `AutomationEventList`, persisted to disk, and replayed frame-by-frame.
+/// Useful for scripted demos, regression tests, and benchmark reproducibility.
+///
+/// # See also
+///
+/// See the *raygui* chapter of the book.
 pub mod automation;
 /// Custom callback hooks for audio streams and logging.
+///
+/// Provides safe wrappers around raylib's C function-pointer hooks: install a trace-log callback
+/// to redirect raylib's diagnostic output into Rust's logging stack, or attach an audio-stream
+/// processor to mutate sample data per frame. The wrappers stash boxed closures in static slots and
+/// trampoline through `extern "C"` shims so user code can stay safe.
+///
+/// # See also
+///
+/// See the *Callbacks and Logging* chapter of the book.
 pub mod callbacks;
 #[cfg(not(feature = "nobuild"))]
 pub mod camera;
 
 pub mod collision;
-/// Color type and color-manipulation helpers, re-exporting [`crate::ffi::Color`].
+/// Re-export module exposing the raylib `Color` type at `core::color::Color`.
+///
+/// The bulk of color manipulation — `from_hex`, `color_to_int`, `color_normalize`, `color_to_hsv`,
+/// `alpha`, and the named-constant set (`RAYWHITE`, `BLACK`, …) — lives on the [`Color`] type itself
+/// as inherent `impl` methods. This module exists solely to give `Color` a conventional path under
+/// `raylib::core::color` alongside the other domain submodules; ordinary user code should reach for
+/// `raylib::prelude::Color` instead.
+///
+/// [`Color`]: crate::ffi::Color
+///
+/// # See also
+///
+/// See the *Window and drawing* chapter of the book.
 pub mod color {
     #[allow(unused_imports)]
     pub use crate::ffi::Color;
 }
-/// Low-level data utilities (compression, encoding, hashing).
+/// Low-level data utilities: DEFLATE compression and Base64 encoding.
+///
+/// Thin safe wrappers around raylib's `CompressData`/`DecompressData` (DEFLATE via sdefl/sinfl) and
+/// `EncodeDataBase64`/`DecodeDataBase64`. Each returns a [`DataBuf`](crate::core::databuf::DataBuf)
+/// that owns the raylib-allocated buffer and frees it through `MemFree` on drop. For cryptographic
+/// digests see [`crate::core::hashes`]; for raw FFI access see [`crate::ffi`].
+///
+/// # See also
+///
+/// See the *Strings and allocations* chapter of the book.
 pub mod data;
 pub mod databuf;
 pub mod drawing;
@@ -168,7 +206,26 @@ use std::ffi::CString;
 use std::marker::PhantomData;
 
 // shamelessly stolen from imgui
-/// Create a `&CStr` literal at compile time, or a `CString` from a format string, avoiding per-frame heap allocations in GUI draw calls.
+/// Builds a NUL-terminated C string for FFI calls — `&'static CStr` from a string literal, or an
+/// owned `CString` from a format expression.
+///
+/// raygui's draw functions take `*const c_char`, which in the safe wrapper appears as `&CStr`. The
+/// naive path — `CString::new(s).unwrap()` — allocates on the heap and copies the bytes every frame.
+/// `rstr!` sidesteps that cost for the common case where the label is a literal: it appends a NUL
+/// byte at **compile time** via `concat!`, then reinterprets the resulting `&'static str` as a
+/// `&'static CStr` with `CStr::from_bytes_with_nul_unchecked`. Because the NUL is statically known
+/// to terminate the slice and no interior NUL exists in a string literal that ends with `"\0"`
+/// (assuming the caller did not embed one), the unchecked call is sound.
+///
+/// The two-argument form (`rstr!("score: {}", n)`) forwards to `format!` and wraps the result in a
+/// freshly allocated `CString` — use it only when the value genuinely varies between frames, since
+/// it does allocate. Prefer the single-argument literal form inside hot GUI loops.
+///
+/// # Panics
+///
+/// The two-argument form panics if the formatted string contains an interior NUL byte. The
+/// single-argument form does not panic, but the caller must not embed `\0` in the literal — doing
+/// so would silently truncate the `&CStr`.
 #[macro_export]
 macro_rules! rstr {
     ($e:tt) => ({
