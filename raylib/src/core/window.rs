@@ -8,25 +8,66 @@ use std::os::raw::c_char;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// MonitorInfo grabs the sizes (virtual and physical) of your monitor
+/// Snapshot of a monitor's virtual size, physical size, name, and desktop position.
+///
+/// Populated by [`get_monitor_info`] from the per-monitor `GetMonitor*` queries; the
+/// virtual fields reflect the OS-reported logical resolution (DPI-scaled on platforms
+/// that scale), while the physical fields are derived from EDID where the OS exposes it
+/// and may be zero on monitors without EDID data.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (_rl, _thread) = raylib::init().size(800, 600).title("demo").build();
+/// for i in 0..get_monitor_count() {
+///     if let Ok(info) = get_monitor_info(i) {
+///         println!("monitor {}: {} ({}x{})", i, info.name, info.width, info.height);
+///     }
+/// }
+/// ```
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MonitorInfo {
-    /// Monitor width in pixels (virtual/logical).
+    /// Monitor width in virtual pixels (logical resolution, as reported by the OS).
     pub width: i32,
-    /// Monitor height in pixels (virtual/logical).
+    /// Monitor height in virtual pixels (logical resolution, as reported by the OS).
     pub height: i32,
-    /// Monitor physical width in millimetres.
+    /// Monitor width in millimetres (physical dimension, derived from EDID where available).
     pub physical_width: i32,
-    /// Monitor physical height in millimetres.
+    /// Monitor height in millimetres (physical dimension, derived from EDID where available).
     pub physical_height: i32,
-    /// Monitor name reported by the OS.
+    /// Monitor's user-facing display name as reported by the OS.
     pub name: String,
-    /// Monitor position on the virtual desktop.
+    /// Monitor's top-left position in the desktop's virtual coordinate space.
     pub position: Vector2,
 }
 
 /// Bitmask of [`ffi::ConfigFlags`] representing the current or desired window state.
+///
+/// Returned from [`RaylibHandle::get_window_state`] to inspect which flags raylib
+/// considers active, and accepted by [`RaylibHandle::set_window_state`] /
+/// [`RaylibHandle::clear_window_state`] to enable or disable a combination of flags
+/// after the window has been opened. The individual `*_mode()` / `window_*()` /
+/// `vsync_hint()` accessors expose each bit as a `bool`; the matching `set_*` builders
+/// return a new `WindowState` with that bit flipped so flags can be composed in a
+/// const-friendly chain.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+///
+/// let (rl, _thread) = raylib::init().size(800, 600).title("demo").build();
+/// let state = rl.get_window_state();
+/// if state.fullscreen_mode() {
+///     println!("running in fullscreen");
+/// }
+/// if state.window_undecorated() {
+///     println!("window has no frame or buttons");
+/// }
+/// ```
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct WindowState(i32);
