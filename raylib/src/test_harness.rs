@@ -30,13 +30,14 @@
 //! # Example
 //!
 //! ```no_run
+//! use raylib::prelude::*;
 //! use raylib::test_harness::*;
 //!
 //! with_headless(320, 240, |rl, thread| {
 //!     let img = render_frame(rl, thread, |d| {
-//!         d.clear_background(raylib::prelude::Color::BLACK);
+//!         d.clear_background(Color::BLACK);
 //!     });
-//!     assert_pixel(&img, 0, 0, raylib::prelude::Color::BLACK, 0);
+//!     assert_pixel(&img, 0, 0, Color::BLACK, 0);
 //! });
 //! ```
 
