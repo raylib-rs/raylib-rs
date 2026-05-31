@@ -27,10 +27,14 @@ jobs:
       - name: Install macOS build deps
         if: runner.os == 'macOS'
         run: brew install cmake
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
       - name: Build
         run: cargo build -p raylib --features ${{ matrix.features }}
-      - name: Unit + doc tests
-        run: cargo test -p raylib --features ${{ matrix.features }} && cargo test -p raylib --doc --features ${{ matrix.features }}
+      - name: Unit tests (nextest)
+        run: cargo nextest run -p raylib --features ${{ matrix.features }}
+      - name: Doc tests
+        run: cargo test -p raylib --doc --features ${{ matrix.features }}
 
   # no-default-features: build-only (no window backend).
   no-default:
@@ -73,21 +77,24 @@ jobs:
       - name: Install macOS build deps
         if: runner.os == 'macOS'
         run: brew install cmake
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
       - name: Build (software_renderer)
         run: cargo build -p raylib --no-default-features --features software_renderer
       - name: Headless smoke test
         run: cargo test -p raylib-sys --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES --test software_renderer_smoke
       - name: Tier-2 render tests (shapes/text)
-        run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION --test render_shapes --test render_text -- --test-threads=1
+        run: cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION -E 'test(render_shapes) | test(render_text)'
       - name: Tier-2 render tests (raygui)
-        run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,raygui --test render_gui -- --test-threads=1
+        run: cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,raygui -E 'test(render_gui)'
       - name: Tier-2 render tests (rlgl)
-        run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION --test render_rlgl -- --test-threads=1
+        run: cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION -E 'test(render_rlgl)'
       - name: Tier-2 integration tests (raylib-test salvage)
         # The 6 integration_* files preserve coverage salvaged from the
         # retired raylib-test crate. See docs/superpowers/notes/
-        # spike-raylib-test-delete-or-fix.md for context. Each file is its
-        # own test binary (one #[test] per file per InitWindow's
-        # single-init constraint), so --test-threads=1 applies per-file
-        # internally; the cargo test driver runs the binaries in series.
-        run: cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_FILEFORMAT_TTF,SUPPORT_FILEFORMAT_OBJ,SUPPORT_MESH_GENERATION --test integration_window_api --test integration_image_io --test integration_random_seed --test integration_fonts --test integration_models --test integration_model_animations -- --test-threads=1
+        # spike-raylib-test-delete-or-fix.md for context. With cargo
+        # nextest run, per-test process isolation handles InitWindow's
+        # single-init constraint without needing --test-threads=1.
+        run: cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_FILEFORMAT_TTF,SUPPORT_FILEFORMAT_OBJ,SUPPORT_MESH_GENERATION -E 'test(integration_window_api) | test(integration_image_io) | test(integration_random_seed) | test(integration_fonts) | test(integration_models) | test(integration_model_animations)'
+      - name: Doctests (software_renderer)
+        run: cargo test -p raylib --doc --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_FILEFORMAT_TTF

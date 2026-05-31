@@ -19,8 +19,8 @@ Cargo workspace (`Cargo.toml` at root):
 
 - Clone with `git clone --recurse-submodules` (raylib C source is a submodule under `raylib-sys/raylib`).
 - Build: `cargo build` from root.
-- Tests: `cargo test` and `cargo test --doc` from inside `raylib/`.
-- Headless integration tests (Tier-2): `cargo test -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION -- --test-threads=1` (uses `software_renderer` + the rlsw Memory platform; no window opens).
+- Tests: `cargo nextest run` (unit + integration; per-test process isolation respects raylib's single-init constraint) and `cargo test --doc` (doctests; nextest does not run them). Both from inside `raylib/`. Contributors without cargo-nextest can fall back to `cargo test ... -- --test-threads=1` locally; CI uses nextest.
+- Headless integration tests (Tier-2): `cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION` (uses `software_renderer` + the rlsw Memory platform; no window opens). Software-renderer doctests run via `cargo test -p raylib --doc --no-default-features --features software_renderer,...` (same feature set).
 - Run an example: see `showcase/` for Rust ports of raylib's C examples (legacy `samples/` was removed in 6.0).
 - Build deps: `glfw`, `cmake`, `curl`. NixOS users can `nix-shell ./shell.nix`.
 
