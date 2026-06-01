@@ -1053,3 +1053,150 @@ pub enum RaylibError {
     #[error("texture loading error")]
     LoadTexture(#[from] LoadTextureError),
 }
+
+/// Errors that can occur while loading a raygui `.rgi` icons file.
+///
+/// raygui's own `GuiLoadIcons` returns silently on failure (NULL is also
+/// returned when names aren't requested), so this enum's variants are
+/// surfaced by pre-validation in Rust before the FFI call. The
+/// `_from_memory` variants share the same set minus [`Self::FileNotFound`]
+/// and [`Self::Io`].
+#[derive(Debug, thiserror::Error)]
+pub enum LoadIconsError {
+    /// The icons file at `path` does not exist.
+    ///
+    /// **Cause:** `std::fs::metadata` reported `NotFound` before raygui was called.
+    ///
+    /// **Recovery:** Verify the path; check working directory; confirm the file
+    /// has the `.rgi` extension and exists.
+    #[error("icons file not found: {0:?}")]
+    FileNotFound(std::path::PathBuf),
+
+    /// The icons file or memory buffer is shorter than raygui's 12-byte header
+    /// (4-byte signature + 2-byte version + 2-byte reserved + 2-byte icon count
+    /// + 2-byte icon size).
+    ///
+    /// **Cause:** A truncated download, a non-`.rgi` file accidentally renamed,
+    /// or a programmatically-constructed buffer that was never fully populated.
+    ///
+    /// **Recovery:** Confirm the source data is a complete raygui icons payload.
+    #[error("icons file too short: need >=12 bytes for header, got {0}")]
+    HeaderTruncated(usize),
+
+    /// The icons payload's first 4 bytes are not `b"rGI "`.
+    ///
+    /// **Cause:** The file is not a raygui `.rgi` icons file, or it has been
+    /// corrupted.
+    ///
+    /// **Recovery:** Confirm the file was produced by the `rGuiIcons` tool or
+    /// a compatible writer.
+    #[error("invalid .rgi signature: expected 'rGI ', got {0:?}")]
+    InvalidSignature([u8; 4]),
+
+    /// The icons payload declares an icon size other than raygui's compile-time
+    /// `RAYGUI_ICON_SIZE` (= 16).
+    ///
+    /// **Cause:** The file targets a raygui build with a different icon-size
+    /// configuration; raygui's `GuiDrawIcon` hard-codes 16x16, so loading
+    /// non-16 icons would render garbage.
+    ///
+    /// **Recovery:** Re-export the icons at 16x16, or rebuild raygui with a
+    /// matching `RAYGUI_ICON_SIZE`.
+    #[error("unsupported icon size: expected {expected}, got {actual}")]
+    UnsupportedIconSize {
+        /// raygui's compile-time icon size (currently 16).
+        expected: u16,
+        /// The icon size declared in the loaded file.
+        actual: u16,
+    },
+
+    /// The icons payload declares more than raygui's compile-time
+    /// `RAYGUI_ICON_MAX_ICONS` (= 256) icons.
+    ///
+    /// **Cause:** A `.rgi` file targeting a raygui build with a higher icon-count
+    /// limit.
+    ///
+    /// **Recovery:** Trim the icons file to ≤256 entries, or rebuild raygui with
+    /// a higher limit.
+    #[error("too many icons: max {max}, got {actual}")]
+    TooManyIcons {
+        /// raygui's compile-time max (currently 256).
+        max: u16,
+        /// The icon count declared in the loaded file.
+        actual: u16,
+    },
+
+    /// The in-memory data length doesn't fit in `i32` (raygui's parameter type).
+    ///
+    /// **Cause:** A buffer larger than ~2 GiB was passed to a `_from_memory` variant.
+    ///
+    /// **Recovery:** Slice the buffer to a reasonable size; `.rgi` payloads are
+    /// kilobytes in practice.
+    #[error("data length {0} overflows i32")]
+    LengthOverflow(usize),
+
+    /// An I/O error occurred while reading the icons file.
+    ///
+    /// **Cause:** Permission denied, mid-read failure, etc. — anything `std::io::Error`
+    /// reports beyond `NotFound` (which surfaces as [`Self::FileNotFound`]).
+    ///
+    /// **Recovery:** Inspect the wrapped error.
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+}
+
+/// Errors that can occur while loading a raygui `.rgs` style file from memory.
+///
+/// raygui's `GuiLoadStyleFromMemory` does not signal parse errors — only the
+/// i32 length-overflow check is surfaced here. Bad style payloads silently
+/// no-op (same upstream wart as the file-based `gui_load_style`).
+#[derive(Debug, thiserror::Error)]
+pub enum LoadStyleFromMemoryError {
+    /// The in-memory data length doesn't fit in `i32` (raygui's parameter type).
+    ///
+    /// **Cause:** A buffer larger than ~2 GiB.
+    ///
+    /// **Recovery:** Slice the buffer; `.rgs` style payloads are kilobytes.
+    #[error("data length {0} overflows i32")]
+    LengthOverflow(usize),
+}
+
+#[cfg(test)]
+mod load_icons_error_tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn load_icons_error_variants_display() {
+        let err = LoadIconsError::FileNotFound(PathBuf::from("a.rgi"));
+        assert!(err.to_string().contains("a.rgi"));
+        let err = LoadIconsError::HeaderTruncated(7);
+        assert_eq!(
+            err.to_string(),
+            "icons file too short: need >=12 bytes for header, got 7"
+        );
+        let err = LoadIconsError::InvalidSignature(*b"XXXX");
+        assert!(err.to_string().contains("expected 'rGI '"));
+        let err = LoadIconsError::UnsupportedIconSize {
+            expected: 16,
+            actual: 32,
+        };
+        assert_eq!(
+            err.to_string(),
+            "unsupported icon size: expected 16, got 32"
+        );
+        let err = LoadIconsError::TooManyIcons {
+            max: 256,
+            actual: 300,
+        };
+        assert_eq!(err.to_string(), "too many icons: max 256, got 300");
+        let err = LoadIconsError::LengthOverflow(usize::MAX);
+        assert!(err.to_string().contains("overflows i32"));
+    }
+
+    #[test]
+    fn load_style_from_memory_error_display() {
+        let err = LoadStyleFromMemoryError::LengthOverflow(usize::MAX);
+        assert!(err.to_string().contains("overflows i32"));
+    }
+}
