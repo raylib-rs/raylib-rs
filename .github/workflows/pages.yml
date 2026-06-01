@@ -1,0 +1,55 @@
+name: pages
+
+on:
+  push:
+    branches: [6.0-rc]
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  EMCC_CFLAGS: "-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install Linux build deps
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+      - name: Set up emsdk
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.64
+          actions-cache-folder: emsdk-cache
+      - name: Export bindgen sysroot for wasm32-emscripten
+        run: echo "BINDGEN_EXTRA_CLANG_ARGS=--sysroot=$EMSDK/upstream/emscripten/cache/sysroot" >> $GITHUB_ENV
+      - uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          targets: wasm32-unknown-emscripten
+      - name: Populate examples_meta.json (release)
+        run: cargo build -p raylib-showcase --release --examples
+      - name: Build all wasm examples
+        run: cargo run -p raylib-showcase --release --bin xtask-wasm-build
+      - name: Generate thumbnails (software_renderer)
+        run: cargo run -p raylib-showcase --release --features software_renderer --bin gen-thumbnails
+      - name: Assemble Pages site
+        run: cargo run -p raylib-showcase --release --bin xtask-build-pages
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: showcase/_site
+      - id: deployment
+        uses: actions/deploy-pages@v4
