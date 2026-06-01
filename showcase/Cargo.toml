@@ -41,6 +41,51 @@ toml = "0.8"
 name = "core_basic_window"
 path = "examples/core/core_basic_window.rs"
 
+[[example]]
+name = "audio_sound_loading"
+path = "examples/audio/audio_sound_loading.rs"
+
+[[example]]
+name = "audio_sound_multi"
+path = "examples/audio/audio_sound_multi.rs"
+
+[[example]]
+name = "audio_music_stream"
+path = "examples/audio/audio_music_stream.rs"
+
+[[example]]
+name = "audio_module_playing"
+path = "examples/audio/audio_module_playing.rs"
+
+[[example]]
+name = "audio_raw_stream"
+path = "examples/audio/audio_raw_stream.rs"
+
+[[example]]
+name = "audio_sound_positioning"
+path = "examples/audio/audio_sound_positioning.rs"
+
+[[example]]
+name = "audio_amp_envelope"
+path = "examples/audio/audio_amp_envelope.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "audio_mixed_processor"
+path = "examples/audio/audio_mixed_processor.rs"
+
+[[example]]
+name = "audio_stream_effects"
+path = "examples/audio/audio_stream_effects.rs"
+
+[[example]]
+name = "audio_stream_callback"
+path = "examples/audio/audio_stream_callback.rs"
+
+[[example]]
+name = "audio_spectrum_visualizer"
+path = "examples/audio/audio_spectrum_visualizer.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
