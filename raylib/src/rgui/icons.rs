@@ -1,4 +1,3 @@
-use crate::core::error::LoadIconsError;
 use crate::ffi;
 use crate::ffi::Color;
 use crate::rgui::scratch::scratch_txt;
@@ -11,9 +10,22 @@ pub const RAYGUI_ICON_MAX_ICONS: usize = 256;
 /// `RAYGUI_ICON_SIZE * RAYGUI_ICON_SIZE / 32` = `16 * 16 / 32`).
 pub const RAYGUI_ICON_DATA_ELEMENTS: usize = 8;
 
+// ── raygui-feature-gated helpers ────────────────────────────────────────────
+//
+// The functions below call `GuiGetIcons`, `GuiLoadIconsFromMemory`, and
+// `GuiLoadIcons` — symbols that only exist when the `raygui` feature is
+// enabled (they are compiled from `binding/raygui.h` via `rgui_wrapper.c`).
+// Without that feature, `raylib-sys` does not include the raygui C translation
+// unit at all, so references to those symbols produce linker errors.  Gate
+// every piece of code that touches them.
+
 /// Pre-validate a `.rgi` payload's 12-byte header. Returns `(icon_count, icon_size)`
 /// on success. Public-in-crate so the from-file path can reuse it.
-pub(crate) fn validate_rgi_header(buf: &[u8]) -> Result<(u16, u16), LoadIconsError> {
+#[cfg(feature = "raygui")]
+pub(crate) fn validate_rgi_header(
+    buf: &[u8],
+) -> Result<(u16, u16), crate::core::error::LoadIconsError> {
+    use crate::core::error::LoadIconsError;
     if buf.len() < 12 {
         return Err(LoadIconsError::HeaderTruncated(buf.len()));
     }
@@ -41,8 +53,9 @@ pub(crate) fn validate_rgi_header(buf: &[u8]) -> Result<(u16, u16), LoadIconsErr
 
 /// Verify `len` fits in `i32`. Used by from-memory paths before passing the length
 /// to raygui (which takes `int dataSize`).
-pub(crate) fn check_i32_len(len: usize) -> Result<i32, LoadIconsError> {
-    i32::try_from(len).map_err(|_| LoadIconsError::LengthOverflow(len))
+#[cfg(feature = "raygui")]
+pub(crate) fn check_i32_len(len: usize) -> Result<i32, crate::core::error::LoadIconsError> {
+    i32::try_from(len).map_err(|_| crate::core::error::LoadIconsError::LengthOverflow(len))
 }
 
 /// Copy raygui's `char**` icon-names buffer into a `Vec<String>` and free
@@ -63,6 +76,7 @@ pub(crate) fn check_i32_len(len: usize) -> Result<i32, LoadIconsError> {
 /// as `iconCount * sizeof(char *)`, so reading past `icon_count - 1` is
 /// out-of-bounds. The caller is responsible for passing the same `icon_count`
 /// that `validate_rgi_header` returned for the same payload.
+#[cfg(feature = "raygui")]
 unsafe fn copy_and_free_names(
     ptr: *mut *mut std::os::raw::c_char,
     icon_count: usize,
@@ -100,7 +114,10 @@ unsafe fn copy_and_free_names(
 /// Uses `take(12).read_to_end` (NOT plain `Read::read`) so a short-read on a
 /// valid file — permitted by `Read::read`'s contract even when the file has
 /// more bytes — cannot produce a spurious `HeaderTruncated`.
-fn read_header_bytes(path: &std::path::Path) -> Result<Vec<u8>, LoadIconsError> {
+#[cfg(feature = "raygui")]
+fn read_header_bytes(
+    path: &std::path::Path,
+) -> Result<Vec<u8>, crate::core::error::LoadIconsError> {
     use std::io::Read;
     let file = std::fs::File::open(path)?;
     let mut buf = Vec::with_capacity(12);
@@ -111,10 +128,13 @@ fn read_header_bytes(path: &std::path::Path) -> Result<Vec<u8>, LoadIconsError> 
 /// Convert a Rust path to a C string for raygui's `fopen`-based loaders. On
 /// Windows this lossy-converts non-UTF-8 components to U+FFFD (consistent
 /// with the rest of the crate). An interior NUL byte in the path produces
-/// [`LoadIconsError::Io`] rather than a panic.
-fn path_to_c_string(path: &std::path::Path) -> Result<std::ffi::CString, LoadIconsError> {
+/// [`crate::core::error::LoadIconsError::Io`] rather than a panic.
+#[cfg(feature = "raygui")]
+fn path_to_c_string(
+    path: &std::path::Path,
+) -> Result<std::ffi::CString, crate::core::error::LoadIconsError> {
     std::ffi::CString::new(path.to_string_lossy().as_bytes()).map_err(|_| {
-        LoadIconsError::Io(std::io::Error::new(
+        crate::core::error::LoadIconsError::Io(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
             "path contains an interior NUL byte",
         ))
@@ -177,6 +197,7 @@ pub trait RaylibGuiIcons {
     ///
     /// The buffer is live: mutations via [`gui_get_icons_mut`](Self::gui_get_icons_mut)
     /// are visible to subsequent [`gui_draw_icon`](Self::gui_draw_icon) calls.
+    #[cfg(feature = "raygui")]
     #[inline]
     fn gui_get_icons(&self) -> &[[u32; RAYGUI_ICON_DATA_ELEMENTS]; RAYGUI_ICON_MAX_ICONS] {
         // SAFETY: GuiGetIcons returns a non-null pointer to raygui's icon
@@ -205,6 +226,7 @@ pub trait RaylibGuiIcons {
     ///
     /// See [`gui_get_icons`](Self::gui_get_icons) for the bit layout (bit 0
     /// of word 0 = top-left pixel; LSB-first, 16 pixels per `u32` row half).
+    #[cfg(feature = "raygui")]
     #[inline]
     fn gui_get_icons_mut(
         &mut self,
@@ -230,8 +252,12 @@ pub trait RaylibGuiIcons {
     /// Calling this method multiple times in one process leaks the previous
     /// buffer (≈8 KB per call). raygui's `GuiLoadIcons` (the file variant) does
     /// not have this issue.
+    #[cfg(feature = "raygui")]
     #[inline]
-    fn gui_load_icons_from_memory(&mut self, data: &[u8]) -> Result<(), LoadIconsError> {
+    fn gui_load_icons_from_memory(
+        &mut self,
+        data: &[u8],
+    ) -> Result<(), crate::core::error::LoadIconsError> {
         let _hdr = validate_rgi_header(data)?;
         let len = check_i32_len(data.len())?;
         // SAFETY: data lives for the duration of the call; raygui memcpys out
@@ -250,11 +276,12 @@ pub trait RaylibGuiIcons {
     ///
     /// Names with fewer than 32 (`RAYGUI_ICON_MAX_NAME_LENGTH`) characters are
     /// returned trimmed at the first NUL byte.
+    #[cfg(feature = "raygui")]
     #[inline]
     fn gui_load_icons_from_memory_with_names(
         &mut self,
         data: &[u8],
-    ) -> Result<Vec<String>, LoadIconsError> {
+    ) -> Result<Vec<String>, crate::core::error::LoadIconsError> {
         let (icon_count, _icon_size) = validate_rgi_header(data)?;
         let len = check_i32_len(data.len())?;
         // SAFETY: data lives for the duration of the call.
@@ -271,22 +298,29 @@ pub trait RaylibGuiIcons {
     /// and icon count (≤ `RAYGUI_ICON_MAX_ICONS` = 256) before delegating to
     /// raygui.
     ///
-    /// Returns [`LoadIconsError::FileNotFound`] if the path doesn't exist;
-    /// other I/O failures (permission denied, interior-NUL path bytes, mid-read
-    /// errors) surface as [`LoadIconsError::Io`]. Header validation surfaces
-    /// [`LoadIconsError::HeaderTruncated`], [`LoadIconsError::InvalidSignature`],
-    /// [`LoadIconsError::UnsupportedIconSize`], and
-    /// [`LoadIconsError::TooManyIcons`] as appropriate.
+    /// Returns [`crate::core::error::LoadIconsError::FileNotFound`] if the path
+    /// doesn't exist; other I/O failures (permission denied, interior-NUL path
+    /// bytes, mid-read errors) surface as
+    /// [`crate::core::error::LoadIconsError::Io`]. Header validation surfaces
+    /// [`crate::core::error::LoadIconsError::HeaderTruncated`],
+    /// [`crate::core::error::LoadIconsError::InvalidSignature`],
+    /// [`crate::core::error::LoadIconsError::UnsupportedIconSize`], and
+    /// [`crate::core::error::LoadIconsError::TooManyIcons`] as appropriate.
     ///
     /// # TOCTOU
     ///
     /// The existence check, header read, and raygui's internal `fopen` are
     /// three separate operations. A file deleted after the existence check
-    /// surfaces as [`LoadIconsError::Io`] rather than `FileNotFound`; a file
-    /// deleted after header validation causes raygui to silently no-op,
-    /// returning `Ok(())` with no icon change.
+    /// surfaces as [`crate::core::error::LoadIconsError::Io`] rather than
+    /// `FileNotFound`; a file deleted after header validation causes raygui to
+    /// silently no-op, returning `Ok(())` with no icon change.
+    #[cfg(feature = "raygui")]
     #[inline]
-    fn gui_load_icons(&mut self, path: impl AsRef<std::path::Path>) -> Result<(), LoadIconsError> {
+    fn gui_load_icons(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<(), crate::core::error::LoadIconsError> {
+        use crate::core::error::LoadIconsError;
         let path = path.as_ref();
         // 1. Existence check via fs::metadata (NOT path.exists() — exists()
         //    swallows PermissionDenied on some platforms, mis-routing it as
@@ -315,11 +349,13 @@ pub trait RaylibGuiIcons {
     /// in the file (`iconCount` entries; up to `RAYGUI_ICON_MAX_ICONS` = 256).
     ///
     /// Same error semantics as [`Self::gui_load_icons`].
+    #[cfg(feature = "raygui")]
     #[inline]
     fn gui_load_icons_with_names(
         &mut self,
         path: impl AsRef<std::path::Path>,
-    ) -> Result<Vec<String>, LoadIconsError> {
+    ) -> Result<Vec<String>, crate::core::error::LoadIconsError> {
+        use crate::core::error::LoadIconsError;
         let path = path.as_ref();
         match std::fs::metadata(path) {
             Ok(_) => {}
@@ -341,7 +377,9 @@ pub trait RaylibGuiIcons {
     }
 }
 
-#[cfg(all(test, feature = "software_renderer"))]
+// Headless integration tests for icon methods — require both the software
+// renderer and the raygui feature (which provides GuiGetIcons etc.).
+#[cfg(all(test, feature = "software_renderer", feature = "raygui"))]
 mod tests {
     use super::*;
     use crate::test_harness::with_headless;
@@ -514,7 +552,9 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+// Pure unit tests for the validation helpers — only compiled when raygui is
+// present (the helpers themselves are cfg-gated).
+#[cfg(all(test, feature = "raygui"))]
 mod unit_tests {
     use super::*;
 
