@@ -1065,7 +1065,10 @@ pub enum RaylibError {
 pub enum LoadIconsError {
     /// The icons file at `path` does not exist.
     ///
-    /// **Cause:** `std::fs::metadata` reported `NotFound` before raygui was called.
+    /// **Cause:** A pre-FFI file-existence check reported the path as missing
+    /// (i.e., a `std::fs` lookup returned `io::ErrorKind::NotFound`). Other
+    /// `io::Error` kinds (permission-denied, mid-read failures) surface as
+    /// [`Self::Io`] instead.
     ///
     /// **Recovery:** Verify the path; check working directory; confirm the file
     /// has the `.rgi` extension and exists.
@@ -1198,5 +1201,13 @@ mod load_icons_error_tests {
     fn load_style_from_memory_error_display() {
         let err = LoadStyleFromMemoryError::LengthOverflow(usize::MAX);
         assert!(err.to_string().contains("overflows i32"));
+    }
+
+    #[test]
+    fn load_icons_error_io_from_impl() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied");
+        let err: LoadIconsError = io_err.into();
+        assert!(err.to_string().contains("denied"));
+        assert!(matches!(err, LoadIconsError::Io(_)));
     }
 }
