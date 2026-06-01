@@ -20,3 +20,15 @@ reason = "Uses raw `glDrawArrays`/`glEnable(GL_PROGRAM_POINT_SIZE)` via a Rust `
 [[exclude]]
 name = "rlgl_standalone"
 reason = "Upstream C source carries an explicit `WARNING: This example is intended only for PLATFORM_DESKTOP and OpenGL 3.3 Core profile`. The Rust port mirrors the desktop-only contract."
+
+[[exclude]]
+name = "core_drop_files"
+reason = "LoadDroppedFiles requires native drag-and-drop event delivery; emscripten does not expose it."
+
+[[exclude]]
+name = "core_automation_events"
+reason = "Automation event recording (StartAutomationEventRecording / ExportAutomationEventList) is desktop-only in raylib 6.0."
+
+[[exclude]]
+name = "core_custom_frame_control"
+reason = "Requires the SUPPORT_CUSTOM_FRAME_CONTROL build flag and exposes PollInputEvents/SwapScreenBuffer/WaitTime — emscripten's main-loop is driven by the browser and these helpers are not available on web."

@@ -21,6 +21,8 @@ default = []
 software_renderer = ["raylib/software_renderer"]
 # Required for the raygui examples in P3.
 raygui = ["raylib/raygui"]
+# Required for core_custom_frame_control (poll_input_events / swap_screen_buffer / wait_time).
+SUPPORT_CUSTOM_FRAME_CONTROL = ["raylib/SUPPORT_CUSTOM_FRAME_CONTROL"]
 
 [dependencies]
 raylib = { version = "6.0.0-rc.1", path = "../raylib" }
@@ -85,6 +87,106 @@ path = "examples/audio/audio_stream_callback.rs"
 [[example]]
 name = "audio_spectrum_visualizer"
 path = "examples/audio/audio_spectrum_visualizer.rs"
+
+[[example]]
+name = "core_2d_camera"
+path = "examples/core/core_2d_camera.rs"
+
+[[example]]
+name = "core_2d_camera_mouse_zoom"
+path = "examples/core/core_2d_camera_mouse_zoom.rs"
+
+[[example]]
+name = "core_2d_camera_platformer"
+path = "examples/core/core_2d_camera_platformer.rs"
+
+[[example]]
+name = "core_2d_camera_split_screen"
+path = "examples/core/core_2d_camera_split_screen.rs"
+
+[[example]]
+name = "core_3d_camera_first_person"
+path = "examples/core/core_3d_camera_first_person.rs"
+
+[[example]]
+name = "core_3d_camera_fps"
+path = "examples/core/core_3d_camera_fps.rs"
+
+[[example]]
+name = "core_3d_camera_free"
+path = "examples/core/core_3d_camera_free.rs"
+
+[[example]]
+name = "core_3d_camera_mode"
+path = "examples/core/core_3d_camera_mode.rs"
+
+[[example]]
+name = "core_3d_camera_split_screen"
+path = "examples/core/core_3d_camera_split_screen.rs"
+
+[[example]]
+name = "core_3d_picking"
+path = "examples/core/core_3d_picking.rs"
+
+[[example]]
+name = "core_automation_events"
+path = "examples/core/core_automation_events.rs"
+
+[[example]]
+name = "core_basic_screen_manager"
+path = "examples/core/core_basic_screen_manager.rs"
+
+[[example]]
+name = "core_clipboard_text"
+path = "examples/core/core_clipboard_text.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "core_compute_hash"
+path = "examples/core/core_compute_hash.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "core_custom_frame_control"
+path = "examples/core/core_custom_frame_control.rs"
+required-features = ["SUPPORT_CUSTOM_FRAME_CONTROL"]
+
+[[example]]
+name = "core_custom_logging"
+path = "examples/core/core_custom_logging.rs"
+
+[[example]]
+name = "core_delta_time"
+path = "examples/core/core_delta_time.rs"
+
+[[example]]
+name = "core_directory_files"
+path = "examples/core/core_directory_files.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "core_drop_files"
+path = "examples/core/core_drop_files.rs"
+
+[[example]]
+name = "core_highdpi_demo"
+path = "examples/core/core_highdpi_demo.rs"
+
+[[example]]
+name = "core_highdpi_testbed"
+path = "examples/core/core_highdpi_testbed.rs"
+
+[[example]]
+name = "core_input_actions"
+path = "examples/core/core_input_actions.rs"
+
+[[example]]
+name = "core_input_gamepad"
+path = "examples/core/core_input_gamepad.rs"
+
+[[example]]
+name = "core_input_gestures"
+path = "examples/core/core_input_gestures.rs"
 
 [[example]]
 name = "embedded_files_loading"
