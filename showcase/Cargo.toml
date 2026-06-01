@@ -285,6 +285,10 @@ name = "core_world_screen"
 path = "examples/core/core_world_screen.rs"
 
 [[example]]
+name = "text_3d_drawing"
+path = "examples/text/text_3d_drawing.rs"
+
+[[example]]
 name = "text_codepoints_loading"
 path = "examples/text/text_codepoints_loading.rs"
 
