@@ -84,13 +84,15 @@
 
 ## CI inventory
 
-| Workflow | Status |
-|----------|--------|
-| `check` | (TBD after push) |
-| `test` | (TBD after push) |
-| `web` | (TBD after push) |
-| `sanitizers` | (TBD after push) |
-| `book` | (TBD after push) |
+All 5 workflows green on fork (`Dacode45/ms-raylib-rs`, branch `6.0-rc`, commit `99065cc`).
+
+| Workflow | Run ID | Duration | Status |
+|----------|--------|----------|--------|
+| `book` | 26733572432 | 52s | ✅ success |
+| `sanitizers` | 26733572441 | 1m34s | ✅ success |
+| `check` | 26733572436 | 1m32s | ✅ success |
+| `web` | 26733572433 | 2m36s | ✅ success |
+| `test` | 26733572438 | 2m54s | ✅ success |
 
 ## Next workstream
 
