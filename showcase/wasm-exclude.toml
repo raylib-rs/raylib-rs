@@ -12,3 +12,11 @@
 [[exclude]]
 name = "audio_spectrum_visualizer"
 reason = "Upstream C source notes 'Memory out-of-bounds on PLATFORM_WEB' when reading the decoded country.mp3 buffer; same hazard applies here."
+
+[[exclude]]
+name = "raylib_opengl_interop"
+reason = "Uses raw `glDrawArrays`/`glEnable(GL_PROGRAM_POINT_SIZE)` via a Rust `extern \"C\"` block with #[link(name=\"opengl32\"|\"GL\"|\"OpenGL\")] attrs — none of those satisfy emscripten's WebGL/GLES2 link surface. GL_PROGRAM_POINT_SIZE is also a desktop-only toggle (always-on in WebGL). Desktop-only mirrors the C source's GLSL_VERSION fork."
+
+[[exclude]]
+name = "rlgl_standalone"
+reason = "Upstream C source carries an explicit `WARNING: This example is intended only for PLATFORM_DESKTOP and OpenGL 3.3 Core profile`. The Rust port mirrors the desktop-only contract."
