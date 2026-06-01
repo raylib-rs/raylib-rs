@@ -31,7 +31,9 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - **`SUPPORT_*` feature flag set reconciled with raylib 6.0 `config.h`:** removed `SUPPORT_GIF_RECORDING`, `SUPPORT_IMAGE_MANIPULATION`, `SUPPORT_DEFAULT_FONT`, `SUPPORT_FONT_ATLAS_WHITE_REC`, `SUPPORT_TEXT_MANIPULATION`, `SUPPORT_STANDARD_FILEIO` (unconditional in 6.0), `SUPPORT_DISTORTION_SHADER`, `SUPPORT_FONT_TEXTURE`, `SUPPORT_VR_SIMULATOR` from the feature list; added `SUPPORT_FILEFORMAT_PNM` and `SUPPORT_GPU_SKINNING` (both default-off in 6.0).
 - **Signature changes (6.0 ABI):** `DrawCircleGradient` takes a `Vector2` center instead of separate `i32 x, y`; `UpdateModelAnimation` `frame` is now `f32`; `LoadFontData` gained a trailing `glyphCount` out-parameter; `SaveFileTextCallback` trampoline `text` is now `*const i8`; `DecodeDataBase64` input is `*const i8`.
 - `Image::gen_image_*` family is now cfg-gated on `SUPPORT_IMAGE_GENERATION` (MSVC link fix).
-- **`samples/` directory removed.** Migration: see [`showcase/`](./showcase) for runnable Rust ports of raylib's C examples. Anyone running `cd samples && cargo run --bin <name>` against the pre-release 6.0-rc branch should switch to `showcase/` instead. The WS9 finale of the 6.0 effort completes the port of all upstream examples and publishes the gallery as a GitHub Pages site.
+- **`samples/` directory removed.**
+- `RaylibGuiIcons::gui_get_icons_raw` removed; use `gui_get_icons` / `gui_get_icons_mut`.
+- `RaylibGuiIcons::gui_load_icons_raw` removed; use `gui_load_icons` / `gui_load_icons_with_names`. Migration: see [`showcase/`](./showcase) for runnable Rust ports of raylib's C examples. Anyone running `cd samples && cargo run --bin <name>` against the pre-release 6.0-rc branch should switch to `showcase/` instead. The WS9 finale of the 6.0 effort completes the port of all upstream examples and publishes the gallery as a GitHub Pages site.
 
 ### Added
 
@@ -86,6 +88,17 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 
   Also updates the "post-WS8 workstreams" note at the top of the
   6.0.0-rc.1 block: mixed-audio drops out of the list.
+- **rgui icons and style-from-memory safe abstractions:**
+  - `RaylibGuiIcons::gui_get_icons(&self) -> &[[u32; 8]; 256]` and `gui_get_icons_mut(&mut self) -> &mut [[u32; 8]; 256]` — safe typed-grid access to raygui's internal icons buffer.
+  - `RaylibGuiIcons::gui_load_icons` / `gui_load_icons_with_names` (file) and `gui_load_icons_from_memory` / `gui_load_icons_from_memory_with_names` (in-memory) — safe `.rgi` loaders with Rust-side header validation; `GuiLoadIconsFromMemory` wrapped under the hood.
+  - `RaylibGuiState::gui_load_style_from_memory` — safe wrapper around `GuiLoadStyleFromMemory` (PR #296's intent; upstream raygui#549).
+  - Public constants `raylib::rgui::RAYGUI_ICON_MAX_ICONS` (= 256) and `raylib::rgui::RAYGUI_ICON_DATA_ELEMENTS` (= 8).
+  - Error enums `LoadIconsError` and `LoadStyleFromMemoryError` in `raylib::core::error` (`thiserror`-based).
+
+### Changed
+
+- raygui (vendored at `raylib-sys/binding/raygui.h`) hand-patched to expose `GuiLoadStyleFromMemory` (raysan5/raygui#549 is merged upstream but unreleased; last tagged raygui release is v4.0 / 2023-09-11).
+- raygui now shares raylib's allocator: `RAYGUI_MALLOC` / `_CALLOC` / `_FREE` route through `RL_MALLOC` / `_CALLOC` / `_FREE` via `binding/rgui_wrapper.c`.
 
 ### Fixed
 
@@ -115,7 +128,6 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - **Full rustdoc rewrite** of remaining 208 stub-level items — selective enrichment only in WS7; future passes can extend.
 - **Public Pages deploy** of book + showcase gallery → WS9.
 - **Custom book theme** → WS9.
-- **Safe abstractions for `GuiGetIcons`/`GuiLoadIcons`** (currently `unsafe` + `# Safety`) + PR #296 (`GuiLoadStyleFromMemory`) — revisit when vendored raygui advances.
 
 ### Internal
 
