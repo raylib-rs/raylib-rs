@@ -106,8 +106,11 @@ fn main() {
             format!("FPS: {} (target: {})", fps, current_fps)
         };
         d.draw_text(&fps_text, 10, 10, 20, Color::DARKGRAY);
+        // idiomatic: matches the upstream C — GetFrameTime() is in seconds, the "ms" label
+        // in the format string is intentional/historical (a known display quirk in raylib's
+        // example); we mirror it verbatim instead of "fixing" it to true milliseconds.
         d.draw_text(
-            &format!("Frame time: {:05.2} ms", frame_time * 1000.0),
+            &format!("Frame time: {:05.2} ms", frame_time),
             10,
             30,
             20,

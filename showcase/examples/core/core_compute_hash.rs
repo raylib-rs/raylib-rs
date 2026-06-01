@@ -22,8 +22,10 @@ use raylib_showcase::SourceViewer;
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
 fn get_data_as_hex_text(bytes: &[u8]) -> String {
-    // C uses `%08X` per 4-byte word; we mirror that by chunking the bytes 4-by-4
-    // and printing each big-endian u32 as 8 uppercase hex chars (no separator).
+    // idiomatic: C uses `%08X` on a native-endian `unsigned int`, so on little-endian
+    // platforms (the common case for x86_64/ARM64) the on-screen display is byte-reversed
+    // per 4-byte word. We mirror that visual by reading each 4-byte chunk as little-endian
+    // u32, matching C's output verbatim.
     if bytes.is_empty() {
         return String::from("00000000");
     }
@@ -32,7 +34,7 @@ fn get_data_as_hex_text(bytes: &[u8]) -> String {
     for chunk in bytes.chunks(4) {
         let mut buf = [0u8; 4];
         buf[..chunk.len()].copy_from_slice(chunk);
-        let word = u32::from_be_bytes(buf);
+        let word = u32::from_le_bytes(buf);
         write!(&mut s, "{:08X}", word).expect("write to String never fails");
     }
     s
