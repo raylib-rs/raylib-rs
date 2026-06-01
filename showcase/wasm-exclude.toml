@@ -36,3 +36,7 @@ reason = "Requires the SUPPORT_CUSTOM_FRAME_CONTROL build flag and exposes PollI
 [[exclude]]
 name = "core_screen_recording"
 reason = "Upstream C uses msf_gif.h to encode the back-buffer to a GIF on disk; the Rust port keeps the visuals but cannot record. SaveFileData + LoadImageFromScreen are also desktop-only in raylib 6.0."
+
+[[exclude]]
+name = "core_vr_simulator"
+reason = "VR simulator requires a glsl330 distortion shader; emscripten serves WebGL/GLES2 which uses the glsl100 path. The upstream C source forks on GLSL_VERSION but we pin to glsl330 here, so this is desktop-only."

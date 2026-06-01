@@ -261,6 +261,30 @@ name = "core_viewport_scaling"
 path = "examples/core/core_viewport_scaling.rs"
 
 [[example]]
+name = "core_vr_simulator"
+path = "examples/core/core_vr_simulator.rs"
+
+[[example]]
+name = "core_window_flags"
+path = "examples/core/core_window_flags.rs"
+
+[[example]]
+name = "core_window_letterbox"
+path = "examples/core/core_window_letterbox.rs"
+
+[[example]]
+name = "core_window_should_close"
+path = "examples/core/core_window_should_close.rs"
+
+[[example]]
+name = "core_window_web"
+path = "examples/core/core_window_web.rs"
+
+[[example]]
+name = "core_world_screen"
+path = "examples/core/core_world_screen.rs"
+
+[[example]]
 name = "embedded_files_loading"
 path = "examples/others/embedded_files_loading.rs"
 
