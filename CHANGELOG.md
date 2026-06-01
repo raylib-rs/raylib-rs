@@ -31,9 +31,9 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - **`SUPPORT_*` feature flag set reconciled with raylib 6.0 `config.h`:** removed `SUPPORT_GIF_RECORDING`, `SUPPORT_IMAGE_MANIPULATION`, `SUPPORT_DEFAULT_FONT`, `SUPPORT_FONT_ATLAS_WHITE_REC`, `SUPPORT_TEXT_MANIPULATION`, `SUPPORT_STANDARD_FILEIO` (unconditional in 6.0), `SUPPORT_DISTORTION_SHADER`, `SUPPORT_FONT_TEXTURE`, `SUPPORT_VR_SIMULATOR` from the feature list; added `SUPPORT_FILEFORMAT_PNM` and `SUPPORT_GPU_SKINNING` (both default-off in 6.0).
 - **Signature changes (6.0 ABI):** `DrawCircleGradient` takes a `Vector2` center instead of separate `i32 x, y`; `UpdateModelAnimation` `frame` is now `f32`; `LoadFontData` gained a trailing `glyphCount` out-parameter; `SaveFileTextCallback` trampoline `text` is now `*const i8`; `DecodeDataBase64` input is `*const i8`.
 - `Image::gen_image_*` family is now cfg-gated on `SUPPORT_IMAGE_GENERATION` (MSVC link fix).
-- **`samples/` directory removed.**
+- **`samples/` directory removed.** Migration: see [`showcase/`](./showcase) for runnable Rust ports of raylib's C examples. Anyone running `cd samples && cargo run --bin <name>` against the pre-release 6.0-rc branch should switch to `showcase/` instead. The WS9 finale of the 6.0 effort completes the port of all upstream examples and publishes the gallery as a GitHub Pages site.
 - `RaylibGuiIcons::gui_get_icons_raw` removed; use `gui_get_icons` / `gui_get_icons_mut`.
-- `RaylibGuiIcons::gui_load_icons_raw` removed; use `gui_load_icons` / `gui_load_icons_with_names`. Migration: see [`showcase/`](./showcase) for runnable Rust ports of raylib's C examples. Anyone running `cd samples && cargo run --bin <name>` against the pre-release 6.0-rc branch should switch to `showcase/` instead. The WS9 finale of the 6.0 effort completes the port of all upstream examples and publishes the gallery as a GitHub Pages site.
+- `RaylibGuiIcons::gui_load_icons_raw` removed; use `gui_load_icons` / `gui_load_icons_with_names`.
 
 ### Added
 
