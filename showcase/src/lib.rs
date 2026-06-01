@@ -7,5 +7,5 @@
 pub mod registry;
 pub mod viewer;
 
-pub use registry::{ExampleMeta, EXAMPLES, lookup};
+pub use registry::{EXAMPLES, ExampleMeta, lookup};
 pub use viewer::SourceViewer;

@@ -20,19 +20,17 @@ use walkdir::WalkDir;
 
 #[derive(Debug)]
 struct Pair {
-    name: String,         // e.g. "core_basic_window"
-    category: String,     // e.g. "core" or "raygui"
-    c_path: PathBuf,      // absolute path to the C source
-    rust_path: PathBuf,   // absolute path to the Rust port
+    name: String,       // e.g. "core_basic_window"
+    category: String,   // e.g. "core" or "raygui"
+    c_path: PathBuf,    // absolute path to the C source
+    rust_path: PathBuf, // absolute path to the Rust port
 }
 
 const RAYLIB_EXAMPLES_DIR: &str = "../raylib-sys/raylib/examples";
 const RAYGUI_EXAMPLES_DIR: &str = "../raylib-sys/raygui-examples/examples";
 
 // C files in the raylib examples tree we explicitly do not port (templates, etc.).
-const EXEMPT_C: &[&str] = &[
-    "examples_template.c",
-];
+const EXEMPT_C: &[&str] = &["examples_template.c"];
 
 const RAYLIB_CATEGORIES: &[&str] = &[
     "audio", "core", "models", "others", "shaders", "shapes", "text", "textures",

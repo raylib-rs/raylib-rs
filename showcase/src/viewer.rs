@@ -14,7 +14,7 @@ use std::path::PathBuf;
 
 use raylib::prelude::*;
 
-use crate::registry::{lookup, SourcePair};
+use crate::registry::{SourcePair, lookup};
 
 /// Which source the user is viewing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,10 +64,30 @@ struct ThumbnailCapture {
 
 const HINT_TEXT: &str = "F1: view source";
 const HINT_FONT_SIZE: i32 = 18;
-const PANEL_BG: Color = Color { r: 30, g: 30, b: 38, a: 230 };
-const PANEL_FG: Color = Color { r: 220, g: 220, b: 230, a: 255 };
-const TAB_BG_ACTIVE: Color = Color { r: 80, g: 80, b: 120, a: 255 };
-const TAB_BG_INACTIVE: Color = Color { r: 50, g: 50, b: 60, a: 255 };
+const PANEL_BG: Color = Color {
+    r: 30,
+    g: 30,
+    b: 38,
+    a: 230,
+};
+const PANEL_FG: Color = Color {
+    r: 220,
+    g: 220,
+    b: 230,
+    a: 255,
+};
+const TAB_BG_ACTIVE: Color = Color {
+    r: 80,
+    g: 80,
+    b: 120,
+    a: 255,
+};
+const TAB_BG_INACTIVE: Color = Color {
+    r: 50,
+    g: 50,
+    b: 60,
+    a: 255,
+};
 const TEXT_FONT_SIZE: i32 = 14;
 
 impl SourceViewer {
@@ -206,7 +226,12 @@ impl SourceViewer {
             y,
             self.hint_text_w + 2 * pad,
             HINT_FONT_SIZE + 2 * pad,
-            Color { r: 0, g: 0, b: 0, a: 160 },
+            Color {
+                r: 0,
+                g: 0,
+                b: 0,
+                a: 160,
+            },
         );
         d.draw_text(HINT_TEXT, x + pad, y + pad, HINT_FONT_SIZE, Color::WHITE);
     }
@@ -215,13 +240,30 @@ impl SourceViewer {
         // Use cached screen dimensions from update() — no RaylibHandle needed (Fix A).
         d.draw_rectangle(0, 0, self.screen_w, self.screen_h, PANEL_BG);
 
-        let header = format!("{}  —  F1: close · Tab: swap · PgUp/PgDn: scroll", self.name);
+        let header = format!(
+            "{}  —  F1: close · Tab: swap · PgUp/PgDn: scroll",
+            self.name
+        );
         d.draw_text(&header, PANEL_MARGIN, HEADER_Y, HEADER_FONT_SIZE, PANEL_FG);
 
-        let c_bg = if self.tab == Tab::C { TAB_BG_ACTIVE } else { TAB_BG_INACTIVE };
-        let r_bg = if self.tab == Tab::Rust { TAB_BG_ACTIVE } else { TAB_BG_INACTIVE };
+        let c_bg = if self.tab == Tab::C {
+            TAB_BG_ACTIVE
+        } else {
+            TAB_BG_INACTIVE
+        };
+        let r_bg = if self.tab == Tab::Rust {
+            TAB_BG_ACTIVE
+        } else {
+            TAB_BG_INACTIVE
+        };
         d.draw_rectangle(PANEL_MARGIN, TAB_Y, TAB_W, TAB_H, c_bg);
-        d.draw_text("C", PANEL_MARGIN + TAB_W / 2 - 8, TAB_Y + 6, TAB_FONT_SIZE, PANEL_FG);
+        d.draw_text(
+            "C",
+            PANEL_MARGIN + TAB_W / 2 - 8,
+            TAB_Y + 6,
+            TAB_FONT_SIZE,
+            PANEL_FG,
+        );
         d.draw_rectangle(PANEL_MARGIN + TAB_W + 4, TAB_Y, TAB_W, TAB_H, r_bg);
         d.draw_text(
             "Rust",
@@ -296,7 +338,10 @@ fn capture_and_exit(rl: &mut RaylibHandle, thread: &RaylibThread, out_path: &std
     // layer, so we verify the file exists after the write.
     img.export_image(&out_str);
     if !out_path.exists() {
-        eprintln!("gen_thumbnails: export_image({:?}) did not produce a file", out_path);
+        eprintln!(
+            "gen_thumbnails: export_image({:?}) did not produce a file",
+            out_path
+        );
         process::exit(2);
     }
     process::exit(0);

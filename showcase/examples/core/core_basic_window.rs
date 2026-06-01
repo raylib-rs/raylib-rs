@@ -43,12 +43,13 @@ fn main() {
         .title("raylib [core] example - basic window")
         .build();
 
-    rl.set_target_fps(60);               // Set our game to run at 60 frames-per-second
+    rl.set_target_fps(60); // Set our game to run at 60 frames-per-second
     let mut viewer = SourceViewer::for_current_example();
     //--------------------------------------------------------------------------------------
 
     // Main game loop
-    while !rl.window_should_close()    // Detect window close button or ESC key
+    while !rl.window_should_close()
+    // Detect window close button or ESC key
     {
         // Update
         //----------------------------------------------------------------------------------
@@ -60,11 +61,17 @@ fn main() {
         //----------------------------------------------------------------------------------
         let mut d = rl.begin_drawing(&thread);
 
-            d.clear_background(Color::RAYWHITE);
+        d.clear_background(Color::RAYWHITE);
 
-            d.draw_text("Congrats! You created your first window!", 190, 200, 20, Color::LIGHTGRAY);
+        d.draw_text(
+            "Congrats! You created your first window!",
+            190,
+            200,
+            20,
+            Color::LIGHTGRAY,
+        );
 
-            viewer.draw(&mut d);
+        viewer.draw(&mut d);
         //----------------------------------------------------------------------------------
     }
 

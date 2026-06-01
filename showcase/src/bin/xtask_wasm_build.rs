@@ -22,8 +22,9 @@ fn main() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let workspace_root = manifest_dir.parent().unwrap().to_path_buf();
 
-    let meta_path = find_examples_meta(&workspace_root)
-        .expect("examples_meta.json not found; run `cargo build -p raylib-showcase --examples` first");
+    let meta_path = find_examples_meta(&workspace_root).expect(
+        "examples_meta.json not found; run `cargo build -p raylib-showcase --examples` first",
+    );
     let metas: Vec<ExampleMeta> =
         serde_json::from_str(&fs::read_to_string(&meta_path).unwrap()).unwrap();
 
@@ -43,7 +44,10 @@ fn main() {
             eprintln!("xtask_wasm_build: skipping {} (wasm-excluded)", meta.name);
             continue;
         }
-        eprintln!("xtask_wasm_build: building {} for wasm32-unknown-emscripten", meta.name);
+        eprintln!(
+            "xtask_wasm_build: building {} for wasm32-unknown-emscripten",
+            meta.name
+        );
         let status = Command::new("cargo")
             .args([
                 "build",

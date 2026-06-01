@@ -31,16 +31,25 @@ fn main() {
         .ok()
         .and_then(|d| {
             d.flatten()
-                .find(|e| e.file_name().to_string_lossy().starts_with("raylib-showcase-"))
+                .find(|e| {
+                    e.file_name()
+                        .to_string_lossy()
+                        .starts_with("raylib-showcase-")
+                })
                 .map(|e| e.path().join("out").join("examples_meta.json"))
         })
         .expect("examples_meta.json not found; build the showcase first");
-    let metas: Vec<ExampleMeta> = serde_json::from_str(&fs::read_to_string(&meta_path).unwrap()).unwrap();
+    let metas: Vec<ExampleMeta> =
+        serde_json::from_str(&fs::read_to_string(&meta_path).unwrap()).unwrap();
 
     let index_template = fs::read_to_string(manifest_dir.join("index/template.html")).unwrap();
     let mut index_body = String::new();
     for m in &metas {
-        let badge = if m.wasm_excluded { " (desktop only)" } else { "" };
+        let badge = if m.wasm_excluded {
+            " (desktop only)"
+        } else {
+            ""
+        };
         index_body.push_str(&format!(
             r#"<li><a href="examples/{}/{}.html">{} [{}]{}</a></li>"#,
             m.category, m.name, m.name, m.category, badge,

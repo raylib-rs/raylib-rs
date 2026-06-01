@@ -49,16 +49,17 @@ fn main() {
     let out_thumbs = workspace_root.join("target").join("thumbnails");
     fs::create_dir_all(&out_thumbs).unwrap();
 
-    let meta_path = find_examples_meta(&workspace_root)
-        .expect("examples_meta.json not found; run `cargo build -p raylib-showcase --examples` first");
+    let meta_path = find_examples_meta(&workspace_root).expect(
+        "examples_meta.json not found; run `cargo build -p raylib-showcase --examples` first",
+    );
     let metas: Vec<ExampleMeta> =
         serde_json::from_str(&fs::read_to_string(&meta_path).unwrap()).unwrap();
 
     let thumbs_overrides: HashMap<String, ThumbsEntry> = {
         let tpath = manifest_dir.join("thumbnails.toml");
         if tpath.exists() {
-            let f: ThumbsFile = toml::from_str(&fs::read_to_string(&tpath).unwrap())
-                .unwrap_or_default();
+            let f: ThumbsFile =
+                toml::from_str(&fs::read_to_string(&tpath).unwrap()).unwrap_or_default();
             f.example.into_iter().map(|e| (e.name.clone(), e)).collect()
         } else {
             HashMap::new()
@@ -107,7 +108,10 @@ fn main() {
     .unwrap();
     let ok = manifest.iter().filter(|m| m.thumbnail.is_some()).count();
     let bad = manifest.len() - ok;
-    eprintln!("gen_thumbnails: {} ok, {} failed/skipped → {:?}", ok, bad, manifest_path);
+    eprintln!(
+        "gen_thumbnails: {} ok, {} failed/skipped → {:?}",
+        ok, bad, manifest_path
+    );
 }
 
 fn find_examples_meta(workspace_root: &Path) -> Option<PathBuf> {
@@ -143,7 +147,10 @@ fn run_one(name: &str, frames: usize, out: &Path) -> Result<(), String> {
         name,
     ]);
     cmd.env("RAYLIB_SHOWCASE_THUMBNAIL_FRAMES", frames.to_string());
-    cmd.env("RAYLIB_SHOWCASE_THUMBNAIL_OUT", out.to_string_lossy().to_string());
+    cmd.env(
+        "RAYLIB_SHOWCASE_THUMBNAIL_OUT",
+        out.to_string_lossy().to_string(),
+    );
     let mut child = cmd.spawn().map_err(|e| format!("spawn: {}", e))?;
     let start = Instant::now();
     loop {
