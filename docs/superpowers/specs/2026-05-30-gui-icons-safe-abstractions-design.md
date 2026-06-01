@@ -210,9 +210,11 @@ For `gui_load_icons_from_memory` / `gui_load_icons_from_memory_with_names`:
 ### 6.2 Names array copy + free
 
 After raygui returns `char**`:
-1. If `ptr.is_null()`, return `Ok(())` (no-names variant) or `Ok(Vec::with_capacity(256))` (with-names variant, but pre-validation ensured success — if we still hit NULL here it's a raygui bug; document and return empty).
-2. For with-names variant: `Vec::with_capacity(256)`; for `i in 0..256`: `CStr::from_ptr(*ptr.add(i)).to_string_lossy().into_owned()` push to the vec.
-3. Free: `for i in 0..256 { ffi::MemFree((*ptr.add(i)).cast()); } ffi::MemFree(ptr.cast());` (allocator-correct after D8).
+1. If `ptr.is_null()`, return `Ok(())` (no-names variant) or `Ok(Vec::new())` (with-names variant; pre-validation ensured success, so a NULL here is treated as "raygui produced an empty name set").
+2. For with-names variant: `Vec::with_capacity(icon_count)`; for `i in 0..icon_count`: `CStr::from_ptr(*ptr.add(i)).to_string_lossy().into_owned()` push to the vec.
+3. Free: `for i in 0..icon_count { ffi::MemFree((*ptr.add(i)).cast()); } ffi::MemFree(ptr.cast());` (allocator-correct after D8).
+
+**Critical**: the loop bound is `icon_count` (from `validate_rgi_header`), NOT `RAYGUI_ICON_MAX_ICONS`. raygui allocates the outer array as `iconCount * sizeof(char *)` (raygui.h:4920-4926) — looping to 256 unconditionally would read past the allocation for any `.rgi` with `iconCount < 256`. The `copy_and_free_names` helper takes `icon_count` as a parameter to enforce this.
 
 ### 6.3 Allocator unification (D8)
 

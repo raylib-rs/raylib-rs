@@ -57,16 +57,23 @@ pub(crate) fn check_i32_len(len: usize) -> Result<i32, LoadIconsError> {
 /// # Safety
 ///
 /// `ptr` must either be NULL or a `char**` returned by `GuiLoadIcons` /
-/// `GuiLoadIconsFromMemory` with at least `RAYGUI_ICON_MAX_ICONS` valid
-/// entries, each a NUL-terminated C string allocated via `RAYGUI_MALLOC`.
-unsafe fn copy_and_free_names(ptr: *mut *mut std::os::raw::c_char) -> Vec<String> {
+/// `GuiLoadIconsFromMemory` with **exactly `icon_count`** valid entries
+/// (one per icon declared in the loaded `.rgi` header), each a NUL-terminated
+/// C string allocated via `RAYGUI_MALLOC`. raygui allocates the outer array
+/// as `iconCount * sizeof(char *)`, so reading past `icon_count - 1` is
+/// out-of-bounds. The caller is responsible for passing the same `icon_count`
+/// that `validate_rgi_header` returned for the same payload.
+unsafe fn copy_and_free_names(
+    ptr: *mut *mut std::os::raw::c_char,
+    icon_count: usize,
+) -> Vec<String> {
     if ptr.is_null() {
         return Vec::new();
     }
-    let mut names = Vec::with_capacity(RAYGUI_ICON_MAX_ICONS);
-    for i in 0..RAYGUI_ICON_MAX_ICONS {
-        // SAFETY: i in [0, 256); raygui guarantees 256 entries when char**
-        // is non-NULL. Each entry is a NUL-terminated cstring.
+    let mut names = Vec::with_capacity(icon_count);
+    for i in 0..icon_count {
+        // SAFETY: i in [0, icon_count); raygui allocated exactly icon_count
+        // entries. Each entry is a NUL-terminated cstring.
         let cstr_ptr = unsafe { *ptr.add(i) };
         if cstr_ptr.is_null() {
             names.push(String::new());
@@ -208,8 +215,10 @@ pub trait RaylibGuiIcons {
         Ok(())
     }
 
-    /// Load icons from an in-memory `.rgi` buffer, returning the 256 icon names.
-    /// Same upstream-leak caveat as [`Self::gui_load_icons_from_memory`].
+    /// Load icons from an in-memory `.rgi` buffer, returning one icon name per
+    /// icon declared in the file (`iconCount` entries; up to
+    /// `RAYGUI_ICON_MAX_ICONS` = 256). Same upstream-leak caveat as
+    /// [`Self::gui_load_icons_from_memory`].
     ///
     /// Names with fewer than 32 (`RAYGUI_ICON_MAX_NAME_LENGTH`) characters are
     /// returned trimmed at the first NUL byte.
@@ -218,12 +227,14 @@ pub trait RaylibGuiIcons {
         &mut self,
         data: &[u8],
     ) -> Result<Vec<String>, LoadIconsError> {
-        let _hdr = validate_rgi_header(data)?;
+        let (icon_count, _icon_size) = validate_rgi_header(data)?;
         let len = check_i32_len(data.len())?;
         // SAFETY: data lives for the duration of the call.
         let ptr = unsafe { ffi::GuiLoadIconsFromMemory(data.as_ptr(), len, true) };
-        // SAFETY: ptr is either NULL or a char** with RAYGUI_ICON_MAX_ICONS entries.
-        let names = unsafe { copy_and_free_names(ptr) };
+        // SAFETY: raygui allocates exactly `icon_count` entries in the outer
+        // array when load_names=true (raygui.h:4923). `icon_count` came from
+        // the same validated header that raygui parsed, so the counts match.
+        let names = unsafe { copy_and_free_names(ptr, icon_count as usize) };
         Ok(names)
     }
 }
@@ -326,6 +337,46 @@ mod tests {
                 ),
                 "got {err:?}"
             );
+        });
+    }
+
+    /// Regression test for the iconCount-vs-256 bug caught in code review:
+    /// `copy_and_free_names` must loop to `icon_count`, not unconditionally
+    /// to 256, otherwise it reads past raygui's outer `iconCount * sizeof(char*)`
+    /// allocation for any sub-256 .rgi.
+    #[test]
+    fn load_icons_from_memory_with_names_handles_sub_256_icon_count() {
+        with_headless(64, 64, |rl, _thread| {
+            // Build a minimal .rgi payload: 1 icon, 1 name ("save"), 1 bitmap.
+            // Layout (raygui.h:4824-4845):
+            //   12 bytes header (sig+version+reserved+iconCount+iconSize)
+            //   + iconCount * 32 bytes of names
+            //   + iconCount * 8 u32s of bitmap data (16*16/32 = 8 words per icon)
+            const ICON_COUNT: u16 = 1;
+            const NAME_LEN: usize = 32; // RAYGUI_ICON_MAX_NAME_LENGTH
+            const WORDS_PER_ICON: usize = 8;
+            let mut buf =
+                Vec::with_capacity(12 + ICON_COUNT as usize * (NAME_LEN + 4 * WORDS_PER_ICON));
+            // Header
+            buf.extend_from_slice(b"rGI ");
+            buf.extend_from_slice(&100u16.to_le_bytes()); // version
+            buf.extend_from_slice(&0u16.to_le_bytes()); // reserved
+            buf.extend_from_slice(&ICON_COUNT.to_le_bytes());
+            buf.extend_from_slice(&16u16.to_le_bytes()); // iconSize
+            // Names: "save" NUL-padded to 32 bytes
+            let mut name = [0u8; NAME_LEN];
+            name[..4].copy_from_slice(b"save");
+            buf.extend_from_slice(&name);
+            // Bitmap: 8 u32s of 0xAAAAAAAA per icon (checkerboard-ish, arbitrary)
+            for _ in 0..WORDS_PER_ICON {
+                buf.extend_from_slice(&0xAAAA_AAAAu32.to_le_bytes());
+            }
+
+            let names = rl
+                .gui_load_icons_from_memory_with_names(&buf)
+                .expect("well-formed 1-icon payload");
+            assert_eq!(names.len(), 1, "exactly iconCount names returned");
+            assert_eq!(names[0], "save", "name round-trips through raygui + Rust");
         });
     }
 }
