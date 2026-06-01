@@ -10,7 +10,6 @@
 //! the framebuffer at the configured frame, then exits the process.
 
 use std::env;
-use std::ffi::CString;
 use std::path::PathBuf;
 
 use raylib::prelude::*;
@@ -136,7 +135,7 @@ impl SourceViewer {
     ///
     /// Must be called inside a [`begin_drawing`](RaylibHandle::begin_drawing)
     /// scope.
-    pub fn draw<D: RaylibDraw>(&self, d: &mut D) {
+    pub fn draw<D: RaylibDraw + std::ops::Deref<Target = RaylibHandle>>(&self, d: &mut D) {
         if self.thumbnail.is_some() {
             return;
         }
@@ -147,17 +146,10 @@ impl SourceViewer {
         self.draw_overlay(d);
     }
 
-    fn draw_hint<D: RaylibDraw>(&self, d: &mut D) {
-        // SAFETY: GetScreenWidth/GetScreenHeight/MeasureText are pure reads of
-        // raylib global state; safe to call from the main thread during drawing.
-        let (screen_w, screen_h, text_w) = unsafe {
-            let c_hint = CString::new(HINT_TEXT).unwrap();
-            (
-                raylib::ffi::GetScreenWidth(),
-                raylib::ffi::GetScreenHeight(),
-                raylib::ffi::MeasureText(c_hint.as_ptr(), HINT_FONT_SIZE),
-            )
-        };
+    fn draw_hint<D: RaylibDraw + std::ops::Deref<Target = RaylibHandle>>(&self, d: &mut D) {
+        let screen_w = (*d).get_screen_width();
+        let screen_h = (*d).get_screen_height();
+        let text_w = (*d).measure_text(HINT_TEXT, HINT_FONT_SIZE);
         let pad = 8;
         let x = screen_w - text_w - 2 * pad - 4;
         let y = screen_h - HINT_FONT_SIZE - 2 * pad - 4;
@@ -171,12 +163,9 @@ impl SourceViewer {
         d.draw_text(HINT_TEXT, x + pad, y + pad, HINT_FONT_SIZE, Color::WHITE);
     }
 
-    fn draw_overlay<D: RaylibDraw>(&self, d: &mut D) {
-        // SAFETY: GetScreenWidth/GetScreenHeight are pure reads of raylib
-        // global state; safe to call from the main thread during drawing.
-        let (screen_w, screen_h) = unsafe {
-            (raylib::ffi::GetScreenWidth(), raylib::ffi::GetScreenHeight())
-        };
+    fn draw_overlay<D: RaylibDraw + std::ops::Deref<Target = RaylibHandle>>(&self, d: &mut D) {
+        let screen_w = (*d).get_screen_width();
+        let screen_h = (*d).get_screen_height();
         d.draw_rectangle(0, 0, screen_w, screen_h, PANEL_BG);
 
         let header = format!("{}  —  F1: close · Tab: swap · PgUp/PgDn: scroll", self.name);
