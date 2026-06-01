@@ -1,0 +1,10 @@
+# WS9 wasm-exclude list. Entries here are excluded from
+# `cargo build --target wasm32-unknown-emscripten --example <name>` in CI
+# and shown with a "desktop only" badge on the Pages gallery.
+#
+# Schema:
+#   [[exclude]]
+#   name = "<example name matching [[example]] name in Cargo.toml>"
+#   reason = "one-line reason (LoadDroppedFiles, native dialog, threading, …)"
+#
+# Starts empty; entries land per P2/P3 wave as broken-on-wasm examples surface.

@@ -1,0 +1,12 @@
+# WS9 thumbnail-generation overrides. The default capture frame is 60
+# (~1 second at 60 FPS). Per-example overrides land here.
+#
+# Schema:
+#   [[example]]
+#   name = "<example name>"
+#   frames = <N>      # capture at frame N (use a higher value to let
+#                     # animations play in)
+#   skip = true       # skip thumbnail generation entirely (use upstream
+#                     # PNG or placeholder)
+#
+# Starts empty.
