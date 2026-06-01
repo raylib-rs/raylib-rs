@@ -101,6 +101,28 @@ pub trait RaylibGuiState {
     fn gui_load_style_default(&mut self) {
         unsafe { ffi::GuiLoadStyleDefault() }
     }
+    /// Load a binary `.rgs` style file from an in-memory buffer. Mirrors
+    /// [`Self::gui_load_style`] (path-based) for embedded / network-loaded
+    /// styles.
+    ///
+    /// raygui only supports the binary `.rgs` format from memory (not the
+    /// text format). Returns [`crate::core::error::LoadStyleFromMemoryError::LengthOverflow`] if
+    /// `data.len()` exceeds `i32::MAX`. raygui itself does not signal style-
+    /// parse failures — the same silent-failure semantics as
+    /// [`Self::gui_load_style`] apply.
+    #[inline]
+    fn gui_load_style_from_memory(
+        &mut self,
+        data: &[u8],
+    ) -> Result<(), crate::core::error::LoadStyleFromMemoryError> {
+        let len = i32::try_from(data.len()).map_err(|_| {
+            crate::core::error::LoadStyleFromMemoryError::LengthOverflow(data.len())
+        })?;
+        // SAFETY: data lives for the duration of the call; raygui memcpys out
+        // of the buffer synchronously.
+        unsafe { ffi::GuiLoadStyleFromMemory(data.as_ptr(), len) };
+        Ok(())
+    }
     /// Enable gui tooltips (global state)
     #[inline]
     fn gui_enable_tooltip(&mut self) {
@@ -199,5 +221,32 @@ impl GuiProperty for crate::consts::GuiValueBoxProperty {
 impl GuiProperty for crate::consts::GuiToggleProperty {
     fn as_i32(self) -> i32 {
         self as i32
+    }
+}
+
+#[cfg(test)]
+mod load_style_from_memory_tests {
+    use crate::core::error::LoadStyleFromMemoryError;
+
+    // Pure unit test on the i32 boundary. The actual FFI call needs a live
+    // RaylibHandle (which would force the test under software_renderer), but
+    // the LengthOverflow path returns before reaching FFI, so we exercise
+    // the boundary at the conversion layer directly.
+    #[test]
+    fn length_overflow_at_i32_max_plus_one() {
+        let oversize: usize = i32::MAX as usize + 1;
+        let err = i32::try_from(oversize)
+            .map_err(|_| LoadStyleFromMemoryError::LengthOverflow(oversize))
+            .unwrap_err();
+        assert!(matches!(err, LoadStyleFromMemoryError::LengthOverflow(n) if n == oversize));
+    }
+
+    #[test]
+    fn length_overflow_at_i32_max_is_ok() {
+        // i32::MAX as usize must NOT trigger overflow.
+        let at_max: usize = i32::MAX as usize;
+        let result =
+            i32::try_from(at_max).map_err(|_| LoadStyleFromMemoryError::LengthOverflow(at_max));
+        assert!(result.is_ok());
     }
 }
