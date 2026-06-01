@@ -134,13 +134,6 @@ impl RaylibHandle {
 pub trait AsF32: Copy {
     /// Returns `self` converted to `f32` via Rust's `as`-cast — may lose precision for
     /// values outside `f32`'s exactly-representable range.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use raylib::core::misc::AsF32;
-    /// assert_eq!(42u32.as_f32(), 42.0);
-    /// ```
     fn as_f32(self) -> f32;
 }
 

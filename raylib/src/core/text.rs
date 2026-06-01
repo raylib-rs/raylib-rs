@@ -66,9 +66,12 @@ make_thin_wrapper!(
 /// it acts like a slice: index with `slice[i]`, iterate with `slice.iter()`, or read
 /// `slice.len()` directly.
 ///
-/// Constructed internally by font-loading machinery that feeds into
-/// [`Font::from_data`](Font). Never call `libc::free` on the inner data pointer — the
-/// `Drop` impl routes through `UnloadFontData` so custom allocators stay correct.
+/// # Construction
+///
+/// `RSliceGlyphInfo` has no public constructor; instances are produced by
+/// internal font-loading paths and surface to callers through [`Font`]'s loading APIs.
+/// Never call `libc::free` on the inner data pointer — the `Drop` impl routes through
+/// `UnloadFontData` so custom allocators stay correct.
 ///
 /// # See also
 ///

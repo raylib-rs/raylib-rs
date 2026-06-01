@@ -1015,7 +1015,7 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
         }
     }
 
-    /// Set texture for a material map type (MATERIAL_MAP_DIFFUSE, MATERIAL_MAP_SPECULAR...)
+    /// Set texture for a material map type (MATERIAL_MAP_ALBEDO, MATERIAL_MAP_SPECULAR, etc.).
     #[inline]
     fn set_material_texture(
         &mut self,

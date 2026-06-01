@@ -166,7 +166,7 @@ pub enum LoadSoundError {
     ///
     /// **Recovery:** Validate the source buffer and retry; if the source is in-memory data,
     /// confirm the format hint matches the bytes provided.
-    #[error("music's buffer data data is null, check provided buffer data")]
+    #[error("music's buffer data is null, check provided buffer data")]
     MusicNull,
 }
 
