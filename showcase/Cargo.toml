@@ -1,13 +1,58 @@
 [package]
 name = "raylib-showcase"
-version = "5.5.1"
+version = "6.0.0-rc.1"
 authors = ["raylib-rs team <https://github.com/raylib-rs/raylib-rs>"]
 edition = "2024"
+rust-version = "1.85"
 license = "Zlib"
 readme = "../README.md"
 repository = "https://github.com/raylib-rs/raylib-rs"
+description = "Runnable Rust ports of raylib's official C examples (raylib-rs 6.0 showcase)."
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# We declare every [[example]] explicitly so we control the binary name
+# (used by SourceViewer::for_current_example for registry lookup) and the
+# nested path layout (which mirrors raylib-sys/raylib/examples/<cat>/<name>.c).
+autoexamples = false
+autobins = false
+
+[features]
+default = []
+# Mirrors raylib's software_renderer for headless thumbnail generation.
+software_renderer = ["raylib/software_renderer"]
+# Required for the raygui examples in P3.
+raygui = ["raylib/raygui"]
 
 [dependencies]
-raylib = { version = "5.5.1", path = "../raylib" }
+raylib = { version = "6.0.0-rc.1", path = "../raylib" }
+phf = { version = "0.11", features = ["macros"] }
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[build-dependencies]
+phf_codegen = "0.11"
+walkdir = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Explicit example entries grow as P2/P3 batches land. P0 ships only the reference.
+[[example]]
+name = "core_basic_window"
+path = "examples/core/core_basic_window.rs"
+
+[[bin]]
+name = "gen-thumbnails"
+path = "src/bin/gen_thumbnails.rs"
+
+[[bin]]
+name = "xtask-wasm-build"
+path = "src/bin/xtask_wasm_build.rs"
+
+[[bin]]
+name = "xtask-build-pages"
+path = "src/bin/xtask_build_pages.rs"
+
+[[bin]]
+name = "xtask-vendor-resources"
+path = "src/bin/xtask_vendor_resources.rs"
