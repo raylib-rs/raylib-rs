@@ -25,7 +25,7 @@ mod state;
 pub use advanced::RaylibGuiAdvanced;
 pub use containers::RaylibGuiContainers;
 pub use controls::RaylibGuiControls;
-pub use icons::RaylibGuiIcons;
+pub use icons::{RAYGUI_ICON_DATA_ELEMENTS, RAYGUI_ICON_MAX_ICONS, RaylibGuiIcons};
 pub use state::{GuiProperty, RaylibGuiState};
 
 use crate::core::RaylibHandle;
@@ -49,3 +49,4 @@ impl<D: RaylibDraw> RaylibDrawGui for D {}
 // RaylibHandle (during setup) gets the global-state group only. (RaylibHandle is
 // not RaylibDraw, so this does not conflict with the blanket impl above.)
 impl RaylibGuiState for RaylibHandle {}
+impl RaylibGuiIcons for RaylibHandle {}

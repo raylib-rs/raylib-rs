@@ -3,6 +3,13 @@ use crate::ffi::Color;
 use crate::rgui::scratch::scratch_txt;
 use std::ffi::CStr;
 
+/// Number of raygui icons (= `RAYGUI_ICON_MAX_ICONS`).
+pub const RAYGUI_ICON_MAX_ICONS: usize = 256;
+
+/// Number of `u32` words per icon (= `RAYGUI_ICON_DATA_ELEMENTS`,
+/// `RAYGUI_ICON_SIZE * RAYGUI_ICON_SIZE / 32` = `16 * 16 / 32`).
+pub const RAYGUI_ICON_DATA_ELEMENTS: usize = 8;
+
 /// raygui icon controls.
 pub trait RaylibGuiIcons {
     /// Get text with an icon id prepended (e.g. `#23#Save`). The returned string
@@ -23,11 +30,13 @@ pub trait RaylibGuiIcons {
             .to_string_lossy()
             .into_owned()
     }
+
     /// Set default icon drawing size (in pixels).
     #[inline]
     fn gui_set_icon_scale(&mut self, scale: i32) {
         unsafe { ffi::GuiSetIconScale(scale) }
     }
+
     /// Draw an icon at a position using a pixel size.
     #[inline]
     fn gui_draw_icon(
@@ -40,30 +49,72 @@ pub trait RaylibGuiIcons {
     ) {
         unsafe { ffi::GuiDrawIcon(icon_id as i32, pos_x, pos_y, pixel_size, color.into()) }
     }
-    /// Get a raw pointer to raygui's internal icons data (advanced; see raygui).
+
+    /// Borrow raygui's icon buffer as a typed 256×8 grid (read-only).
     ///
-    /// # Safety
-    /// The pointer aliases raygui-global mutable state with no lifetime tracking;
-    /// the caller must not retain it across `GuiLoadStyle`/icon mutations and must
-    /// respect raygui's `RAYGUI_ICON_MAX_ICONS * RAYGUI_ICON_DATA_ELEMENTS` layout.
+    /// `256` = [`RAYGUI_ICON_MAX_ICONS`]; `8` = [`RAYGUI_ICON_DATA_ELEMENTS`]
+    /// (`RAYGUI_ICON_SIZE * RAYGUI_ICON_SIZE / 32` = `16 * 16 / 32`). Each
+    /// entry is one icon's bitmap: 256 bits, 1 bit per pixel, packed into 8
+    /// `u32` words.
+    ///
+    /// The buffer is live: mutations via [`gui_get_icons_mut`](Self::gui_get_icons_mut)
+    /// are visible to subsequent [`gui_draw_icon`](Self::gui_draw_icon) calls.
     #[inline]
-    unsafe fn gui_get_icons_raw(&mut self) -> *mut std::os::raw::c_uint {
-        unsafe { ffi::GuiGetIcons() }
+    fn gui_get_icons(&self) -> &[[u32; RAYGUI_ICON_DATA_ELEMENTS]; RAYGUI_ICON_MAX_ICONS] {
+        // SAFETY: GuiGetIcons returns a non-null pointer to raygui's static
+        // (or RAYGUI_MALLOC'd in the from-memory case) buffer of exactly
+        // RAYGUI_ICON_MAX_ICONS * RAYGUI_ICON_DATA_ELEMENTS u32s. We cast it
+        // to a typed array reference of the same layout. The borrow's lifetime
+        // is bounded by `&self`; raygui can only swap the pointer via a
+        // `&mut self` method (gui_load_icons*), which Rust's borrow checker
+        // ensures cannot happen while this borrow is live.
+        unsafe {
+            let ptr = ffi::GuiGetIcons() as *const [u32; RAYGUI_ICON_DATA_ELEMENTS];
+            &*(ptr as *const [[u32; RAYGUI_ICON_DATA_ELEMENTS]; RAYGUI_ICON_MAX_ICONS])
+        }
     }
-    /// Load a raygui icons file (.rgi); returns the raw `char**` name array.
-    ///
-    /// # Safety
-    /// Ownership and length of the returned `char**` follow raygui's contract
-    /// (RAYGUI_ICON_MAX_ICONS entries); the caller is responsible for freeing it
-    /// per raygui. Prefer not to use unless porting raygui icon tooling. `file_name`
-    /// is passed via the thread-local scratch buffer and is only valid for the
-    /// synchronous duration of this call (raygui opens it immediately with `fopen`).
+
+    /// Borrow raygui's icon buffer mutably. Edits are observable on the next
+    /// [`gui_draw_icon`](Self::gui_draw_icon) call.
     #[inline]
-    unsafe fn gui_load_icons_raw(
+    fn gui_get_icons_mut(
         &mut self,
-        file_name: impl AsRef<str>,
-        load_icons_name: bool,
-    ) -> *mut *mut std::os::raw::c_char {
-        unsafe { ffi::GuiLoadIcons(scratch_txt(file_name), load_icons_name) }
+    ) -> &mut [[u32; RAYGUI_ICON_DATA_ELEMENTS]; RAYGUI_ICON_MAX_ICONS] {
+        // SAFETY: Same as gui_get_icons, but producing a mutable borrow. The
+        // `&mut self` receiver prevents any other `gui_*` call from observing
+        // a torn buffer during the borrow.
+        unsafe {
+            let ptr = ffi::GuiGetIcons() as *mut [u32; RAYGUI_ICON_DATA_ELEMENTS];
+            &mut *(ptr as *mut [[u32; RAYGUI_ICON_DATA_ELEMENTS]; RAYGUI_ICON_MAX_ICONS])
+        }
+    }
+}
+
+#[cfg(all(test, feature = "software_renderer"))]
+mod tests {
+    use super::*;
+    use crate::test_harness::with_headless;
+
+    #[test]
+    fn icons_buffer_round_trip() {
+        with_headless(64, 64, |rl, _thread| {
+            // Pick an empty icon slot well past the populated ones.
+            const SLOT: usize = 200;
+            let pattern: [u32; 8] = [0xDEADBEEF; 8];
+
+            // Mutate via gui_get_icons_mut.
+            {
+                let icons = rl.gui_get_icons_mut();
+                icons[SLOT] = pattern;
+            }
+
+            // Read back via gui_get_icons.
+            let icons = rl.gui_get_icons();
+            assert_eq!(
+                icons[SLOT], pattern,
+                "icon buffer aliases raygui's live state"
+            );
+            assert_eq!(icons.len(), 256, "RAYGUI_ICON_MAX_ICONS = 256");
+        });
     }
 }

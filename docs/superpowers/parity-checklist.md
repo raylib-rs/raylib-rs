@@ -802,8 +802,8 @@ _Deferred: `GuiLoadStyleFromMemory` (PR #296) — the symbol is absent from the 
 
 - [x] `GuiIconText`
 - [x] `GuiSetIconScale`
-- [x] `GuiGetIcons` — raw `*mut c_uint` via `gui_get_icons_raw` (`unsafe`, `# Safety`); safe abstraction deferred
-- [x] `GuiLoadIcons` — raw `*mut *mut c_char` via `gui_load_icons_raw` (`unsafe`, `# Safety`); safe abstraction deferred
+- [x] `GuiGetIcons` — safe `gui_get_icons(&self) -> &[[u32; 8]; 256]` + `gui_get_icons_mut(&mut self)`; `_raw` removed (breaking)
+- [x] `GuiLoadIcons` — safe abstraction deferred to Task 6 (`gui_load_icons` / `gui_load_icons_with_names`); `_raw` removed (breaking)
 - [x] `GuiDrawIcon`
 
 ### Container/separator controls, useful for controls organization
