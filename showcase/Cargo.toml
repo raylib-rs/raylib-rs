@@ -285,6 +285,26 @@ name = "core_world_screen"
 path = "examples/core/core_world_screen.rs"
 
 [[example]]
+name = "text_format_text"
+path = "examples/text/text_format_text.rs"
+
+[[example]]
+name = "text_writing_anim"
+path = "examples/text/text_writing_anim.rs"
+
+[[example]]
+name = "text_input_box"
+path = "examples/text/text_input_box.rs"
+
+[[example]]
+name = "text_rectangle_bounds"
+path = "examples/text/text_rectangle_bounds.rs"
+
+[[example]]
+name = "text_words_alignment"
+path = "examples/text/text_words_alignment.rs"
+
+[[example]]
 name = "embedded_files_loading"
 path = "examples/others/embedded_files_loading.rs"
 
