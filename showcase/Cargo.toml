@@ -241,6 +241,26 @@ name = "core_smooth_pixelperfect"
 path = "examples/core/core_smooth_pixelperfect.rs"
 
 [[example]]
+name = "core_screen_recording"
+path = "examples/core/core_screen_recording.rs"
+
+[[example]]
+name = "core_storage_values"
+path = "examples/core/core_storage_values.rs"
+
+[[example]]
+name = "core_text_file_loading"
+path = "examples/core/core_text_file_loading.rs"
+
+[[example]]
+name = "core_undo_redo"
+path = "examples/core/core_undo_redo.rs"
+
+[[example]]
+name = "core_viewport_scaling"
+path = "examples/core/core_viewport_scaling.rs"
+
+[[example]]
 name = "embedded_files_loading"
 path = "examples/others/embedded_files_loading.rs"
 
