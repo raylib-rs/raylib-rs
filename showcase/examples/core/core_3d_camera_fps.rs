@@ -101,7 +101,7 @@ fn main() {
         60.0,
     );
 
-    update_camera_fps(&mut camera, &state); // Update camera parameters
+    update_camera_fps(&mut camera, &mut state); // Update camera parameters
 
     rl.disable_cursor(); // Limit cursor to relative movement inside the window
 
@@ -163,7 +163,7 @@ fn main() {
         state.lean.x = lerp(state.lean.x, sideway as f32 * 0.02, 10.0 * delta);
         state.lean.y = lerp(state.lean.y, forward as f32 * 0.015, 10.0 * delta);
 
-        update_camera_fps(&mut camera, &state);
+        update_camera_fps(&mut camera, &mut state);
         viewer.update(&mut rl, &thread);
         //----------------------------------------------------------------------------------
 
@@ -294,7 +294,7 @@ fn update_body(
 }
 
 // Update camera for FPS behaviour
-fn update_camera_fps(camera: &mut Camera3D, state: &GameState) {
+fn update_camera_fps(camera: &mut Camera3D, state: &mut GameState) {
     let up = Vector3::new(0.0, 1.0, 0.0);
     let target_offset = Vector3::new(0.0, 0.0, -1.0);
 
@@ -302,26 +302,27 @@ fn update_camera_fps(camera: &mut Camera3D, state: &GameState) {
     let yaw = target_offset.rotate_by_axis_angle(up, state.look_rotation.x);
 
     // Clamp view up
+    // idiomatic: C mutates the global `lookRotation.y` so the clamp persists across frames;
+    // mirror that by clamping `state.look_rotation.y` in place instead of a local copy.
     let mut max_angle_up = up.angle(yaw);
     max_angle_up -= 0.001; // Avoid numerical errors
-    let mut look_rot_y = state.look_rotation.y;
-    if -look_rot_y > max_angle_up {
-        look_rot_y = -max_angle_up;
+    if -state.look_rotation.y > max_angle_up {
+        state.look_rotation.y = -max_angle_up;
     }
 
     // Clamp view down
     let mut max_angle_down = (-up).angle(yaw);
     max_angle_down *= -1.0; // Downwards angle is negative
     max_angle_down += 0.001; // Avoid numerical errors
-    if -look_rot_y < max_angle_down {
-        look_rot_y = -max_angle_down;
+    if -state.look_rotation.y < max_angle_down {
+        state.look_rotation.y = -max_angle_down;
     }
 
     // Up and down
     let right = yaw.cross(up).normalize();
 
     // Rotate view vector around right axis
-    let mut pitch_angle = -look_rot_y - state.lean.y;
+    let mut pitch_angle = -state.look_rotation.y - state.lean.y;
     pitch_angle = pitch_angle.clamp(
         -std::f32::consts::PI / 2.0 + 0.0001,
         std::f32::consts::PI / 2.0 - 0.0001,

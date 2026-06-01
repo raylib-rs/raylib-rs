@@ -138,14 +138,28 @@ fn get_key_text(key: i32) -> &'static str {
     }
 }
 
+// Map a layout-array int to a KeyboardKey, treating the upstream `162` placeholder
+// (and `KEY_NULL == 0`) as "no key" so we never transmute a non-discriminant value.
+// idiomatic: C just passes the int to IsKeyDown(); Rust's typed API needs us to gate
+// the transmute on entries we know are real KEY_* discriminants.
+fn key_for_layout(key: i32) -> Option<KeyboardKey> {
+    match key {
+        // `0` is KEY_NULL, `162` is an upstream placeholder in line06_keys (see raylib's
+        // core_keyboard_testbed.c). Neither is a KeyboardKey discriminant — skip both.
+        0 | 162 => None,
+        v => Some(unsafe {
+            // SAFETY: every other entry in the layout arrays (`line0X_keys`) is built from
+            // a `KeyboardKey::KEY_*` discriminant via `as i32`, so transmuting back is sound.
+            // raylib-sys generates KeyboardKey as #[repr(i32)], so the bit pattern is the
+            // same as the original enum value.
+            std::mem::transmute::<i32, KeyboardKey>(v)
+        }),
+    }
+}
+
 // Draw keyboard key
 fn gui_keyboard_key(d: &mut RaylibDrawHandle, bounds: Rectangle, key: i32) {
-    use raylib::ffi::KeyboardKey as K;
-    if key == K::KEY_NULL as i32 {
-        d.draw_rectangle_lines_ex(bounds, 2.0, Color::LIGHTGRAY);
-    } else {
-        // SAFETY: `key` is one of the KEY_* enum values used in the layout arrays below.
-        let key_enum: KeyboardKey = unsafe { std::mem::transmute(key as u32) };
+    if let Some(key_enum) = key_for_layout(key) {
         if d.is_key_down(key_enum) {
             d.draw_rectangle_lines_ex(bounds, 2.0, Color::MAROON);
             d.draw_text(
@@ -165,6 +179,9 @@ fn gui_keyboard_key(d: &mut RaylibDrawHandle, bounds: Rectangle, key: i32) {
                 Color::DARKGRAY,
             );
         }
+    } else {
+        // KEY_NULL or upstream placeholder: just outline the slot like C does for KEY_NULL.
+        d.draw_rectangle_lines_ex(bounds, 2.0, Color::LIGHTGRAY);
     }
 
     if bounds.check_collision_point_rec(d.get_mouse_position()) {
