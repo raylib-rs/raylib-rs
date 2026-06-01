@@ -309,6 +309,22 @@ name = "text_sprite_fonts"
 path = "examples/text/text_sprite_fonts.rs"
 
 [[example]]
+name = "text_inline_styling"
+path = "examples/text/text_inline_styling.rs"
+
+[[example]]
+name = "text_strings_management"
+path = "examples/text/text_strings_management.rs"
+
+[[example]]
+name = "text_unicode_emojis"
+path = "examples/text/text_unicode_emojis.rs"
+
+[[example]]
+name = "text_unicode_ranges"
+path = "examples/text/text_unicode_ranges.rs"
+
+[[example]]
 name = "text_format_text"
 path = "examples/text/text_format_text.rs"
 
