@@ -8,3 +8,7 @@
 #   reason = "one-line reason (LoadDroppedFiles, native dialog, threading, …)"
 #
 # Starts empty; entries land per P2/P3 wave as broken-on-wasm examples surface.
+
+[[exclude]]
+name = "audio_spectrum_visualizer"
+reason = "Upstream C source notes 'Memory out-of-bounds on PLATFORM_WEB' when reading the decoded country.mp3 buffer; same hazard applies here."
