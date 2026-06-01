@@ -45,7 +45,11 @@ jobs:
         with:
           submodules: recursive
       - name: Install Linux build deps
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake
+        # cmake for raylib's CMake-based build; the X11/audio/GL stack is
+        # needed by the native preflight `cargo build --examples` (which
+        # populates examples_meta.json) even though the wasm leg itself
+        # targets emscripten.
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
       - name: Set up emsdk
         uses: mymindstorm/setup-emsdk@v14
         with:

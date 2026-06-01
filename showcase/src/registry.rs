@@ -37,7 +37,10 @@ mod tests {
     fn core_basic_window_is_registered() {
         let pair = lookup("core_basic_window").expect("reference port must be registered");
         assert_eq!(pair.category, "core");
-        assert!(pair.c.contains("InitWindow"), "C source must reference InitWindow");
+        assert!(
+            pair.c.contains("InitWindow"),
+            "C source must reference InitWindow"
+        );
         assert!(
             pair.rust.contains("SourceViewer::for_current_example"),
             "Rust port must wire the SourceViewer",
