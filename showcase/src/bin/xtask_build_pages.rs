@@ -5,7 +5,7 @@
 //! P4 (Task 4.1).
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
@@ -23,22 +23,12 @@ fn main() {
     let _ = fs::remove_dir_all(&site);
     fs::create_dir_all(site.join("examples")).unwrap();
 
-    let meta_path = workspace_root
-        .join("target")
-        .join("release")
-        .join("build")
-        .read_dir()
-        .ok()
-        .and_then(|d| {
-            d.flatten()
-                .find(|e| {
-                    e.file_name()
-                        .to_string_lossy()
-                        .starts_with("raylib-showcase-")
-                })
-                .map(|e| e.path().join("out").join("examples_meta.json"))
-        })
-        .expect("examples_meta.json not found; build the showcase first");
+    // Cargo creates multiple `raylib-showcase-<hash>` build dirs
+    // (sometimes one for build-script output, one for run-script). Only
+    // some contain the OUT_DIR/examples_meta.json our build.rs emits;
+    // iterate and pick the one that actually has the file.
+    let meta_path = find_examples_meta(&workspace_root)
+        .expect("examples_meta.json not found; run `cargo build -p raylib-showcase --release --examples` first");
     let metas: Vec<ExampleMeta> =
         serde_json::from_str(&fs::read_to_string(&meta_path).unwrap()).unwrap();
 
@@ -94,4 +84,24 @@ fn main() {
     }
 
     eprintln!("xtask_build_pages: wrote site to {:?}", site);
+}
+
+fn find_examples_meta(workspace_root: &Path) -> Option<PathBuf> {
+    for profile in &["release", "debug"] {
+        let build_dir = workspace_root.join("target").join(profile).join("build");
+        if !build_dir.exists() {
+            continue;
+        }
+        for entry in fs::read_dir(&build_dir).ok()?.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !name.starts_with("raylib-showcase-") {
+                continue;
+            }
+            let candidate = entry.path().join("out").join("examples_meta.json");
+            if candidate.exists() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
 }
