@@ -72,9 +72,18 @@ const TEXT_FONT_SIZE: i32 = 14;
 
 impl SourceViewer {
     /// Constructs a viewer keyed off the current `[[example]] name`
-    /// (resolved at build time as `env!("CARGO_BIN_NAME")`).
+    /// (resolved at runtime from the current executable's file stem;
+    /// `cargo run --example <name>` produces an executable named `<name>(.exe)`,
+    /// so the file stem matches the `[[example]] name` for registry lookup).
+    /// `env!("CARGO_BIN_NAME")` would also work but is only defined when
+    /// compiling the bin/example crate, not the lib that hosts this fn.
     pub fn for_current_example() -> Self {
-        let name = env!("CARGO_BIN_NAME").to_string();
+        let name = std::env::current_exe()
+            .ok()
+            .as_deref()
+            .and_then(|p| p.file_stem())
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "<unknown>".to_string());
         Self::for_example(&name)
     }
 

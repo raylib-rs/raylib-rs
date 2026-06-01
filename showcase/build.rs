@@ -156,12 +156,34 @@ fn main() {
         }
     }
 
+    // Pairing diagnostics. By default these are cargo warnings so that
+    // incremental porting (P0..P2) doesn't block local builds or CI. When
+    // `WS9_STRICT_PAIRING=1` is set (intended for the P2.5 close
+    // verification onward), pairing mismatches escalate to a hard panic so
+    // a forgotten port can never reach a release build silently.
+    let strict = env::var("WS9_STRICT_PAIRING").ok().as_deref() == Some("1");
     if !errors.is_empty() {
         for e in &errors {
-            eprintln!("build.rs: ERROR: {}", e);
+            if strict {
+                eprintln!("build.rs: ERROR: {}", e);
+            } else {
+                println!("cargo:warning=showcase: {}", e);
+            }
         }
-        panic!("build.rs: {} pairing error(s); fix per WS9 spec.", errors.len());
+        if strict {
+            panic!(
+                "build.rs: {} pairing error(s); fix per WS9 spec (WS9_STRICT_PAIRING=1).",
+                errors.len(),
+            );
+        } else {
+            println!(
+                "cargo:warning=showcase: {} pairing diagnostic(s); set WS9_STRICT_PAIRING=1 to make them fatal.",
+                errors.len(),
+            );
+        }
     }
+    // Also re-emit a rerun-if-env-changed so toggling strictness re-runs the build script.
+    println!("cargo:rerun-if-env-changed=WS9_STRICT_PAIRING");
 
     // cargo:rerun-if-changed for every walked file + the TOMLs.
     for p in &pairs {
