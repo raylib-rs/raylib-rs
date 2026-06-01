@@ -371,7 +371,12 @@ fn gen_bindings() {
 }
 
 fn gen_rgui() {
-    // Compile the code and link with cc crate
+    // Compile the code and link with cc crate.
+    //
+    // Allocator unification (RAYGUI_MALLOC → RL_MALLOC etc.) is done in
+    // binding/rgui_wrapper.c itself, not via `.define()` here, so that the
+    // RL_* macros from raylib.h are in scope before the RAYGUI_* defines
+    // take effect. See the comment block at the top of rgui_wrapper.c.
     cc::Build::new()
         .files(vec!["binding/rgui_wrapper.c"])
         .include("binding")
