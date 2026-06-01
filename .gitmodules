@@ -3,3 +3,7 @@
 	url = https://github.com/raysan5/raylib
 	commit = "6.0"
 	shallow = true
+[submodule "raylib-sys/raygui-examples"]
+	path = raylib-sys/raygui-examples
+	url = https://github.com/raysan5/raygui
+	branch = master
