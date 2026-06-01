@@ -168,15 +168,37 @@ fn main() {
         println!("cargo:rerun-if-changed={}", p.c_path.display());
         println!("cargo:rerun-if-changed={}", p.rust_path.display());
     }
+    // Watch each category directory so additions/removals trigger a rerun even
+    // before the new files are in `pairs` (cargo's contract: once any
+    // rerun-if-changed is emitted, only listed paths re-trigger builds).
+    for cat in RAYLIB_CATEGORIES {
+        println!("cargo:rerun-if-changed={}", raylib_root.join(cat).display());
+    }
+    if let Some(raygui_root) = raygui_root.as_ref() {
+        println!("cargo:rerun-if-changed={}", raygui_root.display());
+    }
     println!("cargo:rerun-if-changed=wasm-exclude.toml");
     println!("cargo:rerun-if-changed=thumbnails.toml");
     println!("cargo:rerun-if-changed=build.rs");
 
     // Parse wasm-exclude.toml to populate per-example wasm_excluded flag.
+    // A parse failure here would silently drop exclusions and could let
+    // examples that should be wasm-excluded slip into the wasm build, so we
+    // surface the parse error explicitly via cargo:warning= before falling
+    // back to an empty list.
     let exclude_path = manifest_dir.join("wasm-exclude.toml");
     let wasm_excluded: HashSet<String> = if exclude_path.exists() {
         let txt = fs::read_to_string(&exclude_path).unwrap();
-        let parsed: WasmExcludeFile = toml::from_str(&txt).unwrap_or_default();
+        let parsed: WasmExcludeFile = match toml::from_str::<WasmExcludeFile>(&txt) {
+            Ok(p) => p,
+            Err(e) => {
+                println!(
+                    "cargo:warning=showcase: failed to parse wasm-exclude.toml ({}); treating as empty exclusion list",
+                    e,
+                );
+                WasmExcludeFile::default()
+            }
+        };
         parsed.exclude.into_iter().map(|e| e.name).collect()
     } else {
         HashSet::new()
