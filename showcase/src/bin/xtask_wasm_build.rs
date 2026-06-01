@@ -2,7 +2,12 @@
 //! `cargo build --target wasm32-unknown-emscripten --example <name>`
 //! for each. Collects failures and prints a summary; exits non-zero on
 //! any failure.
+//!
+//! Reads `required-features` per example from `showcase/Cargo.toml` so
+//! raygui-gated examples build with `--features raygui` (otherwise cargo
+//! refuses to build them).
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -18,6 +23,19 @@ struct ExampleMeta {
     wasm_excluded: bool,
 }
 
+#[derive(Deserialize)]
+struct CargoToml {
+    #[serde(rename = "example", default)]
+    examples: Vec<CargoExample>,
+}
+
+#[derive(Deserialize)]
+struct CargoExample {
+    name: String,
+    #[serde(rename = "required-features", default)]
+    required_features: Vec<String>,
+}
+
 fn main() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let workspace_root = manifest_dir.parent().unwrap().to_path_buf();
@@ -27,6 +45,15 @@ fn main() {
     );
     let metas: Vec<ExampleMeta> =
         serde_json::from_str(&fs::read_to_string(&meta_path).unwrap()).unwrap();
+
+    let cargo_toml: CargoToml =
+        toml::from_str(&fs::read_to_string(manifest_dir.join("Cargo.toml")).unwrap()).unwrap();
+    let required_features: HashMap<String, Vec<String>> = cargo_toml
+        .examples
+        .into_iter()
+        .filter(|e| !e.required_features.is_empty())
+        .map(|e| (e.name, e.required_features))
+        .collect();
 
     let total = metas.len();
     let mut excluded: HashSet<String> = HashSet::new();
@@ -48,18 +75,21 @@ fn main() {
             "xtask_wasm_build: building {} for wasm32-unknown-emscripten",
             meta.name
         );
-        let status = Command::new("cargo")
-            .args([
-                "build",
-                "-p",
-                "raylib-showcase",
-                "--target",
-                "wasm32-unknown-emscripten",
-                "--release",
-                "--example",
-                &meta.name,
-            ])
-            .status();
+        let mut cmd = Command::new("cargo");
+        cmd.args([
+            "build",
+            "-p",
+            "raylib-showcase",
+            "--target",
+            "wasm32-unknown-emscripten",
+            "--release",
+            "--example",
+            &meta.name,
+        ]);
+        if let Some(feats) = required_features.get(&meta.name) {
+            cmd.args(["--features", &feats.join(",")]);
+        }
+        let status = cmd.status();
         match status {
             Ok(s) if s.success() => built += 1,
             Ok(s) => failures.push((meta.name.clone(), format!("exit {:?}", s.code()))),

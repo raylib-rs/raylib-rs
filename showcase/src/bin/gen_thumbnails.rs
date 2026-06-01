@@ -18,6 +18,19 @@ struct ExampleMeta {
     wasm_excluded: bool,
 }
 
+#[derive(Deserialize)]
+struct CargoToml {
+    #[serde(rename = "example", default)]
+    examples: Vec<CargoExample>,
+}
+
+#[derive(Deserialize)]
+struct CargoExample {
+    name: String,
+    #[serde(rename = "required-features", default)]
+    required_features: Vec<String>,
+}
+
 #[derive(Deserialize, Default)]
 struct ThumbsFile {
     #[serde(default)]
@@ -55,6 +68,15 @@ fn main() {
     let metas: Vec<ExampleMeta> =
         serde_json::from_str(&fs::read_to_string(&meta_path).unwrap()).unwrap();
 
+    let cargo_toml: CargoToml =
+        toml::from_str(&fs::read_to_string(manifest_dir.join("Cargo.toml")).unwrap()).unwrap();
+    let required_features: HashMap<String, Vec<String>> = cargo_toml
+        .examples
+        .into_iter()
+        .filter(|e| !e.required_features.is_empty())
+        .map(|e| (e.name, e.required_features))
+        .collect();
+
     let thumbs_overrides: HashMap<String, ThumbsEntry> = {
         let tpath = manifest_dir.join("thumbnails.toml");
         if tpath.exists() {
@@ -83,7 +105,11 @@ fn main() {
             .and_then(|e| e.frames)
             .unwrap_or(DEFAULT_FRAMES);
         let out = out_thumbs.join(format!("{}_{}.png", meta.category, meta.name));
-        let result = run_one(&meta.name, frames, &out);
+        let extra_features = required_features
+            .get(&meta.name)
+            .cloned()
+            .unwrap_or_default();
+        let result = run_one(&meta.name, frames, &out, &extra_features);
         match result {
             Ok(()) => manifest.push(ManifestEntry {
                 name: meta.name.clone(),
@@ -134,14 +160,17 @@ fn find_examples_meta(workspace_root: &Path) -> Option<PathBuf> {
     None
 }
 
-fn run_one(name: &str, frames: usize, out: &Path) -> Result<(), String> {
+fn run_one(name: &str, frames: usize, out: &Path, extra_features: &[String]) -> Result<(), String> {
+    let mut features = vec!["software_renderer".to_string()];
+    features.extend(extra_features.iter().cloned());
+    let features_arg = features.join(",");
     let mut cmd = Command::new("cargo");
     cmd.args([
         "run",
         "-p",
         "raylib-showcase",
         "--features",
-        "software_renderer",
+        &features_arg,
         "--release",
         "--example",
         name,
