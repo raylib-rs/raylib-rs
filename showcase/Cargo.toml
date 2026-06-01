@@ -189,6 +189,58 @@ name = "core_input_gestures"
 path = "examples/core/core_input_gestures.rs"
 
 [[example]]
+name = "core_input_gestures_testbed"
+path = "examples/core/core_input_gestures_testbed.rs"
+
+[[example]]
+name = "core_input_keys"
+path = "examples/core/core_input_keys.rs"
+
+[[example]]
+name = "core_input_mouse"
+path = "examples/core/core_input_mouse.rs"
+
+[[example]]
+name = "core_input_mouse_wheel"
+path = "examples/core/core_input_mouse_wheel.rs"
+
+[[example]]
+name = "core_input_multitouch"
+path = "examples/core/core_input_multitouch.rs"
+
+[[example]]
+name = "core_input_virtual_controls"
+path = "examples/core/core_input_virtual_controls.rs"
+
+[[example]]
+name = "core_keyboard_testbed"
+path = "examples/core/core_keyboard_testbed.rs"
+
+[[example]]
+name = "core_monitor_detector"
+path = "examples/core/core_monitor_detector.rs"
+
+[[example]]
+name = "core_random_sequence"
+path = "examples/core/core_random_sequence.rs"
+
+[[example]]
+name = "core_random_values"
+path = "examples/core/core_random_values.rs"
+
+[[example]]
+name = "core_render_texture"
+path = "examples/core/core_render_texture.rs"
+
+[[example]]
+name = "core_scissor_test"
+path = "examples/core/core_scissor_test.rs"
+
+[[example]]
+name = "core_smooth_pixelperfect"
+path = "examples/core/core_smooth_pixelperfect.rs"
+
+[[example]]
 name = "embedded_files_loading"
 path = "examples/others/embedded_files_loading.rs"
 
