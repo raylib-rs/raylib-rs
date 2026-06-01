@@ -25,6 +25,16 @@ pub enum Tab {
     Rust,
 }
 
+// --- Layout constants (Fix D) ---
+const TAB_Y: i32 = 40;
+const TAB_W: i32 = 100;
+const TAB_H: i32 = 28;
+const HEADER_Y: i32 = 12;
+const HEADER_FONT_SIZE: i32 = 18;
+const TAB_FONT_SIZE: i32 = 20;
+const PANEL_MARGIN: i32 = 16;
+const BODY_TOP_GAP: i32 = 12;
+
 /// The in-canvas source viewer.
 ///
 /// Instantiated once per example after `raylib::init`. Call [`update`] and
@@ -41,6 +51,10 @@ pub struct SourceViewer {
     line_height: i32,
     thumbnail: Option<ThumbnailCapture>,
     frame_counter: usize,
+    // Cached per-frame from update() so draw() doesn't need RaylibHandle (Fix A)
+    screen_w: i32,
+    screen_h: i32,
+    hint_text_w: i32,
 }
 
 struct ThumbnailCapture {
@@ -77,6 +91,9 @@ impl SourceViewer {
             line_height: TEXT_FONT_SIZE + 2,
             thumbnail,
             frame_counter: 0,
+            screen_w: 0,
+            screen_h: 0,
+            hint_text_w: 0,
         }
     }
 
@@ -93,6 +110,12 @@ impl SourceViewer {
             }
             return;
         }
+
+        // Cache screen dimensions and hint text width so draw() needs only
+        // RaylibDraw (Fix A) — nested draw-mode guards also satisfy that bound.
+        self.screen_w = rl.get_screen_width();
+        self.screen_h = rl.get_screen_height();
+        self.hint_text_w = rl.measure_text(HINT_TEXT, HINT_FONT_SIZE);
 
         if rl.is_key_pressed(KeyboardKey::KEY_F1) {
             self.visible = !self.visible;
@@ -112,7 +135,8 @@ impl SourceViewer {
         }
         let lines_per_step = 10;
         if rl.is_key_pressed(KeyboardKey::KEY_PAGE_DOWN) {
-            self.scroll_y += self.line_height * lines_per_step;
+            self.scroll_y =
+                (self.scroll_y + self.line_height * lines_per_step).min(self.max_scroll());
         }
         if rl.is_key_pressed(KeyboardKey::KEY_PAGE_UP) {
             self.scroll_y = (self.scroll_y - self.line_height * lines_per_step).max(0);
@@ -121,21 +145,38 @@ impl SourceViewer {
             self.scroll_y = 0;
         }
         if rl.is_key_pressed(KeyboardKey::KEY_END) {
-            self.scroll_y = self.lines().count() as i32 * self.line_height;
+            self.scroll_y = self.max_scroll();
         }
         let wheel = rl.get_mouse_wheel_move();
         if wheel != 0.0 {
-            self.scroll_y =
-                (self.scroll_y - (wheel * self.line_height as f32 * 3.0) as i32).max(0);
+            self.scroll_y = (self.scroll_y - (wheel * self.line_height as f32 * 3.0) as i32)
+                .max(0)
+                .min(self.max_scroll());
         }
+    }
+
+    /// Returns the maximum scroll position: the offset that puts the last
+    /// screenful of lines at the top of the viewport.
+    ///
+    /// Returns 0 when `screen_h` has not yet been populated (before the first
+    /// `update` call).
+    fn max_scroll(&self) -> i32 {
+        let total_lines = self.lines().count() as i32;
+        let body_top = TAB_Y + TAB_H + BODY_TOP_GAP;
+        let body_bottom = self.screen_h - PANEL_MARGIN;
+        let viewport_h = (body_bottom - body_top).max(self.line_height);
+        let lines_visible = viewport_h / self.line_height;
+        let bottom_line = (total_lines - lines_visible).max(0);
+        bottom_line * self.line_height
     }
 
     /// Per-frame draw: renders either the small "F1: view source" hint or the
     /// full overlay, depending on visibility state.
     ///
     /// Must be called inside a [`begin_drawing`](RaylibHandle::begin_drawing)
-    /// scope.
-    pub fn draw<D: RaylibDraw + std::ops::Deref<Target = RaylibHandle>>(&self, d: &mut D) {
+    /// scope. Works with any draw handle, including nested mode guards such as
+    /// `RaylibMode3D`, `RaylibShaderMode`, etc. (Fix A).
+    pub fn draw<D: RaylibDraw>(&self, d: &mut D) {
         if self.thumbnail.is_some() {
             return;
         }
@@ -146,44 +187,44 @@ impl SourceViewer {
         self.draw_overlay(d);
     }
 
-    fn draw_hint<D: RaylibDraw + std::ops::Deref<Target = RaylibHandle>>(&self, d: &mut D) {
-        let screen_w = (*d).get_screen_width();
-        let screen_h = (*d).get_screen_height();
-        let text_w = (*d).measure_text(HINT_TEXT, HINT_FONT_SIZE);
+    fn draw_hint<D: RaylibDraw>(&self, d: &mut D) {
+        // Use cached values populated by update() — no RaylibHandle needed (Fix A).
         let pad = 8;
-        let x = screen_w - text_w - 2 * pad - 4;
-        let y = screen_h - HINT_FONT_SIZE - 2 * pad - 4;
+        let x = self.screen_w - self.hint_text_w - 2 * pad - 4;
+        let y = self.screen_h - HINT_FONT_SIZE - 2 * pad - 4;
         d.draw_rectangle(
             x,
             y,
-            text_w + 2 * pad,
+            self.hint_text_w + 2 * pad,
             HINT_FONT_SIZE + 2 * pad,
             Color { r: 0, g: 0, b: 0, a: 160 },
         );
         d.draw_text(HINT_TEXT, x + pad, y + pad, HINT_FONT_SIZE, Color::WHITE);
     }
 
-    fn draw_overlay<D: RaylibDraw + std::ops::Deref<Target = RaylibHandle>>(&self, d: &mut D) {
-        let screen_w = (*d).get_screen_width();
-        let screen_h = (*d).get_screen_height();
-        d.draw_rectangle(0, 0, screen_w, screen_h, PANEL_BG);
+    fn draw_overlay<D: RaylibDraw>(&self, d: &mut D) {
+        // Use cached screen dimensions from update() — no RaylibHandle needed (Fix A).
+        d.draw_rectangle(0, 0, self.screen_w, self.screen_h, PANEL_BG);
 
         let header = format!("{}  —  F1: close · Tab: swap · PgUp/PgDn: scroll", self.name);
-        d.draw_text(&header, 16, 12, 18, PANEL_FG);
+        d.draw_text(&header, PANEL_MARGIN, HEADER_Y, HEADER_FONT_SIZE, PANEL_FG);
 
-        let tab_y = 40;
-        let tab_w = 100;
-        let tab_h = 28;
         let c_bg = if self.tab == Tab::C { TAB_BG_ACTIVE } else { TAB_BG_INACTIVE };
         let r_bg = if self.tab == Tab::Rust { TAB_BG_ACTIVE } else { TAB_BG_INACTIVE };
-        d.draw_rectangle(16, tab_y, tab_w, tab_h, c_bg);
-        d.draw_text("C", 16 + tab_w / 2 - 8, tab_y + 6, 20, PANEL_FG);
-        d.draw_rectangle(16 + tab_w + 4, tab_y, tab_w, tab_h, r_bg);
-        d.draw_text("Rust", 16 + tab_w + 4 + tab_w / 2 - 20, tab_y + 6, 20, PANEL_FG);
+        d.draw_rectangle(PANEL_MARGIN, TAB_Y, TAB_W, TAB_H, c_bg);
+        d.draw_text("C", PANEL_MARGIN + TAB_W / 2 - 8, TAB_Y + 6, TAB_FONT_SIZE, PANEL_FG);
+        d.draw_rectangle(PANEL_MARGIN + TAB_W + 4, TAB_Y, TAB_W, TAB_H, r_bg);
+        d.draw_text(
+            "Rust",
+            PANEL_MARGIN + TAB_W + 4 + TAB_W / 2 - 20,
+            TAB_Y + 6,
+            TAB_FONT_SIZE,
+            PANEL_FG,
+        );
 
-        let body_top = tab_y + tab_h + 12;
-        let body_bottom = screen_h - 16;
-        let body_left = 16;
+        let body_top = TAB_Y + TAB_H + BODY_TOP_GAP;
+        let body_bottom = self.screen_h - PANEL_MARGIN;
+        let body_left = PANEL_MARGIN;
         let viewport_h = body_bottom - body_top;
         let first_visible_line = (self.scroll_y / self.line_height).max(0);
         let lines_visible = (viewport_h / self.line_height) + 2;
@@ -234,12 +275,20 @@ fn capture_and_exit(rl: &mut RaylibHandle, thread: &RaylibThread, out_path: &std
 
     let img = rl.load_image_from_screen(thread);
 
+    // Fix C: surface directory-creation failures instead of silently swallowing them.
     if let Some(parent) = out_path.parent() {
-        let _ = std::fs::create_dir_all(parent);
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            eprintln!("gen_thumbnails: create_dir_all({:?}) failed: {}", parent, e);
+            process::exit(2);
+        }
     }
     let out_str = out_path.to_string_lossy().to_string();
-    // export_image returns () — failures are silent at the C layer; the
-    // process exit code is 0 on expected capture, 2 only on overt errors.
+    // export_image returns () — the safe API cannot signal failure at the C
+    // layer, so we verify the file exists after the write.
     img.export_image(&out_str);
+    if !out_path.exists() {
+        eprintln!("gen_thumbnails: export_image({:?}) did not produce a file", out_path);
+        process::exit(2);
+    }
     process::exit(0);
 }
