@@ -26,3 +26,26 @@ pub struct ExampleMeta {
 /// `xtask_build_pages` consumes `$OUT_DIR/examples_meta.json` directly; this
 /// public re-export is reserved for downstream tooling (post-release).
 pub const EXAMPLES: &[ExampleMeta] = &[];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Tier-1 sanity: the reference port lands in the registry under its
+    // [[example]] name with non-empty source strings.
+    #[test]
+    fn core_basic_window_is_registered() {
+        let pair = lookup("core_basic_window").expect("reference port must be registered");
+        assert_eq!(pair.category, "core");
+        assert!(pair.c.contains("InitWindow"), "C source must reference InitWindow");
+        assert!(
+            pair.rust.contains("SourceViewer::for_current_example"),
+            "Rust port must wire the SourceViewer",
+        );
+    }
+
+    #[test]
+    fn lookup_missing_returns_none() {
+        assert!(lookup("__definitely_not_an_example__").is_none());
+    }
+}
