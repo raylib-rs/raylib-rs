@@ -96,13 +96,29 @@ unsafe fn copy_and_free_names(
 /// Read the first 12 bytes of a `.rgi` file for header validation. Returns
 /// fewer bytes if the file is shorter (the caller's `validate_rgi_header`
 /// turns that into `HeaderTruncated`).
+///
+/// Uses `take(12).read_to_end` (NOT plain `Read::read`) so a short-read on a
+/// valid file — permitted by `Read::read`'s contract even when the file has
+/// more bytes — cannot produce a spurious `HeaderTruncated`.
 fn read_header_bytes(path: &std::path::Path) -> Result<Vec<u8>, LoadIconsError> {
     use std::io::Read;
-    let mut file = std::fs::File::open(path)?;
-    let mut buf = vec![0u8; 12];
-    let n = file.read(&mut buf)?;
-    buf.truncate(n);
+    let file = std::fs::File::open(path)?;
+    let mut buf = Vec::with_capacity(12);
+    file.take(12).read_to_end(&mut buf)?;
     Ok(buf)
+}
+
+/// Convert a Rust path to a C string for raygui's `fopen`-based loaders. On
+/// Windows this lossy-converts non-UTF-8 components to U+FFFD (consistent
+/// with the rest of the crate). An interior NUL byte in the path produces
+/// [`LoadIconsError::Io`] rather than a panic.
+fn path_to_c_string(path: &std::path::Path) -> Result<std::ffi::CString, LoadIconsError> {
+    std::ffi::CString::new(path.to_string_lossy().as_bytes()).map_err(|_| {
+        LoadIconsError::Io(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "path contains an interior NUL byte",
+        ))
+    })
 }
 
 /// raygui icon controls.
@@ -256,8 +272,19 @@ pub trait RaylibGuiIcons {
     /// raygui.
     ///
     /// Returns [`LoadIconsError::FileNotFound`] if the path doesn't exist;
-    /// other I/O failures (permission denied, mid-read errors) surface as
-    /// [`LoadIconsError::Io`].
+    /// other I/O failures (permission denied, interior-NUL path bytes, mid-read
+    /// errors) surface as [`LoadIconsError::Io`]. Header validation surfaces
+    /// [`LoadIconsError::HeaderTruncated`], [`LoadIconsError::InvalidSignature`],
+    /// [`LoadIconsError::UnsupportedIconSize`], and
+    /// [`LoadIconsError::TooManyIcons`] as appropriate.
+    ///
+    /// # TOCTOU
+    ///
+    /// The existence check, header read, and raygui's internal `fopen` are
+    /// three separate operations. A file deleted after the existence check
+    /// surfaces as [`LoadIconsError::Io`] rather than `FileNotFound`; a file
+    /// deleted after header validation causes raygui to silently no-op,
+    /// returning `Ok(())` with no icon change.
     #[inline]
     fn gui_load_icons(&mut self, path: impl AsRef<std::path::Path>) -> Result<(), LoadIconsError> {
         let path = path.as_ref();
@@ -275,8 +302,7 @@ pub trait RaylibGuiIcons {
         let header = read_header_bytes(path)?;
         let _hdr = validate_rgi_header(&header)?;
         // 3. Delegate to raygui.
-        let c_path = std::ffi::CString::new(path.to_string_lossy().as_bytes())
-            .expect("path has no interior NULs");
+        let c_path = path_to_c_string(path)?;
         // SAFETY: c_path lives until the end of this fn; raygui opens the file
         // synchronously via fopen. load_names=false ⇒ returned char** is NULL.
         unsafe {
@@ -304,8 +330,7 @@ pub trait RaylibGuiIcons {
         }
         let header = read_header_bytes(path)?;
         let (icon_count, _icon_size) = validate_rgi_header(&header)?;
-        let c_path = std::ffi::CString::new(path.to_string_lossy().as_bytes())
-            .expect("path has no interior NULs");
+        let c_path = path_to_c_string(path)?;
         // SAFETY: c_path lives until the end of this fn.
         let ptr = unsafe { ffi::GuiLoadIcons(c_path.as_ptr(), true) };
         // SAFETY: raygui allocates exactly icon_count entries in the outer array
@@ -433,7 +458,11 @@ mod tests {
     fn load_icons_file_bad_signature() {
         use crate::core::error::LoadIconsError;
         with_headless(64, 64, |rl, _thread| {
-            let tmp = std::env::temp_dir().join("raylib-rs-test-bad-sig.rgi");
+            // Unique per-process to avoid cross-test races under nextest's
+            // parallel scheduling (each test runs in its own process, but
+            // a stale file from a prior run could survive).
+            let tmp = std::env::temp_dir()
+                .join(format!("raylib-rs-test-bad-sig-{}.rgi", std::process::id()));
             std::fs::write(&tmp, b"NOPE_NOT_AN_RGI_FILE_AT_ALL").unwrap();
             let err = rl.gui_load_icons(&tmp).unwrap_err();
             assert!(
