@@ -93,6 +93,18 @@ unsafe fn copy_and_free_names(
     names
 }
 
+/// Read the first 12 bytes of a `.rgi` file for header validation. Returns
+/// fewer bytes if the file is shorter (the caller's `validate_rgi_header`
+/// turns that into `HeaderTruncated`).
+fn read_header_bytes(path: &std::path::Path) -> Result<Vec<u8>, LoadIconsError> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut buf = vec![0u8; 12];
+    let n = file.read(&mut buf)?;
+    buf.truncate(n);
+    Ok(buf)
+}
+
 /// raygui icon controls.
 pub trait RaylibGuiIcons {
     /// Get text with an icon id prepended (e.g. `#23#Save`). The returned string
@@ -237,6 +249,71 @@ pub trait RaylibGuiIcons {
         let names = unsafe { copy_and_free_names(ptr, icon_count as usize) };
         Ok(names)
     }
+
+    /// Load icons from a `.rgi` file, discarding names. Pre-validates the file
+    /// existence, signature, icon size (must equal `RAYGUI_ICON_SIZE` = 16),
+    /// and icon count (≤ `RAYGUI_ICON_MAX_ICONS` = 256) before delegating to
+    /// raygui.
+    ///
+    /// Returns [`LoadIconsError::FileNotFound`] if the path doesn't exist;
+    /// other I/O failures (permission denied, mid-read errors) surface as
+    /// [`LoadIconsError::Io`].
+    #[inline]
+    fn gui_load_icons(&mut self, path: impl AsRef<std::path::Path>) -> Result<(), LoadIconsError> {
+        let path = path.as_ref();
+        // 1. Existence check via fs::metadata (NOT path.exists() — exists()
+        //    swallows PermissionDenied on some platforms, mis-routing it as
+        //    FileNotFound).
+        match std::fs::metadata(path) {
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return Err(LoadIconsError::FileNotFound(path.to_path_buf()));
+            }
+            Err(e) => return Err(LoadIconsError::Io(e)),
+        }
+        // 2. Read header + validate.
+        let header = read_header_bytes(path)?;
+        let _hdr = validate_rgi_header(&header)?;
+        // 3. Delegate to raygui.
+        let c_path = std::ffi::CString::new(path.to_string_lossy().as_bytes())
+            .expect("path has no interior NULs");
+        // SAFETY: c_path lives until the end of this fn; raygui opens the file
+        // synchronously via fopen. load_names=false ⇒ returned char** is NULL.
+        unsafe {
+            let _ = ffi::GuiLoadIcons(c_path.as_ptr(), false);
+        }
+        Ok(())
+    }
+
+    /// Load icons from a `.rgi` file, returning one icon name per icon declared
+    /// in the file (`iconCount` entries; up to `RAYGUI_ICON_MAX_ICONS` = 256).
+    ///
+    /// Same error semantics as [`Self::gui_load_icons`].
+    #[inline]
+    fn gui_load_icons_with_names(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<Vec<String>, LoadIconsError> {
+        let path = path.as_ref();
+        match std::fs::metadata(path) {
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return Err(LoadIconsError::FileNotFound(path.to_path_buf()));
+            }
+            Err(e) => return Err(LoadIconsError::Io(e)),
+        }
+        let header = read_header_bytes(path)?;
+        let (icon_count, _icon_size) = validate_rgi_header(&header)?;
+        let c_path = std::ffi::CString::new(path.to_string_lossy().as_bytes())
+            .expect("path has no interior NULs");
+        // SAFETY: c_path lives until the end of this fn.
+        let ptr = unsafe { ffi::GuiLoadIcons(c_path.as_ptr(), true) };
+        // SAFETY: raygui allocates exactly icon_count entries in the outer array
+        // when loadIconsName=true (raygui.h:4873). icon_count came from the same
+        // validated header that raygui parsed, so the counts match.
+        let names = unsafe { copy_and_free_names(ptr, icon_count as usize) };
+        Ok(names)
+    }
 }
 
 #[cfg(all(test, feature = "software_renderer"))]
@@ -337,6 +414,33 @@ mod tests {
                 ),
                 "got {err:?}"
             );
+        });
+    }
+
+    #[test]
+    fn load_icons_file_not_found() {
+        use crate::core::error::LoadIconsError;
+        with_headless(64, 64, |rl, _thread| {
+            let err = rl.gui_load_icons("definitely-nonexistent.rgi").unwrap_err();
+            assert!(
+                matches!(err, LoadIconsError::FileNotFound(_)),
+                "got {err:?}"
+            );
+        });
+    }
+
+    #[test]
+    fn load_icons_file_bad_signature() {
+        use crate::core::error::LoadIconsError;
+        with_headless(64, 64, |rl, _thread| {
+            let tmp = std::env::temp_dir().join("raylib-rs-test-bad-sig.rgi");
+            std::fs::write(&tmp, b"NOPE_NOT_AN_RGI_FILE_AT_ALL").unwrap();
+            let err = rl.gui_load_icons(&tmp).unwrap_err();
+            assert!(
+                matches!(err, LoadIconsError::InvalidSignature(_)),
+                "got {err:?}"
+            );
+            let _ = std::fs::remove_file(&tmp);
         });
     }
 
