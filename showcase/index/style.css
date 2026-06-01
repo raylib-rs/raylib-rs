@@ -1,0 +1,12 @@
+:root { font-family: system-ui, sans-serif; color-scheme: light dark; }
+body { margin: 0; padding: 0; }
+header { padding: 1rem; border-bottom: 1px solid #888; }
+header h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
+.banner { margin: 0; font-size: 0.85rem; opacity: 0.8; }
+main { padding: 1rem; }
+ul#examples { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem; }
+ul#examples li { border: 1px solid #888; border-radius: 4px; padding: 0.5rem; }
+ul#examples a { text-decoration: none; color: inherit; }
+nav { padding: 0.5rem; font-size: 0.9rem; }
+canvas { display: block; margin: 1rem auto; background: black; }
+.hint { text-align: center; font-size: 0.85rem; opacity: 0.7; }
