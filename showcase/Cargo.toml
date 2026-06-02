@@ -689,6 +689,28 @@ path = "examples/shapes/shapes_ellipse_collision.rs"
 name = "shapes_following_eyes"
 path = "examples/shapes/shapes_following_eyes.rs"
 
+[[example]]
+name = "shapes_clock_of_clocks"
+path = "examples/shapes/shapes_clock_of_clocks.rs"
+
+[[example]]
+name = "shapes_colors_palette"
+path = "examples/shapes/shapes_colors_palette.rs"
+
+[[example]]
+name = "shapes_digital_clock"
+path = "examples/shapes/shapes_digital_clock.rs"
+
+[[example]]
+name = "shapes_hilbert_curve"
+path = "examples/shapes/shapes_hilbert_curve.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_kaleidoscope"
+path = "examples/shapes/shapes_kaleidoscope.rs"
+required-features = ["raygui"]
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
