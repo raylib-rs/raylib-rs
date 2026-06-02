@@ -624,6 +624,27 @@ path = "examples/shaders/shaders_rlgl_compute.rs"
 name = "shaders_shadowmap_rendering"
 path = "examples/shaders/shaders_shadowmap_rendering.rs"
 
+[[example]]
+name = "shapes_basic_shapes"
+path = "examples/shapes/shapes_basic_shapes.rs"
+
+[[example]]
+name = "shapes_circle_sector_drawing"
+path = "examples/shapes/shapes_circle_sector_drawing.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_dashed_line"
+path = "examples/shapes/shapes_dashed_line.rs"
+
+[[example]]
+name = "shapes_lines_drawing"
+path = "examples/shapes/shapes_lines_drawing.rs"
+
+[[example]]
+name = "shapes_lines_bezier"
+path = "examples/shapes/shapes_lines_bezier.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
