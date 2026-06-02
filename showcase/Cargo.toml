@@ -839,6 +839,18 @@ path = "examples/textures/textures_image_rotate.rs"
 name = "textures_image_text"
 path = "examples/textures/textures_image_text.rs"
 
+[[example]]
+name = "textures_image_loading"
+path = "examples/textures/textures_image_loading.rs"
+
+[[example]]
+name = "textures_image_generation"
+path = "examples/textures/textures_image_generation.rs"
+
+[[example]]
+name = "textures_gif_player"
+path = "examples/textures/textures_gif_player.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
