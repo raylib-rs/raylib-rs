@@ -532,6 +532,26 @@ path = "examples/shaders/shaders_julia_set.rs"
 name = "shaders_mandelbrot_set"
 path = "examples/shaders/shaders_mandelbrot_set.rs"
 
+[[example]]
+name = "shaders_depth_writing"
+path = "examples/shaders/shaders_depth_writing.rs"
+
+[[example]]
+name = "shaders_depth_rendering"
+path = "examples/shaders/shaders_depth_rendering.rs"
+
+[[example]]
+name = "shaders_hybrid_rendering"
+path = "examples/shaders/shaders_hybrid_rendering.rs"
+
+[[example]]
+name = "shaders_hot_reloading"
+path = "examples/shaders/shaders_hot_reloading.rs"
+
+[[example]]
+name = "shaders_deferred_rendering"
+path = "examples/shaders/shaders_deferred_rendering.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"

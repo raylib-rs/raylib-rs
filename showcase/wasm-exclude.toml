@@ -108,3 +108,23 @@ reason = "Loads the glsl330 julia_set.fs; emscripten serves WebGL/GLES2 (glsl100
 [[exclude]]
 name = "shaders_mandelbrot_set"
 reason = "Loads the glsl330 mandelbrot_set.fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_deferred_rendering"
+reason = "Uses MRT (multi-render-targets) via rlActiveDrawBuffers + 3 colour attachments and glsl330 gbuffer/deferred_shading shaders. MRT is not exposed on WebGL1/GLES2 (emscripten's default). Desktop-only."
+
+[[exclude]]
+name = "shaders_depth_rendering"
+reason = "Samples a glsl330 depth-texture attachment via a custom FBO (rlLoadTextureDepth + RL_ATTACHMENT_TEXTURE2D); WebGL1/GLES2 lacks direct depth-texture sampling. Desktop-only."
+
+[[exclude]]
+name = "shaders_depth_writing"
+reason = "Writes gl_FragDepth from a glsl330 fragment shader against a custom FBO with a depth texture; WebGL1/GLES2 lacks gl_FragDepth without EXT_frag_depth and direct depth-texture sampling. Desktop-only."
+
+[[exclude]]
+name = "shaders_hybrid_rendering"
+reason = "Combines a glsl330 raymarch fragment shader writing gl_FragDepth with a glsl330 rasterization shader against a custom FBO + depth texture. WebGL1/GLES2 lacks gl_FragDepth and direct depth-texture sampling. Desktop-only."
+
+[[exclude]]
+name = "shaders_hot_reloading"
+reason = "Upstream C header explicitly notes 'OpenGL ES 2.0 platforms are not supported at the moment' and the example depends on filesystem GetFileModTime polling; both rule out emscripten/web."
