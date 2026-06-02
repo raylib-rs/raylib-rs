@@ -102,7 +102,7 @@ fn main() {
             &format!("{:.2}", width),
             &mut width,
             0.0,
-            rl.get_screen_width() as f32 - 300.0,
+            screen_w as f32 - 300.0,
         );
         d.gui_slider_bar(
             Rectangle::new(640.0, 70.0, 105.0, 20.0),
@@ -110,7 +110,7 @@ fn main() {
             &format!("{:.2}", height),
             &mut height,
             0.0,
-            rl.get_screen_height() as f32 - 50.0,
+            screen_h as f32 - 50.0,
         );
         d.gui_slider_bar(
             Rectangle::new(640.0, 140.0, 105.0, 20.0),
