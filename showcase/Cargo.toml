@@ -396,6 +396,32 @@ path = "examples/models/models_billboard_rendering.rs"
 name = "models_directional_billboard"
 path = "examples/models/models_directional_billboard.rs"
 
+[[example]]
+name = "models_animation_gpu_skinning"
+path = "examples/models/models_animation_gpu_skinning.rs"
+
+[[example]]
+name = "models_animation_timing"
+path = "examples/models/models_animation_timing.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "models_animation_blending"
+path = "examples/models/models_animation_blending.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "models_animation_blend_custom"
+path = "examples/models/models_animation_blend_custom.rs"
+
+[[example]]
+name = "models_bone_socket"
+path = "examples/models/models_bone_socket.rs"
+
+[[example]]
+name = "models_decals"
+path = "examples/models/models_decals.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"

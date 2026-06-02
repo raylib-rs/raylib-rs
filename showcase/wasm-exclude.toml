@@ -40,3 +40,15 @@ reason = "Upstream C uses msf_gif.h to encode the back-buffer to a GIF on disk; 
 [[exclude]]
 name = "core_vr_simulator"
 reason = "VR simulator requires a glsl330 distortion shader; emscripten serves WebGL/GLES2 which uses the glsl100 path. The upstream C source forks on GLSL_VERSION but we pin to glsl330 here, so this is desktop-only."
+
+[[exclude]]
+name = "models_animation_gpu_skinning"
+reason = "GPU skinning vs/fs shaders are pinned to glsl330; emscripten serves WebGL/GLES2 (glsl100). The upstream C forks on GLSL_VERSION but we pin to glsl330 here, so this is desktop-only."
+
+[[exclude]]
+name = "models_animation_blending"
+reason = "Loads the glsl330 skinning shader (same as models_animation_gpu_skinning); emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION; we pin to glsl330."
+
+[[exclude]]
+name = "models_animation_blend_custom"
+reason = "Loads the glsl330 skinning shader (same as models_animation_gpu_skinning); emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION; we pin to glsl330."
