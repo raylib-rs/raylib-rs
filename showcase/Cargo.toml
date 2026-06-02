@@ -957,6 +957,26 @@ name = "style_selector"
 path = "examples/raygui/style_selector.rs"
 required-features = ["raygui"]
 
+[[example]]
+name = "custom_input_box"
+path = "examples/raygui/custom_input_box.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "custom_sliders"
+path = "examples/raygui/custom_sliders.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "animation_curve"
+path = "examples/raygui/animation_curve.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "controls_test_suite"
+path = "examples/raygui/controls_test_suite.rs"
+required-features = ["raygui"]
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
