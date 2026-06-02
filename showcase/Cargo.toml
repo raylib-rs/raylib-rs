@@ -600,6 +600,22 @@ path = "examples/shaders/shaders_vertex_displacement.rs"
 name = "shaders_rounded_rectangle"
 path = "examples/shaders/shaders_rounded_rectangle.rs"
 
+[[example]]
+name = "shaders_mesh_instancing"
+path = "examples/shaders/shaders_mesh_instancing.rs"
+
+[[example]]
+name = "shaders_normalmap_rendering"
+path = "examples/shaders/shaders_normalmap_rendering.rs"
+
+[[example]]
+name = "shaders_postprocessing"
+path = "examples/shaders/shaders_postprocessing.rs"
+
+[[example]]
+name = "shaders_raymarching_rendering"
+path = "examples/shaders/shaders_raymarching_rendering.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
