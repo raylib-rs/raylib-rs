@@ -942,6 +942,21 @@ name = "floating_window"
 path = "examples/raygui/floating_window.rs"
 required-features = ["raygui"]
 
+[[example]]
+name = "image_exporter"
+path = "examples/raygui/image_exporter.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "image_importer_raw"
+path = "examples/raygui/image_importer_raw.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "style_selector"
+path = "examples/raygui/style_selector.rs"
+required-features = ["raygui"]
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
