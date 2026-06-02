@@ -10,6 +10,10 @@ env:
   # raylib-sys's emscripten target panics in build.rs without this. Matches
   # web.yml's pinned flag set.
   EMCC_CFLAGS: "-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1"
+  # Wave 4 closed every raylib core example as a Rust port. Escalate missing
+  # pairs from warn-only to fatal so new C examples added upstream get
+  # surfaced as a build break, not buried in the diagnostic noise.
+  WS9_STRICT_PAIRING: "1"
 
 jobs:
   build:
