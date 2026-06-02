@@ -552,6 +552,30 @@ path = "examples/shaders/shaders_hot_reloading.rs"
 name = "shaders_deferred_rendering"
 path = "examples/shaders/shaders_deferred_rendering.rs"
 
+[[example]]
+name = "shaders_shapes_textures"
+path = "examples/shaders/shaders_shapes_textures.rs"
+
+[[example]]
+name = "shaders_texture_rendering"
+path = "examples/shaders/shaders_texture_rendering.rs"
+
+[[example]]
+name = "shaders_texture_waves"
+path = "examples/shaders/shaders_texture_waves.rs"
+
+[[example]]
+name = "shaders_texture_outline"
+path = "examples/shaders/shaders_texture_outline.rs"
+
+[[example]]
+name = "shaders_multi_sample2d"
+path = "examples/shaders/shaders_multi_sample2d.rs"
+
+[[example]]
+name = "shaders_palette_switch"
+path = "examples/shaders/shaders_palette_switch.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
