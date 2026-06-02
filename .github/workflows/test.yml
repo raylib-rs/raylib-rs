@@ -7,6 +7,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # sccache + rust-cache interaction: disable incremental in CI to avoid
+  # false misses caused by the rustc-wrapper showing up in incremental metadata.
+  CARGO_INCREMENTAL: 0
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: sccache
+  CMAKE_C_COMPILER_LAUNCHER: sccache
+  CMAKE_CXX_COMPILER_LAUNCHER: sccache
 
 jobs:
   # default + full feature sets: build + unit + doctests on all three OSes.
@@ -27,6 +34,13 @@ jobs:
       - name: Install macOS build deps
         if: runner.os == 'macOS'
         run: brew install cmake
+      - uses: mozilla-actions/sccache-action@v0.0.6
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Separate cache per feature set — default and full have meaningfully
+          # different target dirs, sharing one cache thrashes both.
+          shared-key: test-unit-${{ matrix.features }}
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Build
@@ -53,6 +67,11 @@ jobs:
       - name: Install macOS build deps
         if: runner.os == 'macOS'
         run: brew install cmake
+      - uses: mozilla-actions/sccache-action@v0.0.6
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test-no-default
       - name: Build (non-Linux)
         if: runner.os != 'Linux'
         run: cargo build -p raylib --no-default-features
@@ -77,6 +96,11 @@ jobs:
       - name: Install macOS build deps
         if: runner.os == 'macOS'
         run: brew install cmake
+      - uses: mozilla-actions/sccache-action@v0.0.6
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test-software-render
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Build (software_renderer)

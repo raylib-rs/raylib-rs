@@ -9,6 +9,13 @@ env:
   CARGO_TERM_COLOR: always
   # Required by raylib-sys/build.rs for the emscripten target (it panics without it).
   EMCC_CFLAGS: "-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1"
+  # sccache + rust-cache interaction: disable incremental in CI to avoid
+  # false misses caused by the rustc-wrapper showing up in incremental metadata.
+  CARGO_INCREMENTAL: 0
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: sccache
+  CMAKE_C_COMPILER_LAUNCHER: sccache
+  CMAKE_CXX_COMPILER_LAUNCHER: sccache
 
 jobs:
   wasm-build:
@@ -33,6 +40,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-emscripten
+      - uses: mozilla-actions/sccache-action@v0.0.6
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: web-wasm
       - name: Build raylib-sys (wasm)
         run: cargo build -p raylib-sys --target wasm32-unknown-emscripten
       - name: Build raylib (wasm)

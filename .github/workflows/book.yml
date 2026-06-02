@@ -8,6 +8,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # sccache + rust-cache interaction: disable incremental in CI to avoid
+  # false misses caused by the rustc-wrapper showing up in incremental metadata.
+  CARGO_INCREMENTAL: 0
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: sccache
+  CMAKE_C_COMPILER_LAUNCHER: sccache
+  CMAKE_CXX_COMPILER_LAUNCHER: sccache
 
 jobs:
   build:
@@ -28,6 +35,8 @@ jobs:
           version: 6.0-book-v1
 
       - uses: dtolnay/rust-toolchain@stable
+
+      - uses: mozilla-actions/sccache-action@v0.0.6
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2

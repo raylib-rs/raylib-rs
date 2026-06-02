@@ -29,6 +29,15 @@ jobs:
         with:
           components: rust-src
           targets: x86_64-unknown-linux-gnu
+      # sccache deliberately skipped here: -Zbuild-std rebuilds std with
+      # sanitizer flags every run, and RUSTC_WRAPPER + nightly + build-std
+      # has historically been a source of mysterious cache poisoning. The
+      # rust-cache below still caches the registry, ~/.cargo, and the
+      # sanitizer-instrumented target dir between runs.
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: sanitizers-asan-ubsan
       - name: ASAN — software_renderer render tests
         continue-on-error: true
         env:
