@@ -863,6 +863,26 @@ path = "examples/textures/textures_clipboard_image.rs"
 name = "textures_fog_of_war"
 path = "examples/textures/textures_fog_of_war.rs"
 
+[[example]]
+name = "textures_logo_raylib"
+path = "examples/textures/textures_logo_raylib.rs"
+
+[[example]]
+name = "textures_npatch_drawing"
+path = "examples/textures/textures_npatch_drawing.rs"
+
+[[example]]
+name = "textures_polygon_drawing"
+path = "examples/textures/textures_polygon_drawing.rs"
+
+[[example]]
+name = "textures_srcrec_dstrec"
+path = "examples/textures/textures_srcrec_dstrec.rs"
+
+[[example]]
+name = "textures_tiled_drawing"
+path = "examples/textures/textures_tiled_drawing.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
