@@ -661,6 +661,22 @@ path = "examples/shapes/shapes_bullet_hell.rs"
 name = "shapes_double_pendulum"
 path = "examples/shapes/shapes_double_pendulum.rs"
 
+[[example]]
+name = "shapes_easings_ball"
+path = "examples/shapes/shapes_easings_ball.rs"
+
+[[example]]
+name = "shapes_easings_box"
+path = "examples/shapes/shapes_easings_box.rs"
+
+[[example]]
+name = "shapes_easings_rectangles"
+path = "examples/shapes/shapes_easings_rectangles.rs"
+
+[[example]]
+name = "shapes_easings_testbed"
+path = "examples/shapes/shapes_easings_testbed.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
