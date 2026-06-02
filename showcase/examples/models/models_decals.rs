@@ -53,6 +53,8 @@ impl MeshBuilder {
 // Build a Mesh from MeshBuilder data
 fn build_mesh(mb: &MeshBuilder, uvs: &[Vector2]) -> ffi::Mesh {
     let vertex_count = mb.vertices.len() as i32;
+    // SAFETY: ffi::Mesh is repr(C) of POD pointer/integer fields; zero-init produces the same
+    // state as the C source's `{ 0 }` struct literal.
     let mut out_mesh: ffi::Mesh = unsafe { std::mem::zeroed() };
     out_mesh.vertexCount = vertex_count;
     out_mesh.triangleCount = vertex_count / 3;
@@ -304,6 +306,8 @@ fn gen_mesh_decal(
     }
 
     // Return a blank mesh as there's nothing to add
+    // SAFETY: ffi::Mesh is repr(C) of POD pointer/integer fields; zero-init produces the same
+    // state as the C source's `{ 0 }` struct literal.
     unsafe { std::mem::zeroed() }
 }
 
