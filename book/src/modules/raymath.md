@@ -105,3 +105,15 @@ assert_eq!(t.m12, 3.0);
 - [glam, mint, serde](../ecosystem/glam-mint-serde.md) — opt-in conversions.
 - [`Vector3` docs.rs](https://docs.rs/raylib/latest/raylib/math/struct.Vector3.html) /
   [`Matrix` docs.rs](https://docs.rs/raylib/latest/raylib/math/struct.Matrix.html)
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [shapes_math_angle_rotation](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_math_angle_rotation.html)
+- [shapes_math_sine_cosine](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_math_sine_cosine.html)
+- [shapes_vector_angle](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_vector_angle.html)
+- [shapes_easings_testbed](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_easings_testbed.html)
+- [models_orthographic_projection](https://dacode45.github.io/raylib-rs/examples/models/models_orthographic_projection.html)
+- [models_yaw_pitch_roll](https://dacode45.github.io/raylib-rs/examples/models/models_yaw_pitch_roll.html)
+- [models_tesseract_view](https://dacode45.github.io/raylib-rs/examples/models/models_tesseract_view.html)

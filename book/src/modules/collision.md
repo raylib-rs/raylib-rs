@@ -89,3 +89,11 @@ assert!((pt.x).abs() < 1e-4 && (pt.y).abs() < 1e-4);
 - [raymath](./raymath.md) — `Vector2`/`Vector3`/`BoundingBox` types used here.
 - [Shapes](./shapes.md) — drawing the same geometry you're testing.
 - [`check_collision_recs` docs.rs](https://docs.rs/raylib/latest/raylib/ffi/struct.Rectangle.html#method.check_collision_recs)
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [shapes_collision_area](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_collision_area.html)
+- [shapes_ellipse_collision](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_ellipse_collision.html)
+- [shapes_ball_physics](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_ball_physics.html)

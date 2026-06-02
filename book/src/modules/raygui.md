@@ -100,3 +100,14 @@ fn main() {
 - [Window and drawing](./window-and-drawing.md) — the frame loop that hosts GUI calls.
 - [Strings and allocations](../core-concepts/strings-and-allocs.md) — why raygui uses `impl AsRef<str>`.
 - [`RaylibGuiControls` docs.rs](https://docs.rs/raylib/latest/raylib/rgui/trait.RaylibGuiControls.html)
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [controls_test_suite](https://dacode45.github.io/raylib-rs/examples/raygui/controls_test_suite.html)
+- [floating_window](https://dacode45.github.io/raylib-rs/examples/raygui/floating_window.html)
+- [property_list](https://dacode45.github.io/raylib-rs/examples/raygui/property_list.html)
+- [scroll_panel](https://dacode45.github.io/raylib-rs/examples/raygui/scroll_panel.html)
+- [style_selector](https://dacode45.github.io/raylib-rs/examples/raygui/style_selector.html)
+- [custom_sliders](https://dacode45.github.io/raylib-rs/examples/raygui/custom_sliders.html)

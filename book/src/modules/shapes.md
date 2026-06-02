@@ -83,3 +83,14 @@ Shapes are stable across raylib 5.x and 6.0; there are no breaking changes to th
 - [Textures and images](./textures-and-images.md) — blitting pixel buffers and
   textures in the same draw scope.
 - [Software renderer](./software-renderer.md) — running headless shape tests.
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [shapes_basic_shapes](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_basic_shapes.html)
+- [shapes_lines_bezier](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_lines_bezier.html)
+- [shapes_rectangle_advanced](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_rectangle_advanced.html)
+- [shapes_splines_drawing](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_splines_drawing.html)
+- [shapes_colors_palette](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_colors_palette.html)
+- [shapes_logo_raylib](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_logo_raylib.html)

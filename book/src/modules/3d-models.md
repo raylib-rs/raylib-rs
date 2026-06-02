@@ -81,3 +81,14 @@ fn main() {
 - [raymath](./raymath.md) — `Vector3`, `Matrix`, `Quaternion` used throughout the 3D
   API.
 - [`Model` docs.rs](https://docs.rs/raylib/latest/raylib/core/models/struct.Model.html)
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [models_loading](https://dacode45.github.io/raylib-rs/examples/models/models_loading.html)
+- [models_loading_gltf](https://dacode45.github.io/raylib-rs/examples/models/models_loading_gltf.html)
+- [models_mesh_generation](https://dacode45.github.io/raylib-rs/examples/models/models_mesh_generation.html)
+- [models_geometric_shapes](https://dacode45.github.io/raylib-rs/examples/models/models_geometric_shapes.html)
+- [models_billboard_rendering](https://dacode45.github.io/raylib-rs/examples/models/models_billboard_rendering.html)
+- [models_box_collisions](https://dacode45.github.io/raylib-rs/examples/models/models_box_collisions.html)

@@ -81,3 +81,14 @@ fn main() {
   live on.
 - [`Font` docs.rs](https://docs.rs/raylib/latest/raylib/core/text/struct.Font.html) —
   full rustdoc for custom font operations.
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [text_font_loading](https://dacode45.github.io/raylib-rs/examples/text/text_font_loading.html)
+- [text_font_sdf](https://dacode45.github.io/raylib-rs/examples/text/text_font_sdf.html)
+- [text_format_text](https://dacode45.github.io/raylib-rs/examples/text/text_format_text.html)
+- [text_input_box](https://dacode45.github.io/raylib-rs/examples/text/text_input_box.html)
+- [text_rectangle_bounds](https://dacode45.github.io/raylib-rs/examples/text/text_rectangle_bounds.html)
+- [text_unicode_emojis](https://dacode45.github.io/raylib-rs/examples/text/text_unicode_emojis.html)

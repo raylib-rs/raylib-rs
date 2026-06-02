@@ -100,3 +100,12 @@ fn main() {
 - [Window and drawing](./window-and-drawing.md) — the draw handle that hosts rlgl calls.
 - [Software renderer](./software-renderer.md) — the headless backend used in render tests.
 - [`RaylibRlgl` docs.rs](https://docs.rs/raylib/latest/raylib/rlgl/trait.RaylibRlgl.html)
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [rlgl_standalone](https://dacode45.github.io/raylib-rs/examples/others/rlgl_standalone.html) — desktop only
+- [shapes_rlgl_color_wheel](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_rlgl_color_wheel.html)
+- [shapes_rlgl_triangle](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_rlgl_triangle.html)
+- [models_rlgl_solar_system](https://dacode45.github.io/raylib-rs/examples/models/models_rlgl_solar_system.html)

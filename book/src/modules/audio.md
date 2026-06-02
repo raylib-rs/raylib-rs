@@ -83,3 +83,14 @@ fn main() {
   resources fit the broader RAII model.
 - [`RaylibAudio` docs.rs](https://docs.rs/raylib/latest/raylib/core/audio/struct.RaylibAudio.html) /
   [`Sound` docs.rs](https://docs.rs/raylib/latest/raylib/core/audio/struct.Sound.html)
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [audio_sound_loading](https://dacode45.github.io/raylib-rs/examples/audio/audio_sound_loading.html)
+- [audio_music_stream](https://dacode45.github.io/raylib-rs/examples/audio/audio_music_stream.html)
+- [audio_raw_stream](https://dacode45.github.io/raylib-rs/examples/audio/audio_raw_stream.html)
+- [audio_module_playing](https://dacode45.github.io/raylib-rs/examples/audio/audio_module_playing.html)
+- [audio_mixed_processor](https://dacode45.github.io/raylib-rs/examples/audio/audio_mixed_processor.html)
+- [audio_stream_effects](https://dacode45.github.io/raylib-rs/examples/audio/audio_stream_effects.html)

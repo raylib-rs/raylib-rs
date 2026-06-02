@@ -78,3 +78,9 @@ fn main() {
 
 - [Audio](./audio.md) — `AudioStream` and the audio processor callback.
 - [`set_trace_log_callback` docs.rs](https://docs.rs/raylib/latest/raylib/core/callbacks/fn.set_trace_log_callback.html)
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [core_custom_logging](https://dacode45.github.io/raylib-rs/examples/core/core_custom_logging.html)

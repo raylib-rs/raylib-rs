@@ -95,3 +95,14 @@ fn main() {
 - [3D models](./3d-models.md) — textures applied to models.
 - [`Image` docs.rs](https://docs.rs/raylib/latest/raylib/core/texture/struct.Image.html) /
   [`Texture2D` docs.rs](https://docs.rs/raylib/latest/raylib/core/texture/struct.Texture2D.html)
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [textures_image_loading](https://dacode45.github.io/raylib-rs/examples/textures/textures_image_loading.html)
+- [textures_image_drawing](https://dacode45.github.io/raylib-rs/examples/textures/textures_image_drawing.html)
+- [textures_image_generation](https://dacode45.github.io/raylib-rs/examples/textures/textures_image_generation.html)
+- [textures_sprite_animation](https://dacode45.github.io/raylib-rs/examples/textures/textures_sprite_animation.html)
+- [textures_npatch_drawing](https://dacode45.github.io/raylib-rs/examples/textures/textures_npatch_drawing.html)
+- [textures_bunnymark](https://dacode45.github.io/raylib-rs/examples/textures/textures_bunnymark.html)

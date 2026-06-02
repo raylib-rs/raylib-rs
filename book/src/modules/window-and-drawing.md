@@ -70,3 +70,14 @@ fn main() {
   the `!Send` invariant.
 - [Input](./input.md) — reading keyboard, mouse, and gamepad inside the loop.
 - [Shapes](./shapes.md) — the full 2D primitive catalogue.
+
+### Showcase examples
+
+Showcase examples that exercise this module:
+
+- [core_basic_window](https://dacode45.github.io/raylib-rs/examples/core/core_basic_window.html)
+- [core_window_flags](https://dacode45.github.io/raylib-rs/examples/core/core_window_flags.html)
+- [core_window_letterbox](https://dacode45.github.io/raylib-rs/examples/core/core_window_letterbox.html)
+- [core_window_should_close](https://dacode45.github.io/raylib-rs/examples/core/core_window_should_close.html)
+- [core_2d_camera](https://dacode45.github.io/raylib-rs/examples/core/core_2d_camera.html)
+- [core_basic_screen_manager](https://dacode45.github.io/raylib-rs/examples/core/core_basic_screen_manager.html)
