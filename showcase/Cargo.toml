@@ -576,6 +576,30 @@ path = "examples/shaders/shaders_multi_sample2d.rs"
 name = "shaders_palette_switch"
 path = "examples/shaders/shaders_palette_switch.rs"
 
+[[example]]
+name = "shaders_model_shader"
+path = "examples/shaders/shaders_model_shader.rs"
+
+[[example]]
+name = "shaders_simple_mask"
+path = "examples/shaders/shaders_simple_mask.rs"
+
+[[example]]
+name = "shaders_spotlight_rendering"
+path = "examples/shaders/shaders_spotlight_rendering.rs"
+
+[[example]]
+name = "shaders_texture_tiling"
+path = "examples/shaders/shaders_texture_tiling.rs"
+
+[[example]]
+name = "shaders_vertex_displacement"
+path = "examples/shaders/shaders_vertex_displacement.rs"
+
+[[example]]
+name = "shaders_rounded_rectangle"
+path = "examples/shaders/shaders_rounded_rectangle.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
