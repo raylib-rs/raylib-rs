@@ -748,6 +748,29 @@ path = "examples/shapes/shapes_starfield_effect.rs"
 name = "shapes_top_down_lights"
 path = "examples/shapes/shapes_top_down_lights.rs"
 
+[[example]]
+name = "shapes_rectangle_advanced"
+path = "examples/shapes/shapes_rectangle_advanced.rs"
+
+[[example]]
+name = "shapes_rectangle_scaling"
+path = "examples/shapes/shapes_rectangle_scaling.rs"
+
+[[example]]
+name = "shapes_ring_drawing"
+path = "examples/shapes/shapes_ring_drawing.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_rounded_rectangle_drawing"
+path = "examples/shapes/shapes_rounded_rectangle_drawing.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_pie_chart"
+path = "examples/shapes/shapes_pie_chart.rs"
+required-features = ["raygui"]
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
