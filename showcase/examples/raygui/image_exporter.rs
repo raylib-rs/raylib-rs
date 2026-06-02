@@ -105,11 +105,21 @@ fn main() {
         if btn_export_pressed {
             if image_loaded {
                 if let Some(img) = image.as_mut() {
-                    img.set_format(unsafe {
-                        std::mem::transmute::<i32, raylib::consts::PixelFormat>(
-                            pixel_format_active + 1,
-                        )
-                    });
+                    // idiomatic: combo index 0..6 maps to PIXELFORMAT_UNCOMPRESSED_*
+                    // discriminants 1..7. Match on the index so the conversion stays
+                    // sound even if the combo's selection becomes out-of-range — no
+                    // transmute, no UB.
+                    use raylib::consts::PixelFormat::*;
+                    let pf = match pixel_format_active {
+                        0 => PIXELFORMAT_UNCOMPRESSED_GRAYSCALE,
+                        1 => PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA,
+                        2 => PIXELFORMAT_UNCOMPRESSED_R5G6B5,
+                        3 => PIXELFORMAT_UNCOMPRESSED_R8G8B8,
+                        4 => PIXELFORMAT_UNCOMPRESSED_R5G5B5A1,
+                        5 => PIXELFORMAT_UNCOMPRESSED_R4G4B4A4,
+                        _ => PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+                    };
+                    img.set_format(pf);
 
                     if file_format_active == 0 {
                         // PNG
