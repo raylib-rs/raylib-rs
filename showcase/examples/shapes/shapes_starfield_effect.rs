@@ -167,8 +167,8 @@ fn main() {
     //--------------------------------------------------------------------------------------
 }
 
-// raymath Lerp: linear interpolation between a and b by amount
+// raymath Lerp: linear interpolation, matches C `Lerp(start, end, amount)` order
 #[inline]
-fn lerp(amount: f32, a: f32, b: f32) -> f32 {
-    a + amount * (b - a)
+fn lerp(start: f32, end: f32, amount: f32) -> f32 {
+    start + amount * (end - start)
 }
