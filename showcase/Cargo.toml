@@ -781,6 +781,15 @@ path = "examples/shapes/shapes_recursive_tree.rs"
 required-features = ["raygui"]
 
 [[example]]
+name = "shapes_rlgl_color_wheel"
+path = "examples/shapes/shapes_rlgl_color_wheel.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_rlgl_triangle"
+path = "examples/shapes/shapes_rlgl_triangle.rs"
+
+[[example]]
 name = "shapes_splines_drawing"
 path = "examples/shapes/shapes_splines_drawing.rs"
 required-features = ["raygui"]
