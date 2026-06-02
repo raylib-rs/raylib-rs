@@ -40,3 +40,7 @@
 
 - [glam, mint, serde](./ecosystem/glam-mint-serde.md)
 - [What next?](./ecosystem/what-next.md)
+
+# Appendix
+
+- [Showcase examples](./appendix/showcase-examples.md)
