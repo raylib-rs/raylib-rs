@@ -66,6 +66,8 @@ fn main() {
     let mut failures: Vec<(String, String)> = Vec::new();
     let mut built = 0usize;
 
+    let shell_path = manifest_dir.join("index").join("example_shell.html");
+
     for meta in &metas {
         if meta.wasm_excluded {
             eprintln!("xtask_wasm_build: skipping {} (wasm-excluded)", meta.name);
@@ -89,6 +91,9 @@ fn main() {
         if let Some(feats) = required_features.get(&meta.name) {
             cmd.args(["--features", &feats.join(",")]);
         }
+        let existing_cflags = std::env::var("EMCC_CFLAGS").unwrap_or_default();
+        let new_cflags = format!("{} --shell-file {}", existing_cflags, shell_path.display(),);
+        cmd.env("EMCC_CFLAGS", new_cflags);
         let status = cmd.status();
         match status {
             Ok(s) if s.success() => built += 1,
