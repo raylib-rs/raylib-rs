@@ -899,6 +899,26 @@ path = "examples/textures/textures_sprite_explosion.rs"
 name = "textures_sprite_stacking"
 path = "examples/textures/textures_sprite_stacking.rs"
 
+[[example]]
+name = "textures_magnifying_glass"
+path = "examples/textures/textures_magnifying_glass.rs"
+
+[[example]]
+name = "textures_mouse_painting"
+path = "examples/textures/textures_mouse_painting.rs"
+
+[[example]]
+name = "textures_particles_blending"
+path = "examples/textures/textures_particles_blending.rs"
+
+[[example]]
+name = "textures_raw_data"
+path = "examples/textures/textures_raw_data.rs"
+
+[[example]]
+name = "textures_textured_curve"
+path = "examples/textures/textures_textured_curve.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
