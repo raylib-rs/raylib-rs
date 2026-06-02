@@ -252,8 +252,10 @@ fn main() {
             max_y = (element.rect.y + element.rect.height).max(max_y);
         }
 
+        // SAFETY: pure raylib FFI taking primitive args and returning a primitive; no aliasing or lifetime concerns.
         let max =
             unsafe { raylib::ffi::GetWorldToScreen2D(Vector2::new(max_x, max_y), camera.into()) };
+        // SAFETY: pure raylib FFI taking primitive args and returning a primitive; no aliasing or lifetime concerns.
         let min =
             unsafe { raylib::ffi::GetWorldToScreen2D(Vector2::new(min_x, min_y), camera.into()) };
 

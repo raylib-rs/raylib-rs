@@ -154,6 +154,7 @@ fn main() {
                 c.draw_rectangle_rec(player2, Color::BLUE);
             }
 
+            // SAFETY: pure raylib FFI taking no args and returning a primitive; no aliasing or lifetime concerns.
             let sw = unsafe { raylib::ffi::GetScreenWidth() };
             tm.draw_rectangle(0, 0, sw / 2, 30, Color::RAYWHITE.alpha(0.6));
             tm.draw_text("PLAYER1: W/S/A/D to move", 10, 10, 10, Color::MAROON);
@@ -200,6 +201,7 @@ fn main() {
                 c.draw_rectangle_rec(player2, Color::BLUE);
             }
 
+            // SAFETY: pure raylib FFI taking no args and returning a primitive; no aliasing or lifetime concerns.
             let sw = unsafe { raylib::ffi::GetScreenWidth() };
             tm.draw_rectangle(0, 0, sw / 2, 30, Color::RAYWHITE.alpha(0.6));
             tm.draw_text(

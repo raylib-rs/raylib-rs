@@ -116,5 +116,7 @@ fn main() {
 
 fn measure_text(text: &str, font_size: i32) -> i32 {
     let c = std::ffi::CString::new(text).unwrap();
+    // SAFETY: pure raylib FFI taking a borrowed C-string pointer and a primitive,
+    // returning a primitive; the CString outlives the call so its pointer is valid.
     unsafe { raylib::ffi::MeasureText(c.as_ptr(), font_size) }
 }

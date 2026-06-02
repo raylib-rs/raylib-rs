@@ -295,8 +295,10 @@ fn update_camera_center_inside_map(
         max_y = (ei.rect.y + ei.rect.height).max(max_y);
     }
 
+    // SAFETY: pure raylib FFI taking primitive args and returning a primitive; no aliasing or lifetime concerns.
     let max =
         unsafe { raylib::ffi::GetWorldToScreen2D(Vector2::new(max_x, max_y), (*camera).into()) };
+    // SAFETY: pure raylib FFI taking primitive args and returning a primitive; no aliasing or lifetime concerns.
     let min =
         unsafe { raylib::ffi::GetWorldToScreen2D(Vector2::new(min_x, min_y), (*camera).into()) };
 
@@ -384,6 +386,7 @@ fn update_camera_player_bounds_push(
 ) {
     let bbox = Vector2::new(0.2, 0.2);
 
+    // SAFETY: pure raylib FFI taking primitive args and returning a primitive; no aliasing or lifetime concerns.
     let bbox_world_min = unsafe {
         raylib::ffi::GetScreenToWorld2D(
             Vector2::new(
@@ -393,6 +396,7 @@ fn update_camera_player_bounds_push(
             (*camera).into(),
         )
     };
+    // SAFETY: pure raylib FFI taking primitive args and returning a primitive; no aliasing or lifetime concerns.
     let bbox_world_max = unsafe {
         raylib::ffi::GetScreenToWorld2D(
             Vector2::new(

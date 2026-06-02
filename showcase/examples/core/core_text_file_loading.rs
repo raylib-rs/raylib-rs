@@ -81,6 +81,9 @@ fn main() {
                 let sub = std::str::from_utf8(&bytes[last_wrap_start..last_wrap_start + nul])
                     .unwrap_or("");
                 let mw = unsafe {
+                    // SAFETY: pure raylib FFI taking a borrowed C-string pointer and a primitive,
+                    // returning a primitive; the CString lives for the duration of the block so
+                    // its pointer is valid for the call, and no aliasing/lifetime escapes.
                     let c = std::ffi::CString::new(sub).unwrap();
                     raylib::ffi::MeasureText(c.as_ptr(), font_size)
                 };
@@ -108,6 +111,9 @@ fn main() {
     for i in 0..line_count {
         let c = std::ffi::CString::new(lines[i].as_str()).unwrap();
         let size = unsafe {
+            // SAFETY: pure raylib FFI; GetFontDefault returns a raylib-owned Font by value
+            // and MeasureTextEx takes that Font by value plus a borrowed C-string pointer.
+            // The CString outlives the call, so the pointer is valid; no aliasing or lifetime escapes.
             raylib::ffi::MeasureTextEx(
                 raylib::ffi::GetFontDefault(),
                 c.as_ptr(),
@@ -173,6 +179,9 @@ fn main() {
                     // Fix for empty line in the text file
                     let c = std::ffi::CString::new(lines[i].as_str()).unwrap();
                     unsafe {
+                        // SAFETY: pure raylib FFI; GetFontDefault returns a raylib-owned Font by
+                        // value and MeasureTextEx reads through the borrowed C-string pointer (which
+                        // is valid for the duration of this call); no aliasing or lifetime escapes.
                         raylib::ffi::MeasureTextEx(
                             raylib::ffi::GetFontDefault(),
                             c.as_ptr(),
@@ -183,6 +192,7 @@ fn main() {
                 } else {
                     let c = std::ffi::CString::new(" ").unwrap();
                     unsafe {
+                        // SAFETY: pure raylib FFI; same justification as the non-empty branch above.
                         raylib::ffi::MeasureTextEx(
                             raylib::ffi::GetFontDefault(),
                             c.as_ptr(),

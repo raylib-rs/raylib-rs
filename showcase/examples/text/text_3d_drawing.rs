@@ -83,6 +83,8 @@ fn draw_text_codepoint_3d<D: RaylibDraw + RaylibDraw3D + RaylibRlgl>(
     // Character destination rectangle on screen
     // NOTE: We consider charsPadding on drawing
     let glyphs = font.chars();
+    // SAFETY: WeakFont/Font owns `recs` as a `glyphCount`-long raylib-allocated array; the slice
+    // is read for the duration of this frame and the Font outlives this scope.
     let recs = unsafe { std::slice::from_raw_parts(inner.recs, inner.glyphCount as usize) };
     position.x += (glyphs[index as usize].offsetX - glyph_padding) as f32 * scale;
     position.z += (glyphs[index as usize].offsetY - glyph_padding) as f32 * scale;
@@ -110,6 +112,7 @@ fn draw_text_codepoint_3d<D: RaylibDraw + RaylibDraw3D + RaylibRlgl>(
         let tw = (src_rec.x + src_rec.width) / inner.texture.width as f32;
         let th = (src_rec.y + src_rec.height) / inner.texture.height as f32;
 
+        // SAFETY: raylib is single-threaded; static mut reads/writes in the main loop are race-free.
         if unsafe { SHOW_LETTER_BOUNDRY } {
             d.draw_cube_wires_v(
                 Vector3::new(
@@ -224,6 +227,8 @@ fn draw_text_3d<D: RaylibDraw + RaylibDraw3D + RaylibRlgl>(
             }
 
             let glyphs = font.chars();
+            // SAFETY: WeakFont/Font owns `recs` as a `glyphCount`-long raylib-allocated array; the
+            // slice is read for the duration of this frame and the Font outlives this scope.
             let recs = unsafe { std::slice::from_raw_parts(inner.recs, inner.glyphCount as usize) };
             if glyphs[index as usize].advanceX == 0 {
                 text_offset_x += recs[index as usize].width * scale + font_spacing;
@@ -307,6 +312,8 @@ fn draw_text_wave_3d<D: RaylibDraw + RaylibDraw3D + RaylibRlgl>(
             }
 
             let glyphs = font.chars();
+            // SAFETY: WeakFont/Font owns `recs` as a `glyphCount`-long raylib-allocated array; the
+            // slice is read for the duration of this frame and the Font outlives this scope.
             let recs = unsafe { std::slice::from_raw_parts(inner.recs, inner.glyphCount as usize) };
             if glyphs[index as usize].advanceX == 0 {
                 text_offset_x += recs[index as usize].width * scale + font_spacing;
@@ -356,6 +363,8 @@ fn measure_text_wave_3d(
                 } else {
                     len_counter += 1;
                     let glyphs = font.chars();
+                    // SAFETY: WeakFont/Font owns `recs` as a `glyphCount`-long raylib-allocated
+                    // array; the slice is read here and the Font outlives this scope.
                     let recs = unsafe {
                         std::slice::from_raw_parts(inner.recs, inner.glyphCount as usize)
                     };
@@ -370,6 +379,8 @@ fn measure_text_wave_3d(
             } else {
                 len_counter += 1;
                 let glyphs = font.chars();
+                // SAFETY: WeakFont/Font owns `recs` as a `glyphCount`-long raylib-allocated array;
+                // the slice is read here and the Font outlives this scope.
                 let recs =
                     unsafe { std::slice::from_raw_parts(inner.recs, inner.glyphCount as usize) };
                 if glyphs[index as usize].advanceX != 0 {
@@ -538,11 +549,13 @@ fn main() {
 
         // Handle Events
         if rl.is_key_pressed(KeyboardKey::KEY_F1) {
+            // SAFETY: raylib is single-threaded; static mut reads/writes in the main loop are race-free.
             unsafe {
                 SHOW_LETTER_BOUNDRY = !SHOW_LETTER_BOUNDRY;
             }
         }
         if rl.is_key_pressed(KeyboardKey::KEY_F2) {
+            // SAFETY: raylib is single-threaded; static mut reads/writes in the main loop are race-free.
             unsafe {
                 SHOW_TEXT_BOUNDRY = !SHOW_TEXT_BOUNDRY;
             }
@@ -705,6 +718,7 @@ fn main() {
                     }
 
                     // Draw the text boundry if set
+                    // SAFETY: raylib is single-threaded; static mut reads/writes in the main loop are race-free.
                     if unsafe { SHOW_TEXT_BOUNDRY } {
                         mat.draw_cube_wires_v(
                             Vector3::new(0.0, 0.0, -4.5 + tbox.z / 2.0),
@@ -715,7 +729,9 @@ fn main() {
                 }
 
                 // Don't draw the letter boundries for the 3D text below
+                // SAFETY: raylib is single-threaded; static mut reads/writes in the main loop are race-free.
                 let slb = unsafe { SHOW_LETTER_BOUNDRY };
+                // SAFETY: raylib is single-threaded; static mut reads/writes in the main loop are race-free.
                 unsafe {
                     SHOW_LETTER_BOUNDRY = false;
                 }
@@ -795,6 +811,7 @@ fn main() {
 
                     let opt = format!(
                         "< TBOX: {:>3} >",
+                        // SAFETY: raylib is single-threaded; static mut reads/writes in the main loop are race-free.
                         if unsafe { SHOW_TEXT_BOUNDRY } {
                             "ON"
                         } else {
@@ -939,6 +956,7 @@ fn main() {
                 );
                 //-------------------------------------------------------------------------
 
+                // SAFETY: raylib is single-threaded; static mut reads/writes in the main loop are race-free.
                 unsafe {
                     SHOW_LETTER_BOUNDRY = slb;
                 }

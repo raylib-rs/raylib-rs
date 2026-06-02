@@ -365,6 +365,8 @@ fn main() {
         let key = rl.get_key_pressed_number(); // Get pressed keycode
         if let Some(k) = key {
             unsafe {
+                // SAFETY: pure raylib FFI varargs printf-style call; the format string is a
+                // static C string literal whose `%d` matches the i32 we pass, so no UB.
                 raylib::ffi::TraceLog(
                     raylib::ffi::TraceLogLevel::LOG_INFO as i32,
                     c"KEYBOARD TESTBED: KEY PRESSED:    %d".as_ptr(),
@@ -377,6 +379,8 @@ fn main() {
         if let Some(c) = ch {
             let cval = c as u32;
             unsafe {
+                // SAFETY: pure raylib FFI varargs printf-style call; the format string is a
+                // static C string literal whose `%c (%d)` matches the two i32 args we pass.
                 raylib::ffi::TraceLog(
                     raylib::ffi::TraceLogLevel::LOG_INFO as i32,
                     c"KEYBOARD TESTBED: CHAR PRESSED:   %c (%d)".as_ptr(),

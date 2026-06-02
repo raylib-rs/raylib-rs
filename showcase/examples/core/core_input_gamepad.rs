@@ -556,6 +556,12 @@ fn main() {
                         "AXIS {}: {:.02}",
                         i,
                         d.get_gamepad_axis_movement(gamepad, unsafe {
+                            // SAFETY: indices 0..axis_count come from raylib's GetGamepadAxisCount,
+                            // which is bounded by the GamepadAxis enum size; raylib-sys generates
+                            // GamepadAxis as #[repr(i32)] with sequential variants starting at 0,
+                            // so the bit pattern is a valid discriminant.
+                            // (WS6b-tracked-deferred: replace this transmute with a typed enum-cast
+                            // helper once the safe wrapper exposes one.)
                             std::mem::transmute::<u32, GamepadAxis>(i as u32)
                         })
                     ),

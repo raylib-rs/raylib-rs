@@ -116,6 +116,7 @@ fn main() {
         // Update
         //--------------------------------------------------------------------------------------
         // Handle common gestures data
+        // SAFETY: pure raylib FFI taking no args and returning a primitive; no aliasing or lifetime concerns.
         let current_gesture: i32 = unsafe { raylib::ffi::GetGestureDetected() };
         let current_drag_degrees = rl.get_gesture_drag_angle();
         let current_pitch_degrees = rl.get_gesture_pinch_angle();

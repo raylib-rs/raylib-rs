@@ -135,6 +135,7 @@ fn main() {
                 c.draw_cube(camera_player2.position, 1.0, 1.0, 1.0, Color::BLUE);
             }
 
+            // SAFETY: pure raylib FFI taking no args and returning a primitive; no aliasing or lifetime concerns.
             let sw = unsafe { raylib::ffi::GetScreenWidth() };
             tm.draw_rectangle(0, 0, sw / 2, 40, Color::RAYWHITE.alpha(0.8));
             tm.draw_text("PLAYER1: W/S to move", 10, 10, 20, Color::MAROON);
@@ -171,6 +172,7 @@ fn main() {
                 c.draw_cube(camera_player2.position, 1.0, 1.0, 1.0, Color::BLUE);
             }
 
+            // SAFETY: pure raylib FFI taking no args and returning a primitive; no aliasing or lifetime concerns.
             let sw = unsafe { raylib::ffi::GetScreenWidth() };
             tm.draw_rectangle(0, 0, sw / 2, 40, Color::RAYWHITE.alpha(0.8));
             tm.draw_text("PLAYER2: UP/DOWN to move", 10, 10, 20, Color::DARKBLUE);
