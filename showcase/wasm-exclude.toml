@@ -52,3 +52,11 @@ reason = "Loads the glsl330 skinning shader (same as models_animation_gpu_skinni
 [[exclude]]
 name = "models_animation_blend_custom"
 reason = "Loads the glsl330 skinning shader (same as models_animation_gpu_skinning); emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION; we pin to glsl330."
+
+[[exclude]]
+name = "models_loading_vox"
+reason = "Loads the glsl330 voxel_lighting shader (rlights-style lighting); emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "models_skybox_rendering"
+reason = "Loads the glsl330 skybox + cubemap shaders; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."

@@ -422,6 +422,66 @@ path = "examples/models/models_bone_socket.rs"
 name = "models_decals"
 path = "examples/models/models_decals.rs"
 
+[[example]]
+name = "models_loading_gltf"
+path = "examples/models/models_loading_gltf.rs"
+
+[[example]]
+name = "models_loading_iqm"
+path = "examples/models/models_loading_iqm.rs"
+
+[[example]]
+name = "models_loading_m3d"
+path = "examples/models/models_loading_m3d.rs"
+
+[[example]]
+name = "models_loading_vox"
+path = "examples/models/models_loading_vox.rs"
+
+[[example]]
+name = "models_mesh_generation"
+path = "examples/models/models_mesh_generation.rs"
+
+[[example]]
+name = "models_mesh_picking"
+path = "examples/models/models_mesh_picking.rs"
+
+[[example]]
+name = "models_orthographic_projection"
+path = "examples/models/models_orthographic_projection.rs"
+
+[[example]]
+name = "models_point_rendering"
+path = "examples/models/models_point_rendering.rs"
+
+[[example]]
+name = "models_rlgl_solar_system"
+path = "examples/models/models_rlgl_solar_system.rs"
+
+[[example]]
+name = "models_rotating_cube"
+path = "examples/models/models_rotating_cube.rs"
+
+[[example]]
+name = "models_skybox_rendering"
+path = "examples/models/models_skybox_rendering.rs"
+
+[[example]]
+name = "models_tesseract_view"
+path = "examples/models/models_tesseract_view.rs"
+
+[[example]]
+name = "models_textured_cube"
+path = "examples/models/models_textured_cube.rs"
+
+[[example]]
+name = "models_waving_cubes"
+path = "examples/models/models_waving_cubes.rs"
+
+[[example]]
+name = "models_yaw_pitch_roll"
+path = "examples/models/models_yaw_pitch_roll.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
