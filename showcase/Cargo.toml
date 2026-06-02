@@ -732,6 +732,22 @@ required-features = ["raygui"]
 name = "shapes_vector_angle"
 path = "examples/shapes/shapes_vector_angle.rs"
 
+[[example]]
+name = "shapes_mouse_trail"
+path = "examples/shapes/shapes_mouse_trail.rs"
+
+[[example]]
+name = "shapes_simple_particles"
+path = "examples/shapes/shapes_simple_particles.rs"
+
+[[example]]
+name = "shapes_starfield_effect"
+path = "examples/shapes/shapes_starfield_effect.rs"
+
+[[example]]
+name = "shapes_top_down_lights"
+path = "examples/shapes/shapes_top_down_lights.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
