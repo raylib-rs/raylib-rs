@@ -88,3 +88,7 @@ reason = "Compute shaders require GL 4.3+ / OpenGL ES 3.1+ and SSBOs; WebGL/GLES
 [[exclude]]
 name = "shaders_shadowmap_rendering"
 reason = "Samples a glsl330 depth-texture attachment via a custom FBO (rlLoadTextureDepth + RL_ATTACHMENT_TEXTURE2D); WebGL1/GLES2 lacks direct depth-texture sampling. We pin to glsl330; the upstream C forks on GLSL_VERSION but the depth-sampler shader does not work on ES2 in practice."
+
+[[exclude]]
+name = "textures_clipboard_image"
+reason = "Uses GetClipboardImage (raylib 6.0), which on web depends on the browser's async-only clipboard API; raylib's synchronous implementation cannot retrieve clipboard images on emscripten in practice. Desktop-only."

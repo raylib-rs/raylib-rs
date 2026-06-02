@@ -851,6 +851,18 @@ path = "examples/textures/textures_image_generation.rs"
 name = "textures_gif_player"
 path = "examples/textures/textures_gif_player.rs"
 
+[[example]]
+name = "textures_cellular_automata"
+path = "examples/textures/textures_cellular_automata.rs"
+
+[[example]]
+name = "textures_clipboard_image"
+path = "examples/textures/textures_clipboard_image.rs"
+
+[[example]]
+name = "textures_fog_of_war"
+path = "examples/textures/textures_fog_of_war.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
