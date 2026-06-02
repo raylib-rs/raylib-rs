@@ -92,3 +92,19 @@ reason = "Loads the glsl330 color_correction.fs and uses raygui; emscripten serv
 [[exclude]]
 name = "shaders_custom_uniform"
 reason = "Loads the glsl330 swirl.fs postprocess shader; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_eratosthenes_sieve"
+reason = "Loads the glsl330 eratosthenes.fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_game_of_life"
+reason = "Loads the glsl330 game_of_life.fs and uses raygui; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_julia_set"
+reason = "Loads the glsl330 julia_set.fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_mandelbrot_set"
+reason = "Loads the glsl330 mandelbrot_set.fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."

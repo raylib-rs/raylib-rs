@@ -515,6 +515,23 @@ required-features = ["raygui"]
 name = "shaders_custom_uniform"
 path = "examples/shaders/shaders_custom_uniform.rs"
 
+[[example]]
+name = "shaders_eratosthenes_sieve"
+path = "examples/shaders/shaders_eratosthenes_sieve.rs"
+
+[[example]]
+name = "shaders_game_of_life"
+path = "examples/shaders/shaders_game_of_life.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shaders_julia_set"
+path = "examples/shaders/shaders_julia_set.rs"
+
+[[example]]
+name = "shaders_mandelbrot_set"
+path = "examples/shaders/shaders_mandelbrot_set.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
