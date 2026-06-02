@@ -360,6 +360,42 @@ path = "examples/others/raylib_opengl_interop.rs"
 name = "rlgl_standalone"
 path = "examples/others/rlgl_standalone.rs"
 
+[[example]]
+name = "models_geometric_shapes"
+path = "examples/models/models_geometric_shapes.rs"
+
+[[example]]
+name = "models_box_collisions"
+path = "examples/models/models_box_collisions.rs"
+
+[[example]]
+name = "models_heightmap_rendering"
+path = "examples/models/models_heightmap_rendering.rs"
+
+[[example]]
+name = "models_cubicmap_rendering"
+path = "examples/models/models_cubicmap_rendering.rs"
+
+[[example]]
+name = "models_basic_voxel"
+path = "examples/models/models_basic_voxel.rs"
+
+[[example]]
+name = "models_first_person_maze"
+path = "examples/models/models_first_person_maze.rs"
+
+[[example]]
+name = "models_loading"
+path = "examples/models/models_loading.rs"
+
+[[example]]
+name = "models_billboard_rendering"
+path = "examples/models/models_billboard_rendering.rs"
+
+[[example]]
+name = "models_directional_billboard"
+path = "examples/models/models_directional_billboard.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
