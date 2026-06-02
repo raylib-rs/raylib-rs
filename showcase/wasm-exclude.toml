@@ -92,3 +92,17 @@ reason = "Samples a glsl330 depth-texture attachment via a custom FBO (rlLoadTex
 [[exclude]]
 name = "textures_clipboard_image"
 reason = "Uses GetClipboardImage (raylib 6.0), which on web depends on the browser's async-only clipboard API; raylib's synchronous implementation cannot retrieve clipboard images on emscripten in practice. Desktop-only."
+
+# --- WS9 P3 raygui exclusions ---
+
+[[exclude]]
+name = "custom_file_dialog"
+reason = "Custom file dialog relies on drag-and-drop file loading and (in the C source) a native directory-browsing modal; emscripten does not expose LoadDroppedFiles equivalents."
+
+[[exclude]]
+name = "portable_window"
+reason = "Window-drag behaviour uses SetWindowPosition + FLAG_WINDOW_UNDECORATED; emscripten's main window is the browser tab and these APIs are no-ops on web."
+
+[[exclude]]
+name = "image_importer_raw"
+reason = "Drag-and-drop is the primary input path (LoadDroppedFiles); emscripten does not expose native drag-and-drop event delivery."

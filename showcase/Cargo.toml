@@ -977,6 +977,16 @@ name = "controls_test_suite"
 path = "examples/raygui/controls_test_suite.rs"
 required-features = ["raygui"]
 
+[[example]]
+name = "custom_file_dialog"
+path = "examples/raygui/custom_file_dialog.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "property_list"
+path = "examples/raygui/property_list.rs"
+required-features = ["raygui"]
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
