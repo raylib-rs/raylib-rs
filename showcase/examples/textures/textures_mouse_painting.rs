@@ -79,6 +79,7 @@ fn main() {
     let mut mouse_was_pressed = false;
 
     let btn_save_rec = Rectangle::new(750.0, 10.0, 40.0, 30.0);
+    #[allow(unused_assignments)]
     let mut btn_save_mouse_hover = false;
     let mut show_save_message = false;
     let mut save_message_counter: i32 = 0;

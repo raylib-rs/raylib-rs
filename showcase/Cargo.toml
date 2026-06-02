@@ -919,6 +919,14 @@ path = "examples/textures/textures_raw_data.rs"
 name = "textures_textured_curve"
 path = "examples/textures/textures_textured_curve.rs"
 
+[[example]]
+name = "textures_screen_buffer"
+path = "examples/textures/textures_screen_buffer.rs"
+
+[[example]]
+name = "textures_to_image"
+path = "examples/textures/textures_to_image.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
