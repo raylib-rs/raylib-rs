@@ -60,3 +60,23 @@ reason = "Loads the glsl330 voxel_lighting shader (rlights-style lighting); emsc
 [[exclude]]
 name = "models_skybox_rendering"
 reason = "Loads the glsl330 skybox + cubemap shaders; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_basic_lighting"
+reason = "Loads the glsl330 lighting vs/fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_basic_pbr"
+reason = "Loads the glsl330 PBR vs/fs (multi-sampler, MRA-packed textures); emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_cel_shading"
+reason = "Loads the glsl330 cel + outline_hull shaders and uses rlSetCullFace from rlgl; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_fog_rendering"
+reason = "Loads the glsl330 lighting vs + fog fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_lightmap_rendering"
+reason = "Loads the glsl330 lightmap vs/fs and patches mesh.texcoords2 via rlgl; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."

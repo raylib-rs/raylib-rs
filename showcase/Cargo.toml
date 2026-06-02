@@ -482,6 +482,26 @@ path = "examples/models/models_waving_cubes.rs"
 name = "models_yaw_pitch_roll"
 path = "examples/models/models_yaw_pitch_roll.rs"
 
+[[example]]
+name = "shaders_basic_lighting"
+path = "examples/shaders/shaders_basic_lighting.rs"
+
+[[example]]
+name = "shaders_basic_pbr"
+path = "examples/shaders/shaders_basic_pbr.rs"
+
+[[example]]
+name = "shaders_cel_shading"
+path = "examples/shaders/shaders_cel_shading.rs"
+
+[[example]]
+name = "shaders_fog_rendering"
+path = "examples/shaders/shaders_fog_rendering.rs"
+
+[[example]]
+name = "shaders_lightmap_rendering"
+path = "examples/shaders/shaders_lightmap_rendering.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
