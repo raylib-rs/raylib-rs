@@ -616,6 +616,14 @@ path = "examples/shaders/shaders_postprocessing.rs"
 name = "shaders_raymarching_rendering"
 path = "examples/shaders/shaders_raymarching_rendering.rs"
 
+[[example]]
+name = "shaders_rlgl_compute"
+path = "examples/shaders/shaders_rlgl_compute.rs"
+
+[[example]]
+name = "shaders_shadowmap_rendering"
+path = "examples/shaders/shaders_shadowmap_rendering.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
