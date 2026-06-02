@@ -10,11 +10,18 @@
 //! sibling helper .c files in the same dir — we only walk the dirname-matching
 //! one). Skipping standalone/raygui_standalone.c (a template, not a runnable
 //! example) falls out of the dirname-match rule.
+//!
+//! WS9 Phase 4 (Task 4.1): also resolves the submodule remotes, the pinned
+//! submodule SHAs, and the showcase repo origin/HEAD at build time, and
+//! bakes per-pair `c_url` / `rust_url` deep links into both the registry
+//! source and the `examples_meta.json` sidecar so the Pages gallery and
+//! the in-canvas SourceViewer can link straight to the upstream source.
 
 use std::collections::HashSet;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use walkdir::WalkDir;
 
@@ -36,15 +43,53 @@ const RAYLIB_CATEGORIES: &[&str] = &[
     "audio", "core", "models", "others", "shaders", "shapes", "text", "textures",
 ];
 
+// Fallbacks used if `git` is unavailable or returns an unexpected value
+// (e.g. a CI checkout without an `origin` remote). We emit a
+// `cargo:warning=` whenever a fallback fires so the deviation is visible
+// in the build log.
+const FALLBACK_SHOWCASE_REMOTE: &str = "https://github.com/raylib-rs/raylib-rs";
+const FALLBACK_SHOWCASE_REF: &str = "6.0-rc";
+const FALLBACK_RAYLIB_REMOTE: &str = "https://github.com/raysan5/raylib";
+const FALLBACK_RAYGUI_REMOTE: &str = "https://github.com/raysan5/raygui";
+
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let workspace_root = manifest_dir.parent().unwrap().to_path_buf();
 
     let raylib_root = manifest_dir
         .join(RAYLIB_EXAMPLES_DIR)
         .canonicalize()
         .expect("raylib-sys submodule must be checked out");
     let raygui_root = manifest_dir.join(RAYGUI_EXAMPLES_DIR).canonicalize().ok();
+
+    // Resolve submodule remotes from .gitmodules and pinned SHAs from each
+    // submodule's HEAD. Fallbacks keep the build alive on non-submodule
+    // checkouts (e.g. a published crate tarball), with a cargo:warning so
+    // the deviation is visible.
+    let raylib_remote = resolve_submodule_remote(
+        &workspace_root,
+        "submodule.raylib-sys/raylib.url",
+        FALLBACK_RAYLIB_REMOTE,
+    );
+    let raygui_remote = resolve_submodule_remote(
+        &workspace_root,
+        "submodule.raylib-sys/raygui-examples.url",
+        FALLBACK_RAYGUI_REMOTE,
+    );
+    let raylib_sha = resolve_git_head(
+        &workspace_root.join("raylib-sys").join("raylib"),
+        FALLBACK_SHOWCASE_REF,
+    );
+    let raygui_sha = resolve_git_head(
+        &workspace_root.join("raylib-sys").join("raygui-examples"),
+        FALLBACK_SHOWCASE_REF,
+    );
+
+    // Showcase repo origin + HEAD: same fallback strategy, but the origin
+    // resolution also normalizes SSH-form remotes to https-form.
+    let showcase_remote = resolve_showcase_remote(&workspace_root);
+    let showcase_sha = resolve_git_head(&workspace_root, FALLBACK_SHOWCASE_REF);
 
     let mut pairs: Vec<Pair> = Vec::new();
     let mut errors: Vec<String> = Vec::new();
@@ -200,6 +245,32 @@ fn main() {
     println!("cargo:rerun-if-changed=wasm-exclude.toml");
     println!("cargo:rerun-if-changed=thumbnails.toml");
     println!("cargo:rerun-if-changed=build.rs");
+    // Re-run when submodule pins or the showcase HEAD shift so c_url /
+    // rust_url stay in sync with what's actually checked out.
+    let gitmodules = workspace_root.join(".gitmodules");
+    if gitmodules.exists() {
+        println!("cargo:rerun-if-changed={}", gitmodules.display());
+    }
+    let head_paths = [
+        workspace_root.join(".git").join("HEAD"),
+        workspace_root
+            .join(".git")
+            .join("modules")
+            .join("raylib-sys")
+            .join("raylib")
+            .join("HEAD"),
+        workspace_root
+            .join(".git")
+            .join("modules")
+            .join("raylib-sys")
+            .join("raygui-examples")
+            .join("HEAD"),
+    ];
+    for hp in &head_paths {
+        if hp.exists() {
+            println!("cargo:rerun-if-changed={}", hp.display());
+        }
+    }
 
     // Parse wasm-exclude.toml to populate per-example wasm_excluded flag.
     // A parse failure here would silently drop exclusions and could let
@@ -230,17 +301,30 @@ fn main() {
     let mut meta: Vec<MetaEntry> = Vec::new();
 
     for p in &pairs {
+        let (c_url, rust_url) = build_urls(
+            p,
+            &raylib_remote,
+            &raylib_sha,
+            &raygui_remote,
+            &raygui_sha,
+            &showcase_remote,
+            &showcase_sha,
+        );
         let value = format!(
-            "SourcePair {{ c: include_str!(r\"{}\"), rust: include_str!(r\"{}\"), category: \"{}\" }}",
+            "SourcePair {{ c: include_str!(r\"{}\"), rust: include_str!(r\"{}\"), category: \"{}\", c_url: \"{}\", rust_url: \"{}\" }}",
             p.c_path.display(),
             p.rust_path.display(),
             p.category,
+            c_url,
+            rust_url,
         );
         map.entry(p.name.clone(), &value);
         meta.push(MetaEntry {
             name: p.name.clone(),
             category: p.category.clone(),
             wasm_excluded: wasm_excluded.contains(&p.name),
+            c_url,
+            rust_url,
         });
     }
 
@@ -250,6 +334,8 @@ pub struct SourcePair {{
     pub c: &'static str,
     pub rust: &'static str,
     pub category: &'static str,
+    pub c_url: &'static str,
+    pub rust_url: &'static str,
 }}
 
 pub static REGISTRY: phf::Map<&'static str, SourcePair> = {};
@@ -286,4 +372,192 @@ struct MetaEntry {
     name: String,
     category: String,
     wasm_excluded: bool,
+    c_url: String,
+    rust_url: String,
+}
+
+/// Reads `submodule.<name>.url` from the workspace's `.gitmodules`. Strips a
+/// trailing `.git` and normalizes SSH-form (`git@github.com:owner/repo`) to
+/// https-form. Returns `fallback` (with a cargo:warning) on any failure.
+fn resolve_submodule_remote(workspace_root: &Path, key: &str, fallback: &str) -> String {
+    let gitmodules = workspace_root.join(".gitmodules");
+    let out = Command::new("git")
+        .args(["config", "-f"])
+        .arg(&gitmodules)
+        .arg("--get")
+        .arg(key)
+        .output();
+    match out {
+        Ok(o) if o.status.success() => {
+            let raw = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            if raw.is_empty() {
+                println!(
+                    "cargo:warning=showcase: .gitmodules has no value for {}; using fallback {}",
+                    key, fallback,
+                );
+                normalize_remote(fallback)
+            } else {
+                normalize_remote(&raw)
+            }
+        }
+        Ok(o) => {
+            println!(
+                "cargo:warning=showcase: git config -f .gitmodules --get {} exited {:?}; using fallback {}",
+                key,
+                o.status.code(),
+                fallback,
+            );
+            normalize_remote(fallback)
+        }
+        Err(e) => {
+            println!(
+                "cargo:warning=showcase: failed to invoke git for {} ({}); using fallback {}",
+                key, e, fallback,
+            );
+            normalize_remote(fallback)
+        }
+    }
+}
+
+/// Reads the showcase repo's `origin` remote, normalized to https-form +
+/// trailing-`.git`-stripped. Returns `FALLBACK_SHOWCASE_REMOTE` (with a
+/// cargo:warning) on any failure.
+fn resolve_showcase_remote(workspace_root: &Path) -> String {
+    let out = Command::new("git")
+        .args(["-C"])
+        .arg(workspace_root)
+        .args(["remote", "get-url", "origin"])
+        .output();
+    match out {
+        Ok(o) if o.status.success() => {
+            let raw = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            if raw.is_empty() {
+                println!(
+                    "cargo:warning=showcase: `git remote get-url origin` returned empty; using fallback {}",
+                    FALLBACK_SHOWCASE_REMOTE,
+                );
+                FALLBACK_SHOWCASE_REMOTE.to_string()
+            } else {
+                normalize_remote(&raw)
+            }
+        }
+        Ok(o) => {
+            println!(
+                "cargo:warning=showcase: `git remote get-url origin` exited {:?}; using fallback {}",
+                o.status.code(),
+                FALLBACK_SHOWCASE_REMOTE,
+            );
+            FALLBACK_SHOWCASE_REMOTE.to_string()
+        }
+        Err(e) => {
+            println!(
+                "cargo:warning=showcase: failed to invoke git remote get-url origin ({}); using fallback {}",
+                e, FALLBACK_SHOWCASE_REMOTE,
+            );
+            FALLBACK_SHOWCASE_REMOTE.to_string()
+        }
+    }
+}
+
+/// `git rev-parse HEAD` for a given repo / submodule, with a fallback ref
+/// (e.g. the `6.0-rc` branch name) on any failure.
+fn resolve_git_head(repo: &Path, fallback: &str) -> String {
+    if !repo.exists() {
+        println!(
+            "cargo:warning=showcase: {:?} does not exist; using ref fallback {}",
+            repo, fallback,
+        );
+        return fallback.to_string();
+    }
+    let out = Command::new("git")
+        .args(["-C"])
+        .arg(repo)
+        .args(["rev-parse", "HEAD"])
+        .output();
+    match out {
+        Ok(o) if o.status.success() => {
+            let raw = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            if raw.is_empty() {
+                println!(
+                    "cargo:warning=showcase: `git rev-parse HEAD` in {:?} returned empty; using ref fallback {}",
+                    repo, fallback,
+                );
+                fallback.to_string()
+            } else {
+                raw
+            }
+        }
+        Ok(o) => {
+            println!(
+                "cargo:warning=showcase: `git rev-parse HEAD` in {:?} exited {:?}; using ref fallback {}",
+                repo,
+                o.status.code(),
+                fallback,
+            );
+            fallback.to_string()
+        }
+        Err(e) => {
+            println!(
+                "cargo:warning=showcase: failed to invoke git rev-parse in {:?} ({}); using ref fallback {}",
+                repo, e, fallback,
+            );
+            fallback.to_string()
+        }
+    }
+}
+
+/// Normalizes a remote URL to https-form and strips a trailing `.git`.
+///
+/// Accepts:
+///   * `https://github.com/owner/repo[.git]`
+///   * `http://github.com/owner/repo[.git]`
+///   * `git@github.com:owner/repo[.git]`
+///   * `ssh://git@github.com/owner/repo[.git]`
+fn normalize_remote(raw: &str) -> String {
+    let trimmed = raw.trim();
+    // SSH short-form: `git@host:owner/repo`
+    let https = if let Some(rest) = trimmed.strip_prefix("git@") {
+        if let Some((host, path)) = rest.split_once(':') {
+            format!("https://{}/{}", host, path)
+        } else {
+            trimmed.to_string()
+        }
+    } else if let Some(rest) = trimmed.strip_prefix("ssh://git@") {
+        format!("https://{}", rest)
+    } else {
+        trimmed.to_string()
+    };
+    https.strip_suffix(".git").unwrap_or(&https).to_string()
+}
+
+/// Builds the (c_url, rust_url) pair for a single example.
+///
+/// raylib pairs:   `{raylib_remote}/blob/{raylib_sha}/examples/{category}/{name}.c`
+/// raygui pairs:   `{raygui_remote}/blob/{raygui_sha}/examples/{name}/{name}.c`
+/// Rust port:      `{showcase_remote}/blob/{showcase_sha}/showcase/examples/{category}/{name}.rs`
+fn build_urls(
+    p: &Pair,
+    raylib_remote: &str,
+    raylib_sha: &str,
+    raygui_remote: &str,
+    raygui_sha: &str,
+    showcase_remote: &str,
+    showcase_sha: &str,
+) -> (String, String) {
+    let c_url = if p.category == "raygui" {
+        format!(
+            "{}/blob/{}/examples/{}/{}.c",
+            raygui_remote, raygui_sha, p.name, p.name,
+        )
+    } else {
+        format!(
+            "{}/blob/{}/examples/{}/{}.c",
+            raylib_remote, raylib_sha, p.category, p.name,
+        )
+    };
+    let rust_url = format!(
+        "{}/blob/{}/showcase/examples/{}/{}.rs",
+        showcase_remote, showcase_sha, p.category, p.name,
+    );
+    (c_url, rust_url)
 }
