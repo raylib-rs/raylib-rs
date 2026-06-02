@@ -799,6 +799,22 @@ name = "shapes_triangle_strip"
 path = "examples/shapes/shapes_triangle_strip.rs"
 required-features = ["raygui"]
 
+[[example]]
+name = "textures_background_scrolling"
+path = "examples/textures/textures_background_scrolling.rs"
+
+[[example]]
+name = "textures_blend_modes"
+path = "examples/textures/textures_blend_modes.rs"
+
+[[example]]
+name = "textures_bunnymark"
+path = "examples/textures/textures_bunnymark.rs"
+
+[[example]]
+name = "textures_framebuffer_rendering"
+path = "examples/textures/textures_framebuffer_rendering.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
