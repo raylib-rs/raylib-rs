@@ -927,6 +927,21 @@ path = "examples/textures/textures_screen_buffer.rs"
 name = "textures_to_image"
 path = "examples/textures/textures_to_image.rs"
 
+[[example]]
+name = "scroll_panel"
+path = "examples/raygui/scroll_panel.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "portable_window"
+path = "examples/raygui/portable_window.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "floating_window"
+path = "examples/raygui/floating_window.rs"
+required-features = ["raygui"]
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
