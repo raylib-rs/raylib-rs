@@ -645,6 +645,22 @@ path = "examples/shapes/shapes_lines_drawing.rs"
 name = "shapes_lines_bezier"
 path = "examples/shapes/shapes_lines_bezier.rs"
 
+[[example]]
+name = "shapes_ball_physics"
+path = "examples/shapes/shapes_ball_physics.rs"
+
+[[example]]
+name = "shapes_bouncing_ball"
+path = "examples/shapes/shapes_bouncing_ball.rs"
+
+[[example]]
+name = "shapes_bullet_hell"
+path = "examples/shapes/shapes_bullet_hell.rs"
+
+[[example]]
+name = "shapes_double_pendulum"
+path = "examples/shapes/shapes_double_pendulum.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
