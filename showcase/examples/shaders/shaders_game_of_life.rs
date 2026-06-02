@@ -24,7 +24,9 @@ use raylib::prelude::*;
 use raylib::rgui::RaylibDrawGui;
 use raylib_showcase::SourceViewer;
 
-// We always run on PLATFORM_DESKTOP via raylib-rs; mirror the GLSL_VERSION fork's desktop value.
+#[cfg(target_family = "wasm")]
+const GLSL_VERSION: i32 = 100;
+#[cfg(not(target_family = "wasm"))]
 const GLSL_VERSION: i32 = 330;
 
 //----------------------------------------------------------------------------------

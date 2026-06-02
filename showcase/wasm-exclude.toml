@@ -62,54 +62,6 @@ name = "models_skybox_rendering"
 reason = "Loads the glsl330 skybox + cubemap shaders; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
 
 [[exclude]]
-name = "shaders_basic_lighting"
-reason = "Loads the glsl330 lighting vs/fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_basic_pbr"
-reason = "Loads the glsl330 PBR vs/fs (multi-sampler, MRA-packed textures); emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_cel_shading"
-reason = "Loads the glsl330 cel + outline_hull shaders and uses rlSetCullFace from rlgl; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_fog_rendering"
-reason = "Loads the glsl330 lighting vs + fog fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_lightmap_rendering"
-reason = "Loads the glsl330 lightmap vs/fs and patches mesh.texcoords2 via rlgl; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_ascii_rendering"
-reason = "Loads the glsl330 ascii.fs postprocess shader; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_color_correction"
-reason = "Loads the glsl330 color_correction.fs and uses raygui; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_custom_uniform"
-reason = "Loads the glsl330 swirl.fs postprocess shader; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_eratosthenes_sieve"
-reason = "Loads the glsl330 eratosthenes.fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_game_of_life"
-reason = "Loads the glsl330 game_of_life.fs and uses raygui; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_julia_set"
-reason = "Loads the glsl330 julia_set.fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
-name = "shaders_mandelbrot_set"
-reason = "Loads the glsl330 mandelbrot_set.fs; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
-
-[[exclude]]
 name = "shaders_deferred_rendering"
 reason = "Uses MRT (multi-render-targets) via rlActiveDrawBuffers + 3 colour attachments and glsl330 gbuffer/deferred_shading shaders. MRT is not exposed on WebGL1/GLES2 (emscripten's default). Desktop-only."
 
