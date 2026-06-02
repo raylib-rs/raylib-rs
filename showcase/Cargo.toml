@@ -677,6 +677,18 @@ path = "examples/shapes/shapes_easings_rectangles.rs"
 name = "shapes_easings_testbed"
 path = "examples/shapes/shapes_easings_testbed.rs"
 
+[[example]]
+name = "shapes_collision_area"
+path = "examples/shapes/shapes_collision_area.rs"
+
+[[example]]
+name = "shapes_ellipse_collision"
+path = "examples/shapes/shapes_ellipse_collision.rs"
+
+[[example]]
+name = "shapes_following_eyes"
+path = "examples/shapes/shapes_following_eyes.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
