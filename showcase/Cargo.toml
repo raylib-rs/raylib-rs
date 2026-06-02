@@ -815,6 +815,30 @@ path = "examples/textures/textures_bunnymark.rs"
 name = "textures_framebuffer_rendering"
 path = "examples/textures/textures_framebuffer_rendering.rs"
 
+[[example]]
+name = "textures_image_channel"
+path = "examples/textures/textures_image_channel.rs"
+
+[[example]]
+name = "textures_image_drawing"
+path = "examples/textures/textures_image_drawing.rs"
+
+[[example]]
+name = "textures_image_kernel"
+path = "examples/textures/textures_image_kernel.rs"
+
+[[example]]
+name = "textures_image_processing"
+path = "examples/textures/textures_image_processing.rs"
+
+[[example]]
+name = "textures_image_rotate"
+path = "examples/textures/textures_image_rotate.rs"
+
+[[example]]
+name = "textures_image_text"
+path = "examples/textures/textures_image_text.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
