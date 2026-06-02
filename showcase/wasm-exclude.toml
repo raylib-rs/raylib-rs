@@ -80,3 +80,15 @@ reason = "Loads the glsl330 lighting vs + fog fs; emscripten serves WebGL/GLES2 
 [[exclude]]
 name = "shaders_lightmap_rendering"
 reason = "Loads the glsl330 lightmap vs/fs and patches mesh.texcoords2 via rlgl; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_ascii_rendering"
+reason = "Loads the glsl330 ascii.fs postprocess shader; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_color_correction"
+reason = "Loads the glsl330 color_correction.fs and uses raygui; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_custom_uniform"
+reason = "Loads the glsl330 swirl.fs postprocess shader; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."

@@ -502,6 +502,19 @@ path = "examples/shaders/shaders_fog_rendering.rs"
 name = "shaders_lightmap_rendering"
 path = "examples/shaders/shaders_lightmap_rendering.rs"
 
+[[example]]
+name = "shaders_ascii_rendering"
+path = "examples/shaders/shaders_ascii_rendering.rs"
+
+[[example]]
+name = "shaders_color_correction"
+path = "examples/shaders/shaders_color_correction.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shaders_custom_uniform"
+path = "examples/shaders/shaders_custom_uniform.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
