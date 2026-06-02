@@ -883,6 +883,22 @@ path = "examples/textures/textures_srcrec_dstrec.rs"
 name = "textures_tiled_drawing"
 path = "examples/textures/textures_tiled_drawing.rs"
 
+[[example]]
+name = "textures_sprite_animation"
+path = "examples/textures/textures_sprite_animation.rs"
+
+[[example]]
+name = "textures_sprite_button"
+path = "examples/textures/textures_sprite_button.rs"
+
+[[example]]
+name = "textures_sprite_explosion"
+path = "examples/textures/textures_sprite_explosion.rs"
+
+[[example]]
+name = "textures_sprite_stacking"
+path = "examples/textures/textures_sprite_stacking.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
