@@ -711,6 +711,27 @@ name = "shapes_kaleidoscope"
 path = "examples/shapes/shapes_kaleidoscope.rs"
 required-features = ["raygui"]
 
+[[example]]
+name = "shapes_logo_raylib"
+path = "examples/shapes/shapes_logo_raylib.rs"
+
+[[example]]
+name = "shapes_logo_raylib_anim"
+path = "examples/shapes/shapes_logo_raylib_anim.rs"
+
+[[example]]
+name = "shapes_math_angle_rotation"
+path = "examples/shapes/shapes_math_angle_rotation.rs"
+
+[[example]]
+name = "shapes_math_sine_cosine"
+path = "examples/shapes/shapes_math_sine_cosine.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_vector_angle"
+path = "examples/shapes/shapes_vector_angle.rs"
+
 [[bin]]
 name = "gen-thumbnails"
 path = "src/bin/gen_thumbnails.rs"
