@@ -116,11 +116,22 @@ fn main() {
 
     // Per-example HTML pages: copy wasm artifacts for buildable examples,
     // or write a "desktop only" placeholder for wasm-excluded ones.
+    //
+    // The shell template (`index/example_shell.html`) is loaded once and
+    // used to synthesize the per-example HTML wrapper around the emscripten
+    // `.js` loader. We don't rely on emcc emitting HTML itself, because
+    // `cargo build --target wasm32-unknown-emscripten` invokes emcc with a
+    // `.js` output path, so emcc never enters HTML-emit mode and the
+    // `EMCC_CFLAGS --shell-file ...` is silently ignored. Synthesizing the
+    // wrapper here keeps the substitution deterministic and avoids a second
+    // emcc invocation.
     let wasm_dir = workspace_root
         .join("target")
         .join("wasm32-unknown-emscripten")
         .join("release")
         .join("examples");
+    let shell_template = fs::read_to_string(manifest_dir.join("index/example_shell.html"))
+        .expect("index/example_shell.html not found; required to synthesize per-example pages");
     for m in &metas {
         let out_dir = site.join("examples").join(&m.category);
         fs::create_dir_all(&out_dir).unwrap();
@@ -132,19 +143,36 @@ fn main() {
             continue;
         }
 
-        let mut copied_any = false;
-        for ext in &["html", "js", "wasm", "data"] {
+        // Copy the runtime artifacts emcc produced. We deliberately do NOT
+        // copy `.html` (emcc doesn't emit one — see comment above) and
+        // instead synthesize it from the shell template below.
+        let mut js_copied = false;
+        for ext in &["js", "wasm", "data"] {
             let src = wasm_dir.join(format!("{}.{}", m.name, ext));
             if src.exists() {
                 let dst = out_dir.join(format!("{}.{}", m.name, ext));
                 let _ = fs::copy(src, dst);
-                copied_any = true;
+                if *ext == "js" {
+                    js_copied = true;
+                }
             }
         }
-        // If the wasm build hasn't been run, fall back to a placeholder
-        // (with a note that the wasm artifacts haven't been built yet) so
-        // the gallery tile still resolves to a real page.
-        if !copied_any {
+        if js_copied {
+            // Substitute placeholders in the shell. `{{{ SCRIPT }}}` is the
+            // emscripten loader script tag (defaulted to async to match
+            // emscripten's own default HTML output).
+            let script_tag = format!(
+                "<script async type=\"text/javascript\" src=\"{}.js\"></script>",
+                m.name
+            );
+            let html = shell_template
+                .replace("{{{ EXAMPLE_NAME }}}", &m.name)
+                .replace("{{{ SCRIPT }}}", &script_tag);
+            fs::write(out_dir.join(format!("{}.html", m.name)), html).unwrap();
+        } else {
+            // Fall back to a placeholder noting that the wasm artifacts
+            // haven't been built yet, so the gallery tile still resolves
+            // to a real page.
             let html = render_unbuilt_wasm_placeholder(m);
             fs::write(out_dir.join(format!("{}.html", m.name)), html).unwrap();
         }
