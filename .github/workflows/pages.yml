@@ -2,7 +2,7 @@ name: pages
 
 on:
   push:
-    branches: [6.0-rc]
+    branches: [6.0-rc, unstable]
   workflow_dispatch:
 
 permissions:

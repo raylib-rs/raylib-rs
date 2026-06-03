@@ -2,7 +2,7 @@ name: test
 
 on:
   push:
-    branches: [6.0-rc]
+    branches: [6.0-rc, unstable]
   pull_request:
 
 env:
