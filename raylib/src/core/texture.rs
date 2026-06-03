@@ -955,11 +955,25 @@ impl Image {
         let c_filetype = CString::new(file_type).unwrap();
         let mut data_size = MaybeUninit::uninit();
         let data = unsafe {
-            // ExportImageToMemory returns null if the code for converting to a file type never goes off.
+            // ExportImageToMemory returns null if the file_type's encoder branch is not compiled in.
             ffi::ExportImageToMemory(self.0, c_filetype.as_ptr(), data_size.as_mut_ptr())
         };
 
-        // SAFETY: DataBuf::slice_from_raw returns None if the data ptr is null.
+        // SAFETY: `slice_from_raw`'s contract is upheld:
+        //   * `data_size` is initialized whenever `data` is non-null:
+        //     `ExportImageToMemory` writes `*dataSize = 0` unconditionally at function
+        //     entry (rtextures.c) before any branch, and on the success path
+        //     `stbi_write_png_to_mem` overwrites it with the buffer length.
+        //   * `data` is a unique, owned, non-dangling pointer allocated by `RL_MALLOC`:
+        //     `stbi_write_png_to_mem` allocates via `STBIW_MALLOC`, which `rtextures.c`
+        //     aliases to `RL_MALLOC`. The buffer escapes only via the return value.
+        //   * `data` points to `*data_size` initialized bytes: `stbi_write_png_to_mem`
+        //     fully populates the PNG stream before returning and asserts the cursor
+        //     matches `*out_len`.
+        //   * `data` is properly aligned for `u8` (trivial: alignment = 1).
+        //   * The null-return branch (unsupported format / allocation failure) is
+        //     handled by `slice_from_raw` returning `None`, so we never construct a
+        //     slice over invalid memory.
         let buf = unsafe { DataBuf::slice_from_raw(data, data_size) };
         buf.ok_or(InvalidImageError::UnsupportedFormat)
     }
