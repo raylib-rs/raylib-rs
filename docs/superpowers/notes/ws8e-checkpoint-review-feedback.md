@@ -192,6 +192,19 @@ start consuming the gallery examples.
 17. **Full PR #277 wrapper-soundness refactor** — macro-generated
     `AsRef`/`AsMut`/`Deref`/`DerefMut` on pointer-owning wrappers
     (WS3-scale).
+18. **`raylib-sys` `no_std` support** — make `raylib-sys` compile under
+    `#![no_std]` for embedded / bare-metal targets that lack `std`.
+    PR [#251](https://github.com/raylib-rs/raylib-rs/pull/251)
+    (nbe1233, open against `unstable`) is the minimal patch:
+    `#![cfg_attr(not(feature = "std"), no_std)]` on
+    `raylib-sys/src/lib.rs`, `.use_core()` on the bindgen builder,
+    `core::num::ParseIntError` (not `std::`), and a default-on `std`
+    feature. Scope is **`raylib-sys` only** — the safe `raylib` crate
+    uses `String`/`Vec` throughout and is not a no_std candidate.
+    Originally tagged `adapt → WS1` in `inventory.md`, but WS1's
+    bindgen regeneration didn't pull in the core/std split; queued
+    here for adoption after `final-release` ships `6.0.0` to
+    crates.io. Author attribution belongs to nbe1233.
 
 ### Long-tail
 
