@@ -16,11 +16,12 @@ env:
   WS9_STRICT_PAIRING: "1"
   # sccache + rust-cache interaction: disable incremental in CI to avoid
   # false misses caused by the rustc-wrapper showing up in incremental metadata.
-  CARGO_INCREMENTAL: 0
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: sccache
-  CMAKE_C_COMPILER_LAUNCHER: sccache
-  CMAKE_CXX_COMPILER_LAUNCHER: sccache
+  # TODO(re-enable): GHA artifact-cache outage 2026-06-02 — sccache disabled until cache recovers
+  # CARGO_INCREMENTAL: 0
+  # SCCACHE_GHA_ENABLED: "true"
+  # RUSTC_WRAPPER: sccache
+  # CMAKE_C_COMPILER_LAUNCHER: sccache
+  # CMAKE_CXX_COMPILER_LAUNCHER: sccache
 
 jobs:
   build:
@@ -40,7 +41,7 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install cmake
       - uses: dtolnay/rust-toolchain@1.85.0
-      - uses: mozilla-actions/sccache-action@v0.0.6
+      # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
@@ -78,7 +79,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.85.0
         with:
           targets: wasm32-unknown-emscripten
-      - uses: mozilla-actions/sccache-action@v0.0.6
+      # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:

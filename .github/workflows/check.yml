@@ -21,12 +21,13 @@ jobs:
     # sccache + rust-cache interaction: cargo records the wrapper in incremental
     # metadata, which can cause false cache misses. Disable incremental in CI —
     # it rarely helps clean-build CI anyway.
-    env:
-      CARGO_INCREMENTAL: 0
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: sccache
-      CMAKE_C_COMPILER_LAUNCHER: sccache
-      CMAKE_CXX_COMPILER_LAUNCHER: sccache
+    # TODO(re-enable): GHA artifact-cache outage 2026-06-02 — sccache disabled until cache recovers
+    # env:
+    #   CARGO_INCREMENTAL: 0
+    #   SCCACHE_GHA_ENABLED: "true"
+    #   RUSTC_WRAPPER: sccache
+    #   CMAKE_C_COMPILER_LAUNCHER: sccache
+    #   CMAKE_CXX_COMPILER_LAUNCHER: sccache
     steps:
       - uses: actions/checkout@v5
         with:
@@ -34,7 +35,7 @@ jobs:
       - name: Install Linux build deps
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
       - run: rustup component add clippy
-      - uses: mozilla-actions/sccache-action@v0.0.6
+      # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
@@ -48,19 +49,20 @@ jobs:
 
   docs:
     runs-on: ubuntu-latest
-    env:
-      CARGO_INCREMENTAL: 0
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: sccache
-      CMAKE_C_COMPILER_LAUNCHER: sccache
-      CMAKE_CXX_COMPILER_LAUNCHER: sccache
+    # TODO(re-enable): GHA artifact-cache outage 2026-06-02 — sccache disabled until cache recovers
+    # env:
+    #   CARGO_INCREMENTAL: 0
+    #   SCCACHE_GHA_ENABLED: "true"
+    #   RUSTC_WRAPPER: sccache
+    #   CMAKE_C_COMPILER_LAUNCHER: sccache
+    #   CMAKE_CXX_COMPILER_LAUNCHER: sccache
     steps:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Install Linux build deps
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
-      - uses: mozilla-actions/sccache-action@v0.0.6
+      # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
@@ -84,12 +86,13 @@ jobs:
 
   msrv:
     runs-on: ubuntu-latest
-    env:
-      CARGO_INCREMENTAL: 0
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: sccache
-      CMAKE_C_COMPILER_LAUNCHER: sccache
-      CMAKE_CXX_COMPILER_LAUNCHER: sccache
+    # TODO(re-enable): GHA artifact-cache outage 2026-06-02 — sccache disabled until cache recovers
+    # env:
+    #   CARGO_INCREMENTAL: 0
+    #   SCCACHE_GHA_ENABLED: "true"
+    #   RUSTC_WRAPPER: sccache
+    #   CMAKE_C_COMPILER_LAUNCHER: sccache
+    #   CMAKE_CXX_COMPILER_LAUNCHER: sccache
     steps:
       - uses: actions/checkout@v5
         with:
@@ -97,7 +100,7 @@ jobs:
       - name: Install Linux build deps
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
       - uses: dtolnay/rust-toolchain@1.85.0
-      - uses: mozilla-actions/sccache-action@v0.0.6
+      # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
