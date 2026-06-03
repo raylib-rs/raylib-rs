@@ -34,7 +34,11 @@ use raylib::prelude::*;
 use raylib::rlgl::RaylibRlgl;
 use raylib_showcase::SourceViewer;
 
-// Always glsl330 in this Rust port (desktop only; raylib-rs pins glsl330)
+// Mirror the C #if PLATFORM_DESKTOP / #else fork: glsl330 on desktop,
+// glsl100 on web (WebGL/GLES2) — same cfg pattern as the shaders ports.
+#[cfg(target_family = "wasm")]
+const GLSL_VERSION: i32 = 100;
+#[cfg(not(target_family = "wasm"))]
 const GLSL_VERSION: i32 = 330;
 
 //--------------------------------------------------------------------------------------
