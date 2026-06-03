@@ -15,6 +15,27 @@ header { padding: 1rem; border-bottom: 1px solid #888; }
 header h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
 .banner { margin: 0 0 0.75rem; font-size: 0.85rem; opacity: 0.8; }
 
+.site-nav {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+.site-nav a {
+  color: inherit;
+  text-decoration: none;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+.site-nav a:hover { border-color: #888; }
+.site-nav a[aria-current="page"] {
+  border-color: #888;
+  opacity: 0.7;
+  cursor: default;
+}
+
 #filter {
   width: 100%;
   max-width: 32rem;

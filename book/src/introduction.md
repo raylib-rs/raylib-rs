@@ -1,5 +1,7 @@
 # Introduction
 
+> **Looking for runnable examples?** The [**showcase gallery**](https://raylib-rs.github.io/raylib-rs/) ships every raylib example as a live, in-browser Rust port with side-by-side C↔Rust source. This book is the narrative companion.
+
 raylib-rs is a safe, idiomatic Rust binding to raylib 6.0 — the simple and easy-to-use game programming library. It lets you write 2D/3D games, simulations, and visualizations in Rust with the same low-ceremony feel as the original C library, without requiring `unsafe` in user code.
 
 ## Who this is for
@@ -24,7 +26,7 @@ raylib-rs 6.0 covers the full raylib 6.0 surface:
 
 - **The C raylib reference** — see [raylib.com](https://www.raylib.com/) for the upstream API docs.
 - **The rustdoc API reference** — generated from doc comments; published to docs.rs with each crate release.
-- **The showcase examples** — full ports of the raylib C example set, shipping as a GitHub Pages site in WS9.
+- **The showcase examples** — full ports of the raylib C example set, live at <https://raylib-rs.github.io/raylib-rs/>.
 
 ## How to read this book
 

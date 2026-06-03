@@ -55,6 +55,10 @@ jobs:
           # Single shared cache across native preflight + wasm + thumbnails
           # since all three share the same workspace target dir.
           shared-key: pages
+      - name: Set up mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: '0.5.3'
       - name: Populate examples_meta.json (release)
         run: cargo build -p raylib-showcase --release --examples
       - name: Build all wasm examples
@@ -63,6 +67,10 @@ jobs:
         run: cargo run -p raylib-showcase --release --features software_renderer --bin gen-thumbnails
       - name: Assemble Pages site
         run: cargo run -p raylib-showcase --release --bin xtask-build-pages
+      - name: Build the mdBook
+        run: mdbook build book
+      - name: Mount book under /book/ in the Pages site
+        run: cp -r book/book showcase/_site/book
       - uses: actions/upload-pages-artifact@v3
         with:
           path: showcase/_site

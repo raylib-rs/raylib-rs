@@ -143,13 +143,15 @@ Each `SUPPORT_*` capability from raylib's `config.h` is exposed as a Cargo featu
 
 ## The book
 
-Narrative documentation lives in [`book/`](./book/) and is published by the `book` workflow. **28 chapters** organized as:
+Narrative documentation lives in [`book/`](./book/) and is deployed alongside the showcase gallery by the `pages` workflow. **28 chapters** organized as:
 
 - **Getting Started** — quickstart, Windows / macOS / Linux / Web install guides, deferred targets.
 - **Core Concepts** — `RaylibHandle`/`RaylibThread`, RAII and resources, strings and allocations, safety, features and platforms.
 - **Modules** — window and drawing, input, shapes, textures and images, text and fonts, 3D models, audio, raymath, collision, raygui, rlgl, software renderer, callbacks and logging, error handling.
 - **Ecosystem** — `glam` / `mint` / `serde` interop, what comes next.
 - **Appendix** — Showcase examples index (links each module chapter to its runnable examples).
+
+**Live site:** <https://raylib-rs.github.io/raylib-rs/book/>.
 
 Build locally: `mdbook serve book` (after `cargo install mdbook`).
 
@@ -161,7 +163,7 @@ Build locally: `mdbook serve book` (after `cargo install mdbook`).
 - An in-canvas **F1 source-viewer overlay** with **C-vs-Rust tabs** and a "Source on GitHub" deep-link footer (URLs derived at build time from `.gitmodules` + submodule SHAs, so links resolve to the exact upstream commit).
 - A **Pages gallery** with thumbnail tiles, per-tile C/Rust GitHub links, a name filter, and per-example emscripten output wrapped in gallery chrome via a shared `example_shell.html`.
 
-Live site: <https://raylib-rs.github.io/raylib-rs/>.
+**Live site:** <https://raylib-rs.github.io/raylib-rs/> (book lives at <https://raylib-rs.github.io/raylib-rs/book/> on the same deploy).
 
 Run an example locally:
 
