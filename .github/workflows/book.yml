@@ -1,0 +1,59 @@
+name: book
+
+on:
+  push:
+    branches: [6.0-rc, unstable, master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  # sccache + rust-cache interaction: disable incremental in CI to avoid
+  # false misses caused by the rustc-wrapper showing up in incremental metadata.
+  # TODO(re-enable): GHA artifact-cache outage 2026-06-02 — sccache disabled until cache recovers
+  # CARGO_INCREMENTAL: 0
+  # SCCACHE_GHA_ENABLED: "true"
+  # RUSTC_WRAPPER: sccache
+  # CMAKE_C_COMPILER_LAUNCHER: sccache
+  # CMAKE_CXX_COMPILER_LAUNCHER: sccache
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Force stable toolchain for all steps so cargo build and mdbook test
+      # both use the same rustc, avoiding rlib/rustdoc version mismatch.
+      RUSTUP_TOOLCHAIN: stable
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install Linux build deps (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+          version: 6.0-book-v1
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: book
+
+      - name: Set up mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: '0.5.3'   # pinned after first green run (was 'latest')
+
+      - name: Build raylib (debug; needed by mdbook test for doctest linking)
+        run: cargo build -p raylib --features full
+
+      - name: Build the book
+        run: mdbook build book
+
+      - name: Run book doctests
+        run: mdbook test book -L target/debug/deps

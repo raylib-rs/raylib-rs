@@ -14,7 +14,38 @@ use std::mem::ManuallyDrop;
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
-    /// Font, font texture and GlyphInfo array data
+    /// Font: a glyph atlas texture plus per-glyph metrics.
+    ///
+    /// raylib ships a built-in default font (used when `None` or no font is specified in
+    /// draw-text calls). User-defined fonts are loaded via `RaylibHandle` methods:
+    ///
+    /// - [`RaylibHandle::load_font`] — loads the default size and full glyph set from a
+    ///   TTF/BDF/FNT file.
+    /// - [`RaylibHandle::load_font_ex`] — loads with an explicit point size and optional
+    ///   Unicode codepoint list (pass `None` for the entire set).
+    /// - [`RaylibHandle::load_font_from_image`] — XNA-style bitmap font from an image.
+    /// - [`RaylibHandle::load_font_from_memory`] — loads from an in-memory file buffer.
+    ///
+    /// Freed via `UnloadFont` on drop.
+    ///
+    /// # Examples
+    ///
+    /// Load a font with explicit size and a Latin-1 subset, then draw text:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("font demo").build();
+    /// // Load a TTF at 32 pt, restricting to printable ASCII (codepoints 32-126).
+    /// let ascii: String = (32u8..=126).map(|c| c as char).collect();
+    /// let font = rl
+    ///     .load_font_ex(&thread, "assets/Roboto.ttf", 32, Some(&ascii))
+    ///     .unwrap();
+    /// while !rl.window_should_close() {
+    ///     let mut d = rl.begin_drawing(&thread);
+    ///     d.clear_background(Color::RAYWHITE);
+    ///     d.draw_text_ex(&font, "Hello, raylib!", Vector2::new(10.0, 10.0), 32.0, 2.0, Color::BLACK);
+    /// }
+    /// ```
     Font,
     ffi::Font,
     ffi::UnloadFont
@@ -27,6 +58,25 @@ make_thin_wrapper!(
     no_drop
 );
 
+/// An owned slice of [`GlyphInfo`] data allocated by raylib, freed via `UnloadFontData` on drop.
+///
+/// Wraps a raylib-allocated `Box<[GlyphInfo]>` and calls `UnloadFontData` on drop so the
+/// glyph buffer is returned to raylib's allocator rather than Rust's. Implements
+/// [`Deref`](std::ops::Deref) + [`DerefMut`](std::ops::DerefMut) to `Box<[GlyphInfo]>` so
+/// it acts like a slice: index with `slice[i]`, iterate with `slice.iter()`, or read
+/// `slice.len()` directly.
+///
+/// # Construction
+///
+/// `RSliceGlyphInfo` has no public constructor; instances are produced by
+/// internal font-loading paths and surface to callers through [`Font`]'s loading APIs.
+/// Never call `libc::free` on the inner data pointer — the `Drop` impl routes through
+/// `UnloadFontData` so custom allocators stay correct.
+///
+/// # See also
+///
+/// - [`GlyphInfo`] — per-codepoint metrics held in the slice.
+/// - [`Font`] — owning font built from this glyph data.
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct RSliceGlyphInfo(pub(crate) std::mem::ManuallyDrop<std::boxed::Box<[GlyphInfo]>>);
@@ -83,13 +133,13 @@ impl std::ops::DerefMut for RSliceGlyphInfo {
 
 impl AsRef<ffi::Texture2D> for Font {
     fn as_ref(&self) -> &ffi::Texture2D {
-        return &self.0.texture;
+        &self.0.texture
     }
 }
 
 impl AsRef<ffi::Texture2D> for WeakFont {
     fn as_ref(&self) -> &ffi::Texture2D {
-        return &self.0.texture;
+        &self.0.texture
     }
 }
 
@@ -140,7 +190,6 @@ impl RaylibHandle {
 
     /// Loads font from file into GPU memory (VRAM).
     #[inline]
-    #[must_use]
     pub fn load_font(&mut self, _: &RaylibThread, filename: &str) -> Result<Font, LoadFontError> {
         let c_filename = CString::new(filename).unwrap();
         let f = unsafe { ffi::LoadFont(c_filename.as_ptr()) };
@@ -155,7 +204,6 @@ impl RaylibHandle {
     /// Loads font from file with extended parameters.
     /// Supplying None for chars loads the entire character set.
     #[inline]
-    #[must_use]
     pub fn load_font_ex(
         &mut self,
         _: &RaylibThread,
@@ -188,7 +236,6 @@ impl RaylibHandle {
 
     /// Load font from Image (XNA style)
     #[inline]
-    #[must_use]
     pub fn load_font_from_image(
         &mut self,
         _: &RaylibThread,
@@ -206,7 +253,6 @@ impl RaylibHandle {
     /// `file_type` refers to the extension, e.g. ".ttf".
     /// You can pass Some(...) to chars to get the desired characters, or None to get the whole set.
     #[inline]
-    #[must_use]
     pub fn load_font_from_memory(
         &mut self,
         _: &RaylibThread,
@@ -255,6 +301,7 @@ impl RaylibHandle {
         sdf: i32,
     ) -> Option<GlyphInfo> {
         unsafe {
+            let mut glyph_count: i32 = 0;
             let glyph_info = match chars {
                 Some(c) => {
                     let mut co = self.load_codepoints(c);
@@ -265,6 +312,7 @@ impl RaylibHandle {
                         co.0.as_mut_ptr(),
                         co.0.len().try_into().expect(TOO_MANY_CODEPOINTS),
                         sdf,
+                        &mut glyph_count,
                     )
                 }
                 None => ffi::LoadFontData(
@@ -274,13 +322,14 @@ impl RaylibHandle {
                     std::ptr::null_mut(),
                     0,
                     sdf,
+                    &mut glyph_count,
                 ),
             };
             if glyph_info.is_null() {
                 return None;
             }
 
-            return Some(GlyphInfo::from_raw(*glyph_info));
+            Some(GlyphInfo::from_raw(*glyph_info))
         }
     }
 }
@@ -288,6 +337,36 @@ impl RaylibHandle {
 impl RaylibFont for WeakFont {}
 impl RaylibFont for Font {}
 
+/// Extension methods for types that wrap a raylib `Font` (both owned [`Font`] and [`WeakFont`]).
+///
+/// Implemented for [`Font`] (RAII-owned) and [`WeakFont`] (no-drop alias from
+/// [`Font::make_weak`]). Provides field accessors ([`base_size`](Self::base_size),
+/// [`texture`](Self::texture), [`chars`](Self::chars), [`chars_mut`](Self::chars_mut)),
+/// validity check ([`is_font_valid`](Self::is_font_valid)), glyph-table lookups
+/// ([`get_glyph_info`](Self::get_glyph_info),
+/// [`get_glyph_index`](Self::get_glyph_index),
+/// [`get_glyph_atlas_rec`](Self::get_glyph_atlas_rec)), the measurement helper
+/// [`measure_text`](Self::measure_text), and the code-export helper
+/// [`export_font_as_code`](Self::export_font_as_code).
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::text::RaylibFont;
+///
+/// let (mut rl, thread) = raylib::init().size(640, 480).title("font").build();
+/// let font = rl
+///     .load_font(&thread, "assets/font.ttf")
+///     .expect("font load");
+/// let size = font.measure_text("hello", 32.0, 1.0);
+/// println!("rendered width: {}", size.x);
+/// ```
+///
+/// # See also
+///
+/// - [`Font`] — owning font handle.
+/// - [`GlyphInfo`] — per-codepoint metrics returned by [`get_glyph_info`](Self::get_glyph_info).
 pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     /// Base size (default chars height)
     #[inline]
@@ -359,27 +438,52 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     #[inline]
     #[must_use]
     fn get_glyph_atlas_rec(&self, codepoint: char) -> Rectangle {
-        unsafe { ffi::GetGlyphAtlasRec(*self.as_ref(), codepoint as i32).into() }
+        unsafe { ffi::GetGlyphAtlasRec(*self.as_ref(), codepoint as i32) }
     }
 
     /// Measures string width in pixels for `font`.
     #[must_use]
     fn measure_text(&self, text: &str, font_size: f32, spacing: f32) -> Vector2 {
         let c_text = CString::new(text).unwrap();
-        unsafe { ffi::MeasureTextEx(*self.as_ref(), c_text.as_ptr(), font_size, spacing).into() }
+        unsafe { ffi::MeasureTextEx(*self.as_ref(), c_text.as_ptr(), font_size, spacing) }
     }
 }
 
 impl Font {
+    /// Converts this `Font` into a [`WeakFont`] that does not run `UnloadFont` on drop.
+    ///
+    /// Use this when you want to hand a font to code that holds it by `WeakFont` (e.g. a
+    /// renderer that doesn't own the resource) **and** you take responsibility for
+    /// unloading the GPU atlas yourself. Forgets the owning `Font` so the `Drop` impl
+    /// doesn't run; the returned `WeakFont` keeps the same texture and glyph table but
+    /// will *not* free them on drop.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use raylib::prelude::*;
+    ///
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("font").build();
+    /// let font = rl
+    ///     .load_font(&thread, "assets/font.ttf")
+    ///     .expect("font load");
+    /// let weak = font.make_weak();
+    /// // `weak` is now an alias with no drop responsibility — the atlas leaks unless
+    /// // ownership is reclaimed before `weak` goes out of scope.
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`WeakFont`] — the returned no-drop alias type.
+    /// - [`Font`] — owning counterpart.
     #[inline]
     #[must_use]
     pub fn make_weak(self) -> WeakFont {
         let w = WeakFont(self.0);
         std::mem::forget(self);
-        return w;
+        w
     }
     /// Returns a new `Font` using provided `GlyphInfo` data and parameters.
-    #[must_use]
     fn from_data(
         chars: &[ffi::GlyphInfo],
         base_size: i32,
@@ -460,7 +564,7 @@ pub fn gen_image_font_atlas(
         recs.set_len(chars.len());
         std::ptr::copy(ptr, recs.as_mut_ptr(), chars.len());
         ffi::MemFree(ptr as *mut ::std::os::raw::c_void);
-        return (img, recs);
+        (img, recs)
     }
 }
 

@@ -6,7 +6,7 @@
 #![warn(clippy::style, clippy::pedantic, clippy::perf)]
 #![allow(
     clippy::missing_errors_doc,
-    reason = "errors are documented at their defintion, not by the functions that use them"
+    reason = "errors are documented at their definition, not by the functions that use them"
 )]
 #![warn(
     clippy::unnecessary_safety_comment,
@@ -202,7 +202,7 @@ pub use rl_managed::*;
 /// - `buf` must be safe to dereference.
 /// - `buf` must be a **unique, owned** pointer (not to static or local memory, and the memory must not be
 ///   accessible through any pointers/references not derived from the returned [`DataBuf`]).
-/// - `buf` must point to [valid](https://doc.rust-lang.org/std/ptr/index.html#safety), intialized data.
+/// - `buf` must point to [valid](https://doc.rust-lang.org/std/ptr/index.html#safety), initialized data.
 /// - `buf` must be [convertible to a reference](std::ptr#pointer-to-reference-conversion).
 /// - `buf` must have been created with `RL_MALLOC`/[`ffi::MemAlloc`] or `RL_REALLOC`/[`ffi::MemRealloc`].
 ///
@@ -212,7 +212,7 @@ pub use rl_managed::*;
 ///
 /// If the pointer is expected to be conditionally deallocated by Raylib,
 /// (i.e. conditionally passing the buffer to a Raylib function that will certainly deallocatate it)
-/// use [`DataBuf::leak`] to prevent [`DataBuf::drop`] from causing a double-free.
+/// use [`DataBuf::into_inner`] to prevent the [`Drop`] impl from causing a double-free.
 #[derive(Debug)]
 #[repr(transparent)]
 #[must_use]

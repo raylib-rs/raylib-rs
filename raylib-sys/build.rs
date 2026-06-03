@@ -45,6 +45,21 @@ impl bindgen::callbacks::ParseCallbacks for IgnoreMacros {
 }
 
 #[derive(Debug)]
+struct SerdeOnMath;
+
+impl bindgen::callbacks::ParseCallbacks for SerdeOnMath {
+    fn add_derives(&self, info: &bindgen::callbacks::DeriveInfo) -> Vec<String> {
+        match info.name {
+            "Vector2" | "Vector3" | "Vector4" | "Matrix" => vec![
+                "serde::Serialize".to_string(),
+                "serde::Deserialize".to_string(),
+            ],
+            _ => vec![],
+        }
+    }
+}
+
+#[derive(Debug)]
 struct TypeOverrideCallback;
 
 impl ParseCallbacks for TypeOverrideCallback {
@@ -58,20 +73,29 @@ impl ParseCallbacks for TypeOverrideCallback {
             DeriveTrait::Debug,
             DeriveTrait::PartialEqOrPartialOrd,
         ];
-        let overridden_types = [
-            "Vector2",
-            "Vector3",
-            "Vector4",
-            "Matrix",
-            "Quaternion",
-            "Rectangle",
-            "Color",
-        ];
+        let overridden_types = ["Quaternion", "Rectangle", "Color"];
 
         (OK_TRAITS.contains(&derive_trait) && overridden_types.contains(&name))
             .then_some(ImplementsTrait::Yes)
     }
 }
+
+#[cfg(all(
+    feature = "software_renderer",
+    any(
+        feature = "opengl_11",
+        feature = "opengl_21",
+        feature = "opengl_33",
+        feature = "opengl_43",
+        feature = "opengl_es_20",
+        feature = "opengl_es_30",
+        feature = "drm",
+    )
+))]
+compile_error!(
+    "feature `software_renderer` (PLATFORM=Memory) is mutually exclusive with the \
+     opengl_* backends and `drm`; enable it with default-features = false."
+);
 
 #[cfg(feature = "nobuild")]
 fn build_with_cmake(_src_path: &str) {}
@@ -171,9 +195,10 @@ fn build_with_cmake(src_path: &str) {
                 conf.define("PLATFORM", "Desktop")
             }
         }
+        Platform::Memory => conf.define("PLATFORM", "Memory"),
         Platform::Web => conf.define("PLATFORM", "Web"),
-        Platform::DRM => conf.define("PLATFORM", "DRM"),
-        Platform::RPI => conf.define("PLATFORM", "Raspberry Pi"),
+        Platform::Drm => conf.define("PLATFORM", "DRM"),
+        Platform::Rpi => conf.define("PLATFORM", "Raspberry Pi"),
         Platform::Android => {
             // get required env variables
             let android_ndk_home = env::var("ANDROID_NDK_HOME")
@@ -262,8 +287,9 @@ fn gen_bindings() {
 
     let plat = match platform {
         Platform::Desktop => "-DPLATFORM_DESKTOP",
-        Platform::DRM => "-DPLATFORM_DRM",
-        Platform::RPI => "-DPLATFORM_RPI",
+        Platform::Memory => "-DPLATFORM_MEMORY",
+        Platform::Drm => "-DPLATFORM_DRM",
+        Platform::Rpi => "-DPLATFORM_RPI",
         Platform::Android => "-DPLATFORM_ANDROID",
         Platform::Web => "-DPLATFORM_WEB",
     };
@@ -295,10 +321,6 @@ fn gen_bindings() {
         .rustified_enum(".+")
         .derive_partialeq(true)
         .derive_default(true)
-        .blocklist_type("Vector2")
-        .blocklist_type("Vector3")
-        .blocklist_type("Vector4")
-        .blocklist_type("Matrix")
         .blocklist_type("Quaternion")
         .blocklist_type("Rectangle")
         .blocklist_type("Color")
@@ -309,6 +331,14 @@ fn gen_bindings() {
         .clang_arg("-I../raylib/src")
         .clang_arg("-std=c99")
         .clang_arg(plat)
+        // RAYMATH_IMPLEMENTATION makes RMAPI expand to `extern inline` so
+        // bindgen sees the raymath functions as non-static external declarations
+        // and generates Rust FFI stubs for them.  The matching external symbols
+        // are provided by the raymath_shim static library (gen_raymath).
+        .clang_arg("-DRAYMATH_IMPLEMENTATION")
+        // Emit Rust `extern "C"` declarations for raymath's inline functions.
+        // External symbols are provided by the raymath_shim static library.
+        .generate_inline_functions(true)
         .parse_callbacks(Box::new(ignored_macros));
 
     if platform == Platform::Desktop && os == PlatformOS::Windows {
@@ -322,6 +352,10 @@ fn gen_bindings() {
             .clang_arg("--target=wasm32-emscripten");
     }
 
+    if std::env::var("CARGO_FEATURE_SERDE").is_ok() {
+        builder = builder.parse_callbacks(Box::new(SerdeOnMath));
+    }
+
     // Build
     let bindings = builder.generate().expect("Unable to generate bindings");
 
@@ -329,10 +363,20 @@ fn gen_bindings() {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
+
+    // Export the raylib include path so dependent crates (e.g. other raylib C-utility sys-crates)
+    // can compose against the same headers without version drift.  Accessible as
+    // the `DEP_RAYLIB_INCLUDE` environment variable in the downstream build script.
+    println!("cargo::metadata=include={}/include", out_path.display());
 }
 
 fn gen_rgui() {
-    // Compile the code and link with cc crate
+    // Compile the code and link with cc crate.
+    //
+    // Allocator unification (RAYGUI_MALLOC → RL_MALLOC etc.) is done in
+    // binding/rgui_wrapper.c itself, not via `.define()` here, so that the
+    // RL_* macros from raylib.h are in scope before the RAYGUI_* defines
+    // take effect. See the comment block at the top of rgui_wrapper.c.
     cc::Build::new()
         .files(vec!["binding/rgui_wrapper.c"])
         .include("binding")
@@ -351,6 +395,15 @@ fn gen_utils() {
         .compile("utils_log");
 }
 
+fn gen_raymath() {
+    cc::Build::new()
+        .files(vec!["binding/raymath_shim.c"])
+        .include("binding")
+        .warnings(false)
+        .extra_warnings(false)
+        .compile("raymath_shim");
+}
+
 #[cfg(feature = "nobuild")]
 fn link(_platform: Platform, _platform_os: PlatformOS) {
     println!("cargo:rustc-link-lib=dylib=raylib");
@@ -358,6 +411,13 @@ fn link(_platform: Platform, _platform_os: PlatformOS) {
 
 #[cfg(not(feature = "nobuild"))]
 fn link(platform: Platform, platform_os: PlatformOS) {
+    if platform == Platform::Memory {
+        if platform_os == PlatformOS::Windows {
+            println!("cargo:rustc-link-lib=dylib=winmm");
+        }
+        println!("cargo:rustc-link-lib=static=raylib");
+        return;
+    }
     match platform_os {
         PlatformOS::Windows => {
             println!("cargo:rustc-link-lib=dylib=winmm");
@@ -381,7 +441,7 @@ fn link(platform: Platform, platform_os: PlatformOS) {
                 println!("cargo:rustc-link-lib=glfw"); // Link against locally installed glfw
             }
         }
-        PlatformOS::OSX => {
+        PlatformOS::Osx => {
             println!("cargo:rustc-link-search=native=/usr/local/lib");
             println!("cargo:rustc-link-lib=framework=OpenGL");
             println!("cargo:rustc-link-lib=framework=Cocoa");
@@ -393,11 +453,11 @@ fn link(platform: Platform, platform_os: PlatformOS) {
     }
     if platform == Platform::Web {
         println!("cargo:rustc-link-lib=glfw");
-    } else if platform == Platform::DRM {
+    } else if platform == Platform::Drm {
         println!("cargo:rustc-link-lib=EGL");
         println!("cargo:rustc-link-lib=drm");
         println!("cargo:rustc-link-lib=gbm");
-    } else if platform == Platform::RPI {
+    } else if platform == Platform::Rpi {
         println!("cargo:rustc-link-search=/opt/vc/lib");
         println!("cargo:rustc-link-lib=bcm_host");
         println!("cargo:rustc-link-lib=brcmEGL");
@@ -461,13 +521,25 @@ fn main() {
 
     link(platform, platform_os);
 
-    #[cfg(feature = "raygui")] {
+    #[cfg(feature = "raygui")]
+    {
         gen_rgui();
     }
 
-    #[cfg(not(feature = "nobuild"))] {
+    #[cfg(not(feature = "nobuild"))]
+    {
         gen_utils();
+        gen_raymath();
     }
+
+    // ENABLE_UBSAN: the C side is instrumented via cmake's CompilerFlags.cmake
+    // (-fsanitize=undefined). The Rust link step needs `-lubsan` explicitly because
+    // `-Z build-std` passes `-nodefaultlibs` to gcc, suppressing its normal
+    // auto-injection of libubsan from `-fsanitize=undefined`. Emitting
+    // `cargo:rustc-link-lib=ubsan` here puts `-lubsan` in the correct position
+    // (after the rlibs that reference __ubsan_handle_*).
+    #[cfg(feature = "ENABLE_UBSAN")]
+    println!("cargo:rustc-link-lib=ubsan");
 }
 
 #[must_use]
@@ -480,10 +552,12 @@ fn is_directory_empty(path: &str) -> bool {
 }
 
 fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
-    let platform = if cfg!(feature = "drm") {
-        Platform::DRM
+    let platform = if cfg!(feature = "software_renderer") {
+        Platform::Memory
+    } else if cfg!(feature = "drm") {
+        Platform::Drm
     } else if cfg!(feature = "legacy_rpi") {
-        Platform::RPI
+        Platform::Rpi
     } else if target.contains("wasm") {
         Platform::Web
     } else if target.contains("android") {
@@ -492,7 +566,7 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
         Platform::Desktop
     };
 
-    let platform_os = if platform == Platform::Desktop {
+    let platform_os = if matches!(platform, Platform::Desktop | Platform::Memory) {
         // Determine PLATFORM_OS in case PLATFORM_DESKTOP selected
         if env::var("OS")
             .unwrap_or("".to_owned())
@@ -508,15 +582,15 @@ fn platform_from_target(target: &str) -> (Platform, PlatformOS) {
             let un: &str = &uname();
             match un {
                 "Linux" => PlatformOS::Linux,
-                "FreeBSD" => PlatformOS::BSD,
-                "OpenBSD" => PlatformOS::BSD,
-                "NetBSD" => PlatformOS::BSD,
-                "DragonFly" => PlatformOS::BSD,
-                "Darwin" => PlatformOS::OSX,
+                "FreeBSD" => PlatformOS::Bsd,
+                "OpenBSD" => PlatformOS::Bsd,
+                "NetBSD" => PlatformOS::Bsd,
+                "DragonFly" => PlatformOS::Bsd,
+                "Darwin" => PlatformOS::Osx,
                 _ => panic!("Unknown platform {}", uname()),
             }
         }
-    } else if matches!(platform, Platform::DRM | Platform::RPI | Platform::Android) {
+    } else if matches!(platform, Platform::Drm | Platform::Rpi | Platform::Android) {
         let un: &str = &uname();
         if un == "Linux" {
             PlatformOS::Linux
@@ -547,16 +621,17 @@ enum Platform {
     Web,
     Desktop,
     Android,
-    DRM,
-    RPI, // legacy raspberry pi
+    Drm,
+    Rpi,    // legacy raspberry pi
+    Memory, // raylib 6.0 windowless software-render platform (PLATFORM=Memory)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum PlatformOS {
     Windows,
     Linux,
-    BSD,
-    OSX,
+    Bsd,
+    Osx,
     Unknown,
 }
 
@@ -571,8 +646,17 @@ fn features_from_env(cmake: &mut Config) {
     cmake.define("WITH_PIC", bstr(cfg!(feature = "WITH_PIC")));
     cmake.define("BUILD_SHARED_LIBS", bstr(cfg!(feature = "BUILD_SHARED_LIBS")));
     cmake.define("USE_EXTERNAL_GLFW", bstr(cfg!(feature = "USE_EXTERNAL_GLFW")));
+    // PLATFORM=Memory neither builds nor links GLFW, but raylib's top-level CMake still
+    // raises a FATAL_ERROR on Linux ("Cannot disable both Wayland and X11") for any
+    // non-DRM/non-Web platform when both GLFW backends are off. Force X11 on under
+    // software_renderer to satisfy that guard — the GLFW X11 backend is not compiled
+    // for the Memory platform.
+    let force_x11 = cfg!(feature = "software_renderer");
     cmake.define("GLFW_BUILD_WAYLAND", bstr(cfg!(feature = "GLFW_BUILD_WAYLAND") && !is_android));
-    cmake.define("GLFW_BUILD_X11", bstr(cfg!(feature = "GLFW_BUILD_X11") && !is_android));
+    cmake.define(
+        "GLFW_BUILD_X11",
+        bstr((cfg!(feature = "GLFW_BUILD_X11") || force_x11) && !is_android),
+    );
     cmake.define("INCLUDE_EVERYTHING", bstr(cfg!(feature = "INCLUDE_EVERYTHING")));
     cmake.define("USE_AUDIO", bstr(cfg!(feature = "USE_AUDIO")));
     cmake.define("SUPPORT_MODULE_RSHAPES", bstr(cfg!(feature = "SUPPORT_MODULE_RSHAPES")));
@@ -588,7 +672,6 @@ fn features_from_env(cmake: &mut Config) {
     cmake.define("SUPPORT_SSH_KEYBOARD_RPI", bstr(cfg!(feature = "SUPPORT_SSH_KEYBOARD_RPI")));
     cmake.define("SUPPORT_WINMM_HIGHRES_TIMER", bstr(cfg!(feature = "SUPPORT_WINMM_HIGHRES_TIMER")));
     cmake.define("SUPPORT_PARTIALBUSY_WAIT_LOOP", bstr(cfg!(feature = "SUPPORT_PARTIALBUSY_WAIT_LOOP")));
-    cmake.define("SUPPORT_GIF_RECORDING", bstr(cfg!(feature = "SUPPORT_GIF_RECORDING")));
     cmake.define("SUPPORT_COMPRESSION_API", bstr(cfg!(feature = "SUPPORT_COMPRESSION_API")));
     cmake.define("SUPPORT_AUTOMATION_EVENTS", bstr(cfg!(feature = "SUPPORT_AUTOMATION_EVENTS")));
     cmake.define("SUPPORT_CUSTOM_FRAME_CONTROL", bstr(cfg!(feature = "SUPPORT_CUSTOM_FRAME_CONTROL")));
@@ -604,19 +687,16 @@ fn features_from_env(cmake: &mut Config) {
     cmake.define("SUPPORT_FILEFORMAT_DDS", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_DDS")));
     cmake.define("SUPPORT_FILEFORMAT_HDR", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_HDR")));
     cmake.define("SUPPORT_FILEFORMAT_PIC", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_PIC")));
+    cmake.define("SUPPORT_FILEFORMAT_PNM", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_PNM")));
     cmake.define("SUPPORT_FILEFORMAT_KTX", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_KTX")));
     cmake.define("SUPPORT_FILEFORMAT_ASTC", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_ASTC")));
     cmake.define("SUPPORT_FILEFORMAT_PKM", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_PKM")));
     cmake.define("SUPPORT_FILEFORMAT_PVR", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_PVR")));
     cmake.define("SUPPORT_IMAGE_EXPORT", bstr(cfg!(feature = "SUPPORT_IMAGE_EXPORT")));
     cmake.define("SUPPORT_IMAGE_GENERATION", bstr(cfg!(feature = "SUPPORT_IMAGE_GENERATION")));
-    cmake.define("SUPPORT_IMAGE_MANIPULATION", bstr(cfg!(feature = "SUPPORT_IMAGE_MANIPULATION")));
-    cmake.define("SUPPORT_DEFAULT_FONT", bstr(cfg!(feature = "SUPPORT_DEFAULT_FONT")));
     cmake.define("SUPPORT_FILEFORMAT_TTF", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_TTF")));
     cmake.define("SUPPORT_FILEFORMAT_FNT", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_FNT")));
     cmake.define("SUPPORT_FILEFORMAT_BDF", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_BDF")));
-    cmake.define("SUPPORT_TEXT_MANIPULATION", bstr(cfg!(feature = "SUPPORT_TEXT_MANIPULATION")));
-    cmake.define("SUPPORT_FONT_ATLAS_WHITE_REC", bstr(cfg!(feature = "SUPPORT_FONT_ATLAS_WHITE_REC")));
     cmake.define("SUPPORT_FILEFORMAT_OBJ", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_OBJ")));
     cmake.define("SUPPORT_FILEFORMAT_MTL", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_MTL")));
     cmake.define("SUPPORT_FILEFORMAT_IQM", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_IQM")));
@@ -624,6 +704,7 @@ fn features_from_env(cmake: &mut Config) {
     cmake.define("SUPPORT_FILEFORMAT_VOX", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_VOX")));
     cmake.define("SUPPORT_FILEFORMAT_M3D", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_M3D")));
     cmake.define("SUPPORT_MESH_GENERATION", bstr(cfg!(feature = "SUPPORT_MESH_GENERATION")));
+    cmake.define("SUPPORT_GPU_SKINNING", bstr(cfg!(feature = "SUPPORT_GPU_SKINNING")));
     cmake.define("SUPPORT_FILEFORMAT_WAV", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_WAV")));
     cmake.define("SUPPORT_FILEFORMAT_OGG", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_OGG")));
     cmake.define("SUPPORT_FILEFORMAT_MP3", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_MP3")));
@@ -631,12 +712,8 @@ fn features_from_env(cmake: &mut Config) {
     cmake.define("SUPPORT_FILEFORMAT_FLAC", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_FLAC")));
     cmake.define("SUPPORT_FILEFORMAT_XM", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_XM")));
     cmake.define("SUPPORT_FILEFORMAT_MOD", bstr(cfg!(feature = "SUPPORT_FILEFORMAT_MOD")));
-    cmake.define("SUPPORT_STANDARD_FILEIO", bstr(cfg!(feature = "SUPPORT_STANDARD_FILEIO")));
     cmake.define("SUPPORT_TRACELOG", bstr(cfg!(feature = "SUPPORT_TRACELOG")));
     cmake.define("SUPPORT_SCREEN_CAPTURE", bstr(cfg!(feature = "SUPPORT_SCREEN_CAPTURE")));
-    cmake.define("SUPPORT_VR_SIMULATOR", bstr(cfg!(feature = "SUPPORT_VR_SIMULATOR")));
-    cmake.define("SUPPORT_DISTORTION_SHADER", bstr(cfg!(feature = "SUPPORT_DISTORTION_SHADER")));
-    cmake.define("SUPPORT_FONT_TEXTURE", bstr(cfg!(feature = "SUPPORT_FONT_TEXTURE")));
 }
 #[must_use]
 fn bstr(b: bool) -> &'static str {

@@ -744,6 +744,7 @@ extern "C"
 
     // Styles loading functions
     RAYGUIAPI void GuiLoadStyle(const char *fileName); // Load style file over global style variable (.rgs)
+    RAYGUIAPI void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize); // Load style from memory (binary only) // TODO(raygui-sync): drop on next vendored raygui bump; upstream raysan5/raygui#549
     RAYGUIAPI void GuiLoadStyleDefault(void);          // Load style default over global style
 
     // Tooltips management functions
@@ -757,6 +758,8 @@ extern "C"
     RAYGUIAPI void GuiSetIconScale(int scale);                                              // Set default icon drawing size
     RAYGUIAPI unsigned int *GuiGetIcons(void);                                              // Get raygui icons data pointer
     RAYGUIAPI char **GuiLoadIcons(const char *fileName, bool loadIconsName);                // Load raygui icons file (.rgi) into internal icons data
+    RAYGUIAPI char **GuiLoadIconsFromMemory(const unsigned char *fileData, int dataSize, bool loadIconsName); // Load raygui icons file (.rgi) from memory into internal icons data
+    // TODO(raygui-sync): drop if upstream raygui adds a public forward decl for GuiLoadIconsFromMemory
     RAYGUIAPI void GuiDrawIcon(int iconId, int posX, int posY, int pixelSize, Color color); // Draw icon using pixel size at specified position
 #endif
 
@@ -1531,7 +1534,7 @@ static void DrawRectangleGradientV(int posX, int posY, int width, int height, Co
 //----------------------------------------------------------------------------------
 // Module specific Functions Declaration
 //----------------------------------------------------------------------------------
-static void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize); // Load style from memory (binary only)
+void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize); // Load style from memory (binary only) // TODO(raygui-sync): see line 747
 
 static int GetTextWidth(const char *text);                     // Gui get text width using gui font and style
 static Rectangle GetTextBounds(int control, Rectangle bounds); // Get text bounds considering control bounds
@@ -4977,7 +4980,7 @@ void GuiSetIconScale(int scale)
 
 // Load style from memory
 // WARNING: Binary files only
-static void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize)
+void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize) // TODO(raygui-sync): see line 747
 {
     unsigned char *fileDataPtr = (unsigned char *)fileData;
 

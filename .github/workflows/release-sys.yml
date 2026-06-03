@@ -1,0 +1,57 @@
+name: Release raylib-sys
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-run only (no cargo publish). Default: true. Set to false for real publish."
+        type: boolean
+        default: true
+
+jobs:
+  publish-sys:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install jq (sync-check dep)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Version + CHANGELOG sync check
+        run: |
+          if [ "${{ inputs.dry_run }}" = "false" ]; then
+            bash scripts/check-release-sync.sh raylib-sys --require-date
+          else
+            bash scripts/check-release-sync.sh raylib-sys
+          fi
+
+      - name: cargo publish (dry-run, always)
+        run: cargo publish -p raylib-sys --dry-run
+
+      - name: Verify packaged artifact excludes vendored raylib examples
+        # The raylib-sys/Cargo.toml `exclude` list omits raylib/examples/*,
+        # raylib/projects/*, raylib/templates/*. This step double-checks the
+        # actually-packaged file list — fails the build if anything from those
+        # paths sneaks into the publish artifact, so we never ship the vendored
+        # C examples on crates.io.
+        run: |
+          set -euo pipefail
+          list=$(cargo package --list -p raylib-sys --allow-dirty)
+          echo "$list" | grep -E '^(raylib/)?(examples|projects|templates)/' && {
+            echo "ERROR: raylib-sys publish artifact contains vendored example/project/template files." >&2
+            echo "       Tighten the exclude list in raylib-sys/Cargo.toml before publishing." >&2
+            exit 1
+          } || true
+          echo "OK: no vendored example/project/template files in raylib-sys publish artifact."
+
+      - name: cargo publish (real)
+        if: ${{ inputs.dry_run == false }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        run: cargo publish -p raylib-sys

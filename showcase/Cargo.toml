@@ -1,13 +1,1004 @@
 [package]
 name = "raylib-showcase"
-version = "5.5.1"
+version = "6.0.0"
 authors = ["raylib-rs team <https://github.com/raylib-rs/raylib-rs>"]
 edition = "2024"
+rust-version = "1.85"
 license = "Zlib"
 readme = "../README.md"
 repository = "https://github.com/raylib-rs/raylib-rs"
+description = "Runnable Rust ports of raylib's official C examples (raylib-rs 6.0 showcase)."
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# We declare every [[example]] explicitly so we control the binary name
+# (used by SourceViewer::for_current_example for registry lookup) and the
+# nested path layout (which mirrors raylib-sys/raylib/examples/<cat>/<name>.c).
+autoexamples = false
+autobins = false
+
+[features]
+default = []
+# Mirrors raylib's software_renderer for headless thumbnail generation.
+software_renderer = ["raylib/software_renderer"]
+# Required for the raygui examples in P3.
+raygui = ["raylib/raygui"]
+# Required for core_custom_frame_control (poll_input_events / swap_screen_buffer / wait_time).
+SUPPORT_CUSTOM_FRAME_CONTROL = ["raylib/SUPPORT_CUSTOM_FRAME_CONTROL"]
 
 [dependencies]
-raylib = { version = "5.5.1", path = "../raylib" }
+raylib = { version = "6.0.0", path = "../raylib" }
+phf = { version = "0.11", features = ["macros"] }
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[build-dependencies]
+phf_codegen = "0.11"
+walkdir = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Explicit example entries grow as P2/P3 batches land. P0 ships only the reference.
+[[example]]
+name = "core_basic_window"
+path = "examples/core/core_basic_window.rs"
+
+[[example]]
+name = "audio_sound_loading"
+path = "examples/audio/audio_sound_loading.rs"
+
+[[example]]
+name = "audio_sound_multi"
+path = "examples/audio/audio_sound_multi.rs"
+
+[[example]]
+name = "audio_music_stream"
+path = "examples/audio/audio_music_stream.rs"
+
+[[example]]
+name = "audio_module_playing"
+path = "examples/audio/audio_module_playing.rs"
+
+[[example]]
+name = "audio_raw_stream"
+path = "examples/audio/audio_raw_stream.rs"
+
+[[example]]
+name = "audio_sound_positioning"
+path = "examples/audio/audio_sound_positioning.rs"
+
+[[example]]
+name = "audio_amp_envelope"
+path = "examples/audio/audio_amp_envelope.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "audio_mixed_processor"
+path = "examples/audio/audio_mixed_processor.rs"
+
+[[example]]
+name = "audio_stream_effects"
+path = "examples/audio/audio_stream_effects.rs"
+
+[[example]]
+name = "audio_stream_callback"
+path = "examples/audio/audio_stream_callback.rs"
+
+[[example]]
+name = "audio_spectrum_visualizer"
+path = "examples/audio/audio_spectrum_visualizer.rs"
+
+[[example]]
+name = "core_2d_camera"
+path = "examples/core/core_2d_camera.rs"
+
+[[example]]
+name = "core_2d_camera_mouse_zoom"
+path = "examples/core/core_2d_camera_mouse_zoom.rs"
+
+[[example]]
+name = "core_2d_camera_platformer"
+path = "examples/core/core_2d_camera_platformer.rs"
+
+[[example]]
+name = "core_2d_camera_split_screen"
+path = "examples/core/core_2d_camera_split_screen.rs"
+
+[[example]]
+name = "core_3d_camera_first_person"
+path = "examples/core/core_3d_camera_first_person.rs"
+
+[[example]]
+name = "core_3d_camera_fps"
+path = "examples/core/core_3d_camera_fps.rs"
+
+[[example]]
+name = "core_3d_camera_free"
+path = "examples/core/core_3d_camera_free.rs"
+
+[[example]]
+name = "core_3d_camera_mode"
+path = "examples/core/core_3d_camera_mode.rs"
+
+[[example]]
+name = "core_3d_camera_split_screen"
+path = "examples/core/core_3d_camera_split_screen.rs"
+
+[[example]]
+name = "core_3d_picking"
+path = "examples/core/core_3d_picking.rs"
+
+[[example]]
+name = "core_automation_events"
+path = "examples/core/core_automation_events.rs"
+
+[[example]]
+name = "core_basic_screen_manager"
+path = "examples/core/core_basic_screen_manager.rs"
+
+[[example]]
+name = "core_clipboard_text"
+path = "examples/core/core_clipboard_text.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "core_compute_hash"
+path = "examples/core/core_compute_hash.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "core_custom_frame_control"
+path = "examples/core/core_custom_frame_control.rs"
+required-features = ["SUPPORT_CUSTOM_FRAME_CONTROL"]
+
+[[example]]
+name = "core_custom_logging"
+path = "examples/core/core_custom_logging.rs"
+
+[[example]]
+name = "core_delta_time"
+path = "examples/core/core_delta_time.rs"
+
+[[example]]
+name = "core_directory_files"
+path = "examples/core/core_directory_files.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "core_drop_files"
+path = "examples/core/core_drop_files.rs"
+
+[[example]]
+name = "core_highdpi_demo"
+path = "examples/core/core_highdpi_demo.rs"
+
+[[example]]
+name = "core_highdpi_testbed"
+path = "examples/core/core_highdpi_testbed.rs"
+
+[[example]]
+name = "core_input_actions"
+path = "examples/core/core_input_actions.rs"
+
+[[example]]
+name = "core_input_gamepad"
+path = "examples/core/core_input_gamepad.rs"
+
+[[example]]
+name = "core_input_gestures"
+path = "examples/core/core_input_gestures.rs"
+
+[[example]]
+name = "core_input_gestures_testbed"
+path = "examples/core/core_input_gestures_testbed.rs"
+
+[[example]]
+name = "core_input_keys"
+path = "examples/core/core_input_keys.rs"
+
+[[example]]
+name = "core_input_mouse"
+path = "examples/core/core_input_mouse.rs"
+
+[[example]]
+name = "core_input_mouse_wheel"
+path = "examples/core/core_input_mouse_wheel.rs"
+
+[[example]]
+name = "core_input_multitouch"
+path = "examples/core/core_input_multitouch.rs"
+
+[[example]]
+name = "core_input_virtual_controls"
+path = "examples/core/core_input_virtual_controls.rs"
+
+[[example]]
+name = "core_keyboard_testbed"
+path = "examples/core/core_keyboard_testbed.rs"
+
+[[example]]
+name = "core_monitor_detector"
+path = "examples/core/core_monitor_detector.rs"
+
+[[example]]
+name = "core_random_sequence"
+path = "examples/core/core_random_sequence.rs"
+
+[[example]]
+name = "core_random_values"
+path = "examples/core/core_random_values.rs"
+
+[[example]]
+name = "core_render_texture"
+path = "examples/core/core_render_texture.rs"
+
+[[example]]
+name = "core_scissor_test"
+path = "examples/core/core_scissor_test.rs"
+
+[[example]]
+name = "core_smooth_pixelperfect"
+path = "examples/core/core_smooth_pixelperfect.rs"
+
+[[example]]
+name = "core_screen_recording"
+path = "examples/core/core_screen_recording.rs"
+
+[[example]]
+name = "core_storage_values"
+path = "examples/core/core_storage_values.rs"
+
+[[example]]
+name = "core_text_file_loading"
+path = "examples/core/core_text_file_loading.rs"
+
+[[example]]
+name = "core_undo_redo"
+path = "examples/core/core_undo_redo.rs"
+
+[[example]]
+name = "core_viewport_scaling"
+path = "examples/core/core_viewport_scaling.rs"
+
+[[example]]
+name = "core_vr_simulator"
+path = "examples/core/core_vr_simulator.rs"
+
+[[example]]
+name = "core_window_flags"
+path = "examples/core/core_window_flags.rs"
+
+[[example]]
+name = "core_window_letterbox"
+path = "examples/core/core_window_letterbox.rs"
+
+[[example]]
+name = "core_window_should_close"
+path = "examples/core/core_window_should_close.rs"
+
+[[example]]
+name = "core_window_web"
+path = "examples/core/core_window_web.rs"
+
+[[example]]
+name = "core_world_screen"
+path = "examples/core/core_world_screen.rs"
+
+[[example]]
+name = "text_3d_drawing"
+path = "examples/text/text_3d_drawing.rs"
+
+[[example]]
+name = "text_codepoints_loading"
+path = "examples/text/text_codepoints_loading.rs"
+
+[[example]]
+name = "text_font_filters"
+path = "examples/text/text_font_filters.rs"
+
+[[example]]
+name = "text_font_loading"
+path = "examples/text/text_font_loading.rs"
+
+[[example]]
+name = "text_font_sdf"
+path = "examples/text/text_font_sdf.rs"
+
+[[example]]
+name = "text_font_spritefont"
+path = "examples/text/text_font_spritefont.rs"
+
+[[example]]
+name = "text_sprite_fonts"
+path = "examples/text/text_sprite_fonts.rs"
+
+[[example]]
+name = "text_inline_styling"
+path = "examples/text/text_inline_styling.rs"
+
+[[example]]
+name = "text_strings_management"
+path = "examples/text/text_strings_management.rs"
+
+[[example]]
+name = "text_unicode_emojis"
+path = "examples/text/text_unicode_emojis.rs"
+
+[[example]]
+name = "text_unicode_ranges"
+path = "examples/text/text_unicode_ranges.rs"
+
+[[example]]
+name = "text_format_text"
+path = "examples/text/text_format_text.rs"
+
+[[example]]
+name = "text_writing_anim"
+path = "examples/text/text_writing_anim.rs"
+
+[[example]]
+name = "text_input_box"
+path = "examples/text/text_input_box.rs"
+
+[[example]]
+name = "text_rectangle_bounds"
+path = "examples/text/text_rectangle_bounds.rs"
+
+[[example]]
+name = "text_words_alignment"
+path = "examples/text/text_words_alignment.rs"
+
+[[example]]
+name = "embedded_files_loading"
+path = "examples/others/embedded_files_loading.rs"
+
+[[example]]
+name = "raylib_opengl_interop"
+path = "examples/others/raylib_opengl_interop.rs"
+
+[[example]]
+name = "rlgl_standalone"
+path = "examples/others/rlgl_standalone.rs"
+
+[[example]]
+name = "models_geometric_shapes"
+path = "examples/models/models_geometric_shapes.rs"
+
+[[example]]
+name = "models_box_collisions"
+path = "examples/models/models_box_collisions.rs"
+
+[[example]]
+name = "models_heightmap_rendering"
+path = "examples/models/models_heightmap_rendering.rs"
+
+[[example]]
+name = "models_cubicmap_rendering"
+path = "examples/models/models_cubicmap_rendering.rs"
+
+[[example]]
+name = "models_basic_voxel"
+path = "examples/models/models_basic_voxel.rs"
+
+[[example]]
+name = "models_first_person_maze"
+path = "examples/models/models_first_person_maze.rs"
+
+[[example]]
+name = "models_loading"
+path = "examples/models/models_loading.rs"
+
+[[example]]
+name = "models_billboard_rendering"
+path = "examples/models/models_billboard_rendering.rs"
+
+[[example]]
+name = "models_directional_billboard"
+path = "examples/models/models_directional_billboard.rs"
+
+[[example]]
+name = "models_animation_gpu_skinning"
+path = "examples/models/models_animation_gpu_skinning.rs"
+
+[[example]]
+name = "models_animation_timing"
+path = "examples/models/models_animation_timing.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "models_animation_blending"
+path = "examples/models/models_animation_blending.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "models_animation_blend_custom"
+path = "examples/models/models_animation_blend_custom.rs"
+
+[[example]]
+name = "models_bone_socket"
+path = "examples/models/models_bone_socket.rs"
+
+[[example]]
+name = "models_decals"
+path = "examples/models/models_decals.rs"
+
+[[example]]
+name = "models_loading_gltf"
+path = "examples/models/models_loading_gltf.rs"
+
+[[example]]
+name = "models_loading_iqm"
+path = "examples/models/models_loading_iqm.rs"
+
+[[example]]
+name = "models_loading_m3d"
+path = "examples/models/models_loading_m3d.rs"
+
+[[example]]
+name = "models_loading_vox"
+path = "examples/models/models_loading_vox.rs"
+
+[[example]]
+name = "models_mesh_generation"
+path = "examples/models/models_mesh_generation.rs"
+
+[[example]]
+name = "models_mesh_picking"
+path = "examples/models/models_mesh_picking.rs"
+
+[[example]]
+name = "models_orthographic_projection"
+path = "examples/models/models_orthographic_projection.rs"
+
+[[example]]
+name = "models_point_rendering"
+path = "examples/models/models_point_rendering.rs"
+
+[[example]]
+name = "models_rlgl_solar_system"
+path = "examples/models/models_rlgl_solar_system.rs"
+
+[[example]]
+name = "models_rotating_cube"
+path = "examples/models/models_rotating_cube.rs"
+
+[[example]]
+name = "models_skybox_rendering"
+path = "examples/models/models_skybox_rendering.rs"
+
+[[example]]
+name = "models_tesseract_view"
+path = "examples/models/models_tesseract_view.rs"
+
+[[example]]
+name = "models_textured_cube"
+path = "examples/models/models_textured_cube.rs"
+
+[[example]]
+name = "models_waving_cubes"
+path = "examples/models/models_waving_cubes.rs"
+
+[[example]]
+name = "models_yaw_pitch_roll"
+path = "examples/models/models_yaw_pitch_roll.rs"
+
+[[example]]
+name = "shaders_basic_lighting"
+path = "examples/shaders/shaders_basic_lighting.rs"
+
+[[example]]
+name = "shaders_basic_pbr"
+path = "examples/shaders/shaders_basic_pbr.rs"
+
+[[example]]
+name = "shaders_cel_shading"
+path = "examples/shaders/shaders_cel_shading.rs"
+
+[[example]]
+name = "shaders_fog_rendering"
+path = "examples/shaders/shaders_fog_rendering.rs"
+
+[[example]]
+name = "shaders_lightmap_rendering"
+path = "examples/shaders/shaders_lightmap_rendering.rs"
+
+[[example]]
+name = "shaders_ascii_rendering"
+path = "examples/shaders/shaders_ascii_rendering.rs"
+
+[[example]]
+name = "shaders_color_correction"
+path = "examples/shaders/shaders_color_correction.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shaders_custom_uniform"
+path = "examples/shaders/shaders_custom_uniform.rs"
+
+[[example]]
+name = "shaders_eratosthenes_sieve"
+path = "examples/shaders/shaders_eratosthenes_sieve.rs"
+
+[[example]]
+name = "shaders_game_of_life"
+path = "examples/shaders/shaders_game_of_life.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shaders_julia_set"
+path = "examples/shaders/shaders_julia_set.rs"
+
+[[example]]
+name = "shaders_mandelbrot_set"
+path = "examples/shaders/shaders_mandelbrot_set.rs"
+
+[[example]]
+name = "shaders_depth_writing"
+path = "examples/shaders/shaders_depth_writing.rs"
+
+[[example]]
+name = "shaders_depth_rendering"
+path = "examples/shaders/shaders_depth_rendering.rs"
+
+[[example]]
+name = "shaders_hybrid_rendering"
+path = "examples/shaders/shaders_hybrid_rendering.rs"
+
+[[example]]
+name = "shaders_hot_reloading"
+path = "examples/shaders/shaders_hot_reloading.rs"
+
+[[example]]
+name = "shaders_deferred_rendering"
+path = "examples/shaders/shaders_deferred_rendering.rs"
+
+[[example]]
+name = "shaders_shapes_textures"
+path = "examples/shaders/shaders_shapes_textures.rs"
+
+[[example]]
+name = "shaders_texture_rendering"
+path = "examples/shaders/shaders_texture_rendering.rs"
+
+[[example]]
+name = "shaders_texture_waves"
+path = "examples/shaders/shaders_texture_waves.rs"
+
+[[example]]
+name = "shaders_texture_outline"
+path = "examples/shaders/shaders_texture_outline.rs"
+
+[[example]]
+name = "shaders_multi_sample2d"
+path = "examples/shaders/shaders_multi_sample2d.rs"
+
+[[example]]
+name = "shaders_palette_switch"
+path = "examples/shaders/shaders_palette_switch.rs"
+
+[[example]]
+name = "shaders_model_shader"
+path = "examples/shaders/shaders_model_shader.rs"
+
+[[example]]
+name = "shaders_simple_mask"
+path = "examples/shaders/shaders_simple_mask.rs"
+
+[[example]]
+name = "shaders_spotlight_rendering"
+path = "examples/shaders/shaders_spotlight_rendering.rs"
+
+[[example]]
+name = "shaders_texture_tiling"
+path = "examples/shaders/shaders_texture_tiling.rs"
+
+[[example]]
+name = "shaders_vertex_displacement"
+path = "examples/shaders/shaders_vertex_displacement.rs"
+
+[[example]]
+name = "shaders_rounded_rectangle"
+path = "examples/shaders/shaders_rounded_rectangle.rs"
+
+[[example]]
+name = "shaders_mesh_instancing"
+path = "examples/shaders/shaders_mesh_instancing.rs"
+
+[[example]]
+name = "shaders_normalmap_rendering"
+path = "examples/shaders/shaders_normalmap_rendering.rs"
+
+[[example]]
+name = "shaders_postprocessing"
+path = "examples/shaders/shaders_postprocessing.rs"
+
+[[example]]
+name = "shaders_raymarching_rendering"
+path = "examples/shaders/shaders_raymarching_rendering.rs"
+
+[[example]]
+name = "shaders_rlgl_compute"
+path = "examples/shaders/shaders_rlgl_compute.rs"
+
+[[example]]
+name = "shaders_shadowmap_rendering"
+path = "examples/shaders/shaders_shadowmap_rendering.rs"
+
+[[example]]
+name = "shapes_basic_shapes"
+path = "examples/shapes/shapes_basic_shapes.rs"
+
+[[example]]
+name = "shapes_circle_sector_drawing"
+path = "examples/shapes/shapes_circle_sector_drawing.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_dashed_line"
+path = "examples/shapes/shapes_dashed_line.rs"
+
+[[example]]
+name = "shapes_lines_drawing"
+path = "examples/shapes/shapes_lines_drawing.rs"
+
+[[example]]
+name = "shapes_lines_bezier"
+path = "examples/shapes/shapes_lines_bezier.rs"
+
+[[example]]
+name = "shapes_ball_physics"
+path = "examples/shapes/shapes_ball_physics.rs"
+
+[[example]]
+name = "shapes_bouncing_ball"
+path = "examples/shapes/shapes_bouncing_ball.rs"
+
+[[example]]
+name = "shapes_bullet_hell"
+path = "examples/shapes/shapes_bullet_hell.rs"
+
+[[example]]
+name = "shapes_double_pendulum"
+path = "examples/shapes/shapes_double_pendulum.rs"
+
+[[example]]
+name = "shapes_easings_ball"
+path = "examples/shapes/shapes_easings_ball.rs"
+
+[[example]]
+name = "shapes_easings_box"
+path = "examples/shapes/shapes_easings_box.rs"
+
+[[example]]
+name = "shapes_easings_rectangles"
+path = "examples/shapes/shapes_easings_rectangles.rs"
+
+[[example]]
+name = "shapes_easings_testbed"
+path = "examples/shapes/shapes_easings_testbed.rs"
+
+[[example]]
+name = "shapes_collision_area"
+path = "examples/shapes/shapes_collision_area.rs"
+
+[[example]]
+name = "shapes_ellipse_collision"
+path = "examples/shapes/shapes_ellipse_collision.rs"
+
+[[example]]
+name = "shapes_following_eyes"
+path = "examples/shapes/shapes_following_eyes.rs"
+
+[[example]]
+name = "shapes_clock_of_clocks"
+path = "examples/shapes/shapes_clock_of_clocks.rs"
+
+[[example]]
+name = "shapes_colors_palette"
+path = "examples/shapes/shapes_colors_palette.rs"
+
+[[example]]
+name = "shapes_digital_clock"
+path = "examples/shapes/shapes_digital_clock.rs"
+
+[[example]]
+name = "shapes_hilbert_curve"
+path = "examples/shapes/shapes_hilbert_curve.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_kaleidoscope"
+path = "examples/shapes/shapes_kaleidoscope.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_logo_raylib"
+path = "examples/shapes/shapes_logo_raylib.rs"
+
+[[example]]
+name = "shapes_logo_raylib_anim"
+path = "examples/shapes/shapes_logo_raylib_anim.rs"
+
+[[example]]
+name = "shapes_math_angle_rotation"
+path = "examples/shapes/shapes_math_angle_rotation.rs"
+
+[[example]]
+name = "shapes_math_sine_cosine"
+path = "examples/shapes/shapes_math_sine_cosine.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_vector_angle"
+path = "examples/shapes/shapes_vector_angle.rs"
+
+[[example]]
+name = "shapes_mouse_trail"
+path = "examples/shapes/shapes_mouse_trail.rs"
+
+[[example]]
+name = "shapes_simple_particles"
+path = "examples/shapes/shapes_simple_particles.rs"
+
+[[example]]
+name = "shapes_starfield_effect"
+path = "examples/shapes/shapes_starfield_effect.rs"
+
+[[example]]
+name = "shapes_top_down_lights"
+path = "examples/shapes/shapes_top_down_lights.rs"
+
+[[example]]
+name = "shapes_rectangle_advanced"
+path = "examples/shapes/shapes_rectangle_advanced.rs"
+
+[[example]]
+name = "shapes_rectangle_scaling"
+path = "examples/shapes/shapes_rectangle_scaling.rs"
+
+[[example]]
+name = "shapes_ring_drawing"
+path = "examples/shapes/shapes_ring_drawing.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_rounded_rectangle_drawing"
+path = "examples/shapes/shapes_rounded_rectangle_drawing.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_pie_chart"
+path = "examples/shapes/shapes_pie_chart.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_penrose_tile"
+path = "examples/shapes/shapes_penrose_tile.rs"
+
+[[example]]
+name = "shapes_recursive_tree"
+path = "examples/shapes/shapes_recursive_tree.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_rlgl_color_wheel"
+path = "examples/shapes/shapes_rlgl_color_wheel.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_rlgl_triangle"
+path = "examples/shapes/shapes_rlgl_triangle.rs"
+
+[[example]]
+name = "shapes_splines_drawing"
+path = "examples/shapes/shapes_splines_drawing.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "shapes_triangle_strip"
+path = "examples/shapes/shapes_triangle_strip.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "textures_background_scrolling"
+path = "examples/textures/textures_background_scrolling.rs"
+
+[[example]]
+name = "textures_blend_modes"
+path = "examples/textures/textures_blend_modes.rs"
+
+[[example]]
+name = "textures_bunnymark"
+path = "examples/textures/textures_bunnymark.rs"
+
+[[example]]
+name = "textures_framebuffer_rendering"
+path = "examples/textures/textures_framebuffer_rendering.rs"
+
+[[example]]
+name = "textures_image_channel"
+path = "examples/textures/textures_image_channel.rs"
+
+[[example]]
+name = "textures_image_drawing"
+path = "examples/textures/textures_image_drawing.rs"
+
+[[example]]
+name = "textures_image_kernel"
+path = "examples/textures/textures_image_kernel.rs"
+
+[[example]]
+name = "textures_image_processing"
+path = "examples/textures/textures_image_processing.rs"
+
+[[example]]
+name = "textures_image_rotate"
+path = "examples/textures/textures_image_rotate.rs"
+
+[[example]]
+name = "textures_image_text"
+path = "examples/textures/textures_image_text.rs"
+
+[[example]]
+name = "textures_image_loading"
+path = "examples/textures/textures_image_loading.rs"
+
+[[example]]
+name = "textures_image_generation"
+path = "examples/textures/textures_image_generation.rs"
+
+[[example]]
+name = "textures_gif_player"
+path = "examples/textures/textures_gif_player.rs"
+
+[[example]]
+name = "textures_cellular_automata"
+path = "examples/textures/textures_cellular_automata.rs"
+
+[[example]]
+name = "textures_clipboard_image"
+path = "examples/textures/textures_clipboard_image.rs"
+
+[[example]]
+name = "textures_fog_of_war"
+path = "examples/textures/textures_fog_of_war.rs"
+
+[[example]]
+name = "textures_logo_raylib"
+path = "examples/textures/textures_logo_raylib.rs"
+
+[[example]]
+name = "textures_npatch_drawing"
+path = "examples/textures/textures_npatch_drawing.rs"
+
+[[example]]
+name = "textures_polygon_drawing"
+path = "examples/textures/textures_polygon_drawing.rs"
+
+[[example]]
+name = "textures_srcrec_dstrec"
+path = "examples/textures/textures_srcrec_dstrec.rs"
+
+[[example]]
+name = "textures_tiled_drawing"
+path = "examples/textures/textures_tiled_drawing.rs"
+
+[[example]]
+name = "textures_sprite_animation"
+path = "examples/textures/textures_sprite_animation.rs"
+
+[[example]]
+name = "textures_sprite_button"
+path = "examples/textures/textures_sprite_button.rs"
+
+[[example]]
+name = "textures_sprite_explosion"
+path = "examples/textures/textures_sprite_explosion.rs"
+
+[[example]]
+name = "textures_sprite_stacking"
+path = "examples/textures/textures_sprite_stacking.rs"
+
+[[example]]
+name = "textures_magnifying_glass"
+path = "examples/textures/textures_magnifying_glass.rs"
+
+[[example]]
+name = "textures_mouse_painting"
+path = "examples/textures/textures_mouse_painting.rs"
+
+[[example]]
+name = "textures_particles_blending"
+path = "examples/textures/textures_particles_blending.rs"
+
+[[example]]
+name = "textures_raw_data"
+path = "examples/textures/textures_raw_data.rs"
+
+[[example]]
+name = "textures_textured_curve"
+path = "examples/textures/textures_textured_curve.rs"
+
+[[example]]
+name = "textures_screen_buffer"
+path = "examples/textures/textures_screen_buffer.rs"
+
+[[example]]
+name = "textures_to_image"
+path = "examples/textures/textures_to_image.rs"
+
+[[example]]
+name = "scroll_panel"
+path = "examples/raygui/scroll_panel.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "portable_window"
+path = "examples/raygui/portable_window.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "floating_window"
+path = "examples/raygui/floating_window.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "image_exporter"
+path = "examples/raygui/image_exporter.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "image_importer_raw"
+path = "examples/raygui/image_importer_raw.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "style_selector"
+path = "examples/raygui/style_selector.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "custom_input_box"
+path = "examples/raygui/custom_input_box.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "custom_sliders"
+path = "examples/raygui/custom_sliders.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "animation_curve"
+path = "examples/raygui/animation_curve.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "controls_test_suite"
+path = "examples/raygui/controls_test_suite.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "custom_file_dialog"
+path = "examples/raygui/custom_file_dialog.rs"
+required-features = ["raygui"]
+
+[[example]]
+name = "property_list"
+path = "examples/raygui/property_list.rs"
+required-features = ["raygui"]
+
+[[bin]]
+name = "gen-thumbnails"
+path = "src/bin/gen_thumbnails.rs"
+
+[[bin]]
+name = "xtask-wasm-build"
+path = "src/bin/xtask_wasm_build.rs"
+
+[[bin]]
+name = "xtask-build-pages"
+path = "src/bin/xtask_build_pages.rs"
+
+[[bin]]
+name = "xtask-vendor-resources"
+path = "src/bin/xtask_vendor_resources.rs"

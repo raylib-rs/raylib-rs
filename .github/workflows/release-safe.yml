@@ -1,0 +1,41 @@
+name: Release raylib
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-run only (no cargo publish). Default: true. Set to false for real publish. NOTE: cargo publish --dry-run for raylib requires raylib-sys 6.0.0 to exist on crates.io; the dry-run step will fail at registry resolution otherwise."
+        type: boolean
+        default: true
+
+jobs:
+  publish-safe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install jq (sync-check dep)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Version + CHANGELOG sync check
+        run: |
+          if [ "${{ inputs.dry_run }}" = "false" ]; then
+            bash scripts/check-release-sync.sh raylib --require-date
+          else
+            bash scripts/check-release-sync.sh raylib
+          fi
+
+      - name: cargo publish (dry-run, always)
+        run: cargo publish -p raylib --dry-run
+
+      - name: cargo publish (real)
+        if: ${{ inputs.dry_run == false }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        run: cargo publish -p raylib

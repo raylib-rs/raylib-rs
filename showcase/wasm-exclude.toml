@@ -1,0 +1,108 @@
+# WS9 wasm-exclude list. Entries here are excluded from
+# `cargo build --target wasm32-unknown-emscripten --example <name>` in CI
+# and shown with a "desktop only" badge on the Pages gallery.
+#
+# Schema:
+#   [[exclude]]
+#   name = "<example name matching [[example]] name in Cargo.toml>"
+#   reason = "one-line reason (LoadDroppedFiles, native dialog, threading, …)"
+#
+# Starts empty; entries land per P2/P3 wave as broken-on-wasm examples surface.
+
+[[exclude]]
+name = "audio_spectrum_visualizer"
+reason = "Upstream C source notes 'Memory out-of-bounds on PLATFORM_WEB' when reading the decoded country.mp3 buffer; same hazard applies here."
+
+[[exclude]]
+name = "raylib_opengl_interop"
+reason = "Uses raw `glDrawArrays`/`glEnable(GL_PROGRAM_POINT_SIZE)` via a Rust `extern \"C\"` block with #[link(name=\"opengl32\"|\"GL\"|\"OpenGL\")] attrs — none of those satisfy emscripten's WebGL/GLES2 link surface. GL_PROGRAM_POINT_SIZE is also a desktop-only toggle (always-on in WebGL). Desktop-only mirrors the C source's GLSL_VERSION fork."
+
+[[exclude]]
+name = "rlgl_standalone"
+reason = "Upstream C source carries an explicit `WARNING: This example is intended only for PLATFORM_DESKTOP and OpenGL 3.3 Core profile`. The Rust port mirrors the desktop-only contract."
+
+[[exclude]]
+name = "core_drop_files"
+reason = "LoadDroppedFiles requires native drag-and-drop event delivery; emscripten does not expose it."
+
+[[exclude]]
+name = "core_automation_events"
+reason = "Automation event recording (StartAutomationEventRecording / ExportAutomationEventList) is desktop-only in raylib 6.0."
+
+[[exclude]]
+name = "core_custom_frame_control"
+reason = "Requires the SUPPORT_CUSTOM_FRAME_CONTROL build flag and exposes PollInputEvents/SwapScreenBuffer/WaitTime — emscripten's main-loop is driven by the browser and these helpers are not available on web."
+
+[[exclude]]
+name = "core_screen_recording"
+reason = "Upstream C uses msf_gif.h to encode the back-buffer to a GIF on disk; the Rust port keeps the visuals but cannot record. SaveFileData + LoadImageFromScreen are also desktop-only in raylib 6.0."
+
+[[exclude]]
+name = "core_vr_simulator"
+reason = "VR simulator requires a glsl330 distortion shader; emscripten serves WebGL/GLES2 which uses the glsl100 path. The upstream C source forks on GLSL_VERSION but we pin to glsl330 here, so this is desktop-only."
+
+[[exclude]]
+name = "models_animation_gpu_skinning"
+reason = "GPU skinning vs/fs shaders are pinned to glsl330; emscripten serves WebGL/GLES2 (glsl100). The upstream C forks on GLSL_VERSION but we pin to glsl330 here, so this is desktop-only."
+
+[[exclude]]
+name = "models_animation_blending"
+reason = "Loads the glsl330 skinning shader (same as models_animation_gpu_skinning); emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION; we pin to glsl330."
+
+[[exclude]]
+name = "models_animation_blend_custom"
+reason = "Loads the glsl330 skinning shader (same as models_animation_gpu_skinning); emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION; we pin to glsl330."
+
+[[exclude]]
+name = "models_loading_vox"
+reason = "Loads the glsl330 voxel_lighting shader (rlights-style lighting); emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "models_skybox_rendering"
+reason = "Loads the glsl330 skybox + cubemap shaders; emscripten serves WebGL/GLES2 (glsl100). Upstream C forks on GLSL_VERSION but we pin to glsl330."
+
+[[exclude]]
+name = "shaders_deferred_rendering"
+reason = "Uses MRT (multi-render-targets) via rlActiveDrawBuffers + 3 colour attachments and glsl330 gbuffer/deferred_shading shaders. MRT is not exposed on WebGL1/GLES2 (emscripten's default). Desktop-only."
+
+[[exclude]]
+name = "shaders_depth_rendering"
+reason = "Samples a glsl330 depth-texture attachment via a custom FBO (rlLoadTextureDepth + RL_ATTACHMENT_TEXTURE2D); WebGL1/GLES2 lacks direct depth-texture sampling. Desktop-only."
+
+[[exclude]]
+name = "shaders_depth_writing"
+reason = "Writes gl_FragDepth from a glsl330 fragment shader against a custom FBO with a depth texture; WebGL1/GLES2 lacks gl_FragDepth without EXT_frag_depth and direct depth-texture sampling. Desktop-only."
+
+[[exclude]]
+name = "shaders_hybrid_rendering"
+reason = "Combines a glsl330 raymarch fragment shader writing gl_FragDepth with a glsl330 rasterization shader against a custom FBO + depth texture. WebGL1/GLES2 lacks gl_FragDepth and direct depth-texture sampling. Desktop-only."
+
+[[exclude]]
+name = "shaders_hot_reloading"
+reason = "Upstream C header explicitly notes 'OpenGL ES 2.0 platforms are not supported at the moment' and the example depends on filesystem GetFileModTime polling; both rule out emscripten/web."
+
+[[exclude]]
+name = "shaders_rlgl_compute"
+reason = "Compute shaders require GL 4.3+ / OpenGL ES 3.1+ and SSBOs; WebGL/GLES2 (emscripten's default) has neither. The example loads #version 430 .glsl files from glsl430/ which have no glsl100 counterpart, and uses rlComputeShaderDispatch / rlLoadShaderBuffer / rlBindShaderBuffer — none are available on web."
+
+[[exclude]]
+name = "shaders_shadowmap_rendering"
+reason = "Samples a glsl330 depth-texture attachment via a custom FBO (rlLoadTextureDepth + RL_ATTACHMENT_TEXTURE2D); WebGL1/GLES2 lacks direct depth-texture sampling. We pin to glsl330; the upstream C forks on GLSL_VERSION but the depth-sampler shader does not work on ES2 in practice."
+
+[[exclude]]
+name = "textures_clipboard_image"
+reason = "Uses GetClipboardImage (raylib 6.0), which on web depends on the browser's async-only clipboard API; raylib's synchronous implementation cannot retrieve clipboard images on emscripten in practice. Desktop-only."
+
+# --- WS9 P3 raygui exclusions ---
+
+[[exclude]]
+name = "custom_file_dialog"
+reason = "Custom file dialog relies on drag-and-drop file loading and (in the C source) a native directory-browsing modal; emscripten does not expose LoadDroppedFiles equivalents."
+
+[[exclude]]
+name = "portable_window"
+reason = "Window-drag behaviour uses SetWindowPosition + FLAG_WINDOW_UNDECORATED; emscripten's main window is the browser tab and these APIs are no-ops on web."
+
+[[exclude]]
+name = "image_importer_raw"
+reason = "Drag-and-drop is the primary input path (LoadDroppedFiles); emscripten does not expose native drag-and-drop event delivery."

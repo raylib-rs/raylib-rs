@@ -1,4 +1,4 @@
-///! Functions to change the behavior of raylib logging.
+//! Functions to change the behavior of raylib logging.
 // TODO: refactor this entire thing to use log
 use crate::consts::TraceLogLevel;
 use crate::ffi;

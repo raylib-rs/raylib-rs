@@ -14,55 +14,78 @@ Permission is granted to anyone to use this software for any purpose, including 
   3. This notice may not be removed or altered from any source distribution.
 */
 
-//! # raylib-rs
+//! Safe Rust bindings to raylib 6.0.
 //!
-//! `raylib` is a safe Rust binding to [Raylib](https://www.raylib.com/), a C library for enjoying games programming.
+//! This crate provides idiomatic Rust access to [raylib](https://www.raylib.com/)'s full feature
+//! set: window management, 2D/3D drawing, input handling, raymath (vectors, matrices,
+//! quaternions), audio playback, raygui immediate-mode UI, safe `rlgl` OpenGL abstractions, and a
+//! headless software-renderer test harness — all without unsafe code in normal usage.
 //!
-//! To get started, take a look at the [`init_window`] function. This initializes Raylib and shows a window, and returns a [`RaylibHandle`]. This handle is very important, because it is the way in which one accesses the vast majority of Raylib's functionality. This means that it must not go out of scope until the game is ready to exit. You will also receive a !Send and !Sync [`RaylibThread`] required for thread local functions.
+//! ## Getting started
 //!
-//! For more control over the game window, the [`init`] function will return a [`RaylibBuilder`] which allows for tweaking various settings such as VSync, anti-aliasing, fullscreen, and so on. Calling [`RaylibBuilder::build`] will then provide a [`RaylibHandle`].
+//! Call [`init`] to obtain a [`RaylibBuilder`], configure it with chained methods, then call
+//! [`RaylibBuilder::build`] to receive a `(RaylibHandle, RaylibThread)` pair. Everything in the
+//! API hangs off [`RaylibHandle`]; keep it alive for the lifetime of your game loop. The
+//! [`RaylibThread`] token is `!Send` and `!Sync` — it may only be used on the thread raylib was
+//! initialised from.
 //!
-//! Some useful constants can be found in the [`consts`] module, which is also re-exported in the [`prelude`] module. In most cases you will probably want to `use raylib::prelude::*;` to make your experience more smooth.
+//! ## Feature gates
 //!
-//! [`init_window`]: fn.init_window.html
-//! [`init`]: fn.init.html
-//! [`RaylibHandle`]: struct.RaylibHandle.html
-//! [`RaylibThread`]: struct.RaylibThread.html
-//! [`RaylibBuilder`]: struct.RaylibBuilder.html
-//! [`RaylibBuilder::build`]: struct.RaylibBuilder.html#method.build
-//! [`consts`]: consts/index.html
-//! [`prelude`]: prelude/index.html
+//! - Math-crate integrations: `glam`, `mint`, `serde` (all opt-in, none default).
+//! - `software_renderer` — wires the `rlsw` memory-platform backend for windowless/headless
+//!   rendering; exposes the `test_harness` module for pixel-probe tests. Mutually exclusive with
+//!   the `opengl_*` features.
+//! - OpenGL back-end selection: `opengl_33` (default), `opengl_21`, `opengl_es_20`.
+//! - Platform targets: `drm` (DRM/KMS tty, requires `opengl_es_20`), `wayland`.
+//! - `full` — convenience alias enabling all optional API surface except back-end selectors.
 //!
-//! # Examples
+//! ## Examples
 //!
 //! The classic "Hello, world":
 //!
 //! ```no_run
 //! use raylib::prelude::*;
 //!
-//! fn main() {
-//!     let (mut rl, thread) = raylib::init()
-//!         .size(640, 480)
-//!         .title("Hello, World")
-//!         .build();
+//! let (mut rl, thread) = raylib::init()
+//!     .size(640, 480)
+//!     .title("Hello, World")
+//!     .build();
 //!
-//!     while !rl.window_should_close() {
-//!         let mut d = rl.begin_drawing(&thread);
+//! while !rl.window_should_close() {
+//!     let mut d = rl.begin_drawing(&thread);
 //!
-//!         d.clear_background(Color::WHITE);
-//!         d.draw_text("Hello, world!", 12, 12, 20, Color::BLACK);
-//!     }
+//!     d.clear_background(Color::WHITE);
+//!     d.draw_text("Hello, world!", 12, 12, 20, Color::BLACK);
 //! }
 //! ```
 //#![cfg_attr(feature = "nightly", feature(auto_traits))]
 
 #![allow(dead_code)]
+#![deny(missing_docs)]
 pub mod consts;
+/// Safe, idiomatic wrappers over raylib's core subsystems — window, drawing, input, audio,
+/// math, models, textures, shaders, text, files, and more.
+///
+/// Each submodule corresponds to one slice of raylib's C API: `window` wraps `InitWindow` /
+/// `CloseWindow` and the per-frame query helpers, `drawing` provides the RAII guards
+/// returned by `begin_drawing` / `begin_mode2d` / `begin_mode3d`, `audio` wraps the audio
+/// device plus the `Wave`, `Sound`, `Music`, and `AudioStream` types, and so on. The
+/// user-facing types (`RaylibHandle`, `RaylibThread`, `RaylibBuilder`, `Color`, `Image`,
+/// `Texture2D`, ...) are re-exported by [`crate::prelude`] for the common case.
+///
+/// # See also
+///
+/// See the *Window and drawing* chapter of the book for the overall architecture and the
+/// per-subsystem chapters for individual modules.
 pub mod core;
 pub mod ease;
 pub mod prelude;
 #[cfg(not(feature = "nobuild"))]
 pub mod rgui;
+pub mod rlgl;
+/// Headless software-render test harness (enabled by the `software_renderer` feature).
+#[cfg(feature = "software_renderer")]
+pub mod test_harness;
 
 /// The raw, unsafe FFI binding, in case you need that escape hatch or the safe layer doesn't provide something you need.
 pub mod ffi {
@@ -71,10 +94,26 @@ pub mod ffi {
 
 pub use crate::core::collision::*;
 
+/// Deprecated alias for [`ffi::Vector2`]; the public type is now the native `raylib-sys` type.
+#[deprecated(
+    since = "6.0.0",
+    note = "use `Vector2` (the native type); `MintVec2` is now identical"
+)]
 pub type MintVec2 = ffi::Vector2;
+/// Deprecated alias for [`ffi::Vector3`].
+#[deprecated(since = "6.0.0", note = "use `Vector3`; `MintVec3` is now identical")]
 pub type MintVec3 = ffi::Vector3;
+/// Deprecated alias for [`ffi::Vector4`].
+#[deprecated(since = "6.0.0", note = "use `Vector4`; `MintVec4` is now identical")]
 pub type MintVec4 = ffi::Vector4;
+/// Deprecated alias for [`ffi::Matrix`].
+#[deprecated(since = "6.0.0", note = "use `Matrix`; `MintMatrix` is now identical")]
 pub type MintMatrix = ffi::Matrix;
+/// Deprecated alias for [`ffi::Quaternion`].
+#[deprecated(
+    since = "6.0.0",
+    note = "use `Quaternion`; `MintQuat` is now identical"
+)]
 pub type MintQuat = ffi::Quaternion;
 
 pub use crate::core::logging::*;
