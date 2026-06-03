@@ -109,7 +109,7 @@ fn main() {
             .get(&meta.name)
             .cloned()
             .unwrap_or_default();
-        let result = run_one(&meta.name, frames, &out, &extra_features);
+        let result = run_one(&meta.name, frames, &out, &extra_features, &manifest_dir);
         match result {
             Ok(()) => manifest.push(ManifestEntry {
                 name: meta.name.clone(),
@@ -160,7 +160,13 @@ fn find_examples_meta(workspace_root: &Path) -> Option<PathBuf> {
     None
 }
 
-fn run_one(name: &str, frames: usize, out: &Path, extra_features: &[String]) -> Result<(), String> {
+fn run_one(
+    name: &str,
+    frames: usize,
+    out: &Path,
+    extra_features: &[String],
+    manifest_dir: &Path,
+) -> Result<(), String> {
     let mut features = vec!["software_renderer".to_string()];
     features.extend(extra_features.iter().cloned());
     let features_arg = features.join(",");
@@ -175,6 +181,12 @@ fn run_one(name: &str, frames: usize, out: &Path, extra_features: &[String]) -> 
         "--example",
         name,
     ]);
+    // Pin CWD to the showcase package dir so examples' relative
+    // `resources/<cat>/...` paths resolve against the vendored
+    // `showcase/resources/` tree. Without this, gen-thumbnails inherits
+    // the caller's CWD (workspace root in CI), and every resource-loading
+    // example fails to find its files.
+    cmd.current_dir(manifest_dir);
     cmd.env("RAYLIB_SHOWCASE_THUMBNAIL_FRAMES", frames.to_string());
     cmd.env(
         "RAYLIB_SHOWCASE_THUMBNAIL_OUT",
