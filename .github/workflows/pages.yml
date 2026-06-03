@@ -55,9 +55,12 @@ jobs:
           # Single shared cache across native preflight + wasm + thumbnails
           # since all three share the same workspace target dir.
           shared-key: pages
-      - name: Populate examples_meta.json (release)
-        run: cargo build -p raylib-showcase --release --examples
       - name: Build all wasm examples
+        # `cargo run --bin xtask-wasm-build` builds the xtask, which triggers
+        # showcase/build.rs to emit examples_meta.json before the binary runs
+        # — no separate native preflight is required. The xtask itself
+        # invokes one cargo build per required-features bucket (≤3) instead
+        # of one per example (229), which is the bulk of the speedup here.
         run: cargo run -p raylib-showcase --release --bin xtask-wasm-build
       - name: Generate thumbnails (software_renderer)
         run: cargo run -p raylib-showcase --release --features software_renderer --bin gen-thumbnails
