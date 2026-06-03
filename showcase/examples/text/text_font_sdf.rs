@@ -18,8 +18,11 @@ use raylib::core::drawing::RaylibShaderModeExt;
 use raylib::prelude::*;
 use raylib_showcase::SourceViewer;
 
-// Mirror the C #if PLATFORM_DESKTOP / #else: we always run on desktop (wasm uses glsl100, but
-// the GLSL version is selected at C build time — Rust port pins to glsl330 like other ports).
+// Mirror the C #if PLATFORM_DESKTOP / #else fork: glsl330 on desktop,
+// glsl100 on web (WebGL/GLES2) — same cfg pattern as the shaders ports.
+#[cfg(target_family = "wasm")]
+const GLSL_VERSION: i32 = 100;
+#[cfg(not(target_family = "wasm"))]
 const GLSL_VERSION: i32 = 330;
 
 //------------------------------------------------------------------------------------

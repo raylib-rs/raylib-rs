@@ -8,8 +8,10 @@
 //! click target.
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use serde::Deserialize;
 
@@ -95,31 +97,40 @@ fn main() {
         ));
         for m in entries {
             total_tiles += 1;
+            // Desktop-only entries are marked with a badge overlaid on the
+            // thumb box itself (not in the caption), so the marking is
+            // visible at tile-scan level and the thumb box stays the same
+            // fixed size as every other tile.
+            let overlay = if m.wasm_excluded {
+                "<span class=\"badge badge-overlay\">desktop only</span>"
+            } else {
+                ""
+            };
             let thumb_html = match thumbs.get(&m.name).and_then(|t| t.clone()) {
                 Some(file) => format!(
-                    "<div class=\"thumb\"><img src=\"thumbnails/{}\" alt=\"{}\" loading=\"lazy\" /></div>",
-                    file, m.name,
+                    "<div class=\"thumb\"><img src=\"thumbnails/{}\" alt=\"{}\" loading=\"lazy\" />{}</div>",
+                    file, m.name, overlay,
                 ),
                 // No thumbnail captured (gen-thumbnails failed for this
                 // example). Show the name inside the placeholder so the
                 // tile is still identifiable at a glance instead of being
                 // a blank gray box.
                 None => format!(
-                    "<div class=\"thumb placeholder\"><span>{}</span></div>",
-                    m.name,
+                    "<div class=\"thumb placeholder\"><span class=\"ph-name\">{}</span>{}</div>",
+                    m.name, overlay,
                 ),
             };
-            let badge = if m.wasm_excluded {
-                " <span class=\"badge\">desktop only</span>"
-            } else {
-                ""
-            };
+            // The tile root is a <div> with an inner <a> around the thumb +
+            // caption, and the C/Rust links as a *sibling* <p>. Nesting the
+            // C/Rust anchors inside one big tile anchor is invalid HTML —
+            // the parser's misnested-anchor recovery splits every tile into
+            // a real tile plus a collapsed clone (doubling the tile count
+            // and producing mismatched tile sizes in the gallery).
             categories_body.push_str(&format!(
-                "        <a class=\"tile\" href=\"examples/{cat}/{name}.html\" data-name=\"{name}\">\n          {thumb}\n          <p>{name}{badge}</p>\n          <p class=\"links\"><a href=\"{c_url}\">C</a> &middot; <a href=\"{rust_url}\">Rust</a></p>\n        </a>\n",
+                "        <div class=\"tile\" data-name=\"{name}\">\n          <a class=\"tile-main\" href=\"examples/{cat}/{name}.html\">\n            {thumb}\n            <p>{name}</p>\n          </a>\n          <p class=\"links\"><a href=\"{c_url}\">C</a> &middot; <a href=\"{rust_url}\">Rust</a></p>\n        </div>\n",
                 cat = cat,
                 name = m.name,
                 thumb = thumb_html,
-                badge = badge,
                 c_url = m.c_url,
                 rust_url = m.rust_url,
             ));
@@ -151,6 +162,17 @@ fn main() {
         .join("examples");
     let shell_template = fs::read_to_string(manifest_dir.join("index/example_shell.html"))
         .expect("index/example_shell.html not found; required to synthesize per-example pages");
+
+    // Package per-category resources into emscripten preload bundles
+    // (`<cat>_res.data` + `<cat>_res.js`) so examples can fopen their
+    // `resources/<cat>/...` files at runtime. Without this every
+    // file-loading example aborts on the web — the wasm link never sees
+    // an emcc `--preload-file` flag (and can't: the bucketed build shares
+    // one EMCC_CFLAGS across many examples), so we run emscripten's
+    // file_packager post-hoc instead. One bundle per category keeps the
+    // download per page bounded (and browser-cached across that
+    // category's examples) instead of duplicating 49 MB per example.
+    let packaged_categories = package_category_resources(&manifest_dir, &site, &by_category);
     for m in &metas {
         let out_dir = site.join("examples").join(&m.category);
         fs::create_dir_all(&out_dir).unwrap();
@@ -179,11 +201,24 @@ fn main() {
         if js_copied {
             // Substitute placeholders in the shell. `{{{ SCRIPT }}}` is the
             // emscripten loader script tag (defaulted to async to match
-            // emscripten's own default HTML output).
-            let script_tag = format!(
+            // emscripten's own default HTML output). When the category has a
+            // resource bundle, a synchronous file_packager loader script is
+            // injected *before* the async main loader: the sync script blocks
+            // the parser, so its preRun/run-dependency registration is
+            // guaranteed to happen before the runtime starts and main() can
+            // touch the FS.
+            let main_tag = format!(
                 "<script async type=\"text/javascript\" src=\"{}.js\"></script>",
                 m.name
             );
+            let script_tag = if packaged_categories.contains(m.category.as_str()) {
+                format!(
+                    "<script type=\"text/javascript\" src=\"{}_res.js\"></script>\n  {}",
+                    m.category, main_tag,
+                )
+            } else {
+                main_tag
+            };
             let html = shell_template
                 .replace("{{{ EXAMPLE_NAME }}}", &m.name)
                 .replace("{{{ SCRIPT }}}", &script_tag);
@@ -211,12 +246,147 @@ fn main() {
         }
     }
 
+    // Copy a prebuilt mdBook (book/book/, produced by `mdbook build book`)
+    // into _site/book/ so the gallery header's book link resolves on the
+    // deployed Pages site. Optional: local gallery builds without mdbook
+    // still work, with a warning so the gap is visible in CI logs.
+    let book_src = workspace_root.join("book").join("book");
+    if book_src.join("index.html").exists() {
+        copy_dir_recursive(&book_src, &site.join("book"));
+        eprintln!("xtask_build_pages: copied mdBook into _site/book/");
+    } else {
+        eprintln!(
+            "xtask_build_pages: WARNING: {:?} not found (run `mdbook build book` first); \
+             the gallery's book link will 404 on this build",
+            book_src,
+        );
+    }
+
     eprintln!(
-        "xtask_build_pages: wrote {} tiles across {} categories to {:?}",
+        "xtask_build_pages: wrote {} tiles across {} categories to {:?} ({} resource bundles)",
         total_tiles,
         by_category.len(),
         site,
+        packaged_categories.len(),
     );
+}
+
+/// Runs emscripten's `file_packager` once per category that has vendored
+/// resources, emitting `_site/examples/<cat>/<cat>_res.data` (the bundle) and
+/// `<cat>_res.js` (the synchronous preRun loader injected into each of that
+/// category's example pages). Returns the set of categories that were
+/// successfully packaged.
+///
+/// Skips (with a warning) when the `EMSDK` env var, the file_packager script,
+/// or a `python3`/`python` interpreter is unavailable — local site builds
+/// without emsdk still produce a browsable gallery, just without runtime
+/// resources.
+fn package_category_resources(
+    manifest_dir: &Path,
+    site: &Path,
+    by_category: &BTreeMap<String, Vec<&ExampleMeta>>,
+) -> BTreeSet<String> {
+    let mut packaged = BTreeSet::new();
+
+    let Ok(emsdk) = std::env::var("EMSDK") else {
+        eprintln!(
+            "xtask_build_pages: WARNING: EMSDK not set; skipping resource bundles — \
+             file-loading examples will not run on the generated site",
+        );
+        return packaged;
+    };
+    let file_packager = PathBuf::from(&emsdk)
+        .join("upstream")
+        .join("emscripten")
+        .join("tools")
+        .join("file_packager.py");
+    if !file_packager.exists() {
+        eprintln!(
+            "xtask_build_pages: WARNING: {:?} not found; skipping resource bundles",
+            file_packager,
+        );
+        return packaged;
+    }
+    // emsdk environments ship python3 on Linux/macOS and python on Windows.
+    let python = ["python3", "python"]
+        .iter()
+        .find(|p| {
+            Command::new(p)
+                .arg("--version")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false)
+        })
+        .copied();
+    let Some(python) = python else {
+        eprintln!(
+            "xtask_build_pages: WARNING: no python3/python on PATH; skipping resource bundles",
+        );
+        return packaged;
+    };
+
+    for cat in by_category.keys() {
+        let res_dir = manifest_dir.join("resources").join(cat);
+        // Skip categories with no vendored resources (e.g. `shapes`) — their
+        // examples don't fopen anything, so no bundle is needed.
+        let has_files = fs::read_dir(&res_dir)
+            .map(|mut d| d.next().is_some())
+            .unwrap_or(false);
+        if !has_files {
+            continue;
+        }
+        let out_dir = site.join("examples").join(cat);
+        fs::create_dir_all(&out_dir).unwrap();
+        let data_path = out_dir.join(format!("{}_res.data", cat));
+        let js_path = out_dir.join(format!("{}_res.js", cat));
+        // Map the on-disk `showcase/resources/<cat>` to the virtual FS path
+        // `/resources/<cat>` — examples fopen `resources/<cat>/...` relative
+        // to the emscripten CWD `/`, so the paths line up.
+        let preload_spec = format!("{}@/resources/{}", res_dir.display(), cat);
+        let status = Command::new(python)
+            .arg(&file_packager)
+            .arg(&data_path)
+            .arg("--preload")
+            .arg(&preload_spec)
+            .arg(format!("--js-output={}", js_path.display()))
+            .status();
+        match status {
+            Ok(s) if s.success() => {
+                packaged.insert(cat.clone());
+                eprintln!(
+                    "xtask_build_pages: packaged resources/{} ({} bytes)",
+                    cat,
+                    fs::metadata(&data_path).map(|m| m.len()).unwrap_or(0),
+                );
+            }
+            Ok(s) => eprintln!(
+                "xtask_build_pages: WARNING: file_packager for {} exited {:?}; \
+                 that category's examples will lack runtime resources",
+                cat,
+                s.code(),
+            ),
+            Err(e) => eprintln!(
+                "xtask_build_pages: WARNING: failed to spawn file_packager for {}: {}",
+                cat, e,
+            ),
+        }
+    }
+    packaged
+}
+
+/// Recursively copies `src` into `dst` (creating `dst`). Panics on I/O errors
+/// — site assembly is all-or-nothing.
+fn copy_dir_recursive(src: &Path, dst: &Path) {
+    fs::create_dir_all(dst).unwrap();
+    for entry in fs::read_dir(src).unwrap().flatten() {
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if entry.file_type().unwrap().is_dir() {
+            copy_dir_recursive(&from, &to);
+        } else {
+            fs::copy(&from, &to).unwrap();
+        }
+    }
 }
 
 fn render_desktop_only_placeholder(m: &ExampleMeta) -> String {

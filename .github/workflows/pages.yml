@@ -64,7 +64,16 @@ jobs:
         run: cargo run -p raylib-showcase --release --bin xtask-wasm-build
       - name: Generate thumbnails (software_renderer)
         run: cargo run -p raylib-showcase --release --features software_renderer --bin gen-thumbnails
+      - name: Set up mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: '0.5.3'   # match book.yml's pin
+      - name: Build the book (deployed at /book/)
+        run: mdbook build book
       - name: Assemble Pages site
+        # xtask-build-pages also packages per-category resource bundles via
+        # $EMSDK's file_packager (so file-loading examples work on the web)
+        # and copies book/book/ into _site/book/.
         run: cargo run -p raylib-showcase --release --bin xtask-build-pages
       - uses: actions/upload-pages-artifact@v3
         with:
