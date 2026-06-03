@@ -205,6 +205,23 @@ start consuming the gallery examples.
     bindgen regeneration didn't pull in the core/std split; queued
     here for adoption after `final-release` ships `6.0.0` to
     crates.io. Author attribution belongs to nbe1233.
+19. **MSRV bump above 1.85** — the dependency tree has started
+    pulling in crates that require Rust newer than our current
+    `1.85.0` floor. Observed symptom: `Adding wasip2 v1.0.3+wasi-0.2.9
+    (requires Rust 1.87.0)` during a build under the pinned
+    toolchain. The fix is a two-step audit + bump:
+    (a) `cargo update` + walk the `requires Rust` notices to compile
+        a list of dep-driven MSRV floors;
+    (b) decide a target MSRV (likely `1.87.0` minimum — possibly
+        a higher rounded version for headroom), then bump
+        `rust-toolchain.toml`, both `rust-version` fields in
+        `raylib/Cargo.toml` and `raylib-sys/Cargo.toml`, the MSRV
+        gate in CI workflows, the README/book mentions of `1.85`,
+        and the `CLAUDE.md` MSRV line. Coordinate with the
+        `final-release` workstream so the published `6.0.0` advertises
+        the correct MSRV in its manifest. Document the chosen MSRV
+        policy (track stable - N? pin to specific?) in `CLAUDE.md`
+        so future bumps have a rule.
 
 ### Long-tail
 
