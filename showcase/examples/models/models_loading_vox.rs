@@ -130,6 +130,10 @@ fn main() {
     // Load MagicaVoxel files
     let mut models: Vec<Model> = Vec::with_capacity(MAX_VOX_FILES);
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_VOX_FILES {
         // Load VOX file and measure time
         let t0 = rl.get_time() * 1000.0;
@@ -187,6 +191,10 @@ fn main() {
     shader.set_shader_value(ambient_loc, Vector4::new(0.1, 0.1, 0.1, 1.0));
 
     // Assign out lighting shader to model
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_VOX_FILES {
         let mat_count = models[i].materials().len();
         for j in 0..mat_count {
@@ -287,6 +295,10 @@ fn main() {
         shader.set_shader_value(view_loc_now, camera_pos);
 
         // Update light values (actually, only enable/disable them)
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_LIGHTS {
             update_light_values(&mut shader, &mut lights[i]);
         }
@@ -306,6 +318,10 @@ fn main() {
             c.draw_grid(10, 1.0);
 
             // Draw spheres to show where the lights are
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..MAX_LIGHTS {
                 if lights[i].enabled != 0 {
                     c.draw_sphere_ex(lights[i].position, 0.2, 8, 8, lights[i].color);

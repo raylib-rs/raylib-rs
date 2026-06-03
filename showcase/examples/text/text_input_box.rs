@@ -52,6 +52,10 @@ fn main() {
     {
         // Update
         //----------------------------------------------------------------------------------
+        #[expect(
+            clippy::needless_bool_assign,
+            reason = "C-parity: C assigns the bool in if/else"
+        )]
         if text_box.check_collision_point_rec(rl.get_mouse_position()) {
             mouse_on_text = true;
         } else {

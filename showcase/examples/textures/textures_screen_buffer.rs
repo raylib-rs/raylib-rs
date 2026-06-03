@@ -48,16 +48,15 @@ fn main() {
     // UnloadImage; Image::from_raw ties that to Drop. Image::gen_image_color wraps the
     // same call but is gated behind SUPPORT_IMAGE_GENERATION, which isn't propagated
     // through the showcase crate.
-    let mut screen_image = unsafe {
-        Image::from_raw(ffi::GenImageColor(
-            image_width,
-            image_height,
-            Color::BLACK.into(),
-        ))
-    };
+    let mut screen_image =
+        unsafe { Image::from_raw(ffi::GenImageColor(image_width, image_height, Color::BLACK)) };
     let mut screen_texture = rl.load_texture_from_image(&thread, &screen_image).unwrap();
 
     // Generate flame color palette
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_COLORS {
         let t = i as f32 / (MAX_COLORS - 1) as f32;
         let hue = t * t;
@@ -78,6 +77,10 @@ fn main() {
         // Update
         //----------------------------------------------------------------------------------
         // Grow flameRoot
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for x in 2..flame_width as usize {
             let mut flame = flame_root_buffer[x] as i32;
             flame += rl.get_random_value::<i32>(0..=2);
@@ -85,12 +88,20 @@ fn main() {
         }
 
         // Transfer flameRoot to indexBuffer
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for x in 0..flame_width as usize {
             let i = x + ((image_height - 1) * image_width) as usize;
             index_buffer[i] = flame_root_buffer[x];
         }
 
         // Clear top row, because it can't move any higher
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for x in 0..image_width as usize {
             if index_buffer[x] != 0 {
                 index_buffer[x] = 0;

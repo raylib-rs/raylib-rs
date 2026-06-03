@@ -294,6 +294,10 @@ fn update_body(
 }
 
 // Update camera for FPS behaviour
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
 fn update_camera_fps(camera: &mut Camera3D, state: &mut GameState) {
     let up = Vector3::new(0.0, 1.0, 0.0);
     let target_offset = Vector3::new(0.0, 0.0, -1.0);

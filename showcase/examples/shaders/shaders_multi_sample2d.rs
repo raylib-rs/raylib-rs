@@ -48,7 +48,7 @@ fn main() {
         Image::from_raw(raylib::ffi::GenImageColor(
             800,
             450,
-            Color::new(255, 0, 0, 255).into(),
+            Color::new(255, 0, 0, 255),
         ))
     };
     let tex_red = rl.load_texture_from_image(&thread, &im_red).unwrap();
@@ -59,7 +59,7 @@ fn main() {
         Image::from_raw(raylib::ffi::GenImageColor(
             800,
             450,
-            Color::new(0, 0, 255, 255).into(),
+            Color::new(0, 0, 255, 255),
         ))
     };
     let tex_blue = rl.load_texture_from_image(&thread, &im_blue).unwrap();
@@ -97,6 +97,10 @@ fn main() {
             divider_value -= 0.01;
         }
 
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if divider_value < 0.0 {
             divider_value = 0.0;
         } else if divider_value > 1.0 {

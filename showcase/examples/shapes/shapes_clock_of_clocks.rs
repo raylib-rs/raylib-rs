@@ -215,6 +215,10 @@ fn main() {
 
         let mut x_offset: f32 = 4.0;
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for digit in 0..6 {
             for row in 0..6 {
                 for col in 0..4 {

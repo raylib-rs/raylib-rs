@@ -39,8 +39,7 @@ fn main() {
         .build();
 
     // SAFETY: ffi::GenImageColor returns an owned Image; wrap into our RAII Image.
-    let im_blank =
-        unsafe { Image::from_raw(raylib::ffi::GenImageColor(1024, 1024, Color::BLANK.into())) };
+    let im_blank = unsafe { Image::from_raw(raylib::ffi::GenImageColor(1024, 1024, Color::BLANK)) };
     let texture = rl.load_texture_from_image(&thread, &im_blank).unwrap(); // Load blank texture to fill on shader
     drop(im_blank);
 

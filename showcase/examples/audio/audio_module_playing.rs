@@ -90,6 +90,10 @@ fn main() {
 
     music.play_stream();
 
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C initializes time_played before the playback loop overwrites it"
+    )]
     let mut time_played: f32 = 0.0;
     let mut pause = false;
 

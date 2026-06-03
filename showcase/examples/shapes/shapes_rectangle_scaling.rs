@@ -39,6 +39,10 @@ fn main() {
     #[allow(unused_assignments)]
     let mut mouse_position = Vector2::zero();
 
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut mouse_scale_ready = false;
     let mut mouse_scale_mode = false;
 

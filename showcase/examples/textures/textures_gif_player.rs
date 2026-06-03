@@ -102,6 +102,10 @@ fn main() {
             frame_delay -= 1;
         }
 
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if frame_delay > MAX_FRAME_DELAY {
             frame_delay = MAX_FRAME_DELAY;
         } else if frame_delay < MIN_FRAME_DELAY {

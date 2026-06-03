@@ -28,6 +28,10 @@ const MAX_SINEWAVE_POINTS: usize = 256;
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    unused_assignments,
+    reason = "C-parity: the gif_recording reset before window close is an assignment-expression (not a let binding), where a statement-scoped attribute is rejected by stable Rust (E0658); it is dead in this RAII port but kept to mirror the C, suppressed at fn scope"
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -49,6 +53,10 @@ fn main() {
     // Get sine wave points for line drawing
     let mut sine_points: [Vector2; MAX_SINEWAVE_POINTS] =
         [Vector2::new(0.0, 0.0); MAX_SINEWAVE_POINTS];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_SINEWAVE_POINTS {
         sine_points[i].x = i as f32 * rl.get_screen_width() as f32 / 180.0;
         sine_points[i].y = screen_height as f32 / 2.0

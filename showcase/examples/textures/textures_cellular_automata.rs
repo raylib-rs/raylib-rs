@@ -83,7 +83,7 @@ fn main() {
         Image::from_raw(raylib::ffi::GenImageColor(
             IMAGE_WIDTH,
             IMAGE_HEIGHT,
-            Color::RAYWHITE.into(),
+            Color::RAYWHITE,
         ))
     };
     // The top central pixel set as black
@@ -155,7 +155,7 @@ fn main() {
             // SAFETY: ImageClearBackground takes the image by pointer. We have exclusive
             // access via `&mut image` (raylib reads no other state); single-threaded use.
             unsafe {
-                raylib::ffi::ImageClearBackground(&mut *image, Color::RAYWHITE.into());
+                raylib::ffi::ImageClearBackground(&mut *image, Color::RAYWHITE);
             }
             image.draw_pixel(IMAGE_WIDTH / 2, 0, Color::BLACK);
             line = 1;

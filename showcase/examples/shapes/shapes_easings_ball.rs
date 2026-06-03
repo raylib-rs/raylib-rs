@@ -49,6 +49,7 @@ fn main() {
     {
         // Update
         //----------------------------------------------------------------------------------
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if state == 0
         // Move ball position X with easing
         {

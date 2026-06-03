@@ -35,6 +35,10 @@ const MAX_POSTPRO_SHADERS: usize = 12;
 #[repr(i32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
+#[expect(
+    clippy::enum_variant_names,
+    reason = "C-parity: variant names mirror the C enum prefix"
+)]
 enum PostproShader {
     FxGrayscale = 0,
     FxPosterization,

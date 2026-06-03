@@ -32,6 +32,10 @@ fn main() {
         .title("raylib [core] example - input gestures")
         .build();
 
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut touch_position = Vector2::new(0.0, 0.0);
     let touch_area = Rectangle::new(
         220.0,
@@ -62,6 +66,7 @@ fn main() {
         current_gesture = rl.get_gesture_detected();
         touch_position = rl.get_touch_position(0);
 
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if touch_area.check_collision_point_rec(touch_position)
             && (current_gesture != Gesture::GESTURE_NONE)
         {
@@ -105,6 +110,10 @@ fn main() {
 
                 // Reset gestures strings
                 if gestures_count >= MAX_GESTURE_STRINGS {
+                    #[expect(
+                        clippy::needless_range_loop,
+                        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                    )]
                     for i in 0..MAX_GESTURE_STRINGS {
                         gesture_strings[i].clear();
                     }
@@ -139,6 +148,10 @@ fn main() {
             Color::GRAY.alpha(0.5),
         );
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..gestures_count {
             if i % 2 == 0 {
                 d.draw_rectangle(10, 30 + 20 * i as i32, 200, 20, Color::LIGHTGRAY.alpha(0.5));

@@ -58,8 +58,8 @@ fn main() {
             screen_height,
             screen_width / 20,
             screen_height / 20,
-            Color::ORANGE.into(),
-            Color::YELLOW.into(),
+            Color::ORANGE,
+            Color::YELLOW,
         ))
     };
 

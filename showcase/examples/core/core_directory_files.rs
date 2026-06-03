@@ -113,7 +113,7 @@ fn main() {
         unsafe {
             raylib::ffi::GuiListViewEx(
                 Rectangle::new(0.0, 50.0, screen_w as f32, screen_h as f32 - 50.0),
-                path_ptrs.as_mut_ptr() as *mut *const std::os::raw::c_char,
+                path_ptrs.as_mut_ptr(),
                 files.count() as i32,
                 &mut list_scroll_index,
                 &mut list_item_active,

@@ -67,7 +67,15 @@ fn main() {
 
     // playerCellX/Y need to be visible to the HUD; declare here so we can read
     // them again after the borrow of `rl` ends.
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut player_cell_x: i32 = 0;
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut player_cell_y: i32 = 0;
     //--------------------------------------------------------------------------------------
 
@@ -113,15 +121,14 @@ fn main() {
                         // SAFETY: pure raylib FFI taking primitive args; no aliasing or lifetime concerns.
                         && unsafe {
                             raylib::ffi::CheckCollisionCircleRec(
-                                player_pos.into(),
+                                player_pos,
                                 player_radius,
                                 Rectangle {
                                     x: map_position.x - 0.5 + x as f32,
                                     y: map_position.z - 0.5 + y as f32,
                                     width: 1.0,
                                     height: 1.0,
-                                }
-                                .into(),
+                                },
                             )
                         }
                     {

@@ -65,6 +65,10 @@ fn wave_type_as_str(t: WaveType) -> &'static str {
 // callback at a time; cycle wave types by unset + set.
 fn install_callback(stream: &AudioStream, wave_type: WaveType, state: Arc<Mutex<SharedState>>) {
     unset_audio_stream_callback(stream);
+    #[expect(
+        clippy::type_complexity,
+        reason = "Rust closure storage for C's AudioCallback dispatch; explicit type annotation unifies the match arms"
+    )]
     let cb: Box<dyn FnMut(&mut [f32]) + Send + 'static> = match wave_type {
         WaveType::Sine => Box::new(move |frames_out: &mut [f32]| {
             sine_callback(frames_out, &state);
@@ -91,6 +95,10 @@ fn sine_callback(frames_out: &mut [f32], state: &Mutex<SharedState>) {
 
     // Synthesize the sine wave
     let frame_count = frames_out.len();
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..frame_count {
         frames_out[i] = (2.0 * PI * s.wave_index as f32 / wavelength as f32).sin();
 
@@ -112,6 +120,10 @@ fn square_callback(frames_out: &mut [f32], state: &Mutex<SharedState>) {
 
     // Synthesize the square wave
     let frame_count = frames_out.len();
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..frame_count {
         frames_out[i] = if s.wave_index < wavelength / 2 {
             1.0
@@ -136,6 +148,10 @@ fn triangle_callback(frames_out: &mut [f32], state: &Mutex<SharedState>) {
 
     // Synthesize the triangle wave
     let frame_count = frames_out.len();
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..frame_count {
         frames_out[i] = if s.wave_index < wavelength / 2 {
             -1.0 + 2.0 * s.wave_index as f32 / (wavelength / 2) as f32
@@ -160,6 +176,10 @@ fn sawtooth_callback(frames_out: &mut [f32], state: &Mutex<SharedState>) {
 
     // Synthesize the sawtooth wave
     let frame_count = frames_out.len();
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..frame_count {
         frames_out[i] = -1.0 + 2.0 * s.wave_index as f32 / wavelength as f32;
         s.wave_index += 1;

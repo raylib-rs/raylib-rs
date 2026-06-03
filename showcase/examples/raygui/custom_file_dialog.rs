@@ -151,7 +151,7 @@ fn main() {
                 if file_name_input.to_lowercase().ends_with(".png") {
                     // texture must be dropped before reassignment — let it.
                     // RAII: prior texture is dropped on assignment.
-                    let _ = std::mem::replace(&mut texture, None);
+                    let _ = texture.take();
                     // Note: we cannot call `load_texture` here because `rl` is borrowed by `d`;
                     // store the path and load on the next frame's update pass.
                     file_name_to_load = file_name_input.clone();

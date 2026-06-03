@@ -47,6 +47,10 @@ fn add_codepoint_range(font: Font, font_path: &str, start: i32, stop: i32) -> Fo
     }
 
     // Add new codepoints to list (provided range)
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in (current_range_size as usize)..(updated_codepoint_count as usize) {
         updated_codepoints[i] = start + (i as i32 - current_range_size);
     }
@@ -130,8 +134,8 @@ fn main() {
                 // Unicode range: Cyrillic
                 font = add_codepoint_range(font, FONT_PATH, 0x400, 0x4ff);
                 font = add_codepoint_range(font, FONT_PATH, 0x500, 0x52f);
-                font = add_codepoint_range(font, FONT_PATH, 0x2de0, 0x2Dff);
-                font = add_codepoint_range(font, FONT_PATH, 0xa640, 0xA69f);
+                font = add_codepoint_range(font, FONT_PATH, 0x2de0, 0x2DFF);
+                font = add_codepoint_range(font, FONT_PATH, 0xa640, 0xA69F);
             }
             if unicode_range >= 2 {
                 // Unicode range: Greek

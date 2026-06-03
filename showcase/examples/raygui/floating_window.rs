@@ -25,6 +25,10 @@ struct FloatingWindowState {
     scroll: Vector2,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "C-parity: mirrors the C function signature"
+)]
 fn gui_window_floating<D: RaylibDraw + RaylibDrawGui>(
     d: &mut D,
     state: &mut FloatingWindowState,

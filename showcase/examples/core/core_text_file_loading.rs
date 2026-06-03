@@ -58,6 +58,10 @@ fn main() {
     // Wrap the lines as needed
     // idiomatic: we mirror the C in-place wrap by inserting '\n' characters. Rust strings are
     // UTF-8, but the upstream operates on ASCII spaces — keep working in bytes for parity.
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..line_count {
         let mut bytes: Vec<u8> = lines[i].clone().into_bytes();
         let len = bytes.len();
@@ -108,6 +112,10 @@ fn main() {
     // Calculating the total height so that we can show a scrollbar
     let mut text_height: i32 = 0;
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..line_count {
         let c = std::ffi::CString::new(lines[i].as_str()).unwrap();
         let size = unsafe {
@@ -173,6 +181,10 @@ fn main() {
             let mut m = d.begin_mode2D(cam);
             // Going through all the read lines
             let mut t: i32 = text_top;
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..line_count {
                 // Each time we go through and calculate the height of the text to move the cursor appropriately
                 let size = if !lines[i].is_empty() {

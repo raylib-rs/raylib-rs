@@ -33,6 +33,10 @@ fn main() {
 
     let v0 = Vector2::new(screen_width as f32 / 2.0, screen_height as f32 / 2.0);
     let mut v1 = v0 + Vector2::new(100.0, 80.0);
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut v2 = Vector2::zero(); // Updated with mouse position
 
     let mut angle: f32 = 0.0; // Angle in degrees

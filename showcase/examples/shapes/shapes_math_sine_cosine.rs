@@ -319,7 +319,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 40.0, 120.0, 20.0),
             "Angle",
-            &format!("{:.0}\u{00B0}", angle),
+            format!("{:.0}\u{00B0}", angle),
             &mut angle,
             0.0,
             360.0,

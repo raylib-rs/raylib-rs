@@ -26,6 +26,10 @@ const GLSL_VERSION: i32 = 330;
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    unused_assignments,
+    reason = "C-parity: two anim_blend_factor resets are assignment-expressions (not let bindings), where a statement-scoped attribute is rejected by stable Rust (E0658); suppressed at fn scope. The let-binding sites keep their tighter statement-level expects."
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -87,6 +91,10 @@ fn main() {
     let mut anim_current_frame1: f32 = 0.0; // Next animation frame (supporting interpolated frames)
     let mut anim_frame_speed1: f32 = 0.5; // Next animation play speed
 
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut anim_blend_factor: f32 = 0.0; // Blend factor from anim0[frame0] --> anim1[frame1], [0.0f..1.0f]
     // NOTE: 0.0f results in full anim0[] and 1.0f in full anim1[]
 
@@ -109,7 +117,15 @@ fn main() {
 
     let mut dropdown_edit_mode0 = false;
     let mut dropdown_edit_mode1 = false;
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut anim_frame_progress0: f32 = 0.0;
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut anim_frame_progress1: f32 = 0.0;
     let mut anim_blend_progress: f32 = 0.0;
 
@@ -278,7 +294,7 @@ fn main() {
                 height: 12.0,
             },
             "",
-            &format!("x{:.1}", anim_frame_speed0),
+            format!("x{:.1}", anim_frame_speed0),
             &mut anim_frame_speed0,
             0.1,
             2.0,
@@ -294,7 +310,7 @@ fn main() {
                 width: 160.0,
                 height: 12.0,
             },
-            &format!("{:.1}x", anim_frame_speed1),
+            format!("{:.1}x", anim_frame_speed1),
             "",
             &mut anim_frame_speed1,
             0.1,
@@ -363,7 +379,7 @@ fn main() {
                 height: 20.0,
             },
             "ANIM 0",
-            &format!(
+            format!(
                 "FRAME: {:.2} / {}",
                 anim_frame_progress0, anims[anim_index0 as usize].keyframeCount
             ),
@@ -391,7 +407,7 @@ fn main() {
                 height: 20.0,
             },
             "ANIM 1",
-            &format!(
+            format!(
                 "FRAME: {:.2} / {}",
                 anim_frame_progress1, anims[anim_index1 as usize].keyframeCount
             ),

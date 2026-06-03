@@ -127,6 +127,10 @@ fn gen_mesh_decal(
             // The way we calculate the vertices of the mesh triangle
             // depend on whether the mesh vertices are indexed or not
             if mesh.indices.is_null() {
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for v in 0..3 {
                     // SAFETY: mesh.vertices is vertexCount*3 floats; tri < triangleCount.
                     vertices[v] = unsafe {
@@ -138,6 +142,10 @@ fn gen_mesh_decal(
                     };
                 }
             } else {
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for v in 0..3 {
                     // SAFETY: indices array is triangleCount*3 u16; vertices is vertexCount*3 floats.
                     vertices[v] = unsafe {
@@ -159,6 +167,10 @@ fn gen_mesh_decal(
             // Transform all 3 vertices of the triangle
             // and check if they are inside our decal box
             let mut inside_count = 0;
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..3 {
                 // To projection space
                 let v = vertices[i].transform(projection);
@@ -188,6 +200,10 @@ fn gen_mesh_decal(
         Vector3::new(0.0, 0.0, -1.0),
     ];
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for face in 0..6 {
         // Swap current model builder (so we read from the one we just wrote to)
         mb_index = 1 - mb_index;
@@ -199,9 +215,25 @@ fn gen_mesh_decal(
 
         let mut i = 0;
         while i < in_verts.len() {
+            #[expect(
+                unused_assignments,
+                reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+            )]
             let mut n_v1 = Vector3::ZERO;
+            #[expect(
+                unused_assignments,
+                reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+            )]
             let mut n_v2 = Vector3::ZERO;
+            #[expect(
+                unused_assignments,
+                reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+            )]
             let mut n_v3 = Vector3::ZERO;
+            #[expect(
+                unused_assignments,
+                reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+            )]
             let mut n_v4 = Vector3::ZERO;
 
             let d1 = in_verts[i].dot(planes[face]) - s;
@@ -288,6 +320,10 @@ fn gen_mesh_decal(
     // Allocate room for UVs
     if !the_mesh.vertices.is_empty() {
         let mut uvs = vec![Vector2::ZERO; the_mesh.vertices.len()];
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..the_mesh.vertices.len() {
             // Calculate the UVs based on the projected coords
             // They are clipped to (-decalSize .. decalSize) and we want them (0..1)
@@ -323,7 +359,7 @@ fn gui_button<D: RaylibDraw>(
     let mut pressed = false;
 
     // SAFETY: pure raylib FFI taking primitive args; no aliasing or lifetime concerns.
-    if unsafe { ffi::CheckCollisionPointRec(mouse_pos.into(), rec.into()) } {
+    if unsafe { ffi::CheckCollisionPointRec(mouse_pos, rec) } {
         bg_color = Color::LIGHTGRAY;
         if lmb_pressed {
             pressed = true;
@@ -354,6 +390,10 @@ fn gui_button<D: RaylibDraw>(
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -449,8 +489,8 @@ fn main() {
         let mut collision = ffi::RayCollision {
             hit: false,
             distance: f32::MAX,
-            point: Vector3::ZERO.into(),
-            normal: Vector3::ZERO.into(),
+            point: Vector3::ZERO,
+            normal: Vector3::ZERO,
         };
 
         // Get mouse ray
@@ -499,10 +539,8 @@ fn main() {
             && decal_models.len() < MAX_DECALS
         {
             // Create the transformation to project the decal
-            let origin =
-                Vector3::from(collision.point) + Vector3::from(collision.normal).scale(1.0);
-            let mut splat =
-                Matrix::look_at(collision.point.into(), origin, Vector3::new(0.0, 1.0, 0.0));
+            let origin = collision.point + collision.normal.scale(1.0);
+            let mut splat = Matrix::look_at(collision.point, origin, Vector3::new(0.0, 1.0, 0.0));
 
             // Spin the placement around a bit
             splat = splat
@@ -544,16 +582,18 @@ fn main() {
             }
 
             // Draw the decal models
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..decal_models.len() {
                 c.draw_model(&decal_models[i], Vector3::ZERO, 1.0, Color::WHITE);
             }
 
             // If we hit the mesh, draw the box for the decal
             if collision.hit {
-                let origin =
-                    Vector3::from(collision.point) + Vector3::from(collision.normal).scale(1.0);
-                let splat =
-                    Matrix::look_at(collision.point.into(), origin, Vector3::new(0.0, 1.0, 0.0));
+                let origin = collision.point + collision.normal.scale(1.0);
+                let splat = Matrix::look_at(collision.point, origin, Vector3::new(0.0, 1.0, 0.0));
                 placement_cube.set_transform(&splat.invert());
                 c.draw_model(&placement_cube, Vector3::ZERO, 1.0, Color::WHITE.alpha(0.5));
             }
@@ -596,6 +636,10 @@ fn main() {
         );
         y_pos += 15.0;
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..decal_models.len() {
             if i == 20 {
                 d.draw_text("...", x0 as i32, y_pos as i32, 10, Color::LIME);

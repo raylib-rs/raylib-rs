@@ -102,6 +102,10 @@ fn main() {
     // Protractor variables definitions
     let angle_length: f32 = 90.0;
     let mut current_angle_degrees: f32 = 0.0;
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut final_vector = Vector2::new(0.0, 0.0);
     let protractor_position = Vector2::new(266.0, 315.0);
 
@@ -629,6 +633,10 @@ fn main() {
         // GESTURE_NONE
         {
             if touch_count != 0 {
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for i in 0..(touch_count as usize) {
                     d.draw_circle_v(touch_position[i], 50.0, gesture_color.alpha(0.5));
                     d.draw_circle_v(touch_position[i], 5.0, gesture_color);

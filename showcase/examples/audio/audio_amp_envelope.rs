@@ -194,6 +194,10 @@ fn main() {
                 }
             } else {
                 // Clear buffer if silent to avoid looping noise
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for i in 0..BUFFER_SIZE {
                     buffer[i] = 0.0;
                 }

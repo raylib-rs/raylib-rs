@@ -38,6 +38,10 @@ const FFT_HISTORICAL_SMOOTHING_DUR: f32 = 2.0;
 const MIN_DECIBELS: f32 = -100.0; // https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode/minDecibels
 const MAX_DECIBELS: f32 = -30.0; // https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode/maxDecibels
 const INVERSE_DECIBEL_RANGE: f32 = 1.0 / (MAX_DECIBELS - MIN_DECIBELS);
+#[expect(
+    clippy::approx_constant,
+    reason = "deliberate ln(10) literal in the 20/ln(10) dB-to-linear formula; the explicit number documents the Web Audio math"
+)]
 const DB_TO_LINEAR_SCALE: f32 = 20.0 / 2.302_585_1;
 const SMOOTHING_TIME_CONSTANT: f32 = 0.8; // https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode/smoothingTimeConstant
 const TEXTURE_HEIGHT: i32 = 1;
@@ -121,6 +125,10 @@ fn cooley_tukey_fft_slow(spectrum: &mut [FFTComplex], n: usize) {
 }
 
 fn capture_frame(fft_data: &mut FFTData, audio_samples: &[f32], now: f64) {
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..FFT_WINDOW_SIZE {
         let x = (2.0 * PI * i as f32) / (FFT_WINDOW_SIZE as f32 - 1.0);
         let blackman_weight = 0.42 - 0.5 * x.cos() + 0.08 * (2.0 * x).cos(); // https://en.wikipedia.org/wiki/Window_function#Blackman_window
@@ -135,6 +143,10 @@ fn capture_frame(fft_data: &mut FFTData, audio_samples: &[f32], now: f64) {
 
     let mut smoothed_spectrum = [0.0f32; BUFFER_SIZE];
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for bin in 0..BUFFER_SIZE {
         let re = fft_data.work_buffer[bin].real;
         let im = fft_data.work_buffer[bin].imaginary;
@@ -165,6 +177,10 @@ fn render_frame(fft_data: &FFTData, fft_image: &mut Image) {
     }
 
     let amplitude = &fft_data.fft_history[history_position as usize];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for bin in 0..BUFFER_SIZE {
         fft_image.draw_pixel(
             bin as i32,
@@ -201,7 +217,7 @@ fn main() {
         Image::from_raw(raylib::ffi::GenImageColor(
             BUFFER_SIZE as i32,
             TEXTURE_HEIGHT,
-            Color::WHITE.into(),
+            Color::WHITE,
         ))
     };
     let fft_texture = rl
@@ -274,6 +290,10 @@ fn main() {
         // Update
         //----------------------------------------------------------------------------------
         while audio_stream.is_processed() {
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..AUDIO_STREAM_RING_BUFFER_SIZE {
                 // SAFETY: wav_cursor is wrapped to wav_frame_count below; index lies in [0, frameCount).
                 let (left, right) = unsafe {

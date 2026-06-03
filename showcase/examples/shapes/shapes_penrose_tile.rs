@@ -98,6 +98,7 @@ fn main() {
         // Update
         //----------------------------------------------------------------------------------
         let mut rebuild = false;
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_pressed(KeyboardKey::KEY_UP) {
             if generations < max_generations {
                 generations += 1;
@@ -272,6 +273,10 @@ fn draw_penrose_l_system<D: RaylibDraw>(
     }
 
     let bytes = ls.production.as_bytes();
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..(ls.steps as usize) {
         let step = bytes[i] as char;
         if step == 'F' {

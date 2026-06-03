@@ -52,6 +52,10 @@ fn main() {
         .set_texture_filter(&thread, TextureFilter::TEXTURE_FILTER_BILINEAR);
 
     let mut colors: [Color; 10] = [Color::new(0, 0, 0, 0); 10];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..10 {
         colors[i] = Color::new(
             rl.get_random_value::<i32>(100..=250) as u8,
@@ -77,6 +81,10 @@ fn main() {
 
         if rl.is_key_pressed(KeyboardKey::KEY_SPACE) {
             // Recalculate random colors for the bars
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..10 {
                 colors[i] = Color::new(
                     rl.get_random_value::<i32>(100..=250) as u8,

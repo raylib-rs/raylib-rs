@@ -150,6 +150,7 @@ fn main() {
             );
         }
 
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
             if rect_count >= 4 {
                 rect_count -= 1;
@@ -175,6 +176,10 @@ fn main() {
 
         d.clear_background(Color::RAYWHITE);
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..(rect_count as usize) {
             d.draw_rectangle_rec(rectangles[i].rect, rectangles[i].color);
 

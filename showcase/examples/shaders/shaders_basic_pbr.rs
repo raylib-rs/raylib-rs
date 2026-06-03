@@ -472,6 +472,10 @@ fn main() {
         }
 
         // Update light values on shader (actually, only enable/disable them)
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_LIGHTS {
             update_light(&mut shader, &lights[i]);
         }
@@ -558,6 +562,10 @@ fn main() {
             c.draw_model(&car, Vector3::new(0.0, 0.0, 0.0), 0.25, Color::WHITE); // Draw car model
 
             // Draw spheres to show the lights positions
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..MAX_LIGHTS {
                 let light_color = Color::new(
                     (lights[i].color[0] * 255.0) as u8,

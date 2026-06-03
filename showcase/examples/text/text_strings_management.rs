@@ -412,6 +412,10 @@ fn main() {
                 if is_ctrl_down {
                     let grabbed_rect = text_particles[i].rect;
                     for j in 0..text_particles.len() {
+                        #[expect(
+                            clippy::collapsible_if,
+                            reason = "C-parity: C nests the conditionals"
+                        )]
                         if j != i && text_particles[i].grabbed {
                             if grabbed_rect.check_collision_recs(text_particles[j].rect) {
                                 let new = glue_text_particles(i, j, &mut text_particles, &mut rl);

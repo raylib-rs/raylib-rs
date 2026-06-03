@@ -159,6 +159,10 @@ fn draw_undo_buffer(
     }
 
     // Draw occupied slots: firstUndoIndex --> currentUndoIndex
+    #[expect(
+        clippy::comparison_chain,
+        reason = "C-parity: C uses if/else-if on </>"
+    )]
     if first_undo_index < current_undo_index {
         for i in first_undo_index..current_undo_index {
             d.draw_rectangle(
@@ -232,6 +236,10 @@ fn draw_undo_buffer(
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    clippy::field_reassign_with_default,
+    reason = "C-parity: C zero-inits then sets fields"
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -266,6 +274,10 @@ fn main() {
     // Init undo buffer to store MAX_UNDO_STATES states
     let mut states: Vec<PlayerState> = vec![PlayerState::default(); MAX_UNDO_STATES];
     // Init all undo states to current state
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_UNDO_STATES {
         states[i] = player;
     }
@@ -341,6 +353,7 @@ fn main() {
         }
 
         // Recover previous state from buffer: CTRL+Z
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) && rl.is_key_pressed(KeyboardKey::KEY_Z) {
             if current_undo_index != first_undo_index {
                 current_undo_index -= 1;
@@ -355,6 +368,7 @@ fn main() {
         }
 
         // Recover next state from buffer: CTRL+Y
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) && rl.is_key_pressed(KeyboardKey::KEY_Y) {
             if current_undo_index != last_undo_index {
                 let mut next_undo_index = current_undo_index + 1;
@@ -391,6 +405,10 @@ fn main() {
         // Draw player visited cells recorded by undo
         // NOTE: Remember we are using a ring buffer approach so,
         // some cells info could start at the end of the array and end at the beginning
+        #[expect(
+            clippy::comparison_chain,
+            reason = "C-parity: C uses if/else-if on </>"
+        )]
         if last_undo_index > first_undo_index {
             for i in first_undo_index..current_undo_index {
                 d.draw_rectangle_rec(

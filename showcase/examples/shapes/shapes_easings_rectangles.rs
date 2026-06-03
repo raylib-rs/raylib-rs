@@ -72,6 +72,10 @@ fn main() {
         if state == 0 {
             frames_counter += 1;
 
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..(MAX_RECS_X * MAX_RECS_Y) as usize {
                 recs[i].height = ease::circ_out(
                     frames_counter as f32,
@@ -108,6 +112,10 @@ fn main() {
             // When animation has finished, press space to restart
             frames_counter = 0;
 
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..(MAX_RECS_X * MAX_RECS_Y) as usize {
                 recs[i].height = RECS_HEIGHT as f32;
                 recs[i].width = RECS_WIDTH as f32;
@@ -125,6 +133,10 @@ fn main() {
         d.clear_background(Color::RAYWHITE);
 
         if state == 0 {
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..(MAX_RECS_X * MAX_RECS_Y) as usize {
                 d.draw_rectangle_pro(
                     recs[i],

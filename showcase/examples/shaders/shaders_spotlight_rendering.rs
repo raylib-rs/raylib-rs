@@ -69,12 +69,20 @@ struct Star {
 //--------------------------------------------------------------------------------------
 // Module Functions Definition
 //--------------------------------------------------------------------------------------
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
 fn reset_star(star: &mut Star, screen_width: i32, screen_height: i32, rl: &mut RaylibHandle) {
     star.position = Vector2::new(screen_width as f32 / 2.0, screen_height as f32 / 2.0);
 
     star.speed.x = rl.get_random_value::<i32>(-1000..=1000) as f32 / 100.0;
     star.speed.y = rl.get_random_value::<i32>(-1000..=1000) as f32 / 100.0;
 
+    #[expect(
+        clippy::neg_cmp_op_on_partial_ord,
+        reason = "C-parity: mirrors the C !(a < b)"
+    )]
     while !(star.speed.x.abs() + (star.speed.y.abs() > 1.0) as i32 as f32 > 0.0) {
         star.speed.x = rl.get_random_value::<i32>(-1000..=1000) as f32 / 100.0;
         star.speed.y = rl.get_random_value::<i32>(-1000..=1000) as f32 / 100.0;
@@ -83,6 +91,10 @@ fn reset_star(star: &mut Star, screen_width: i32, screen_height: i32, rl: &mut R
     star.position = star.position + star.speed * Vector2::new(8.0, 8.0);
 }
 
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
 fn update_star(star: &mut Star, screen_width: i32, screen_height: i32, rl: &mut RaylibHandle) {
     star.position = star.position + star.speed;
 
@@ -119,12 +131,20 @@ fn main() {
         speed: Vector2::zero(),
     }; MAX_STARS];
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for n in 0..MAX_STARS {
         reset_star(&mut stars[n], screen_width, screen_height, &mut rl);
     }
 
     // Progress all the stars on, so they don't all start in the centre
     for _m in 0..(screen_width / 2) {
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for n in 0..MAX_STARS {
             update_star(&mut stars[n], screen_width, screen_height, &mut rl);
         }
@@ -153,6 +173,10 @@ fn main() {
         radius_loc: 0,
     }; MAX_SPOTS];
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_SPOTS {
         let pos_name = format!("spots[{}].pos", i);
         let inner_name = format!("spots[{}].inner", i);
@@ -171,6 +195,10 @@ fn main() {
 
     // Randomize the locations and velocities of the spotlights
     // and initialize the shader locations
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_SPOTS {
         spots[i].position.x = rl.get_random_value::<i32>(64..=screen_width - 64) as f32;
         spots[i].position.y = rl.get_random_value::<i32>(64..=screen_height - 64) as f32;
@@ -202,11 +230,19 @@ fn main() {
         frame_counter += 1;
 
         // Move the stars, resetting them if the go offscreen
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for n in 0..MAX_STARS {
             update_star(&mut stars[n], screen_width, screen_height, &mut rl);
         }
 
         // Update the spots, send them to the shader
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_SPOTS {
             if i == 0 {
                 let mp = rl.get_mouse_position();
@@ -241,6 +277,10 @@ fn main() {
         d.clear_background(Color::DARKBLUE);
 
         // Draw stars and bobs
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for n in 0..MAX_STARS {
             // Single pixel is just too small these days!
             d.draw_rectangle(

@@ -85,6 +85,7 @@ fn main() {
             && mouse_position.y < slider_rectangle.y + slider_rectangle.height;
 
         // Copy color as hex
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL) && rl.is_key_down(KeyboardKey::KEY_C) {
             if rl.is_key_pressed(KeyboardKey::KEY_C) {
                 let _ = rl

@@ -21,7 +21,6 @@
 use raylib::core::shaders::RaylibShader;
 use raylib::core::texture::RaylibTexture2D;
 use raylib::prelude::*;
-use raylib::rgui::RaylibDrawGui;
 use raylib_showcase::SourceViewer;
 
 #[cfg(target_family = "wasm")]
@@ -35,6 +34,10 @@ const GLSL_VERSION: i32 = 330;
 // Interaction mode (matches MODE_RUN, MODE_PAUSE, MODE_DRAW in the C source)
 const MODE_RUN: i32 = 0;
 const MODE_PAUSE: i32 = 1;
+#[expect(
+    dead_code,
+    reason = "C-parity: mirrors MODE_DRAW in the C InteractionMode enum; present in both C and Rust for completeness though the mode is reached via an implicit else"
+)]
 const MODE_DRAW: i32 = 2;
 
 // Struct to store example preset patterns
@@ -400,7 +403,7 @@ fn main() {
                     Image::from_raw(raylib::ffi::GenImageColor(
                         world_width / random_tiles,
                         world_height / random_tiles,
-                        Color::RAYWHITE.into(),
+                        Color::RAYWHITE,
                     ))
                 };
                 for i in 0..random_tiles {

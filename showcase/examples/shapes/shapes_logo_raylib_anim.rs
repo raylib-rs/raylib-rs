@@ -55,6 +55,7 @@ fn main() {
     {
         // Update
         //----------------------------------------------------------------------------------
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if state == 0
         // State 0: Small box blinking
         {

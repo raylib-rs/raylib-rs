@@ -21,7 +21,6 @@
 use raylib::core::shaders::RaylibShader;
 use raylib::core::texture::RaylibTexture2D;
 use raylib::prelude::*;
-use raylib::rgui::RaylibDrawGui;
 use raylib_showcase::SourceViewer;
 
 const MAX_TEXTURES: usize = 4;

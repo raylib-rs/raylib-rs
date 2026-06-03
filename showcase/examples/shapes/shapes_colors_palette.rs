@@ -84,6 +84,10 @@ fn main() {
         [Rectangle::new(0.0, 0.0, 0.0, 0.0); MAX_COLORS_COUNT]; // Rectangles array
 
     // Fills colorsRecs data (for every rectangle)
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_COLORS_COUNT {
         colors_recs[i].x = 20.0 + 100.0 * (i % 7) as f32 + 10.0 * (i % 7) as f32;
         colors_recs[i].y = 80.0 + 100.0 * (i / 7) as f32 + 10.0 * (i as f32 / 7.0);

@@ -86,6 +86,7 @@ fn main() {
     {
         // Update
         //----------------------------------------------------------------------------------
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_pressed(KeyboardKey::KEY_LEFT) {
             if h_align > 0 {
                 h_align -= 1;
@@ -99,6 +100,7 @@ fn main() {
             }
         }
 
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_pressed(KeyboardKey::KEY_UP) {
             if v_align > 0 {
                 v_align -= 1;

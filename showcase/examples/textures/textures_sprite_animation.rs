@@ -80,6 +80,10 @@ fn main() {
             frames_speed -= 1;
         }
 
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if frames_speed > MAX_FRAME_SPEED {
             frames_speed = MAX_FRAME_SPEED;
         } else if frames_speed < MIN_FRAME_SPEED {

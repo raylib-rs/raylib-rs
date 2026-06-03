@@ -60,6 +60,10 @@ fn main() {
     let left_trigger_deadzone = -0.9_f32;
     let right_trigger_deadzone = -0.9_f32;
 
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut vibrate_button = Rectangle::new(0.0, 0.0, 0.0, 0.0);
 
     rl.set_target_fps(60); // Set our game to run at 60 frames-per-second
@@ -171,8 +175,16 @@ fn main() {
                 Color::BLACK,
             );
 
+            #[expect(
+                clippy::search_is_some,
+                reason = "C-parity: mirrors TextFindIndex(TextToLower(GetGamepadName(gamepad)), XBOX_ALIAS_1) > -1 from the C original"
+            )]
             let is_xbox = gp_name_lower.find(XBOX_ALIAS_1).is_some()
                 || gp_name_lower.find(XBOX_ALIAS_2).is_some();
+            #[expect(
+                clippy::search_is_some,
+                reason = "C-parity: mirrors TextFindIndex(TextToLower(GetGamepadName(gamepad)), PS_ALIAS_1) > -1 from the C original"
+            )]
             let is_ps = gp_name_lower.find(PS_ALIAS_1).is_some()
                 || gp_name_lower.find(PS_ALIAS_2).is_some();
 

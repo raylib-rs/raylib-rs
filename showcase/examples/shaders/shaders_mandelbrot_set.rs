@@ -31,6 +31,10 @@ const GLSL_VERSION: i32 = 100;
 const GLSL_VERSION: i32 = 330;
 
 // A few good interesting places
+#[expect(
+    clippy::excessive_precision,
+    reason = "C-parity: float literals mirror the C constants"
+)]
 const POINTS_OF_INTEREST: [[f32; 3]; 6] = [
     [-1.76826775, -0.00422996283, 28435.9238],
     [0.322004497, -0.0357099883, 56499.7266],

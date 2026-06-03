@@ -27,6 +27,10 @@ const BONE_SOCKET_HAND_L: usize = 2;
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -74,6 +78,10 @@ fn main() {
 
     // Search bones for sockets
     let bones = character_model.bones().unwrap();
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..bones.len() {
         // SAFETY: bones[i].name is a null-terminated inline char[32].
         let name = unsafe {
@@ -208,9 +216,8 @@ fn main() {
                         .bindPose
                         .offset(bone_socket_index[i] as isize))
                     .rotation
-                    .into()
                 };
-                let out_rotation: Quaternion = transform.rotation.into();
+                let out_rotation: Quaternion = transform.rotation;
 
                 // Calculate socket rotation (angle between bone in initial pose and same bone in current animation frame)
                 let rotate = out_rotation * in_rotation.invert();

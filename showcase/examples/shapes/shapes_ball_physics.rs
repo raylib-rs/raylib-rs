@@ -39,6 +39,10 @@ struct Ball {
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -110,6 +114,7 @@ fn main() {
         }
 
         // Creates a new ball
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT)
             || (rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL)
                 && rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_RIGHT))

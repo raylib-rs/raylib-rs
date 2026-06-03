@@ -131,13 +131,8 @@ fn main() {
     // Create a white texture of the size of the window to update
     // each pixel of the window using the fragment shader: golRenderShader
     // SAFETY: ffi::GenImageColor returns an owned Image; wrap with RAII guard.
-    let white_image = unsafe {
-        Image::from_raw(ffi::GenImageColor(
-            GOL_WIDTH,
-            GOL_WIDTH,
-            Color::WHITE.into(),
-        ))
-    };
+    let white_image =
+        unsafe { Image::from_raw(ffi::GenImageColor(GOL_WIDTH, GOL_WIDTH, Color::WHITE)) };
     let white_tex = rl.load_texture_from_image(&thread, &white_image).unwrap();
     drop(white_image);
     let mut viewer = SourceViewer::for_current_example();

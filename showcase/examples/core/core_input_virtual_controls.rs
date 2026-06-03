@@ -84,7 +84,15 @@ fn main() {
         Color::GREEN,  // Down
     ];
 
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut pressed_button: i32 = BUTTON_NONE;
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut input_position = Vector2::new(0.0, 0.0);
 
     let mut player_position = Vector2::new(screen_width as f32 / 2.0, screen_height as f32 / 2.0);
@@ -115,6 +123,10 @@ fn main() {
                 && rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT))
         {
             // Find nearest D-Pad button to the input position
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..BUTTON_MAX {
                 let dist_x = (button_positions[i].x - input_position.x).abs();
                 let dist_y = (button_positions[i].y - input_position.y).abs();

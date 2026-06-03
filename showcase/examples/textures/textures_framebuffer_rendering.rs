@@ -276,6 +276,10 @@ fn draw_camera_prism<D: RaylibDraw3D>(d: &mut D, camera: Camera3D, aspect: f32, 
     d.draw_line3D(corners[3], corners[0], color);
 
     // Draw the prism lines from the far plane to the camera position
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..4 {
         d.draw_line3D(camera.position, corners[i], color);
     }

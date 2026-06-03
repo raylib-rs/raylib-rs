@@ -177,6 +177,10 @@ fn draw_text_codepoint_3d<D: RaylibDraw + RaylibDraw3D + RaylibRlgl>(
 }
 
 // Draw a 2D text in 3D space
+#[expect(
+    clippy::too_many_arguments,
+    reason = "C-parity: mirrors the C function signature"
+)]
 fn draw_text_3d<D: RaylibDraw + RaylibDraw3D + RaylibRlgl>(
     d: &mut D,
     font: &WeakFont,
@@ -609,6 +613,7 @@ fn main() {
         }
 
         // Handle text layers changes
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_pressed(KeyboardKey::KEY_HOME) {
             if layers > 1 {
                 layers -= 1;
@@ -641,6 +646,10 @@ fn main() {
 
             if multicolor {
                 // Fill color array with random colors
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for i in 0..TEXT_MAX_LAYERS {
                     multi[i] = generate_random_color(0.5, 0.8, &mut rl);
                     multi[i].a = rl.get_random_value::<i32>(0..=255) as u8;

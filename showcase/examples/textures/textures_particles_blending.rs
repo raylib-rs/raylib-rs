@@ -57,6 +57,10 @@ fn main() {
     }; MAX_PARTICLES];
 
     // Initialize particles
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_PARTICLES {
         mouse_tail[i].position = Vector2::new(0.0, 0.0);
         mouse_tail[i].color = Color::new(
@@ -94,6 +98,10 @@ fn main() {
         // NOTE: Particles initial position should be mouse position when activated
         // NOTE: Particles fall down with gravity and rotation... and disappear after 2 seconds (alpha = 0)
         // NOTE: When a particle disappears, active = false and it can be reused
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_PARTICLES {
             if !mouse_tail[i].active {
                 mouse_tail[i].active = true;
@@ -103,6 +111,10 @@ fn main() {
             }
         }
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_PARTICLES {
             if mouse_tail[i].active {
                 mouse_tail[i].position.y += gravity / 2.0;
@@ -136,6 +148,10 @@ fn main() {
             let mut b = d.begin_blend_mode(blending);
 
             // Draw active particles
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..MAX_PARTICLES {
                 if mouse_tail[i].active {
                     b.draw_texture_pro(

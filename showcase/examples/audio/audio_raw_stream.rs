@@ -95,6 +95,10 @@ fn main() {
         }
 
         if stream.is_processed() {
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..BUFFER_SIZE {
                 let wavelength = SAMPLE_RATE as i32 / sine_frequency;
                 buffer[i] = (2.0 * PI * sine_index as f32 / wavelength as f32).sin();

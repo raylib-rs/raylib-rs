@@ -147,6 +147,10 @@ fn main() {
 
         camera.zoom += rl.get_mouse_wheel_move() * 0.05;
 
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if camera.zoom > 3.0 {
             camera.zoom = 3.0;
         } else if camera.zoom < 0.25 {
@@ -316,6 +320,10 @@ fn update_camera_center_inside_map(
     }
 }
 
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
 fn update_camera_center_smooth_follow(
     camera: &mut Camera2D,
     player: &mut Player,

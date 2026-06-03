@@ -69,6 +69,10 @@ fn main() {
     let anim_names_joined = anim_names.join(";");
 
     let mut dropdown_edit_mode = false;
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut anim_frame_progress: f32 = 0.0;
 
     rl.set_target_fps(60); // Set our game to run at 60 frames-per-second
@@ -153,7 +157,7 @@ fn main() {
                 height: 24.0,
             },
             "FRAME SPEED: ",
-            &format!("x{:.1}", anim_frame_speed),
+            format!("x{:.1}", anim_frame_speed),
             &mut anim_frame_speed,
             0.1,
             2.0,
@@ -167,7 +171,7 @@ fn main() {
                 width: sw as f32 - 20.0,
                 height: 24.0,
             },
-            &format!(
+            format!(
                 "CURRENT FRAME: {:.2} / {}",
                 anim_frame_progress, anims[anim_index as usize].keyframeCount
             ),

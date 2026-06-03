@@ -137,6 +137,10 @@ fn main() {
         }
 
         // Update bullets position based on its acceleration
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..bullet_count {
             // Only update bullet if inside the screen
             if !bullets[i].disabled {
@@ -235,6 +239,10 @@ fn main() {
         // Draw bullets
         if draw_in_performance_mode {
             // Draw bullets using pre-rendered texture containing circle
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..bullet_count {
                 // Do not draw disabled bullets (out of screen)
                 if !bullets[i].disabled {
@@ -248,6 +256,10 @@ fn main() {
             }
         } else {
             // Draw bullets using DrawCircle(), less performant
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..bullet_count {
                 // Do not draw disabled bullets (out of screen)
                 if !bullets[i].disabled {

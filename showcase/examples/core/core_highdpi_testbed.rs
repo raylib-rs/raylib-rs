@@ -40,9 +40,25 @@ fn main() {
         .title("raylib [core] example - highdpi testbed")
         .build();
 
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut scale_dpi = rl.get_window_scale_dpi();
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut mouse_pos = rl.get_mouse_position();
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut current_monitor = get_current_monitor();
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut window_pos = rl.get_window_position();
 
     let grid_spacing: i32 = 40; // Grid spacing in pixels

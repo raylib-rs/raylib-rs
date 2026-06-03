@@ -68,6 +68,10 @@ fn main() {
         d.clear_background(Color::BLACK);
 
         // Draw the trail by looping through the history array
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_TRAIL_LENGTH {
             // Ensure we skip drawing if the array hasn't been fully filled on startup
             if (trail_positions[i].x != 0.0) || (trail_positions[i].y != 0.0) {

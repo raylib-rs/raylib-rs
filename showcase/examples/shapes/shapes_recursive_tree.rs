@@ -128,6 +128,10 @@ fn main() {
 
         d.clear_background(Color::RAYWHITE);
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..count {
             let branch = branches[i];
             if branch.length >= 2.0 {
@@ -147,7 +151,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 40.0, 120.0, 20.0),
             "Angle",
-            &format!("{:.0}", angle),
+            format!("{:.0}", angle),
             &mut angle,
             0.0,
             180.0,
@@ -155,7 +159,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 70.0, 120.0, 20.0),
             "Length",
-            &format!("{:.0}", length),
+            format!("{:.0}", length),
             &mut length,
             12.0,
             240.0,
@@ -163,7 +167,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 100.0, 120.0, 20.0),
             "Decay",
-            &format!("{:.2}", branch_decay),
+            format!("{:.2}", branch_decay),
             &mut branch_decay,
             0.1,
             0.78,
@@ -171,7 +175,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 130.0, 120.0, 20.0),
             "Depth",
-            &format!("{:.0}", tree_depth),
+            format!("{:.0}", tree_depth),
             &mut tree_depth,
             1.0,
             10.0,
@@ -179,7 +183,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 160.0, 120.0, 20.0),
             "Thick",
-            &format!("{:.0}", thick),
+            format!("{:.0}", thick),
             &mut thick,
             1.0,
             8.0,

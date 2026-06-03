@@ -140,6 +140,10 @@ fn main() {
             // Spline control point focus and selection logic
             if selected_control_point.is_none() {
                 focused_control_point = None;
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for i in 0..(point_count as usize - 1) {
                     if check_collision_point_circle(rl.get_mouse_position(), control[i].start, 6.0)
                     {
@@ -302,7 +306,7 @@ fn main() {
         // Draw spline config
         d.gui_label(
             Rectangle::new(12.0, 62.0, 140.0, 24.0),
-            &format!("Spline thickness: {}", spline_thickness as i32),
+            format!("Spline thickness: {}", spline_thickness as i32),
         );
         d.gui_slider_bar(
             Rectangle::new(12.0, 60.0 + 24.0, 140.0, 16.0),

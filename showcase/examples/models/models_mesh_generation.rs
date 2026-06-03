@@ -97,16 +97,8 @@ fn main() {
     // We generate a checked image for texturing
     // SAFETY: GenImageChecked returns a freshly-allocated raylib Image; wrap in the safe Image
     // RAII so it gets UnloadImage'd on Drop.
-    let checked = unsafe {
-        Image::from_raw(ffi::GenImageChecked(
-            2,
-            2,
-            1,
-            1,
-            Color::RED.into(),
-            Color::GREEN.into(),
-        ))
-    };
+    let checked =
+        unsafe { Image::from_raw(ffi::GenImageChecked(2, 2, 1, 1, Color::RED, Color::GREEN)) };
     let texture = rl.load_texture_from_image(&thread, &checked).unwrap();
     drop(checked);
 
@@ -175,6 +167,10 @@ fn main() {
     // NOTE: Generated meshes could be exported using ExportMesh()
 
     // Set checked texture as default diffuse component for all models material
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..NUM_MODELS {
         models[i].materials_mut()[0].set_material_texture(MATERIAL_MAP_ALBEDO, &texture);
     }
