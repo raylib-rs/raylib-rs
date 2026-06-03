@@ -13,6 +13,9 @@ extend-exclude = [
 [default.extend-words]
 ease = "ease"
 easer = "easer"
+# `mis` appears as a token boundary in valid hyphenated English ("mis-wire",
+# "mis-routing") that typos splits on the hyphen. Allow the prefix through.
+mis = "mis"
 
 [type.fs]
 extend-glob = ["*.fs"]

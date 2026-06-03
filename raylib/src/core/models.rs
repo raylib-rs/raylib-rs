@@ -1728,7 +1728,7 @@ impl<'a> MeshBuilder<'a> {
             indices: slice_to_rl_ptr(self.indices)?,
             ..Default::default()
         };
-        // SAFETY: Borrowing `RaylibThread` guarantees this is the thread the resourece was created from,
+        // SAFETY: Borrowing `RaylibThread` guarantees this is the thread the resource was created from,
         // and raw_mesh has no duplicates because it was just created.
         let mut mesh = unsafe { Mesh::from_raw(raw_mesh) };
         // SAFETY: mesh.vertices and mesh.texcoords are valid, initialized, unique, and safe to dereference.
