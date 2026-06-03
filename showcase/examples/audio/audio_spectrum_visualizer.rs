@@ -38,6 +38,10 @@ const FFT_HISTORICAL_SMOOTHING_DUR: f32 = 2.0;
 const MIN_DECIBELS: f32 = -100.0; // https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode/minDecibels
 const MAX_DECIBELS: f32 = -30.0; // https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode/maxDecibels
 const INVERSE_DECIBEL_RANGE: f32 = 1.0 / (MAX_DECIBELS - MIN_DECIBELS);
+#[expect(
+    clippy::approx_constant,
+    reason = "deliberate ln(10) literal in the 20/ln(10) dB-to-linear formula; the explicit number documents the Web Audio math"
+)]
 const DB_TO_LINEAR_SCALE: f32 = 20.0 / 2.302_585_1;
 const SMOOTHING_TIME_CONSTANT: f32 = 0.8; // https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode/smoothingTimeConstant
 const TEXTURE_HEIGHT: i32 = 1;

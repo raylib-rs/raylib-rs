@@ -25,6 +25,10 @@ use raylib::ffi;
 use raylib::prelude::*;
 use raylib_showcase::SourceViewer;
 
+#[expect(
+    dead_code,
+    reason = "C-parity: mirrors #define MAX_LIGHTS 4 from rlights.h included by the C original; kept for structural parity"
+)]
 const MAX_LIGHTS: usize = 4;
 
 #[cfg(target_family = "wasm")]

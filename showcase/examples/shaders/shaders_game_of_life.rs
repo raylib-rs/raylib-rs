@@ -34,6 +34,10 @@ const GLSL_VERSION: i32 = 330;
 // Interaction mode (matches MODE_RUN, MODE_PAUSE, MODE_DRAW in the C source)
 const MODE_RUN: i32 = 0;
 const MODE_PAUSE: i32 = 1;
+#[expect(
+    dead_code,
+    reason = "C-parity: mirrors MODE_DRAW in the C InteractionMode enum; present in both C and Rust for completeness though the mode is reached via an implicit else"
+)]
 const MODE_DRAW: i32 = 2;
 
 // Struct to store example preset patterns

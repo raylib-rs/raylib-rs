@@ -65,6 +65,10 @@ fn wave_type_as_str(t: WaveType) -> &'static str {
 // callback at a time; cycle wave types by unset + set.
 fn install_callback(stream: &AudioStream, wave_type: WaveType, state: Arc<Mutex<SharedState>>) {
     unset_audio_stream_callback(stream);
+    #[expect(
+        clippy::type_complexity,
+        reason = "Rust closure storage for C's AudioCallback dispatch; explicit type annotation unifies the match arms"
+    )]
     let cb: Box<dyn FnMut(&mut [f32]) + Send + 'static> = match wave_type {
         WaveType::Sine => Box::new(move |frames_out: &mut [f32]| {
             sine_callback(frames_out, &state);
