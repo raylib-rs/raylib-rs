@@ -103,9 +103,16 @@ pub fn render_frame<F: FnOnce(&mut RaylibDrawHandle<'_>)>(
     img
 }
 
-/// Correct the rlsw readback in place: flip vertically and correct the
+/// Correct an rlsw screen readback in place: flip vertically and fix the
 /// BGRA-as-RGBA byte order, yielding a true top-left RGBA image.
-fn normalize_readback(img: &mut Image) {
+///
+/// The raw readback from [`load_image_from_screen`](RaylibHandle::load_image_from_screen)
+/// under the `software_renderer` backend is BGRA + Y-inverted (deterministic on
+/// every OS; see `notes/ws4b-complete.md`). [`render_frame`] applies this to its
+/// result automatically; call it directly when you read the framebuffer yourself
+/// (e.g. capturing a frame to export as a PNG). Only sound for a 32-bit
+/// `PIXELFORMAT_UNCOMPRESSED_R8G8B8A8` image (debug-asserted).
+pub fn normalize_readback(img: &mut Image) {
     // Fix Y-inversion using the existing safe image op. NOTE: `flip_vertical`
     // (ImageFlipVertical) replaces the underlying data buffer, so the raw pointer
     // must be taken *after* this call — which it is, below.
