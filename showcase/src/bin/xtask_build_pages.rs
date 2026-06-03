@@ -74,9 +74,21 @@ fn main() {
     }
 
     // Render the per-category sections that get spliced into the template.
+    // Category ordering: alphabetical, but with `audio` pinned to the end.
+    // Audio examples don't currently run in the web (no audio context wired
+    // through to emscripten yet) and their software_renderer thumbnails fail,
+    // so we push them down so the gallery doesn't lead with broken tiles.
+    let mut ordered_cats: Vec<&String> = by_category.keys().collect();
+    ordered_cats.sort_by(|a, b| match (a.as_str(), b.as_str()) {
+        ("audio", "audio") => std::cmp::Ordering::Equal,
+        ("audio", _) => std::cmp::Ordering::Greater,
+        (_, "audio") => std::cmp::Ordering::Less,
+        _ => a.cmp(b),
+    });
     let mut categories_body = String::new();
     let mut total_tiles = 0usize;
-    for (cat, entries) in &by_category {
+    for cat in &ordered_cats {
+        let entries = &by_category[*cat];
         categories_body.push_str(&format!(
             "    <section class=\"category\" id=\"cat-{}\">\n      <h2>{}</h2>\n      <div class=\"grid\">\n",
             cat, cat,
@@ -88,7 +100,14 @@ fn main() {
                     "<div class=\"thumb\"><img src=\"thumbnails/{}\" alt=\"{}\" loading=\"lazy\" /></div>",
                     file, m.name,
                 ),
-                None => "<div class=\"thumb placeholder\"></div>".to_string(),
+                // No thumbnail captured (gen-thumbnails failed for this
+                // example). Show the name inside the placeholder so the
+                // tile is still identifiable at a glance instead of being
+                // a blank gray box.
+                None => format!(
+                    "<div class=\"thumb placeholder\"><span>{}</span></div>",
+                    m.name,
+                ),
             };
             let badge = if m.wasm_excluded {
                 " <span class=\"badge\">desktop only</span>"
