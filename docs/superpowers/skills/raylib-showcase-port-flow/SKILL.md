@@ -176,7 +176,7 @@ These are the specific failures the reviewer caught across the 4 waves. Each rul
 
 14. **Strict pairing flag `WS9_STRICT_PAIRING=1`.** Flipped on in `.github/workflows/showcase.yml` at P2 close (commit `635d146`). New C examples added upstream will fail CI until a matching Rust port lands. Do not push partial state with the `showcase/examples/raygui/` directory present but missing ports — `build.rs` will hard-error on every missing pair.
 
-15. **CI pattern: push to fork, watch the workflows, tag per wave.** Push to the `fork` remote (`Dacode45/ms-raylib-rs`), watch `showcase.yml` (3-OS + Linux wasm) and `pages.yml` (deploys to `dacode45.github.io/raylib-rs/`). Tag per wave: `ws9-p2-w1-complete`, `ws9-p2-w2-complete`, …, `ws9-p2-complete`, `ws9-p3-complete`, `ws9-p4-complete`, `ws9-complete`. Never `git push origin` — canonical merge is the final-release workstream.
+15. **CI pattern: push to fork, watch the workflows, tag per wave.** Push to the `fork` remote (`Dacode45/ms-raylib-rs`), watch `showcase.yml` (3-OS + Linux wasm) and `pages.yml` (deploys to `raylib-rs.github.io/raylib-rs/`). Tag per wave: `ws9-p2-w1-complete`, `ws9-p2-w2-complete`, …, `ws9-p2-complete`, `ws9-p3-complete`, `ws9-p4-complete`, `ws9-complete`. Never `git push origin` — canonical merge is the final-release workstream.
 
 ## Reference Templates
 

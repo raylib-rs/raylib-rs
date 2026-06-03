@@ -10,7 +10,7 @@
 
 ## 1. Summary
 
-Ship a runnable Rust port of every official raylib 6.0 example (218 raylib core + ~10-15 raygui = ~228-233 total), each with a built-in side-by-side C↔Rust source viewer rendered in-canvas via raygui, deployed as a GitHub Pages gallery at `dacode45.github.io/raylib-rs/`. The showcase is the publishable artifact for raylib-rs 6.0 — the landing surface that demonstrates the binding is alive, current, and at upstream parity. The source viewer is the central UX differentiator: newcomers can see how each raylib API call translates to its Rust equivalent without leaving the example.
+Ship a runnable Rust port of every official raylib 6.0 example (218 raylib core + ~10-15 raygui = ~228-233 total), each with a built-in side-by-side C↔Rust source viewer rendered in-canvas via raygui, deployed as a GitHub Pages gallery at `raylib-rs.github.io/raylib-rs/`. The showcase is the publishable artifact for raylib-rs 6.0 — the landing surface that demonstrates the binding is alive, current, and at upstream parity. The source viewer is the central UX differentiator: newcomers can see how each raylib API call translates to its Rust equivalent without leaving the example.
 
 At workstream completion, a new reusable skill at `~/.claude/skills/raylib-showcase-port-flow/SKILL.md` documents how to detect new upstream raylib examples on future raylib version bumps and how to properly port them — making future bumps cheap.
 
@@ -50,7 +50,7 @@ The 10 brainstorm decisions:
 | D5 | Wasm scope | Best-effort + explicit `showcase/wasm-exclude.toml` list. Excluded examples ship desktop + appear on the Pages site with a "desktop only" badge. |
 | D6 | raygui examples | **Include.** Add ~10-15 raygui upstream examples to the porting set. |
 | D7 | Asset handling | **Vendor every upstream resource** to `showcase/resources/<cat>/...` preserving directory structure so example load paths match the C originals (path-level visual parity). License attribution captured in `showcase/resources/README.md`. |
-| D8 | Pages deploy | Deploy from `fork/6.0-rc` to `dacode45.github.io/raylib-rs/` during RC. At final-release, deploy target flips to canonical (handled by the final-release workstream). |
+| D8 | Pages deploy | Deploy from `fork/6.0-rc` to `raylib-rs.github.io/raylib-rs/` during RC. At final-release, deploy target flips to canonical (handled by the final-release workstream). |
 | D9 | Book integration | Cross-link only. Per-chapter "See also: showcase examples" footers + new `book/src/appendix-examples.md`. No live wasm canvases in chapters (deferred). |
 | D10 | CI gating | Strict desktop (3-OS matrix, gates merges) + strict wasm-after-exclusions (gates merges). From Phase 0. |
 
@@ -216,7 +216,7 @@ impl SourceViewer {
 
 `xtask-build-pages` reads `examples_meta.json` (registry metadata) + `_manifest.json` (thumbnail results), populates `index/template.html` with a categorized table of examples, writes per-example shell pages by wrapping each emscripten-generated `<name>.html` with the gallery's chrome (header, breadcrumb, source-viewer toggle hint, link back to index). Output to `showcase/_site/`. `actions/deploy-pages@v4` uploads.
 
-URL during RC: `https://dacode45.github.io/raylib-rs/`. The per-example URL is `https://dacode45.github.io/raylib-rs/examples/<cat>/<name>.html`. Banner on the RC site: *"Preview build of raylib-rs 6.0-rc — final docs at raylib-rs.github.io after release."*
+URL during RC: `https://raylib-rs.github.io/raylib-rs/`. The per-example URL is `https://raylib-rs.github.io/raylib-rs/examples/<cat>/<name>.html`. Banner on the RC site: *"Preview build of raylib-rs 6.0-rc — final docs at raylib-rs.github.io after release."*
 
 ## 7. Components
 
@@ -283,7 +283,7 @@ Same as Flow B. Each example owns its own emscripten init via raylib's normal cr
 
 1. Push to `fork/6.0-rc` triggers `pages.yml` (gates on `showcase.yml` success).
 2. Job: checkout (with submodules) → install emscripten → `xtask-wasm-build` → `gen-thumbnails` → `xtask-build-pages` → upload `_site/` → `actions/deploy-pages@v4`.
-3. Deployed to `dacode45.github.io/raylib-rs/`. Per-example shells at `/examples/<cat>/<name>.html`.
+3. Deployed to `raylib-rs.github.io/raylib-rs/`. Per-example shells at `/examples/<cat>/<name>.html`.
 
 ### Flow F — Future raylib bump (the skill's flow)
 
@@ -306,7 +306,7 @@ Add `"showcase"` to root workspace; bump version `5.5.1 → 6.0.0-rc.1`; delete 
 - `cargo build --examples` green on 3-OS in `showcase.yml`.
 - `cargo run --example core_basic_window` shows the window; F1 toggles the source viewer with C and Rust tabs working.
 - `cargo build --target wasm32-unknown-emscripten --example core_basic_window` succeeds.
-- `pages.yml` deploys a single-example gallery to `dacode45.github.io/raylib-rs/`.
+- `pages.yml` deploys a single-example gallery to `raylib-rs.github.io/raylib-rs/`.
 - All 7 workflows green on `fork/6.0-rc` at P0 close (`check`, `test`, `web`, `sanitizers`, `book`, `showcase`, `pages`).
 
 ### P1 — Vendor resources (can overlap with P2's first wave)
@@ -359,7 +359,7 @@ Port the ~10-15 raygui upstream examples under `showcase/examples/raygui/<name>.
 - Book CI verification (existing `book.yml` stays green).
 
 **Done bar:**
-- Pages site at `dacode45.github.io/raylib-rs/` renders the full ~228-example gallery with categories, thumbnails, and per-example pages.
+- Pages site at `raylib-rs.github.io/raylib-rs/` renders the full ~228-example gallery with categories, thumbnails, and per-example pages.
 - Book builds with footers + appendix; `book.yml` + `pages.yml` green.
 
 ### P5 — Skill, done-note, status flip (sequential, final)
@@ -507,7 +507,7 @@ Total: 7 workflows green on `fork/6.0-rc` at WS9 done.
 | Emscripten upstream churn breaks the wasm leg mid-WS9 | Medium | Blocks `showcase.yml` + `pages.yml` | Pin emscripten via `setup-emsdk@v14` with explicit `version:` field. Track failures in tracked-deferred if unfixable. |
 | `gen-thumbnails` subprocess races / hangs / GPU context conflicts on CI | Medium | Blocks `pages.yml` | 30s subprocess timeout per example; failures → placeholder (don't fail workflow). Run thumbnail-gen only in `pages.yml`, never PR CI. |
 | `phf_codegen` build-time cost grows large with 228 entries | Low | Slower `cargo build` | Benchmark in P0. Fall back to sorted slice + binary search if too slow. Likely a non-issue at this size. |
-| Pages site at `dacode45.github.io/raylib-rs/` confuses users vs eventual canonical URL | Low | Minor user confusion | RC banner explaining preview state. URL flip handled in final-release. |
+| Pages site at `raylib-rs.github.io/raylib-rs/` confuses users vs eventual canonical URL | Low | Minor user confusion | RC banner explaining preview state. URL flip handled in final-release. |
 | `Cargo.toml` `[[example]]` entries (228 stanzas) make manifest noisy | Low | Manifest readability | Accept the noise; flat `examples/<cat>_<name>.rs` naming would break the visual mirror with raylib-sys. Optional `xtask-regen-cargo-toml` bin in tracked-deferred. |
 | Resource vendoring blows the repo size | Medium | Slower `git clone`; possible LFS needed | Estimate after P1. If >100 MB, evaluate git-lfs. Expected <50 MB (raylib resources are mostly small textures + short audio loops). |
 | New skill at `~/.claude/skills/` lives outside the repo, drifts vs repo state | Low | Skill drift | Mirror at `docs/superpowers/skills/raylib-showcase-port-flow.md` (source of truth); README points at both. |
@@ -554,7 +554,7 @@ Total: 7 workflows green on `fork/6.0-rc` at WS9 done.
 3. Every example displays its (C source, Rust source) pair via the raygui in-canvas viewer (`F1` toggle, C/Rust tabs, scroll).
 4. `cargo build --examples` succeeds on the 3-OS CI matrix in `showcase.yml`.
 5. `cargo build --target wasm32-unknown-emscripten --examples` minus `wasm-exclude.toml` succeeds in `showcase.yml`.
-6. GitHub Pages site at `dacode45.github.io/raylib-rs/` renders the full ~228-example gallery: categorized index, per-example pages with embedded canvas + viewer, thumbnails, "desktop only" badges per `wasm-exclude.toml`.
+6. GitHub Pages site at `raylib-rs.github.io/raylib-rs/` renders the full ~228-example gallery: categorized index, per-example pages with embedded canvas + viewer, thumbnails, "desktop only" badges per `wasm-exclude.toml`.
 7. mdBook has per-chapter "See also" footers and an Examples appendix; `book.yml` green.
 8. New skill exists at `~/.claude/skills/raylib-showcase-port-flow/SKILL.md` (and mirrored at `docs/superpowers/skills/raylib-showcase-port-flow.md`) documenting bump-detection + porting workflow.
 9. Done-note at `docs/superpowers/notes/ws9-showcase-complete.md` with final coverage table, exclusion list, tracked-deferred, CI inventory.

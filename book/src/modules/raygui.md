@@ -105,9 +105,9 @@ fn main() {
 
 Showcase examples that exercise this module:
 
-- [controls_test_suite](https://dacode45.github.io/raylib-rs/examples/raygui/controls_test_suite.html)
-- [floating_window](https://dacode45.github.io/raylib-rs/examples/raygui/floating_window.html)
-- [property_list](https://dacode45.github.io/raylib-rs/examples/raygui/property_list.html)
-- [scroll_panel](https://dacode45.github.io/raylib-rs/examples/raygui/scroll_panel.html)
-- [style_selector](https://dacode45.github.io/raylib-rs/examples/raygui/style_selector.html)
-- [custom_sliders](https://dacode45.github.io/raylib-rs/examples/raygui/custom_sliders.html)
+- [controls_test_suite](https://raylib-rs.github.io/raylib-rs/examples/raygui/controls_test_suite.html)
+- [floating_window](https://raylib-rs.github.io/raylib-rs/examples/raygui/floating_window.html)
+- [property_list](https://raylib-rs.github.io/raylib-rs/examples/raygui/property_list.html)
+- [scroll_panel](https://raylib-rs.github.io/raylib-rs/examples/raygui/scroll_panel.html)
+- [style_selector](https://raylib-rs.github.io/raylib-rs/examples/raygui/style_selector.html)
+- [custom_sliders](https://raylib-rs.github.io/raylib-rs/examples/raygui/custom_sliders.html)

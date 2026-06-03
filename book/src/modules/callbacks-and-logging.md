@@ -83,4 +83,4 @@ fn main() {
 
 Showcase examples that exercise this module:
 
-- [core_custom_logging](https://dacode45.github.io/raylib-rs/examples/core/core_custom_logging.html)
+- [core_custom_logging](https://raylib-rs.github.io/raylib-rs/examples/core/core_custom_logging.html)
