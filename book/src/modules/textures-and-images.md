@@ -100,9 +100,9 @@ fn main() {
 
 Showcase examples that exercise this module:
 
-- [textures_image_loading](https://dacode45.github.io/raylib-rs/examples/textures/textures_image_loading.html)
-- [textures_image_drawing](https://dacode45.github.io/raylib-rs/examples/textures/textures_image_drawing.html)
-- [textures_image_generation](https://dacode45.github.io/raylib-rs/examples/textures/textures_image_generation.html)
-- [textures_sprite_animation](https://dacode45.github.io/raylib-rs/examples/textures/textures_sprite_animation.html)
-- [textures_npatch_drawing](https://dacode45.github.io/raylib-rs/examples/textures/textures_npatch_drawing.html)
-- [textures_bunnymark](https://dacode45.github.io/raylib-rs/examples/textures/textures_bunnymark.html)
+- [textures_image_loading](https://raylib-rs.github.io/raylib-rs/examples/textures/textures_image_loading.html)
+- [textures_image_drawing](https://raylib-rs.github.io/raylib-rs/examples/textures/textures_image_drawing.html)
+- [textures_image_generation](https://raylib-rs.github.io/raylib-rs/examples/textures/textures_image_generation.html)
+- [textures_sprite_animation](https://raylib-rs.github.io/raylib-rs/examples/textures/textures_sprite_animation.html)
+- [textures_npatch_drawing](https://raylib-rs.github.io/raylib-rs/examples/textures/textures_npatch_drawing.html)
+- [textures_bunnymark](https://raylib-rs.github.io/raylib-rs/examples/textures/textures_bunnymark.html)

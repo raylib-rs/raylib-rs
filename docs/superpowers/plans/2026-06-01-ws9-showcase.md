@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship a runnable Rust port of every official raylib 6.0 example (~228 total), each with a built-in side-by-side C↔Rust source viewer rendered in-canvas via raygui, deployed as a GitHub Pages gallery at `dacode45.github.io/raylib-rs/`.
+**Goal:** Ship a runnable Rust port of every official raylib 6.0 example (~228 total), each with a built-in side-by-side C↔Rust source viewer rendered in-canvas via raygui, deployed as a GitHub Pages gallery at `raylib-rs.github.io/raylib-rs/`.
 
 **Architecture:** Per-example `[[example]]` Cargo targets (auto-discovered, declared explicitly in `showcase/Cargo.toml`) each with their own `fn main()` visually parallel to the C original. A workspace `build.rs` walks the `raylib-sys/raylib/examples/` + `raylib-sys/raygui-examples/` submodules at compile time and emits a `phf` source registry into `$OUT_DIR`; each example embeds the registry and reads its own (C, Rust) pair by `env!("CARGO_BIN_NAME")` lookup. A `SourceViewer` struct in the new `raylib-showcase` lib crate renders the in-canvas raygui overlay (`F1` to toggle).
 
@@ -1840,7 +1840,7 @@ ci(ws9): pages workflow — wasm build + thumbnail gen + Pages deploy
 Triggered on push to 6.0-rc. Pipeline: emsdk setup → showcase release
 build (populates examples_meta.json) → xtask-wasm-build → gen-thumbnails
 (software_renderer) → xtask-build-pages → upload-pages-artifact →
-deploy-pages. URL during RC: dacode45.github.io/raylib-rs/. Canonical
+deploy-pages. URL during RC: raylib-rs.github.io/raylib-rs/. Canonical
 URL flip handled by final-release workstream.
 
 Per WS9 spec §10.3 + §8 Flow E.
@@ -1924,7 +1924,7 @@ git push fork 6.0-rc
 Then on `https://github.com/Dacode45/ms-raylib-rs/actions`:
 - `check`, `test`, `web`, `sanitizers`, `book` (existing) — still green.
 - `showcase` (new) — both `build` and `wasm-build` jobs green.
-- `pages` (new) — green; URL output points at `dacode45.github.io/raylib-rs/`.
+- `pages` (new) — green; URL output points at `raylib-rs.github.io/raylib-rs/`.
 - Visit the URL; verify the single-example index renders and links to `examples/core/core_basic_window.html`.
 
 If any workflow fails, fix it before declaring P0 done.
@@ -2748,7 +2748,7 @@ The book's 28 chapters cover specific raylib feature areas. For each chapter tha
 
 A subagent batch is appropriate here: dispatch a single implementer with the prompt:
 
-> Walk `book/src/` chapters. For each chapter that documents a raylib feature area (drawing, input, audio, models, shaders, textures, raygui, …), append a "See also" footer near the end of the chapter listing the most relevant 3-6 showcase examples by name with links of the form `[<name>](https://dacode45.github.io/raylib-rs/examples/<cat>/<name>.html)`. Don't touch chapters about getting-started, architecture, or anything that isn't a feature area. Don't link more than 6 examples per chapter — pick the most representative.
+> Walk `book/src/` chapters. For each chapter that documents a raylib feature area (drawing, input, audio, models, shaders, textures, raygui, …), append a "See also" footer near the end of the chapter listing the most relevant 3-6 showcase examples by name with links of the form `[<name>](https://raylib-rs.github.io/raylib-rs/examples/<cat>/<name>.html)`. Don't touch chapters about getting-started, architecture, or anything that isn't a feature area. Don't link more than 6 examples per chapter — pick the most representative.
 >
 > Footer format:
 > ```markdown
@@ -2809,7 +2809,7 @@ A small one-shot script (or a subagent with the registry as input) generates the
 >
 > The raylib-rs showcase ships a Rust port of every official raylib 6.0
 > example. The full gallery is at
-> [dacode45.github.io/raylib-rs](https://dacode45.github.io/raylib-rs/)
+> [raylib-rs.github.io/raylib-rs](https://raylib-rs.github.io/raylib-rs/)
 > during 6.0-rc; URL flips to canonical after release.
 >
 > Each example is runnable locally via `cargo run -p raylib-showcase --example <name>`.
@@ -2817,7 +2817,7 @@ A small one-shot script (or a subagent with the registry as input) generates the
 >
 > ## audio
 >
-> - [audio_module_playing](https://dacode45.github.io/raylib-rs/examples/audio/audio_module_playing.html)
+> - [audio_module_playing](https://raylib-rs.github.io/raylib-rs/examples/audio/audio_module_playing.html)
 > - ...
 >
 > ## core
@@ -2868,7 +2868,7 @@ EOF
 git push fork 6.0-rc
 ```
 
-Wait for `pages.yml` to complete. Visit `https://dacode45.github.io/raylib-rs/`. Verify:
+Wait for `pages.yml` to complete. Visit `https://raylib-rs.github.io/raylib-rs/`. Verify:
 - Categorized index renders with all categories.
 - Filter input works.
 - A few tiles have thumbnails; the rest have placeholders.
@@ -3112,7 +3112,7 @@ Create `docs/superpowers/notes/ws9-showcase-complete.md`:
 | Thumbnail overrides | n/a | <K> per-example overrides |
 | Vendored resources | 0 | <files>, ~<MB> MB |
 | CI workflows green on fork | 5/5 | 7/7 (added `showcase`, `pages`) |
-| Pages site URL | — | https://dacode45.github.io/raylib-rs/ |
+| Pages site URL | — | https://raylib-rs.github.io/raylib-rs/ |
 | mdBook chapters touched | — | <N> chapters got "See also" footers + new appendix |
 | New skill | — | `raylib-showcase-port-flow` at both `~/.claude/skills/` and `docs/superpowers/skills/` |
 
@@ -3134,7 +3134,7 @@ Create `docs/superpowers/notes/ws9-showcase-complete.md`:
 
 ## Next workstream
 
-**final-release.** Bump `6.0.0-rc.1 → 6.0.0`, flip CHANGELOG `(unreleased)` → ISO date, PR `Dacode45:6.0-rc` → `raylib-rs:unstable`, tag `v6.0.0`, manually trigger `release-sys.yml` then `release-safe.yml` (dry-run first), then GitHub release. The Pages URL flip from `dacode45.github.io/raylib-rs/` to `raylib-rs.github.io/` (or canonical) is part of final-release.
+**final-release.** Bump `6.0.0-rc.1 → 6.0.0`, flip CHANGELOG `(unreleased)` → ISO date, PR `Dacode45:6.0-rc` → `raylib-rs:unstable`, tag `v6.0.0`, manually trigger `release-sys.yml` then `release-safe.yml` (dry-run first), then GitHub release. The Pages URL flip from `raylib-rs.github.io/raylib-rs/` to `raylib-rs.github.io/` (or canonical) is part of final-release.
 ```
 
 - [ ] **Step 3: Commit**
@@ -3173,7 +3173,7 @@ Open `CHANGELOG.md` and locate the `6.0.0 (unreleased)` section. Add (or extend 
 - The `showcase/` crate is rewritten end-to-end as a gallery of ~228 `[[example]]` targets, one Rust port per official raylib 6.0 example, all visually parallel to their C originals.
 - Each example carries an in-canvas raygui source viewer (`F1`) showing the C and Rust sources side-by-side.
 - New `showcase.yml` + `pages.yml` CI workflows: strict desktop build matrix + wasm-after-exclusions + GitHub Pages deploy.
-- Gallery deployed to <https://dacode45.github.io/raylib-rs/> during 6.0-rc; canonical URL handled by final-release.
+- Gallery deployed to <https://raylib-rs.github.io/raylib-rs/> during 6.0-rc; canonical URL handled by final-release.
 - mdBook gains per-chapter "See also" footers and a new Examples appendix.
 - New skill `raylib-showcase-port-flow` documents the bump-detection + porting workflow for future raylib upgrades.
 - Removed: the closure-shaped showcase launcher (`showcase/src/main.rs`) and the vendored `showcase/original/` (replaced by direct reference to the `raylib-sys/raylib/examples/` submodule).
@@ -3212,7 +3212,7 @@ safe-abstractions for GuiGetIcons/GuiLoadIcons + PR #296 ✅ (see `docs/superpow
 to:
 
 ```
-safe-abstractions for GuiGetIcons/GuiLoadIcons + PR #296 ✅ → WS9 showcase ✅ — **~228 ported examples + in-canvas C/Rust source viewer + Pages gallery at dacode45.github.io/raylib-rs/ + reusable port-flow skill (see `docs/superpowers/notes/ws9-showcase-complete.md`)** → **final-release ← NEXT**.
+safe-abstractions for GuiGetIcons/GuiLoadIcons + PR #296 ✅ → WS9 showcase ✅ — **~228 ported examples + in-canvas C/Rust source viewer + Pages gallery at raylib-rs.github.io/raylib-rs/ + reusable port-flow skill (see `docs/superpowers/notes/ws9-showcase-complete.md`)** → **final-release ← NEXT**.
 ```
 
 - [ ] **Step 2: Push everything and watch CI**
@@ -3225,7 +3225,7 @@ Verify all 7 workflows green on the fork:
 - `check`, `test`, `web`, `sanitizers`, `book` (existing)
 - `showcase`, `pages` (new)
 
-Visit `https://dacode45.github.io/raylib-rs/` and click through 3-5 examples to confirm the deploy is correct.
+Visit `https://raylib-rs.github.io/raylib-rs/` and click through 3-5 examples to confirm the deploy is correct.
 
 - [ ] **Step 3: Final commit + tag**
 

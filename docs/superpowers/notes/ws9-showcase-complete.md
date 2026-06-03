@@ -9,7 +9,7 @@ Builds on WS8 (`docs/superpowers/notes/ws8-complete.md`) — version bumps + rel
 
 This is the publishable artifact for raylib-rs 6.0: a Pages gallery of **229 examples** (217 raylib core + 12 raygui) with in-canvas source viewer + GitHub deep-links per source, plus per-chapter "See also" footers and a new Examples appendix in the mdBook.
 
-Live gallery: <https://dacode45.github.io/raylib-rs/>.
+Live gallery: <https://raylib-rs.github.io/raylib-rs/>.
 
 ---
 
@@ -34,7 +34,7 @@ Live gallery: <https://dacode45.github.io/raylib-rs/>.
 
 ### P0 — scaffolding (tag `ws9-p0-complete` at `f947edc`)
 
-What shipped: workspace + `showcase` member, `build.rs` registry + examples_meta.json sidecar, `SourceViewer` overlay (F1 toggle + tab swap + scroll), 4 xtask bins (`gen_thumbnails`, `xtask_wasm_build`, `xtask_build_pages`, `xtask_vendor_resources`), reference port (`core/core_basic_window`), 2 new CI workflows (`showcase.yml` 3-OS desktop + Linux wasm, `pages.yml` deploys to `dacode45.github.io/raylib-rs/`), Tier-1 registry tests.
+What shipped: workspace + `showcase` member, `build.rs` registry + examples_meta.json sidecar, `SourceViewer` overlay (F1 toggle + tab swap + scroll), 4 xtask bins (`gen_thumbnails`, `xtask_wasm_build`, `xtask_build_pages`, `xtask_vendor_resources`), reference port (`core/core_basic_window`), 2 new CI workflows (`showcase.yml` 3-OS desktop + Linux wasm, `pages.yml` deploys to `raylib-rs.github.io/raylib-rs/`), Tier-1 registry tests.
 
 Key design fixes caught during the P0 work:
 
@@ -106,7 +106,7 @@ This note + the new `raylib-showcase-port-flow` skill + the CHANGELOG entry + th
 | `sanitizers.yml` | ASAN/UBSAN over FFI (informational) |
 | `book.yml` | mdbook build + link check |
 | `showcase.yml` | 3-OS desktop build of all 229 examples + Linux wasm build (205 wasm-buildable) — strict-pairing on |
-| `pages.yml` | xtask-build-pages + deploy to `dacode45.github.io/raylib-rs/` |
+| `pages.yml` | xtask-build-pages + deploy to `raylib-rs.github.io/raylib-rs/` |
 
 ## Lessons learned (folded into the new `raylib-showcase-port-flow` skill)
 

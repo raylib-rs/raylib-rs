@@ -75,9 +75,9 @@ fn main() {
 
 Showcase examples that exercise this module:
 
-- [core_basic_window](https://dacode45.github.io/raylib-rs/examples/core/core_basic_window.html)
-- [core_window_flags](https://dacode45.github.io/raylib-rs/examples/core/core_window_flags.html)
-- [core_window_letterbox](https://dacode45.github.io/raylib-rs/examples/core/core_window_letterbox.html)
-- [core_window_should_close](https://dacode45.github.io/raylib-rs/examples/core/core_window_should_close.html)
-- [core_2d_camera](https://dacode45.github.io/raylib-rs/examples/core/core_2d_camera.html)
-- [core_basic_screen_manager](https://dacode45.github.io/raylib-rs/examples/core/core_basic_screen_manager.html)
+- [core_basic_window](https://raylib-rs.github.io/raylib-rs/examples/core/core_basic_window.html)
+- [core_window_flags](https://raylib-rs.github.io/raylib-rs/examples/core/core_window_flags.html)
+- [core_window_letterbox](https://raylib-rs.github.io/raylib-rs/examples/core/core_window_letterbox.html)
+- [core_window_should_close](https://raylib-rs.github.io/raylib-rs/examples/core/core_window_should_close.html)
+- [core_2d_camera](https://raylib-rs.github.io/raylib-rs/examples/core/core_2d_camera.html)
+- [core_basic_screen_manager](https://raylib-rs.github.io/raylib-rs/examples/core/core_basic_screen_manager.html)

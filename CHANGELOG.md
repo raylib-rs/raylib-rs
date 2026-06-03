@@ -20,7 +20,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - raygui at 6.0 parity (57/57 functions, module split into grouped sub-traits, `impl AsRef<str>` + thread-local scratch buffer); new safe immediate-mode `rlgl` module (`RlMatrix`/`RlImmediate` RAII guards, `&Texture2D`/`&Shader` bind helpers).
 - Layered CI: `check.yml` / `test.yml` / `web.yml` / `sanitizers.yml` / `book.yml`; quality hard-gates (fmt, clippy `-Dwarnings`, `deny(missing_docs)`, cargo-deny, MSRV 1.85) fail on violation.
 - mdBook docs at `book/` — 28 chapters covering quickstart, platform build guides, core concepts, and per-module chapters. WS9 added per-module "See also" footers + a new Showcase examples appendix.
-- **WS9 showcase finale** — new `showcase` workspace crate at `showcase/` ports **229** raylib examples (217 raylib core + 12 raygui) to idiomatic raylib-rs under a visual-parity rule. Each port carries an in-canvas F1 source-viewer overlay with C-vs-Rust tabs and a "Source on GitHub" deep-link footer (URLs derived at build time from `.gitmodules` + submodule SHAs). Deployed as a Pages gallery at <https://dacode45.github.io/raylib-rs/> with thumbnail tiles, per-tile C/Rust GitHub links, name filter, and per-example emscripten output wrapped in gallery chrome via a shared `example_shell.html`. CI matrix gate is `WS9_STRICT_PAIRING=1` — missing pairs escalate to build break, not warn-only noise.
+- **WS9 showcase finale** — new `showcase` workspace crate at `showcase/` ports **229** raylib examples (217 raylib core + 12 raygui) to idiomatic raylib-rs under a visual-parity rule. Each port carries an in-canvas F1 source-viewer overlay with C-vs-Rust tabs and a "Source on GitHub" deep-link footer (URLs derived at build time from `.gitmodules` + submodule SHAs). Deployed as a Pages gallery at <https://raylib-rs.github.io/raylib-rs/> with thumbnail tiles, per-tile C/Rust GitHub links, name filter, and per-example emscripten output wrapped in gallery chrome via a shared `example_shell.html`. CI matrix gate is `WS9_STRICT_PAIRING=1` — missing pairs escalate to build break, not warn-only noise.
 
 ### Breaking
 
@@ -136,7 +136,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - **UBSAN through the FFI boundary** — C-side UBSAN runtime link fails under `rust-lld`; informational only (requires `-C linker=gcc`/`libubsan`).
 - **`paste` alternative** — cargo-deny flags this direct dep as unmaintained; rewrite or library swap tracked for a future workstream (accepted with rationale in `deny.toml`).
 - **Full rustdoc rewrite** of remaining 208 stub-level items — selective enrichment only in WS7; future passes can extend.
-- **Public Pages deploy** of book + showcase gallery — WS9 shipped the showcase gallery deploy at <https://dacode45.github.io/raylib-rs/>; canonical book + gallery deploy under `raylib-rs.github.io` lands with the final-release publish step.
+- **Public Pages deploy** of book + showcase gallery — WS9 shipped the showcase gallery deploy at <https://raylib-rs.github.io/raylib-rs/>; canonical book + gallery deploy under `raylib-rs.github.io` lands with the final-release publish step.
 - **Thumbnail generation in CI** — `gen_thumbnails` exists and runs locally via the `software_renderer` feature, but Pages CI doesn't have the rlsw-on-emscripten link path yet (deferred with the existing `rlsw on wasm32` item). Tiles render with CSS placeholder gradients until thumbnails are generated locally and pushed.
 
 ### Internal

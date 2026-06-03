@@ -89,9 +89,9 @@ fn main() {
 
 Showcase examples that exercise this module:
 
-- [core_input_keys](https://dacode45.github.io/raylib-rs/examples/core/core_input_keys.html)
-- [core_input_mouse](https://dacode45.github.io/raylib-rs/examples/core/core_input_mouse.html)
-- [core_input_mouse_wheel](https://dacode45.github.io/raylib-rs/examples/core/core_input_mouse_wheel.html)
-- [core_input_gamepad](https://dacode45.github.io/raylib-rs/examples/core/core_input_gamepad.html)
-- [core_input_gestures](https://dacode45.github.io/raylib-rs/examples/core/core_input_gestures.html)
-- [core_keyboard_testbed](https://dacode45.github.io/raylib-rs/examples/core/core_keyboard_testbed.html)
+- [core_input_keys](https://raylib-rs.github.io/raylib-rs/examples/core/core_input_keys.html)
+- [core_input_mouse](https://raylib-rs.github.io/raylib-rs/examples/core/core_input_mouse.html)
+- [core_input_mouse_wheel](https://raylib-rs.github.io/raylib-rs/examples/core/core_input_mouse_wheel.html)
+- [core_input_gamepad](https://raylib-rs.github.io/raylib-rs/examples/core/core_input_gamepad.html)
+- [core_input_gestures](https://raylib-rs.github.io/raylib-rs/examples/core/core_input_gestures.html)
+- [core_keyboard_testbed](https://raylib-rs.github.io/raylib-rs/examples/core/core_keyboard_testbed.html)

@@ -105,7 +105,7 @@ fn main() {
 
 Showcase examples that exercise this module:
 
-- [rlgl_standalone](https://dacode45.github.io/raylib-rs/examples/others/rlgl_standalone.html) — desktop only
-- [shapes_rlgl_color_wheel](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_rlgl_color_wheel.html)
-- [shapes_rlgl_triangle](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_rlgl_triangle.html)
-- [models_rlgl_solar_system](https://dacode45.github.io/raylib-rs/examples/models/models_rlgl_solar_system.html)
+- [rlgl_standalone](https://raylib-rs.github.io/raylib-rs/examples/others/rlgl_standalone.html) — desktop only
+- [shapes_rlgl_color_wheel](https://raylib-rs.github.io/raylib-rs/examples/shapes/shapes_rlgl_color_wheel.html)
+- [shapes_rlgl_triangle](https://raylib-rs.github.io/raylib-rs/examples/shapes/shapes_rlgl_triangle.html)
+- [models_rlgl_solar_system](https://raylib-rs.github.io/raylib-rs/examples/models/models_rlgl_solar_system.html)

@@ -94,6 +94,6 @@ assert!((pt.x).abs() < 1e-4 && (pt.y).abs() < 1e-4);
 
 Showcase examples that exercise this module:
 
-- [shapes_collision_area](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_collision_area.html)
-- [shapes_ellipse_collision](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_ellipse_collision.html)
-- [shapes_ball_physics](https://dacode45.github.io/raylib-rs/examples/shapes/shapes_ball_physics.html)
+- [shapes_collision_area](https://raylib-rs.github.io/raylib-rs/examples/shapes/shapes_collision_area.html)
+- [shapes_ellipse_collision](https://raylib-rs.github.io/raylib-rs/examples/shapes/shapes_ellipse_collision.html)
+- [shapes_ball_physics](https://raylib-rs.github.io/raylib-rs/examples/shapes/shapes_ball_physics.html)
