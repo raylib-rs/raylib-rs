@@ -47,6 +47,7 @@ Captured to `target/clippy-showcase.log` from both clippy legs (2026-06-03, pre-
 | `clippy::search_is_some` | 2 | ? → inspect |
 | `clippy::explicit_auto_deref` | 2 | ? → inspect |
 | `clippy::type_complexity` | 2 | ? → inspect |
+| `clippy::approx_constant` | 1 | ? → inspect (**deny-by-default — errors clippy**) |
 | `comparison_chain`, `nonminimal_bool`, `neg_cmp_op_on_partial_ord`, `manual_memcpy`, `mixed_case_hex_literals`, `excessive_precision`, `field_reassign_with_default` | 2 each | A |
 | `clippy::mem_replace_option_with_none` | 1 | **B** |
 
