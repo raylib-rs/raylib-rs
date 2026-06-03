@@ -190,7 +190,7 @@ fn main() {
             .as_mut()
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .color = Color::RED.into();
+        .color = Color::RED;
     }
 
     // Load default material (using raylib intenral default shader) for non-instanced mesh drawing
@@ -203,7 +203,7 @@ fn main() {
             .as_mut()
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .color = Color::BLUE.into();
+        .color = Color::BLUE;
     }
 
     rl.set_target_fps(60); // Set our game to run at 60 frames-per-second

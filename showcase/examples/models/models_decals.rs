@@ -323,7 +323,7 @@ fn gui_button<D: RaylibDraw>(
     let mut pressed = false;
 
     // SAFETY: pure raylib FFI taking primitive args; no aliasing or lifetime concerns.
-    if unsafe { ffi::CheckCollisionPointRec(mouse_pos.into(), rec.into()) } {
+    if unsafe { ffi::CheckCollisionPointRec(mouse_pos, rec) } {
         bg_color = Color::LIGHTGRAY;
         if lmb_pressed {
             pressed = true;
@@ -449,8 +449,8 @@ fn main() {
         let mut collision = ffi::RayCollision {
             hit: false,
             distance: f32::MAX,
-            point: Vector3::ZERO.into(),
-            normal: Vector3::ZERO.into(),
+            point: Vector3::ZERO,
+            normal: Vector3::ZERO,
         };
 
         // Get mouse ray
@@ -499,10 +499,8 @@ fn main() {
             && decal_models.len() < MAX_DECALS
         {
             // Create the transformation to project the decal
-            let origin =
-                Vector3::from(collision.point) + Vector3::from(collision.normal).scale(1.0);
-            let mut splat =
-                Matrix::look_at(collision.point.into(), origin, Vector3::new(0.0, 1.0, 0.0));
+            let origin = collision.point + collision.normal.scale(1.0);
+            let mut splat = Matrix::look_at(collision.point, origin, Vector3::new(0.0, 1.0, 0.0));
 
             // Spin the placement around a bit
             splat = splat
@@ -550,10 +548,8 @@ fn main() {
 
             // If we hit the mesh, draw the box for the decal
             if collision.hit {
-                let origin =
-                    Vector3::from(collision.point) + Vector3::from(collision.normal).scale(1.0);
-                let splat =
-                    Matrix::look_at(collision.point.into(), origin, Vector3::new(0.0, 1.0, 0.0));
+                let origin = collision.point + collision.normal.scale(1.0);
+                let splat = Matrix::look_at(collision.point, origin, Vector3::new(0.0, 1.0, 0.0));
                 placement_cube.set_transform(&splat.invert());
                 c.draw_model(&placement_cube, Vector3::ZERO, 1.0, Color::WHITE.alpha(0.5));
             }

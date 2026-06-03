@@ -135,8 +135,7 @@ fn main() {
             cursor_color = Color::PURPLE;
             hit_object_name = "Triangle";
 
-            bary =
-                Vector3::barycenter(collision.point.into(), ta.into(), tb.into(), tc.into()).into();
+            bary = Vector3::barycenter(collision.point, ta, tb, tc);
         }
 
         // Check ray collision against test sphere

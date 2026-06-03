@@ -113,15 +113,14 @@ fn main() {
                         // SAFETY: pure raylib FFI taking primitive args; no aliasing or lifetime concerns.
                         && unsafe {
                             raylib::ffi::CheckCollisionCircleRec(
-                                player_pos.into(),
+                                player_pos,
                                 player_radius,
                                 Rectangle {
                                     x: map_position.x - 0.5 + x as f32,
                                     y: map_position.z - 0.5 + y as f32,
                                     width: 1.0,
                                     height: 1.0,
-                                }
-                                .into(),
+                                },
                             )
                         }
                     {

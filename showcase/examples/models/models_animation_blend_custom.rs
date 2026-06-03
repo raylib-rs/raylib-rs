@@ -156,19 +156,22 @@ fn update_model_animation_bones(
                 unsafe { &*(*anim1.keyframePoses.offset(frame1 as isize)).offset(bone_index) };
 
             // Blend the transforms
-            let blended_translation = Vector3::from(anim_transform0.translation)
-                .lerp(anim_transform1.translation.into(), bone_blend_factor);
-            let blended_rotation = Quaternion::from(anim_transform0.rotation)
-                .slerp(anim_transform1.rotation.into(), bone_blend_factor);
-            let blended_scale = Vector3::from(anim_transform0.scale)
-                .lerp(anim_transform1.scale.into(), bone_blend_factor);
+            let blended_translation = anim_transform0
+                .translation
+                .lerp(anim_transform1.translation, bone_blend_factor);
+            let blended_rotation = anim_transform0
+                .rotation
+                .slerp(anim_transform1.rotation, bone_blend_factor);
+            let blended_scale = anim_transform0
+                .scale
+                .lerp(anim_transform1.scale, bone_blend_factor);
 
             // Convert bind pose to matrix
             let bind_matrix = Matrix::scale(
                 bind_transform.scale.x,
                 bind_transform.scale.y,
                 bind_transform.scale.z,
-            ) * Quaternion::from(bind_transform.rotation).to_matrix()
+            ) * bind_transform.rotation.to_matrix()
                 * Matrix::translate(
                     bind_transform.translation.x,
                     bind_transform.translation.y,
@@ -187,8 +190,7 @@ fn update_model_animation_bones(
             // Calculate final bone matrix (similar to UpdateModelAnimationBones)
             // SAFETY: boneMatrices is allocated by raylib for boneCount entries.
             unsafe {
-                *model.boneMatrices.offset(bone_index) =
-                    (bind_matrix.invert() * blended_matrix).into();
+                *model.boneMatrices.offset(bone_index) = bind_matrix.invert() * blended_matrix;
             }
         }
 
@@ -247,7 +249,7 @@ fn update_model_animation_bones(
                         unsafe { *mesh.vertices.offset(v_counter + 2) },
                     );
                     // SAFETY: boneMatrices is allocated for skeleton.boneCount entries.
-                    let bone_mat: Matrix = unsafe { *model.boneMatrices.offset(bone_index) }.into();
+                    let bone_mat: Matrix = unsafe { *model.boneMatrices.offset(bone_index) };
                     anim_vertex = anim_vertex.transform(bone_mat);
                     // SAFETY: animVertices was checked non-null and has vertexCount*3 floats.
                     unsafe {

@@ -48,13 +48,8 @@ fn main() {
     // UnloadImage; Image::from_raw ties that to Drop. Image::gen_image_color wraps the
     // same call but is gated behind SUPPORT_IMAGE_GENERATION, which isn't propagated
     // through the showcase crate.
-    let mut screen_image = unsafe {
-        Image::from_raw(ffi::GenImageColor(
-            image_width,
-            image_height,
-            Color::BLACK.into(),
-        ))
-    };
+    let mut screen_image =
+        unsafe { Image::from_raw(ffi::GenImageColor(image_width, image_height, Color::BLACK)) };
     let mut screen_texture = rl.load_texture_from_image(&thread, &screen_image).unwrap();
 
     // Generate flame color palette

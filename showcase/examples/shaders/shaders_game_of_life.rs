@@ -400,7 +400,7 @@ fn main() {
                     Image::from_raw(raylib::ffi::GenImageColor(
                         world_width / random_tiles,
                         world_height / random_tiles,
-                        Color::RAYWHITE.into(),
+                        Color::RAYWHITE,
                     ))
                 };
                 for i in 0..random_tiles {

@@ -105,14 +105,7 @@ fn main() {
     // SAFETY: GenImageChecked allocates an Image owned by raylib; we hand ownership to the
     // `Image` newtype which calls UnloadImage on drop (matches the C example's UnloadImage(img)).
     let img = unsafe {
-        let raw = ffi::GenImageChecked(
-            64,
-            64,
-            32,
-            32,
-            Color::DARKBROWN.into(),
-            Color::DARKGRAY.into(),
-        );
+        let raw = ffi::GenImageChecked(64, 64, 32, 32, Color::DARKBROWN, Color::DARKGRAY);
         Image::from_raw(raw)
     };
     let background_texture = rl

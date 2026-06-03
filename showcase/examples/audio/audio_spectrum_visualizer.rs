@@ -201,7 +201,7 @@ fn main() {
         Image::from_raw(raylib::ffi::GenImageColor(
             BUFFER_SIZE as i32,
             TEXTURE_HEIGHT,
-            Color::WHITE.into(),
+            Color::WHITE,
         ))
     };
     let fft_texture = rl

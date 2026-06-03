@@ -97,16 +97,8 @@ fn main() {
     // We generate a checked image for texturing
     // SAFETY: GenImageChecked returns a freshly-allocated raylib Image; wrap in the safe Image
     // RAII so it gets UnloadImage'd on Drop.
-    let checked = unsafe {
-        Image::from_raw(ffi::GenImageChecked(
-            2,
-            2,
-            1,
-            1,
-            Color::RED.into(),
-            Color::GREEN.into(),
-        ))
-    };
+    let checked =
+        unsafe { Image::from_raw(ffi::GenImageChecked(2, 2, 1, 1, Color::RED, Color::GREEN)) };
     let texture = rl.load_texture_from_image(&thread, &checked).unwrap();
     drop(checked);
 

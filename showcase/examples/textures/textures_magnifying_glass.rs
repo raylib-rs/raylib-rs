@@ -44,7 +44,7 @@ fn main() {
     // UnloadImage; Image::from_raw ties that to Drop. Image::gen_image_color wraps the
     // same call but is gated behind SUPPORT_IMAGE_GENERATION, which isn't propagated
     // through the showcase crate.
-    let mut circle = unsafe { Image::from_raw(ffi::GenImageColor(256, 256, Color::BLANK.into())) };
+    let mut circle = unsafe { Image::from_raw(ffi::GenImageColor(256, 256, Color::BLANK)) };
     circle.draw_circle(128, 128, 128, Color::WHITE);
     let mask = rl.load_texture_from_image(&thread, &circle).unwrap(); // Copy the mask image from RAM to VRAM
     drop(circle); // Unload the image from RAM

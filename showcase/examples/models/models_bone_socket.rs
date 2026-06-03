@@ -208,9 +208,8 @@ fn main() {
                         .bindPose
                         .offset(bone_socket_index[i] as isize))
                     .rotation
-                    .into()
                 };
-                let out_rotation: Quaternion = transform.rotation.into();
+                let out_rotation: Quaternion = transform.rotation;
 
                 // Calculate socket rotation (angle between bone in initial pose and same bone in current animation frame)
                 let rotate = out_rotation * in_rotation.invert();

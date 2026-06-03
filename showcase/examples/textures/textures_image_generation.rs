@@ -45,8 +45,8 @@ fn main() {
             screen_width,
             screen_height,
             0,
-            Color::RED.into(),
-            Color::BLUE.into(),
+            Color::RED,
+            Color::BLUE,
         ))
     };
     let horizontal_gradient = unsafe {
@@ -54,8 +54,8 @@ fn main() {
             screen_width,
             screen_height,
             90,
-            Color::RED.into(),
-            Color::BLUE.into(),
+            Color::RED,
+            Color::BLUE,
         ))
     };
     let diagonal_gradient = unsafe {
@@ -63,8 +63,8 @@ fn main() {
             screen_width,
             screen_height,
             45,
-            Color::RED.into(),
-            Color::BLUE.into(),
+            Color::RED,
+            Color::BLUE,
         ))
     };
     let radial_gradient = unsafe {
@@ -72,8 +72,8 @@ fn main() {
             screen_width,
             screen_height,
             0.0,
-            Color::WHITE.into(),
-            Color::BLACK.into(),
+            Color::WHITE,
+            Color::BLACK,
         ))
     };
     let square_gradient = unsafe {
@@ -81,8 +81,8 @@ fn main() {
             screen_width,
             screen_height,
             0.0,
-            Color::WHITE.into(),
-            Color::BLACK.into(),
+            Color::WHITE,
+            Color::BLACK,
         ))
     };
     let checked = unsafe {
@@ -91,8 +91,8 @@ fn main() {
             screen_height,
             32,
             32,
-            Color::RED.into(),
-            Color::BLUE.into(),
+            Color::RED,
+            Color::BLUE,
         ))
     };
     let white_noise = unsafe {

@@ -58,7 +58,7 @@ fn main() {
     // same call but is gated behind SUPPORT_IMAGE_GENERATION, which isn't propagated
     // through the showcase crate.
     let mut checked_im =
-        unsafe { Image::from_raw(ffi::GenImageColor(im_width, im_height, Color::BLACK.into())) };
+        unsafe { Image::from_raw(ffi::GenImageColor(im_width, im_height, Color::BLACK)) };
 
     for y in 0..im_height {
         for x in 0..im_width {
