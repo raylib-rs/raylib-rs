@@ -1,13 +1,13 @@
 //! Image and texture related functions
 
-use crate::MintVec2;
+use crate::core::databuf::DataBuf;
 use crate::core::ffi::{Color, Rectangle};
+use crate::core::math::Vector2;
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi;
 use std::convert::TryInto;
 use std::ffi::CString;
-use std::mem::ManuallyDrop;
-use std::ptr::null_mut;
+use std::mem::{ManuallyDrop, MaybeUninit};
 
 use super::error::{InvalidImageError, LoadTextureError, UpdateTextureError};
 
@@ -38,46 +38,122 @@ impl From<ffi::NPatchInfo> for NPatchInfo {
     }
 }
 
-impl Into<ffi::NPatchInfo> for NPatchInfo {
-    fn into(self) -> ffi::NPatchInfo {
-        unsafe { std::mem::transmute(self) }
+impl From<NPatchInfo> for ffi::NPatchInfo {
+    fn from(v: NPatchInfo) -> Self {
+        unsafe { std::mem::transmute(v) }
     }
 }
 
-impl Into<ffi::NPatchInfo> for &NPatchInfo {
-    fn into(self) -> ffi::NPatchInfo {
+impl From<&NPatchInfo> for ffi::NPatchInfo {
+    fn from(v: &NPatchInfo) -> Self {
         ffi::NPatchInfo {
-            source: self.source.into(),
-            left: self.left,
-            top: self.top,
-            right: self.right,
-            bottom: self.bottom,
-            layout: (self.layout as u32) as i32,
+            source: v.source,
+            left: v.left,
+            top: v.top,
+            right: v.right,
+            bottom: v.bottom,
+            layout: (v.layout as u32) as i32,
         }
     }
 }
 
 fn no_drop<T>(_thing: T) {}
 make_thin_wrapper!(
-    /// Image, pixel data stored in CPU memory (RAM)
+    /// CPU-side pixel buffer.
+    ///
+    /// An `Image` holds raw pixel data in system RAM. It is the starting point for most
+    /// texture-loading workflows: generate or load pixels on the CPU, manipulate them
+    /// (crop, resize, draw into, colour-fill, etc.), then upload to the GPU as a
+    /// [`Texture2D`] via [`RaylibHandle::load_texture_from_image`].
+    ///
+    /// `Image` is automatically freed via `UnloadImage` when it goes out of scope.
+    ///
+    /// # Examples
+    ///
+    /// Generate a solid-colour image and read a pixel back (no window required):
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
+    /// # {
+    /// use raylib::prelude::*;
+    /// let img = Image::gen_image_color(64, 64, Color::RED);
+    /// assert_eq!(img.width(), 64);
+    /// assert_eq!(img.height(), 64);
+    /// let pixel = img.get_color(0, 0);
+    /// assert_eq!(pixel.r, 255);
+    /// assert_eq!(pixel.g, 0);
+    /// assert_eq!(pixel.b, 0);
+    /// # }
+    /// ```
     Image,
     ffi::Image,
     ffi::UnloadImage
 );
 make_thin_wrapper!(
-    /// Texture, tex data stored in GPU memory (VRAM)
+    /// GPU-side texture stored in VRAM.
+    ///
+    /// A `Texture2D` is uploaded from an [`Image`] (or loaded directly from a file) and
+    /// lives on the graphics card. Draw it inside a drawing handle using the
+    /// `draw_texture*` family of methods.
+    ///
+    /// `Texture2D` is automatically freed via `UnloadTexture` when it goes out of scope.
+    ///
+    /// # Examples
+    ///
+    /// Load a texture from file and draw it each frame:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("texture demo").build();
+    /// let tex = rl.load_texture(&thread, "assets/sprite.png").unwrap();
+    /// while !rl.window_should_close() {
+    ///     let mut d = rl.begin_drawing(&thread);
+    ///     d.clear_background(Color::RAYWHITE);
+    ///     d.draw_texture(&tex, 0, 0, Color::WHITE);
+    /// }
+    /// ```
     Texture2D,
     ffi::Texture2D,
     ffi::UnloadTexture
 );
 make_thin_wrapper!(WeakTexture2D, ffi::Texture2D, no_drop);
+#[allow(clippy::derivable_impls)] // Cannot use #[derive(Default)] on a macro-generated struct
 impl Default for WeakTexture2D {
     fn default() -> Self {
         Self(ffi::Texture::default())
     }
 }
 make_thin_wrapper!(
-    /// RenderTexture, fbo for texture rendering
+    /// Off-screen GPU framebuffer for render-to-texture.
+    ///
+    /// A `RenderTexture2D` wraps an OpenGL FBO. Use `begin_texture_mode`
+    /// (or `draw_texture_mode`) on a `RaylibHandle` or `RaylibDrawHandle` to redirect
+    /// drawing into the framebuffer, then access the result via
+    /// [`RaylibRenderTexture2D::texture`] which returns a reference to the
+    /// colour-attachment [`Texture2D`].
+    ///
+    /// Freed via `UnloadRenderTexture` on drop.
+    ///
+    /// # Examples
+    ///
+    /// Render a scene off-screen then display the result on the main framebuffer:
+    ///
+    /// ```rust,no_run
+    /// use raylib::prelude::*;
+    /// let (mut rl, thread) = raylib::init().size(640, 480).title("render-texture demo").build();
+    /// let mut rt = rl.load_render_texture(&thread, 320, 240).unwrap();
+    /// while !rl.window_should_close() {
+    ///     // Draw into the off-screen buffer.
+    ///     {
+    ///         let mut tm = rl.begin_texture_mode(&thread, &mut rt);
+    ///         tm.clear_background(Color::RED);
+    ///     }
+    ///     // Blit the render texture to the screen.
+    ///     let mut d = rl.begin_drawing(&thread);
+    ///     d.clear_background(Color::RAYWHITE);
+    ///     d.draw_texture(rt.texture(), 0, 0, Color::WHITE);
+    /// }
+    /// ```
     RenderTexture2D,
     ffi::RenderTexture2D,
     ffi::UnloadRenderTexture
@@ -130,6 +206,10 @@ impl AsMut<ffi::Texture2D> for WeakRenderTexture2D {
 }
 
 impl RenderTexture2D {
+    /// # Safety
+    ///
+    /// The caller becomes responsible for ensuring the underlying `ffi::RenderTexture2D` is
+    /// eventually unloaded. The returned `WeakRenderTexture2D` does not call `UnloadRenderTexture` on drop.
     #[inline]
     #[must_use]
     pub unsafe fn make_weak(self) -> WeakRenderTexture2D {
@@ -146,6 +226,38 @@ impl RenderTexture2D {
     }
 }
 
+/// Extension methods for types that wrap a raylib `RenderTexture2D` (both owned and weak variants).
+///
+/// Implemented for [`RenderTexture2D`] (RAII-owned) and `WeakRenderTexture2D` (no-drop
+/// alias). Exposes the OpenGL FBO id ([`id`](Self::id)) plus the colour-attachment
+/// texture as a borrowed [`WeakTexture2D`] ([`texture`](Self::texture),
+/// [`texture_mut`](Self::texture_mut)) so callers can sample the offscreen result with
+/// `draw_texture`, regenerate mipmaps, etc.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::texture::RaylibRenderTexture2D;
+///
+/// let (mut rl, thread) = raylib::init().size(640, 480).title("rt").build();
+/// let mut rt = rl
+///     .load_render_texture(&thread, 320, 240)
+///     .expect("render texture");
+/// {
+///     let mut tm = rl.begin_texture_mode(&thread, &mut rt);
+///     tm.clear_background(Color::RED);
+/// }
+/// // Sample the offscreen colour attachment as a regular texture.
+/// let mut d = rl.begin_drawing(&thread);
+/// d.clear_background(Color::RAYWHITE);
+/// d.draw_texture(rt.texture(), 0, 0, Color::WHITE);
+/// ```
+///
+/// # See also
+///
+/// - [`RenderTexture2D`] — owning render-texture handle.
+/// - [`RaylibTexture2D`] — companion trait for the colour-attachment texture.
 pub trait RaylibRenderTexture2D: AsRef<ffi::RenderTexture2D> + AsMut<ffi::RenderTexture2D> {
     /// OpenGL framebuffer object id
     #[inline]
@@ -196,6 +308,11 @@ impl Image {
         self.0.mipmaps
     }
     /// Image raw data
+    ///
+    /// # Safety
+    ///
+    /// The returned pointer is only valid for the lifetime of `self` and the image's backing
+    /// buffer. The caller must not use the pointer after the image is dropped or reallocated.
     #[inline]
     #[must_use]
     pub unsafe fn data(&self) -> *mut ::std::os::raw::c_void {
@@ -216,22 +333,17 @@ impl Image {
     #[inline]
     #[must_use]
     pub fn get_color(&self, x: i32, y: i32) -> Color {
-        Color::from(unsafe { ffi::GetImageColor(self.0, x, y) })
+        unsafe { ffi::GetImageColor(self.0, x, y) }
     }
     /// Draw circle outline within an image
     #[inline]
     pub fn draw_circle_lines(&mut self, center_x: i32, center_y: i32, radius: i32, color: Color) {
-        unsafe { ffi::ImageDrawCircleLines(&mut self.0, center_x, center_y, radius, color.into()) }
+        unsafe { ffi::ImageDrawCircleLines(&mut self.0, center_x, center_y, radius, color) }
     }
     /// Draw circle outline within an image (Vector version)
     #[inline]
-    pub fn draw_circle_lines_v(
-        &mut self,
-        center: impl Into<MintVec2>,
-        center_y: i32,
-        color: Color,
-    ) {
-        unsafe { ffi::ImageDrawCircleLinesV(&mut self.0, center.into(), center_y, color.into()) }
+    pub fn draw_circle_lines_v(&mut self, center: impl Into<Vector2>, center_y: i32, color: Color) {
+        unsafe { ffi::ImageDrawCircleLinesV(&mut self.0, center.into(), center_y, color) }
     }
 
     /// Data format (PixelFormat type)
@@ -449,7 +561,7 @@ impl Image {
     /// Get image alpha border rectangle
     #[inline]
     pub fn get_image_alpha_border(&self, threshold: f32) -> Rectangle {
-        unsafe { ffi::GetImageAlphaBorder(self.0, threshold).into() }
+        unsafe { ffi::GetImageAlphaBorder(self.0, threshold) }
     }
 
     /// Clear image background with given color
@@ -468,13 +580,7 @@ impl Image {
         tint: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::ImageDraw(
-                &mut self.0,
-                src.0,
-                src_rec.into(),
-                dst_rec.into(),
-                tint.into(),
-            );
+            ffi::ImageDraw(&mut self.0, src.0, src_rec, dst_rec, tint.into());
         }
     }
 
@@ -486,7 +592,7 @@ impl Image {
 
     /// Draw pixel within an image (Vector version)
     #[inline]
-    pub fn draw_pixel_v(&mut self, position: impl Into<MintVec2>, color: impl Into<ffi::Color>) {
+    pub fn draw_pixel_v(&mut self, position: impl Into<Vector2>, color: impl Into<ffi::Color>) {
         unsafe { ffi::ImageDrawPixelV(&mut self.0, position.into(), color.into()) }
     }
 
@@ -516,8 +622,8 @@ impl Image {
     #[inline]
     pub fn draw_line_ex(
         &mut self,
-        start_pos: impl Into<MintVec2>,
-        end_pos: impl Into<MintVec2>,
+        start_pos: impl Into<Vector2>,
+        end_pos: impl Into<Vector2>,
         thick: i32,
         color: impl Into<ffi::Color>,
     ) {
@@ -536,8 +642,8 @@ impl Image {
     #[inline]
     pub fn draw_line_v(
         &mut self,
-        start: impl Into<MintVec2>,
-        end: impl Into<MintVec2>,
+        start: impl Into<Vector2>,
+        end: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe { ffi::ImageDrawLineV(&mut self.0, start.into(), end.into(), color.into()) }
@@ -547,9 +653,9 @@ impl Image {
     #[inline]
     pub fn draw_triangle(
         &mut self,
-        v1: impl Into<MintVec2>,
-        v2: impl Into<MintVec2>,
-        v3: impl Into<MintVec2>,
+        v1: impl Into<Vector2>,
+        v2: impl Into<Vector2>,
+        v3: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -561,9 +667,9 @@ impl Image {
     #[inline]
     pub fn draw_triangle_ex(
         &mut self,
-        v1: impl Into<MintVec2>,
-        v2: impl Into<MintVec2>,
-        v3: impl Into<MintVec2>,
+        v1: impl Into<Vector2>,
+        v2: impl Into<Vector2>,
+        v3: impl Into<Vector2>,
         c1: impl Into<ffi::Color>,
         c2: impl Into<ffi::Color>,
         c3: impl Into<ffi::Color>,
@@ -585,9 +691,9 @@ impl Image {
     #[inline]
     pub fn draw_triangle_lines(
         &mut self,
-        v1: impl Into<MintVec2>,
-        v2: impl Into<MintVec2>,
-        v3: impl Into<MintVec2>,
+        v1: impl Into<Vector2>,
+        v2: impl Into<Vector2>,
+        v3: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -604,7 +710,7 @@ impl Image {
         unsafe {
             ffi::ImageDrawTriangleFan(
                 &mut self.0,
-                points.as_ptr() as *mut MintVec2,
+                points.as_ptr() as *mut Vector2,
                 points.len() as i32,
                 color.into(),
             )
@@ -620,7 +726,7 @@ impl Image {
         unsafe {
             ffi::ImageDrawTriangleStrip(
                 &mut self.0,
-                points.as_ptr() as *mut MintVec2,
+                points.as_ptr() as *mut Vector2,
                 points.len() as i32,
                 color.into(),
             )
@@ -643,7 +749,7 @@ impl Image {
     #[inline]
     pub fn draw_circle_v(
         &mut self,
-        center: impl Into<MintVec2>,
+        center: impl Into<Vector2>,
         radius: i32,
         color: impl Into<ffi::Color>,
     ) {
@@ -669,8 +775,8 @@ impl Image {
     #[inline]
     pub fn draw_rectangle_v(
         &mut self,
-        position: impl Into<MintVec2>,
-        size: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
+        size: impl Into<Vector2>,
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
@@ -699,7 +805,7 @@ impl Image {
         color: impl Into<ffi::Color>,
     ) {
         unsafe {
-            ffi::ImageDrawRectangleLines(&mut self.0, rec.into(), thickness, color.into());
+            ffi::ImageDrawRectangleLines(&mut self.0, rec, thickness, color.into());
         }
     }
 
@@ -732,7 +838,7 @@ impl Image {
         &mut self,
         font: impl AsRef<ffi::Font>,
         text: &str,
-        position: impl Into<MintVec2>,
+        position: impl Into<Vector2>,
         font_size: f32,
         spacing: f32,
         color: impl Into<ffi::Color>,
@@ -832,33 +938,34 @@ impl Image {
     }
 
     /// Export image to memory buffer.
-    #[must_use]
-    pub fn export_image_to_memory(&self, file_type: &str) -> Result<&[u8], InvalidImageError> {
+    pub fn export_image_to_memory(
+        &self,
+        file_type: &str,
+    ) -> Result<DataBuf<[u8]>, InvalidImageError> {
         if self.width == 0 {
             return Err(InvalidImageError::ZeroWidth);
         }
         if self.height == 0 {
             return Err(InvalidImageError::ZeroHeight);
         }
-        if self.data == null_mut() {
+        if self.data.is_null() {
             return Err(InvalidImageError::NullData);
         }
 
         let c_filetype = CString::new(file_type).unwrap();
-        let data_size: &mut i32 = &mut 0;
-        let data = unsafe { ffi::ExportImageToMemory(self.0, c_filetype.as_ptr(), data_size) };
+        let mut data_size = MaybeUninit::uninit();
+        let data = unsafe {
+            // ExportImageToMemory returns null if the code for converting to a file type never goes off.
+            ffi::ExportImageToMemory(self.0, c_filetype.as_ptr(), data_size.as_mut_ptr())
+        };
 
-        // The actual function returns null if the code for converting to a file type never goes off.
-        if data == null_mut() {
-            return Err(InvalidImageError::UnsupportedFormat);
-        }
-
-        Ok(unsafe { std::slice::from_raw_parts(data as *const u8, *data_size as usize) })
+        // SAFETY: DataBuf::slice_from_raw returns None if the data ptr is null.
+        let buf = unsafe { DataBuf::slice_from_raw(data, data_size) };
+        buf.ok_or(InvalidImageError::UnsupportedFormat)
     }
 
     /// Apply custom square convolution kernel to image
     /// NOTE: The convolution kernel matrix is expected to be square
-    #[must_use]
     pub fn kernel_convolution(&mut self, kernel: &[f32]) -> Result<(), InvalidImageError> {
         if self.width == 0 {
             return Err(InvalidImageError::ZeroWidth);
@@ -866,7 +973,7 @@ impl Image {
         if self.height == 0 {
             return Err(InvalidImageError::ZeroHeight);
         }
-        if self.data == null_mut() {
+        if self.data.is_null() {
             return Err(InvalidImageError::NullData);
         }
 
@@ -881,13 +988,22 @@ impl Image {
         Ok(())
     }
 
-    /// Generates a plain `color` Image.
+    /// Generates a plain solid-colour image in CPU memory.
+    ///
+    /// Use this to create blank canvases for further pixel manipulation or as placeholder
+    /// textures before real assets are available. Requires the `SUPPORT_IMAGE_GENERATION`
+    /// feature (included in `full`).
     #[inline]
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_color(width: i32, height: i32, color: impl Into<ffi::Color>) -> Image {
         unsafe { Image(ffi::GenImageColor(width, height, color.into())) }
     }
-    /// Generate image: perlin noise
+    /// Generates an image containing Perlin noise in CPU memory.
+    ///
+    /// Useful for procedural terrain heightmaps, cloud textures, or any effect that
+    /// benefits from smooth stochastic variation. Requires `SUPPORT_IMAGE_GENERATION`.
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_perlin_noise(
         width: i32,
         height: i32,
@@ -901,6 +1017,7 @@ impl Image {
     /// Generates an Image containing a radial gradient.
     #[inline]
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_gradient_radial(
         width: i32,
         height: i32,
@@ -922,6 +1039,7 @@ impl Image {
     /// Generates an Image containing a checkerboard pattern.
     #[inline]
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_checked(
         width: i32,
         height: i32,
@@ -946,6 +1064,7 @@ impl Image {
     /// `direction` in expected to be degrees [0..360]. 0 results in a vertical gradient
     #[must_use]
     #[inline]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_gradient_linear(
         width: i32,
         height: i32,
@@ -955,11 +1074,7 @@ impl Image {
     ) -> Image {
         unsafe {
             Image(ffi::GenImageGradientLinear(
-                width,
-                height,
-                direction,
-                start.into(),
-                end.into(),
+                width, height, direction, start, end,
             ))
         }
     }
@@ -967,6 +1082,7 @@ impl Image {
     #[inline]
     /// Generate images an image with a square gradient
     /// For best results, `density` should be `0.0..1.0``
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_gradient_square(
         width: i32,
         height: i32,
@@ -976,17 +1092,55 @@ impl Image {
     ) -> Image {
         unsafe {
             Image(ffi::GenImageGradientSquare(
-                width,
-                height,
-                density,
-                start.into(),
-                end.into(),
+                width, height, density, start, end,
             ))
         }
     }
 
-    // Generates an image with text
+    /// Generates a grayscale image whose pixel data is initialised with the raw bytes of `text`.
+    ///
+    /// Wraps raylib's `GenImageText`. The returned image is `width × height` pixels in
+    /// `PixelFormat::PIXELFORMAT_UNCOMPRESSED_GRAYSCALE` (one byte per pixel); the first
+    /// `min(text.len(), width * height)` bytes are copied from `text` and the rest are
+    /// zero. This is a low-level data-packing helper — it does **not** rasterize glyphs.
+    /// For rasterized text use [`Image::image_text`] (or the `RaylibDraw::draw_text`
+    /// family on a draw handle).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "software_renderer")] {
+    /// use raylib::prelude::*;
+    /// use raylib::test_harness::*;
+    ///
+    /// with_headless(64, 32, |rl, thread| {
+    ///     // Bytes of "HELLO" land at offsets 0..5 of the grayscale buffer.
+    ///     let img = Image::gen_image_text(64, 32, "HELLO");
+    ///     assert_eq!(img.width(), 64);
+    ///     assert_eq!(img.height(), 32);
+    ///     // First pixel is 'H' = 0x48 = 72 on every channel (grayscale → RGB).
+    ///     let p0 = img.get_color(0, 0);
+    ///     assert_eq!(p0.r, b'H');
+    ///     // Upload + draw to verify the texture round-trips through the GPU path.
+    ///     let tex = rl
+    ///         .load_texture_from_image(thread, &img)
+    ///         .expect("texture upload");
+    ///     let frame = render_frame(rl, thread, |d| {
+    ///         d.clear_background(Color::BLACK);
+    ///         d.draw_texture(&tex, 0, 0, Color::WHITE);
+    ///     });
+    ///     // Pixel (0, 0) corresponds to 'H' → grayscale 0x48 ≈ (72, 72, 72).
+    ///     assert_pixel(&frame, 0, 0, Color::new(0x48, 0x48, 0x48, 255), 4);
+    /// });
+    /// # }
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`Image::image_text`] — rasterized text into an image.
+    /// - [`Image::gen_image_color`] — solid-fill counterpart.
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_text(width: i32, height: i32, text: &str) -> Image {
         let c_str = CString::new(text).unwrap();
         unsafe { Image(ffi::GenImageText(width, height, c_str.as_ptr())) }
@@ -995,6 +1149,7 @@ impl Image {
     /// Generates an Image containing white noise.
     #[inline]
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_white_noise(width: i32, height: i32, factor: f32) -> Image {
         unsafe { Image(ffi::GenImageWhiteNoise(width, height, factor)) }
     }
@@ -1002,6 +1157,7 @@ impl Image {
     /// Generates an Image using a cellular algorithm. Bigger `tile_size` means bigger cells.
     #[inline]
     #[must_use]
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_cellular(width: i32, height: i32, tile_size: i32) -> Image {
         unsafe { Image(ffi::GenImageCellular(width, height, tile_size)) }
     }
@@ -1010,7 +1166,6 @@ impl Image {
     ///
     /// NOTE: Only available on Windows. Do not use if you plan to compile to other platforms.
     #[cfg(target_os = "windows")]
-    #[must_use]
     pub fn get_clipboard_image(&mut self) -> Result<Image, InvalidImageError> {
         let i = unsafe { ffi::GetClipboardImage() };
         if i.data.is_null() {
@@ -1019,8 +1174,13 @@ impl Image {
         Ok(Image(i))
     }
 
-    /// Loads image from file into CPU memory (RAM).
-    #[must_use]
+    /// Loads an image from a file path into CPU memory.
+    ///
+    /// Supported formats depend on which `SUPPORT_FILEFORMAT_*` features were compiled in.
+    /// With the `full` feature, PNG, BMP, TGA, JPG, GIF, QOI, PSD, DDS, HDR, PIC, PNM,
+    /// KTX, ASTC, PKM, and PVR are all available.
+    ///
+    /// To display the image, upload it to the GPU with [`RaylibHandle::load_texture_from_image`].
     pub fn load_image(filename: &str) -> Result<Image, InvalidImageError> {
         let c_filename = CString::new(filename).unwrap();
         let i = unsafe { ffi::LoadImage(c_filename.as_ptr()) };
@@ -1033,7 +1193,6 @@ impl Image {
     /// Loads image from a given memory buffer
     /// The input data is expected to be in a supported file format such as png. Which formats are
     /// supported depend on the build flags used for the raylib (C) library.
-    #[must_use]
     pub fn load_image_from_mem(filetype: &str, bytes: &[u8]) -> Result<Image, InvalidImageError> {
         let c_filetype = CString::new(filetype).unwrap();
         let data_size = bytes.len().try_into().unwrap();
@@ -1075,7 +1234,6 @@ impl Image {
     }
 
     /// Loads image from RAW file data.
-    #[must_use]
     pub fn load_image_raw(
         filename: &str,
         width: i32,
@@ -1136,6 +1294,10 @@ impl RaylibTexture2D for WeakRenderTexture2D {}
 impl RaylibTexture2D for RenderTexture2D {}
 
 impl Texture2D {
+    /// # Safety
+    ///
+    /// The caller becomes responsible for ensuring the underlying `ffi::Texture2D` is eventually
+    /// unloaded. The returned `WeakTexture2D` does not call `UnloadTexture` on drop.
     pub unsafe fn make_weak(self) -> WeakTexture2D {
         let m = WeakTexture2D(self.0);
         std::mem::forget(self);
@@ -1143,6 +1305,42 @@ impl Texture2D {
     }
 }
 
+/// Extension methods for types that wrap a raylib `Texture2D` (both owned [`Texture2D`] and [`WeakTexture2D`]).
+///
+/// Implemented for [`Texture2D`] (RAII-owned, freed on drop) and [`WeakTexture2D`] (no-drop
+/// alias from [`Texture2D::make_weak`]). Provides the field accessors
+/// ([`width`](Self::width), [`height`](Self::height), [`mipmaps`](Self::mipmaps),
+/// [`format`](Self::format)), GPU upload helpers ([`update_texture`](Self::update_texture),
+/// [`update_texture_rec`](Self::update_texture_rec)), readback to a CPU
+/// [`Image`] ([`load_image`](Self::load_image)), mipmap generation
+/// ([`gen_texture_mipmaps`](Self::gen_texture_mipmaps)), and the sampler-state setters
+/// ([`set_texture_filter`](Self::set_texture_filter),
+/// [`set_texture_wrap`](Self::set_texture_wrap)).
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::texture::RaylibTexture2D;
+///
+/// let (mut rl, thread) = raylib::init().size(640, 480).title("tex").build();
+/// let tex = rl
+///     .load_texture(&thread, "assets/sprite.png")
+///     .expect("texture load");
+/// println!("{}x{}, mipmaps {}", tex.width(), tex.height(), tex.mipmaps());
+/// while !rl.window_should_close() {
+///     let mut d = rl.begin_drawing(&thread);
+///     d.clear_background(Color::RAYWHITE);
+///     d.draw_texture(&tex, 0, 0, Color::WHITE);
+/// }
+/// ```
+///
+/// # See also
+///
+/// - [`Texture2D`] — owning texture handle.
+/// - [`Image`] — CPU-side counterpart; upload with
+///   [`RaylibHandle::load_texture_from_image`].
+/// - [`RaylibRenderTexture2D`] — companion trait for offscreen render targets.
 pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     /// Texture base width
     #[inline]
@@ -1162,7 +1360,7 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     #[inline]
     #[must_use]
     fn mipmaps(&self) -> i32 {
-        self.as_ref().width
+        self.as_ref().mipmaps
     }
 
     /// Data format (PixelFormat type)
@@ -1244,7 +1442,6 @@ pub trait RaylibTexture2D: AsRef<ffi::Texture2D> + AsMut<ffi::Texture2D> {
     /// Gets pixel data from GPU texture and returns an `Image`.
     /// Fairly sure this would never fail. If it does wrap in result.
     #[inline]
-    #[must_use]
     fn load_image(&self) -> Result<Image, InvalidImageError> {
         let i = unsafe { ffi::LoadImageFromTexture(*self.as_ref()) };
         if i.data.is_null() {
@@ -1292,7 +1489,6 @@ pub fn get_pixel_data_size(width: i32, height: i32, format: ffi::PixelFormat) ->
 
 impl RaylibHandle {
     /// Loads texture from file into GPU memory (VRAM).
-    #[must_use]
     pub fn load_texture(
         &mut self,
         _: &RaylibThread,
@@ -1309,7 +1505,6 @@ impl RaylibHandle {
     }
 
     /// Load cubemap from image, multiple image cubemap layouts supported
-    #[must_use]
     pub fn load_texture_cubemap(
         &mut self,
         _: &RaylibThread,
@@ -1325,7 +1520,6 @@ impl RaylibHandle {
 
     /// Loads texture from image data.
     #[inline]
-    #[must_use]
     pub fn load_texture_from_image(
         &mut self,
         _: &RaylibThread,
@@ -1342,7 +1536,6 @@ impl RaylibHandle {
     }
 
     /// Loads texture for rendering (framebuffer).
-    #[must_use]
     pub fn load_render_texture(
         &mut self,
         _: &RaylibThread,
@@ -1358,16 +1551,121 @@ impl RaylibHandle {
 }
 
 impl RaylibHandle {
-    /// Weak Textures will leak memory if they are not unloaded
-    /// Unload textures from GPU memory (VRAM)
+    /// Unload texture from GPU memory (VRAM).
+    ///
+    /// # Safety
+    ///
+    /// `texture` must not be used after this call. Weak textures will leak memory if not unloaded.
     #[inline]
     pub unsafe fn unload_texture(&mut self, _: &RaylibThread, texture: WeakTexture2D) {
         unsafe { ffi::UnloadTexture(*texture.as_ref()) }
     }
-    /// Weak RenderTextures will leak memory if they are not unloaded
-    /// Unload RenderTextures from GPU memory (VRAM)
+    /// Unload render texture from GPU memory (VRAM).
+    ///
+    /// # Safety
+    ///
+    /// `texture` must not be used after this call. Weak render textures will leak if not unloaded.
     #[inline]
     pub unsafe fn unload_render_texture(&mut self, _: &RaylibThread, texture: WeakRenderTexture2D) {
         unsafe { ffi::UnloadRenderTexture(*texture.as_ref()) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // Color is only used by the SUPPORT_IMAGE_GENERATION-gated test below.
+    // Scoping the import to the same gate avoids an unused_imports warning
+    // when the feature is off (clippy -Dwarnings would fail otherwise).
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
+    use crate::ffi::Color;
+
+    /// Salvaged from raylib-test/src/texture.rs `test_image_loading`.
+    /// Image is CPU-side; no window context needed. The happy-path
+    /// load asserts only when the PNG decoder feature is enabled
+    /// (raylib's image-format support is feature-gated).
+    #[test]
+    fn image_load_from_file_happy_and_error() {
+        // Happy: load the bundled fixture. Gated on PNG support because
+        // raylib's image-format decoders are feature-gated.
+        #[cfg(feature = "SUPPORT_FILEFORMAT_PNG")]
+        {
+            let path = "tests/fixtures/billboard.png";
+            if std::path::Path::new(path).exists() {
+                let img = Image::load_image(path).expect("billboard.png loads");
+                assert!(img.width() > 0, "loaded image has non-zero width");
+                assert!(img.height() > 0, "loaded image has non-zero height");
+            } else {
+                eprintln!("SKIP: {path} not found (cargo invoked from a non-workspace-root cwd?)");
+            }
+        }
+
+        // Error: nonexistent path returns Err.
+        Image::load_image("tests/fixtures/does_not_exist.png")
+            .expect_err("nonexistent file should error");
+    }
+
+    /// Salvaged from raylib-test/src/texture.rs `test_image_manipulations`.
+    /// Exercises the Image CPU-side API without a window context.
+    #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
+    #[test]
+    fn image_manipulations_no_segfault() {
+        let mut i = Image::gen_image_color(32, 32, Color::new(230, 41, 55, 255));
+        let mut canvas = Image::gen_image_color(32, 32, Color::new(0, 0, 0, 0));
+        let mask = Image::gen_image_checked(
+            32,
+            32,
+            8,
+            8,
+            Color::new(255, 255, 255, 255),
+            Color::new(0, 0, 0, 0),
+        );
+
+        let mut c = i.clone();
+        c.alpha_mask(&mask);
+        c.alpha_clear(Color::new(0, 0, 255, 255), 0.5);
+        c.alpha_crop(0.5);
+        c.alpha_premultiply();
+
+        let mut blurry = c.clone();
+        blurry.resize(64, 64);
+        c.resize_nn(64, 64);
+        i.resize_canvas(64, 64, 10, 10, Color::new(0, 0, 255, 255));
+
+        c.gen_mipmaps();
+        blurry.dither(128, 128, 128, 128);
+
+        let colors = c.extract_palette(100);
+        assert_eq!(
+            colors.len(),
+            2,
+            "checker-masked single-color image has 2-color palette"
+        );
+
+        canvas.draw(
+            &i,
+            Rectangle::new(0.0, 0.0, 20.0, 20.0),
+            Rectangle::new(0.0, 0.0, 20.0, 20.0),
+            Color::new(255, 255, 255, 255),
+        );
+        canvas.draw_rectangle_lines(
+            Rectangle::new(20.0, 0.0, 20.0, 20.0),
+            4,
+            Color::new(0, 228, 48, 255),
+        );
+        canvas.draw_rectangle(40, 0, 20, 20, Color::new(255, 161, 0, 255));
+
+        canvas.flip_vertical();
+        canvas.flip_horizontal();
+        canvas.rotate_cw();
+        canvas.rotate_ccw();
+
+        canvas.color_tint(Color::new(255, 109, 194, 255));
+        canvas.color_invert();
+        canvas.color_contrast(0.5);
+        canvas.color_brightness(128);
+        canvas.color_replace(Color::new(0, 228, 48, 255), Color::new(230, 41, 55, 255));
+
+        // Test reaches here = no segfault during the manipulation pipeline.
     }
 }

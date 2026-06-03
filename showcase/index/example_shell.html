@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{{ EXAMPLE_NAME }}}</title>
+  <link rel="stylesheet" href="../../style.css" />
+</head>
+<body>
+  <nav><a href="../../index.html">&larr; back to showcase</a></nav>
+  <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+  <p class="hint">F1 inside the canvas: view source side-by-side.</p>
+  <script>
+    var Module = {
+      canvas: (function() { return document.getElementById('canvas'); })(),
+    };
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>

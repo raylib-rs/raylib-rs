@@ -6,10 +6,12 @@ use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
+type AudioCallbackFn = Box<dyn FnMut(&mut [u8]) + Send>;
+
 struct AudioCallbackWrapper {
     channels: u16,
     bytes_per_sample: usize,
-    callback_fn: Box<dyn FnMut(&mut [u8]) + Send>,
+    callback_fn: AudioCallbackFn,
 }
 
 static AUDIO_STREAM_CALLBACK_SLOT: AtomicPtr<AudioCallbackWrapper> = AtomicPtr::new(null_mut());
@@ -37,7 +39,7 @@ where
     }
     let channels = u16::try_from(stream.channels()).expect("channels should fit in u16");
     let bytes_per_sample = size_of::<T>();
-    let callback_fn: Box<dyn FnMut(&mut [u8]) + Send> = Box::new({
+    let callback_fn: AudioCallbackFn = Box::new({
         let mut closure_captured = cb;
         move |bytes: &mut [u8]| {
             let byte_len = bytes.len() / bytes_per_sample;
@@ -58,6 +60,32 @@ where
     Ok(())
 }
 
+/// Remove any previously registered audio stream callback from the given [`AudioStream`] and free its state.
+///
+/// Calls raylib's `SetAudioStreamCallback(..., NULL)` to unbind the C-side callback, then
+/// reclaims the boxed Rust trampoline that [`set_audio_stream_callback`] heap-allocated.
+/// Safe to call when no callback is registered (no-op). After this call the single global
+/// callback slot is free and a fresh [`set_audio_stream_callback`] succeeds.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::callbacks::audio_stream_callback::{
+///     set_audio_stream_callback, unset_audio_stream_callback,
+/// };
+///
+/// let audio = RaylibAudio::init_audio_device().expect("audio init");
+/// let stream = audio.new_audio_stream(44100, 32, 2);
+/// let cb = |_buf: &mut [f32]| { /* fill samples */ };
+/// set_audio_stream_callback::<f32, _>(&stream, cb).expect("install");
+/// // ... play ...
+/// unset_audio_stream_callback(&stream);
+/// ```
+///
+/// # See also
+///
+/// - [`set_audio_stream_callback`] — the matching installer.
 pub fn unset_audio_stream_callback(stream: &AudioStream) {
     unsafe { ffi::SetAudioStreamCallback(stream.0, None) }
     let raw_ptr_for_callback = AUDIO_STREAM_CALLBACK_SLOT.swap(null_mut(), Ordering::AcqRel);

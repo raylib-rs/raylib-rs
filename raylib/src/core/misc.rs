@@ -4,15 +4,14 @@ use crate::core::texture::Image;
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi;
 use std::ffi::CString;
-use std::ops::{Deref, DerefMut, Range};
-use std::usize;
+use std::ops::{Deref, DerefMut, Range, RangeInclusive};
 
 /// Struct for holding the result of RaylibHandle::load_random_sequence.
 /// This is a thin wrapper for an array of i32. The reason it exists is because Raylib expects you
 /// to unload the sequence it creates manually, and this struct does it for you.
 pub struct RandomSequence<'a>(&'a mut [i32]);
 
-impl<'a> Deref for RandomSequence<'a> {
+impl Deref for RandomSequence<'_> {
     type Target = [i32];
 
     fn deref(&self) -> &Self::Target {
@@ -20,13 +19,13 @@ impl<'a> Deref for RandomSequence<'a> {
     }
 }
 
-impl<'a> DerefMut for RandomSequence<'a> {
+impl DerefMut for RandomSequence<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        self.0
     }
 }
 
-impl<'a> Drop for RandomSequence<'a> {
+impl Drop for RandomSequence<'_> {
     fn drop(&mut self) {
         unsafe { ffi::UnloadRandomSequence(self.0.as_mut_ptr()) }
     }
@@ -41,18 +40,20 @@ impl<'a> IntoIterator for RandomSequence<'a> {
         RandSeqIterator(self, 0)
     }
 }
+/// Owning iterator that walks a [`RandomSequence`] in order, yielding each `i32` value once.
+///
+/// Returned by `RandomSequence::into_iter`. Holds the sequence, so dropping the iterator
+/// also drops the underlying raylib-allocated buffer (via [`RandomSequence`]'s `Drop`).
+/// `Iterator::next` returns `Some(value)` until the sequence is exhausted, then `None`.
 pub struct RandSeqIterator<'a>(RandomSequence<'a>, usize);
 
-impl<'a> Iterator for RandSeqIterator<'a> {
+impl Iterator for RandSeqIterator<'_> {
     type Item = i32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let ret = self.0.get(self.1);
+        let ret = self.0.get(self.1).copied();
         self.1 += 1;
-        match ret {
-            Some(a) => Some(*a),
-            None => None,
-        }
+        ret
     }
 }
 
@@ -74,7 +75,7 @@ impl RaylibHandle {
     /// Load random values sequence, no values repeated
     pub fn load_random_sequence<'a>(&self, num: Range<i32>, count: u32) -> RandomSequence<'a> {
         unsafe {
-            let ptr = ffi::LoadRandomSequence(count, num.start, num.end.into());
+            let ptr = ffi::LoadRandomSequence(count, num.start, num.end);
             RandomSequence(std::slice::from_raw_parts_mut(ptr, count as usize))
         }
     }
@@ -102,8 +103,8 @@ impl RaylibHandle {
     ///     let r = rl.get_random_value(0, 10);
     ///     println!("random value: {}", r);
     /// }
-    pub fn get_random_value<T: From<i32>>(&self, num: Range<i32>) -> T {
-        unsafe { (ffi::GetRandomValue(num.start, num.end.into()) as i32).into() }
+    pub fn get_random_value<T: From<i32>>(&self, num: RangeInclusive<i32>) -> T {
+        unsafe { (ffi::GetRandomValue(*num.start(), *num.end()) as i32).into() }
     }
 
     /// Set the seed for random number generation
@@ -114,8 +115,25 @@ impl RaylibHandle {
     }
 }
 
-// lossy conversion to an f32
+/// Lossy `as`-style conversion from a numeric primitive to `f32`.
+///
+/// Implemented for `u8`, `u16`, `u32`, `i8`, `i16`, `i32`, and `f32`. Used by math-helper
+/// constructors such as [`rquat`](crate::core::math::rquat) so callers can pass integer
+/// literals without writing `as f32` everywhere. The conversion follows Rust's `as`
+/// semantics: values outside `f32`'s exactly-representable range lose precision.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::core::misc::AsF32;
+///
+/// assert_eq!(255u8.as_f32(), 255.0);
+/// assert_eq!((-1i32).as_f32(), -1.0);
+/// assert_eq!(1.5f32.as_f32(), 1.5);
+/// ```
 pub trait AsF32: Copy {
+    /// Returns `self` converted to `f32` via Rust's `as`-cast — may lose precision for
+    /// values outside `f32`'s exactly-representable range.
     fn as_f32(self) -> f32;
 }
 

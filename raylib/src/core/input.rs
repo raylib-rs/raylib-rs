@@ -1,12 +1,12 @@
 //! Keyboard, Controller, and Mouse related functions
 use crate::consts::Gesture;
-use crate::core::math::Vector2;
 use crate::core::RaylibHandle;
+use crate::core::math::Vector2;
 use crate::{ffi, trace_log};
 use raylib_sys::TraceLogLevel;
 
-use std::ffi::c_char;
 use std::ffi::CStr;
+use std::ffi::c_char;
 
 impl RaylibHandle {
     /// Detect if a key has been pressed once.
@@ -75,6 +75,26 @@ impl RaylibHandle {
             return char::from_u32(char_code as u32);
         }
         None
+    }
+
+    /// Get the name of a key in keyboard-layout-aware form.
+    ///
+    /// e.g. on an AZERTY keyboard, `KeyboardKey::KEY_A` returns `"q"`. The C
+    /// function returns a `const char*` into a static internal buffer; we copy
+    /// it into an owned `String` immediately. Returns `None` if the pointer is
+    /// null or the resulting string is empty / not valid UTF-8.
+    #[inline]
+    #[must_use]
+    pub fn get_key_name(&self, key: crate::consts::KeyboardKey) -> Option<String> {
+        let ptr = unsafe { ffi::GetKeyName((key as u32) as i32) };
+        if ptr.is_null() {
+            return None;
+        }
+        let cstr = unsafe { CStr::from_ptr(ptr) };
+        match cstr.to_str() {
+            Ok(s) if !s.is_empty() => Some(s.to_owned()),
+            _ => None,
+        }
     }
 
     /// Sets a custom key to exit program (default is ESC).
@@ -163,7 +183,9 @@ impl RaylibHandle {
     pub fn get_gamepad_button_pressed(&self) -> Option<crate::consts::GamepadButton> {
         let button = unsafe { ffi::GetGamepadButtonPressed() };
         if button != raylib_sys::GamepadButton::GAMEPAD_BUTTON_UNKNOWN as i32 {
-            return Some(unsafe { std::mem::transmute(button as u32) });
+            return Some(unsafe {
+                std::mem::transmute::<u32, crate::consts::GamepadButton>(button as u32)
+            });
         }
         None
     }
@@ -228,14 +250,14 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_mouse_position(&self) -> Vector2 {
-        unsafe { ffi::GetMousePosition().into() }
+        unsafe { ffi::GetMousePosition() }
     }
 
     /// Returns mouse delta between frames.
     #[inline]
     #[must_use]
     pub fn get_mouse_delta(&self) -> Vector2 {
-        unsafe { ffi::GetMouseDelta().into() }
+        unsafe { ffi::GetMouseDelta() }
     }
 
     /// Sets mouse position.
@@ -275,7 +297,7 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_mouse_wheel_move_v(&self) -> Vector2 {
-        unsafe { ffi::GetMouseWheelMoveV().into() }
+        unsafe { ffi::GetMouseWheelMoveV() }
     }
 
     /// Returns touch position X for touch point 0 (relative to screen size).
@@ -296,14 +318,14 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_touch_position(&self, index: u32) -> Vector2 {
-        unsafe { ffi::GetTouchPosition(index as i32).into() }
+        unsafe { ffi::GetTouchPosition(index as i32) }
     }
 
     /// Enables a set of gestures using flags.
     #[inline]
     pub fn set_gestures_enabled(&self, gesture_flags: u32) {
         unsafe {
-            ffi::SetGesturesEnabled(gesture_flags as u32);
+            ffi::SetGesturesEnabled(gesture_flags);
         }
     }
 
@@ -365,7 +387,7 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_gesture_drag_vector(&self) -> Vector2 {
-        unsafe { ffi::GetGestureDragVector().into() }
+        unsafe { ffi::GetGestureDragVector() }
     }
 
     /// Gets gesture drag angle.
@@ -379,7 +401,7 @@ impl RaylibHandle {
     #[inline]
     #[must_use]
     pub fn get_gesture_pinch_vector(&self) -> Vector2 {
-        unsafe { ffi::GetGesturePinchVector().into() }
+        unsafe { ffi::GetGesturePinchVector() }
     }
 
     /// Gets gesture pinch angle.
@@ -390,6 +412,25 @@ impl RaylibHandle {
     }
 }
 
+/// Maps a raw integer keycode (raylib's GLFW-style numeric scheme) to a typed
+/// [`KeyboardKey`](crate::consts::KeyboardKey) — returns `None` for codes outside the enum.
+///
+/// Useful when bridging FFI callbacks or persisted keybinding files into the safe enum. The
+/// match is exhaustive over every [`KeyboardKey`](crate::consts::KeyboardKey) variant; any
+/// other integer falls through to `None`. The conversion is pure and side-effect-free —
+/// safe to call before raylib is initialised.
+///
+/// # Examples
+///
+/// ```rust
+/// use raylib::core::input::key_from_i32;
+/// use raylib::consts::KeyboardKey::*;
+///
+/// assert_eq!(key_from_i32(32), Some(KEY_SPACE));
+/// assert_eq!(key_from_i32(65), Some(KEY_A));
+/// assert_eq!(key_from_i32(-1), None);
+/// assert_eq!(key_from_i32(9999), None);
+/// ```
 #[must_use]
 pub fn key_from_i32(key: i32) -> Option<crate::consts::KeyboardKey> {
     use crate::consts::KeyboardKey::*;

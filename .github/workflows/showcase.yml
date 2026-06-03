@@ -1,0 +1,111 @@
+name: showcase
+
+on:
+  push:
+    branches: [6.0-rc, unstable]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  # raylib-sys's emscripten target panics in build.rs without this. Matches
+  # web.yml's pinned flag set.
+  EMCC_CFLAGS: "-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1"
+  # Wave 4 closed every raylib core example as a Rust port. Escalate missing
+  # pairs from warn-only to fatal so new C examples added upstream get
+  # surfaced as a build break, not buried in the diagnostic noise.
+  WS9_STRICT_PAIRING: "1"
+  # sccache + rust-cache interaction: disable incremental in CI to avoid
+  # false misses caused by the rustc-wrapper showing up in incremental metadata.
+  # TODO(re-enable): GHA artifact-cache outage 2026-06-02 — sccache disabled until cache recovers
+  # CARGO_INCREMENTAL: 0
+  # SCCACHE_GHA_ENABLED: "true"
+  # RUSTC_WRAPPER: sccache
+  # CMAKE_C_COMPILER_LAUNCHER: sccache
+  # CMAKE_CXX_COMPILER_LAUNCHER: sccache
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install Linux build deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+      - name: Install macOS build deps
+        if: runner.os == 'macOS'
+        run: brew install cmake
+      - uses: dtolnay/rust-toolchain@1.85.0
+      # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: showcase-build
+      - name: Build examples (default features)
+        run: cargo build -p raylib-showcase --examples
+      - name: Build examples (raygui)
+        run: cargo build -p raylib-showcase --examples --features raygui
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+      - name: Unit tests
+        run: cargo nextest run -p raylib-showcase
+
+  wasm-build:
+    # Non-blocking: even after the matrix-split + bucketed-cargo speedup, this
+    # leg is still the slowest signal on the workflow. Re-enable blocking once
+    # sccache is back (GHA artifact-cache outage, see env-block TODOs) and a
+    # few green runs confirm the new shard layout is stable. The native
+    # `build` job above stays blocking — it's the actual correctness signal
+    # for 229-example desktop coverage.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        # Bumped from a single ~18 min serial run to N=4 shards. xtask-wasm-
+        # build slices the wasm-eligible example list deterministically by
+        # name so adding/removing examples shuffles work across shards
+        # predictably. Tune the chunk count if wall-time vs. runner-minute
+        # cost shifts.
+        shard: [1, 2, 3, 4]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install Linux build deps
+        # cmake for raylib's CMake-based build; the X11/audio/GL stack is
+        # needed because `cargo run --bin xtask-wasm-build` builds the
+        # xtask natively (which transitively links the raylib safe crate
+        # for build-script execution) before spawning the wasm cargo calls.
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+      - name: Set up emsdk
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.64
+          actions-cache-folder: emsdk-cache
+      - name: Verify emcc on PATH
+        run: emcc --version
+      - name: Export bindgen sysroot for wasm32-emscripten
+        run: echo "BINDGEN_EXTRA_CLANG_ARGS=--sysroot=$EMSDK/upstream/emscripten/cache/sysroot" >> $GITHUB_ENV
+      - uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          targets: wasm32-unknown-emscripten
+      # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Single key shared across shards so each shard restores the same
+          # raylib-sys (wasm) baseline cache rather than fighting for a
+          # per-shard slot. Only one shard wins the save race per run, which
+          # is fine — subsequent runs all restore the latest save.
+          shared-key: showcase-wasm
+      - name: Build wasm examples (shard ${{ matrix.shard }}/4)
+        # xtask-wasm-build's `cargo run` triggers showcase/build.rs which
+        # populates examples_meta.json before the binary executes, so no
+        # separate preflight step is required.
+        run: cargo run -p raylib-showcase --release --bin xtask-wasm-build -- --shard ${{ matrix.shard }}/4

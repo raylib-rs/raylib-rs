@@ -75,3 +75,13 @@ A good way to do this is by looking at the `/// # Safety` docs of each `unsafe` 
   }
   ```
   In `unsound_incr`, `AddOne` has no *preconditions*, but does not give the same protections as Rust would. If `n` is 255, `sound_incr` would panic, but `unsound_incr` would return **an invalid `NonZeroU8` containing 0**.
+
+## Working on the book
+
+The user guide lives in `book/` and is built with [mdBook](https://rust-lang.github.io/mdBook/). Install once with `cargo install mdbook` (or use the official release binary), then from the repo root:
+
+- `mdbook serve book` — live preview at <http://localhost:3000>.
+- `mdbook build book` — write the static HTML to `book/book/`.
+- `mdbook test book -L target/debug/deps` — run the book's Rust code blocks as doctests (requires `cargo build -p raylib --features full` first).
+
+CI builds and tests the book on every push (`book.yml`). The public Pages deploy ships with the WS9 showcase.
