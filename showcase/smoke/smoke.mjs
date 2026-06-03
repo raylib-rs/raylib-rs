@@ -22,8 +22,9 @@ import { chromium } from "playwright";
 
 // One page per breakage class: a no-resource control (shapes), a
 // loader-injected-but-no-file-loads page (the FS_createPath regression),
-// resource-loading shaders (the original #311 report), plus a texture, a
-// font (newly glsl-forked), and a light models page.
+// resource-loading shaders (the original #311 report), a texture, a font
+// (newly glsl-forked), a light models page, a raygui control panel, and
+// an embedded-data page from `others`.
 const SAMPLE_PAGES = [
   "examples/core/core_basic_window.html",
   "examples/core/core_2d_camera_platformer.html",
@@ -33,6 +34,17 @@ const SAMPLE_PAGES = [
   "examples/text/text_font_sdf.html",
   "examples/models/models_geometric_shapes.html",
   "examples/shapes/shapes_basic_shapes.html",
+  "examples/raygui/controls_test_suite.html",
+  "examples/others/embedded_files_loading.html",
+];
+
+// Advisory-only pages: reported (WARN) but never fail the gate. Audio
+// examples are documented as not running on the web yet (no audio context
+// wired through to emscripten — see xtask_build_pages's category-ordering
+// comment); gate-blocking on a known-broken category would freeze deploys.
+// TODO(web-audio): move into SAMPLE_PAGES once audio-on-web lands.
+const ADVISORY_PAGES = [
+  "examples/audio/audio_sound_loading.html",
 ];
 
 // raylib's TraceLog reaches the browser console via emscripten's stdout.
@@ -139,11 +151,15 @@ async function main() {
     console.log(`${r.ok ? "PASS" : "FAIL"} ${r.pagePath} — ${r.detail}`);
     results.push(r);
   }
+  for (const pagePath of ADVISORY_PAGES) {
+    const r = await checkPage(browser, baseUrl, pagePath);
+    console.log(`${r.ok ? "PASS" : "WARN"} ${r.pagePath} — ${r.detail} (advisory, non-gating)`);
+  }
   await browser.close();
   if (server) server.close();
 
   const failed = results.filter((r) => !r.ok);
-  console.log(`\nsmoke: ${results.length - failed.length}/${results.length} pages booted clean`);
+  console.log(`\nsmoke: ${results.length - failed.length}/${results.length} gated pages booted clean`);
   process.exit(failed.length > 0 ? 1 : 0);
 }
 
