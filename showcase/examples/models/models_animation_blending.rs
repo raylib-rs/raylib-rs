@@ -278,7 +278,7 @@ fn main() {
                 height: 12.0,
             },
             "",
-            &format!("x{:.1}", anim_frame_speed0),
+            format!("x{:.1}", anim_frame_speed0),
             &mut anim_frame_speed0,
             0.1,
             2.0,
@@ -294,7 +294,7 @@ fn main() {
                 width: 160.0,
                 height: 12.0,
             },
-            &format!("{:.1}x", anim_frame_speed1),
+            format!("{:.1}x", anim_frame_speed1),
             "",
             &mut anim_frame_speed1,
             0.1,
@@ -363,7 +363,7 @@ fn main() {
                 height: 20.0,
             },
             "ANIM 0",
-            &format!(
+            format!(
                 "FRAME: {:.2} / {}",
                 anim_frame_progress0, anims[anim_index0 as usize].keyframeCount
             ),
@@ -391,7 +391,7 @@ fn main() {
                 height: 20.0,
             },
             "ANIM 1",
-            &format!(
+            format!(
                 "FRAME: {:.2} / {}",
                 anim_frame_progress1, anims[anim_index1 as usize].keyframeCount
             ),

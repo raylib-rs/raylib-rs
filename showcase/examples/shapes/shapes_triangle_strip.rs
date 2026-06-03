@@ -117,7 +117,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 40.0, 120.0, 20.0),
             "Segments",
-            &format!("{:.0}", segments),
+            format!("{:.0}", segments),
             &mut segments,
             6.0,
             60.0,

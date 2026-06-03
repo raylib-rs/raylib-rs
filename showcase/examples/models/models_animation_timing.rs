@@ -153,7 +153,7 @@ fn main() {
                 height: 24.0,
             },
             "FRAME SPEED: ",
-            &format!("x{:.1}", anim_frame_speed),
+            format!("x{:.1}", anim_frame_speed),
             &mut anim_frame_speed,
             0.1,
             2.0,
@@ -167,7 +167,7 @@ fn main() {
                 width: sw as f32 - 20.0,
                 height: 24.0,
             },
-            &format!(
+            format!(
                 "CURRENT FRAME: {:.2} / {}",
                 anim_frame_progress, anims[anim_index as usize].keyframeCount
             ),

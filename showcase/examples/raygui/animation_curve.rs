@@ -341,7 +341,7 @@ fn main() {
                 time_line_rect.width,
                 2.0 * font_size,
             ),
-            &format!("Normalized Time: {:.3}", t),
+            format!("Normalized Time: {:.3}", t),
         );
         if d.gui_button(
             Rectangle::new(

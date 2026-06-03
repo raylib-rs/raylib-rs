@@ -302,7 +302,7 @@ fn main() {
         // Draw spline config
         d.gui_label(
             Rectangle::new(12.0, 62.0, 140.0, 24.0),
-            &format!("Spline thickness: {}", spline_thickness as i32),
+            format!("Spline thickness: {}", spline_thickness as i32),
         );
         d.gui_slider_bar(
             Rectangle::new(12.0, 60.0 + 24.0, 140.0, 16.0),
