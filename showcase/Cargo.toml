@@ -1,6 +1,6 @@
 [package]
 name = "raylib-showcase"
-version = "6.0.0"
+version = "6.0.0-rc.2"
 authors = ["raylib-rs team <https://github.com/raylib-rs/raylib-rs>"]
 edition = "2024"
 rust-version = "1.85"
@@ -25,7 +25,7 @@ raygui = ["raylib/raygui"]
 SUPPORT_CUSTOM_FRAME_CONTROL = ["raylib/SUPPORT_CUSTOM_FRAME_CONTROL"]
 
 [dependencies]
-raylib = { version = "6.0.0", path = "../raylib" }
+raylib = { version = "6.0.0-rc.2", path = "../raylib" }
 phf = { version = "0.11", features = ["macros"] }
 toml = "0.8"
 serde = { version = "1", features = ["derive"] }

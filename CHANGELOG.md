@@ -1,8 +1,15 @@
 # raylib-rs Changelog
 
-## 6.0.0 — 2026-06-02
+## 6.0.0-rc.2 — 2026-06-02
 
 Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024).
+
+> Release candidate 2 for the 6.0 line — published as `6.0.0-rc.2` to
+> get wider eyes on the canonical merge before the final `6.0.0` cut.
+> The headings under this block describe what will ship in `6.0.0`
+> final; `rc.2` is the verbatim source snapshot of the current canonical
+> `unstable` HEAD. The final-cut commit will flip this header to
+> `## 6.0.0 — YYYY-MM-DD` and bump the Cargo.toml versions accordingly.
 
 ### Highlights
 

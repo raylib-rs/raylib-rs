@@ -42,7 +42,7 @@ Follow instructions for building raylib for your platform [here](https://github.
 
 ```toml
 [dependencies]
-raylib = { version = "6.0", features = [] }
+raylib = { version = "6.0.0-rc.2", features = [] }
 ```
 
 2. Start coding!
