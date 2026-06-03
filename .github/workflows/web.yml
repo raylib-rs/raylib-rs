@@ -8,7 +8,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   # Required by raylib-sys/build.rs for the emscripten target (it panics without it).
-  EMCC_CFLAGS: "-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1"
+  EMCC_CFLAGS: "-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1 -sFORCE_FILESYSTEM=1"
   # sccache + rust-cache interaction: disable incremental in CI to avoid
   # false misses caused by the rustc-wrapper showing up in incremental metadata.
   # TODO(re-enable): GHA artifact-cache outage 2026-06-02 — sccache disabled until cache recovers
