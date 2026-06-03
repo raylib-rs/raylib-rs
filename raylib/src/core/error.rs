@@ -1164,6 +1164,42 @@ pub enum LoadStyleFromMemoryError {
     LengthOverflow(usize),
 }
 
+/// Error returned when installing a process-global callback whose slot is already occupied.
+///
+/// Each callback slot in [`crate::core::callbacks`] ([`set_save_file_data_callback`],
+/// [`set_load_file_data_callback`], [`set_save_file_text_callback`],
+/// [`set_load_file_text_callback`]) holds at most one function at a time. Calling a setter
+/// while its slot is occupied returns this error rather than silently overwriting. The inner
+/// `&'static str` names which callback kind was already set (e.g. `"save file data"`).
+///
+/// **Cause:** A previous call to the same setter installed a callback that has not been
+/// removed.
+///
+/// **Recovery:** Keep a single registration site per callback kind, or remove the existing
+/// callback (where an unset function exists) before installing a new one.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::callbacks::set_save_file_data_callback;
+///
+/// fn writer(_path: &str, _bytes: &[u8]) -> bool { true }
+/// set_save_file_data_callback(writer).expect("first install");
+/// match set_save_file_data_callback(writer) {
+///     Err(e) => eprintln!("{e}"), // "there is a save file data callback already set"
+///     Ok(()) => unreachable!(),
+/// }
+/// ```
+///
+/// [`set_save_file_data_callback`]: crate::core::callbacks::set_save_file_data_callback
+/// [`set_load_file_data_callback`]: crate::core::callbacks::set_load_file_data_callback
+/// [`set_save_file_text_callback`]: crate::core::callbacks::set_save_file_text_callback
+/// [`set_load_file_text_callback`]: crate::core::callbacks::set_load_file_text_callback
+#[derive(Error, Debug)]
+#[error("there is a {0} callback already set")]
+pub struct SetCallbackError(pub(crate) &'static str);
+
 #[cfg(test)]
 mod load_icons_error_tests {
     use super::*;
@@ -1209,5 +1245,19 @@ mod load_icons_error_tests {
         let err: LoadIconsError = io_err.into();
         assert!(err.to_string().contains("denied"));
         assert!(matches!(err, LoadIconsError::Io(_)));
+    }
+}
+
+#[cfg(test)]
+mod set_callback_error_tests {
+    use super::*;
+
+    #[test]
+    fn display_names_the_occupied_slot() {
+        let e = SetCallbackError("save file data");
+        assert_eq!(
+            e.to_string(),
+            "there is a save file data callback already set"
+        );
     }
 }
