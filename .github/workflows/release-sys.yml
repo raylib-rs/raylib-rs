@@ -20,8 +20,12 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install jq (sync-check dep)
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Install Linux build deps + jq
+        # `cargo publish --dry-run` runs a verify build of the packaged tarball,
+        # which builds the vendored raylib C source via cmake → requires the X11
+        # + GL stack and ALSA/udev headers. Match check.yml's apt list.
+        # `jq` is the sync-check helper's dep.
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev jq
 
       - name: Version + CHANGELOG sync check
         run: |
