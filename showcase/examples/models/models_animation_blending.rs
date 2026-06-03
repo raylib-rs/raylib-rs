@@ -26,6 +26,10 @@ const GLSL_VERSION: i32 = 330;
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    unused_assignments,
+    reason = "C-parity: two anim_blend_factor resets are assignment-expressions (not let bindings), where a statement-scoped attribute is rejected by stable Rust (E0658); suppressed at fn scope. The let-binding sites keep their tighter statement-level expects."
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -157,10 +161,6 @@ fn main() {
                 // Set animation transition
                 anim_transition = true;
                 anim_blend_time_counter = 0.0;
-                #[expect(
-                    unused_assignments,
-                    reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
-                )]
                 anim_blend_factor = 0.0;
             }
 
@@ -216,10 +216,6 @@ fn main() {
                     }
                     current_anim_playing = next_anim_to_play; // Update current animation playing
 
-                    #[expect(
-                        unused_assignments,
-                        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
-                    )]
                     anim_blend_factor = 0.0; // Reset blend factor
                     anim_transition = false; // Exit transition mode
                     anim_blend_time_counter = 0.0;

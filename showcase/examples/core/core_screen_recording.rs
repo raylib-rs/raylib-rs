@@ -28,6 +28,10 @@ const MAX_SINEWAVE_POINTS: usize = 256;
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    unused_assignments,
+    reason = "C-parity: the gif_recording reset before window close is an assignment-expression (not a let binding), where a statement-scoped attribute is rejected by stable Rust (E0658); it is dead in this RAII port but kept to mirror the C, suppressed at fn scope"
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -153,10 +157,6 @@ fn main() {
     //--------------------------------------------------------------------------------------
     // If still recording a GIF on close window, just finish (omitted — see top-of-file note)
     if gif_recording {
-        #[expect(
-            unused_assignments,
-            reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
-        )]
         gif_recording = false;
     }
 

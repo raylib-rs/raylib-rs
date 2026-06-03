@@ -80,12 +80,12 @@ fn main() {
     };
 
     // Set default actions
+    let mut action_set: i32 = 0;
+    set_actions_default(&mut state);
     #[expect(
         unused_assignments,
         reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
     )]
-    let mut action_set: i32 = 0;
-    set_actions_default(&mut state);
     let mut release_action = false;
 
     let mut position = Vector2::new(400.0, 200.0);
