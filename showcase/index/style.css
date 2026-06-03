@@ -82,7 +82,16 @@ main { padding: 1rem; }
 }
 
 .tile .placeholder {
-  /* No <img>; just shows the placeholder colour. */
+  /* No <img>; show the example name inside the placeholder so the tile
+     is still identifiable when gen-thumbnails couldn't capture it. */
+}
+.tile .placeholder span {
+  padding: 0.4rem 0.6rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  text-align: center;
+  word-break: break-word;
+  opacity: 0.7;
 }
 
 .tile p {
