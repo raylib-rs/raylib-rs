@@ -25,12 +25,6 @@ env:
 
 jobs:
   build:
-    # Non-blocking: showcase builds 229 examples × 3 OSes and is a slow leg.
-    # Failures here surface as warnings but don't gate merges/publishes until
-    # the post-release wasm/showcase build-speed workstream lands. Re-enable
-    # blocking by removing this `continue-on-error` once that workstream
-    # establishes a faster baseline (matrix-split, sccache re-enabled, etc.).
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -62,8 +56,14 @@ jobs:
         run: cargo nextest run -p raylib-showcase
 
   wasm-build:
-    # Non-blocking: ~18 min iterate-and-build over 229 wasm examples.
-    # See `build` job comment + the post-release-web-build-speed memory.
+    # Non-blocking: ~18 min iterate-and-build over 229 wasm examples is the
+    # current CI bottleneck. Failures surface as warnings on the run page but
+    # don't fail the workflow's reported conclusion. Re-enable blocking after
+    # the post-release wasm/showcase build-speed workstream lands (matrix-
+    # split `xtask-wasm-build`, sccache re-enabled once the GHA artifact-
+    # cache outage clears, raylib-sys hoisted out of the per-example loop).
+    # The native `build` job above stays blocking — it's fast (~5 min) and
+    # is the actual signal for 229-example correctness on desktop.
     continue-on-error: true
     runs-on: ubuntu-latest
     steps:
