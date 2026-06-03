@@ -38,15 +38,15 @@ Three common `Cargo.toml` stanzas:
 ```text
 # 1. Default desktop build (OpenGL 3.3, no optional adapters)
 [dependencies]
-raylib = "6.0.0-rc.1"
+raylib = "6.0"
 
 # 2. Headless / CI build using the software renderer (no GPU required)
 [dependencies]
-raylib = { version = "6.0.0-rc.1", features = ["software_renderer"] }
+raylib = { version = "6.0", features = ["software_renderer"] }
 
 # 3. Game with glam math and serde serialization
 [dependencies]
-raylib = { version = "6.0.0-rc.1", features = ["glam", "serde"] }
+raylib = { version = "6.0", features = ["glam", "serde"] }
 ```
 
 ## Gotchas

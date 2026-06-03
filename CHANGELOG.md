@@ -1,14 +1,8 @@
 # raylib-rs Changelog
 
-## 6.0.0-rc.1 (unreleased)
+## 6.0.0 — 2026-06-02
 
 Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024).
-
-> Release candidate 1 for the 6.0 line — the published crate versions are
-> `6.0.0-rc.1` while the remaining post-WS8 workstreams (WS9 showcase and
-> the final-release publish step) settle. The headings under this block
-> describe what is shipping in the eventual `6.0.0` release; `rc.N` bumps
-> capture incremental snapshots leading up to it.
 
 ### Highlights
 
@@ -86,9 +80,6 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
     same 30-slot trampoline pool with the per-stream processors.
   - Re-exported via `raylib::prelude`. Closes the `mixed-audio`
     workstream from the cheatsheet-parity audit.
-
-  Also updates the "post-WS8 workstreams" note at the top of the
-  6.0.0-rc.1 block: mixed-audio drops out of the list.
 - **Showcase crate (`raylib-showcase`):**
   - 229 runnable Rust ports of raylib's C examples organized as `[[example]]` targets under `showcase/examples/<category>/`. Categories: audio (11), core (49), models (30), others (3), raygui (12), shaders (35), shapes (41), text (16), textures (32).
   - `SourceViewer` overlay (`raylib_showcase::SourceViewer`) — F1 toggles a full-canvas C/Rust source view with tab swap, PageUp/PageDown scroll, and a "Source on GitHub: <url>" footer link per tab (URLs baked into the static registry at build time).

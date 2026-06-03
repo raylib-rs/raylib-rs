@@ -8,10 +8,8 @@ In your `Cargo.toml`:
 
 ```toml
 [dependencies]
-raylib = "6.0.0-rc.1"
+raylib = "6.0"
 ```
-
-> **Note:** The crate version in this book reflects the latest published release-candidate of the 6.0 line. `6.0.0-rc.1` is the current pre-release on crates.io; once the post-WS8 gap workstreams settle, the line graduates to `6.0.0` (final). Pre-release tags must be requested explicitly — cargo will not pick up `6.0.0-rc.1` from `raylib = "6.0"` alone.
 
 ## Open a window
 
