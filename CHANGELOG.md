@@ -36,6 +36,8 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - **`samples/` directory removed.** Migration: see [`showcase/`](./showcase) for runnable Rust ports of raylib's C examples. Anyone running `cd samples && cargo run --bin <name>` against the pre-release 6.0-rc branch should switch to `showcase/` instead. The WS9 finale of the 6.0 effort completes the port of all upstream examples and publishes the gallery as a GitHub Pages site.
 - `RaylibGuiIcons::gui_get_icons_raw` removed; use `gui_get_icons` / `gui_get_icons_mut`.
 - `RaylibGuiIcons::gui_load_icons_raw` removed; use `gui_load_icons` / `gui_load_icons_with_names`.
+- `SetLogError` (core/callbacks) is replaced by `SetCallbackError` in `core::error` — a `thiserror` struct without the artificial lifetime parameter. The ~10 `set_*_callback` functions/methods now return `Result<(), SetCallbackError>`.
+- `RaylibError` is now `#[non_exhaustive]` and gained `#[from]` variants for `UpdateAudioStreamError`, `InvalidMeshError`, `GenMeshError`, `Base64Error`, `LoadIconsError`, `LoadStyleFromMemoryError`, `PixelColorError`, and `SetCallbackError` — every leaf error now composes via `?`. Exhaustive matches on `RaylibError` need a wildcard arm.
 
 ### Added
 
