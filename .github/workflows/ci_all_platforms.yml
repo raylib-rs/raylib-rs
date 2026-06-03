@@ -79,11 +79,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: build
-    # TODO(re-enable): WS8 tracked-deferred "nobuild CI matrix" item.
-    # `thiserror` (runtime dep added in 6.0) doesn't build on `x86_64-unknown-none`
-    # under `--features nobuild`. PR #251 (no_std) is the related community work.
-    # The full no_std story is a post-6.0 workstream; disable for now to unblock
-    # the canonical merge.
+    # TODO(re-enable): no_std smoke test, disabled for the 6.0 publish path.
+    #
+    # The job builds the safe `raylib` crate for `x86_64-unknown-none` (a
+    # bare-metal Tier 3 target with no `std`). `--features nobuild` is just
+    # the C-build escape hatch — it skips raylib-sys's cmake step so the C
+    # source doesn't try (and fail) to link on a target with no libc; the
+    # actual signal under test is whether the Rust side compiles without
+    # `std`.
+    #
+    # Current blockers:
+    #   - `thiserror` is added as a runtime dep in 6.0 and is `std`-by-default;
+    #     `default-features = false` would help but isn't enough on its own.
+    #   - `raylib`'s safe crate uses `std::path` / `std::fs` directly across
+    #     file/text/window modules — those would need cfg-gating or moving
+    #     to `alloc` / `core` equivalents.
+    #   - raylib-sys's `nobuild`+`x86_64-unknown-none` link path itself isn't
+    #     wired (no docs on what library file the user is expected to drop
+    #     in for a bare-metal build).
+    #
+    # PR #251 ("Port raylib-sys to work with #![no_std] environments") is the
+    # related community work. Tracked-deferred as the post-6.0 "nobuild CI
+    # matrix + no_std" workstream.
     if: false
     steps:
       - uses: actions/checkout@v4
