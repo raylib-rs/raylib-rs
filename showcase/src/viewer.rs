@@ -352,7 +352,15 @@ fn thumbnail_from_env() -> Option<ThumbnailCapture> {
 fn capture_and_exit(rl: &mut RaylibHandle, thread: &RaylibThread, out_path: &std::path::Path) {
     use std::process;
 
-    let img = rl.load_image_from_screen(thread);
+    // Thumbnails are generated under the `software_renderer` (rlsw) backend,
+    // whose screen readback is BGRA + Y-inverted (see raylib::test_harness).
+    // Normalize to true top-left RGBA before export so thumbnails aren't
+    // flipped vertically or colour-swapped. A real GPU readback is already
+    // correct, so the correction is software_renderer-only.
+    #[allow(unused_mut)]
+    let mut img = rl.load_image_from_screen(thread);
+    #[cfg(feature = "software_renderer")]
+    raylib::test_harness::normalize_readback(&mut img);
 
     // Fix C: surface directory-creation failures instead of silently swallowing them.
     if let Some(parent) = out_path.parent() {
