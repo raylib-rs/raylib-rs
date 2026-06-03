@@ -6,3 +6,5 @@ Cargo.lock
 /.idea
 showcase/*.png
 showcase/*.raw
+# npm artifacts from the Pages smoke gate (showcase/smoke)
+node_modules/

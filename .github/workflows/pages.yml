@@ -75,6 +75,16 @@ jobs:
         # $EMSDK's file_packager (so file-loading examples work on the web)
         # and copies book/book/ into _site/book/.
         run: cargo run -p raylib-showcase --release --bin xtask-build-pages
+      - name: Smoke test the assembled site (Playwright)
+        # Deploy gate: loads a sample of example pages headlessly and fails
+        # on console aborts / pageerrors / missing artifacts / no raylib boot
+        # log. Catches the deploy-time-only breakage classes desktop CI
+        # can't see (e.g. the FS_createPath export abort, missing resource
+        # bundles). A failure here keeps the previous working deploy live.
+        run: |
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+          node showcase/smoke/smoke.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: showcase/_site
