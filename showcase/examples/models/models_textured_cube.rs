@@ -118,6 +118,10 @@ fn draw_cube_texture<D: RaylibDraw3D + raylib::rlgl::RaylibRlgl>(
 }
 
 // Draw cube with texture piece applied to all faces
+#[expect(
+    clippy::too_many_arguments,
+    reason = "C-parity: mirrors the C function signature"
+)]
 fn draw_cube_texture_rec<D: RaylibDraw3D + raylib::rlgl::RaylibRlgl>(
     d: &mut D,
     texture: &Texture2D,

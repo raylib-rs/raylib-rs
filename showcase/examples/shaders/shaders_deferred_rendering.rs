@@ -486,11 +486,8 @@ fn main() {
 
                 // SAFETY: copy depth buffer from g-buffer to default framebuffer.
                 unsafe {
-                    ffi::rlBindFramebuffer(
-                        ffi::RL_READ_FRAMEBUFFER as u32,
-                        g_buffer.framebuffer_id,
-                    );
-                    ffi::rlBindFramebuffer(ffi::RL_DRAW_FRAMEBUFFER as u32, 0);
+                    ffi::rlBindFramebuffer(ffi::RL_READ_FRAMEBUFFER, g_buffer.framebuffer_id);
+                    ffi::rlBindFramebuffer(ffi::RL_DRAW_FRAMEBUFFER, 0);
                     ffi::rlBlitFramebuffer(
                         0,
                         0,

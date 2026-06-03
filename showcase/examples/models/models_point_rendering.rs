@@ -26,6 +26,10 @@ const MIN_POINTS: i32 = 1_000; // 1 thousand
 // Module Functions Declaration
 //------------------------------------------------------------------------------------
 // Generate mesh using points (a spherical point cloud)
+#[expect(
+    clippy::identity_op,
+    reason = "C-parity: explicit +0/*1//1 kept to align with the sibling index expressions in the C"
+)]
 fn gen_mesh_points(num_points: i32) -> ffi::Mesh {
     // SAFETY: zeroed ffi::Mesh; we populate fields and call UploadMesh before returning.
     let mut mesh: ffi::Mesh = unsafe { std::mem::zeroed() };
@@ -97,6 +101,10 @@ fn draw_model_points<D: RaylibDraw3D>(
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    clippy::identity_op,
+    reason = "C-parity: explicit +0/*1//1 kept to align with the sibling index expressions in the C"
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------

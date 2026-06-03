@@ -32,6 +32,14 @@ const GLSL_VERSION: i32 = 330;
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
+#[expect(
+    clippy::identity_op,
+    reason = "C-parity: explicit +0/*1//1 kept to align with the sibling index expressions in the C"
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------

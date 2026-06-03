@@ -239,6 +239,10 @@ fn main() {
 
         // WARNING: On event replay, mouse-wheel internal value is set
         camera.zoom += rl.get_mouse_wheel_move() * 0.05;
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if camera.zoom > 3.0 {
             camera.zoom = 3.0;
         } else if camera.zoom < 0.25 {
@@ -274,6 +278,7 @@ fn main() {
         //----------------------------------------------------------------------------------
 
         // Events management
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_pressed(KeyboardKey::KEY_S)
         // Toggle events recording
         {

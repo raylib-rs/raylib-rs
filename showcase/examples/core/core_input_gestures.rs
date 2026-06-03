@@ -66,6 +66,7 @@ fn main() {
         current_gesture = rl.get_gesture_detected();
         touch_position = rl.get_touch_position(0);
 
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if touch_area.check_collision_point_rec(touch_position)
             && (current_gesture != Gesture::GESTURE_NONE)
         {

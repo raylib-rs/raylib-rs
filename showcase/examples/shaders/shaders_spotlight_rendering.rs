@@ -69,12 +69,20 @@ struct Star {
 //--------------------------------------------------------------------------------------
 // Module Functions Definition
 //--------------------------------------------------------------------------------------
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
 fn reset_star(star: &mut Star, screen_width: i32, screen_height: i32, rl: &mut RaylibHandle) {
     star.position = Vector2::new(screen_width as f32 / 2.0, screen_height as f32 / 2.0);
 
     star.speed.x = rl.get_random_value::<i32>(-1000..=1000) as f32 / 100.0;
     star.speed.y = rl.get_random_value::<i32>(-1000..=1000) as f32 / 100.0;
 
+    #[expect(
+        clippy::neg_cmp_op_on_partial_ord,
+        reason = "C-parity: mirrors the C !(a < b)"
+    )]
     while !(star.speed.x.abs() + (star.speed.y.abs() > 1.0) as i32 as f32 > 0.0) {
         star.speed.x = rl.get_random_value::<i32>(-1000..=1000) as f32 / 100.0;
         star.speed.y = rl.get_random_value::<i32>(-1000..=1000) as f32 / 100.0;
@@ -83,6 +91,10 @@ fn reset_star(star: &mut Star, screen_width: i32, screen_height: i32, rl: &mut R
     star.position = star.position + star.speed * Vector2::new(8.0, 8.0);
 }
 
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
 fn update_star(star: &mut Star, screen_width: i32, screen_height: i32, rl: &mut RaylibHandle) {
     star.position = star.position + star.speed;
 

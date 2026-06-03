@@ -150,6 +150,7 @@ fn main() {
             );
         }
 
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
             if rect_count >= 4 {
                 rect_count -= 1;

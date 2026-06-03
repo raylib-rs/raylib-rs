@@ -97,6 +97,10 @@ fn main() {
             divider_value -= 0.01;
         }
 
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if divider_value < 0.0 {
             divider_value = 0.0;
         } else if divider_value > 1.0 {

@@ -146,6 +146,10 @@ fn main() {
 
         // Change brush size
         brush_size += rl.get_mouse_wheel_move() * 5.0;
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if brush_size < 2.0 {
             brush_size = 2.0;
         }
@@ -204,6 +208,10 @@ fn main() {
         }
 
         // Check mouse hover save button
+        #[expect(
+            clippy::needless_bool_assign,
+            reason = "C-parity: C assigns the bool in if/else"
+        )]
         if btn_save_rec.check_collision_point_rec(mouse_pos) {
             btn_save_mouse_hover = true;
         } else {

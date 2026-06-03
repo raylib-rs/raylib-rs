@@ -198,6 +198,10 @@ fn main() {
         } else if rl.is_key_pressed(KeyboardKey::KEY_RIGHT) {
             progress_value += 0.1;
         }
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if progress_value > 1.0 {
             progress_value = 1.0;
         } else if progress_value < 0.0 {

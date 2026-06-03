@@ -269,6 +269,10 @@ fn randomize_emoji(
 }
 
 // Draw text using font inside rectangle limits
+#[expect(
+    clippy::too_many_arguments,
+    reason = "C-parity: mirrors the C function signature"
+)]
 fn draw_text_boxed<D: RaylibDraw>(
     d: &mut D,
     font: &Font,

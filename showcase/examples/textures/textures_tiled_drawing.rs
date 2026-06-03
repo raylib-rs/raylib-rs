@@ -23,6 +23,10 @@ const MARGIN_SIZE: i32 = 8; // Size for the margins
 const COLOR_SIZE: i32 = 16; // Size of the color select buttons
 
 // Draw part of a texture (defined by a rectangle) with rotation and scale tiled into dest
+#[expect(
+    clippy::too_many_arguments,
+    reason = "C-parity: mirrors the C function signature"
+)]
 fn draw_texture_tiled<D: RaylibDraw>(
     d: &mut D,
     texture: &Texture2D,

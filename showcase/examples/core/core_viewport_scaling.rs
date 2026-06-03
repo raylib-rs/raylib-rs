@@ -22,6 +22,10 @@ const RESOLUTION_COUNT: usize = 4; // For iteration purposes and teaching exampl
 
 #[derive(Clone, Copy, PartialEq)]
 #[repr(i32)]
+#[expect(
+    clippy::enum_variant_names,
+    reason = "C-parity: variant names mirror the C enum prefix"
+)]
 enum ViewportType {
     // Only upscale, useful for pixel art
     KeepAspectInteger = 0,
@@ -200,6 +204,10 @@ fn keep_width_centered(
     source_rect.height *= -1.0;
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "C-parity: mirrors the C function signature"
+)]
 fn resize_render_size(
     rl: &mut RaylibHandle,
     thread: &RaylibThread,

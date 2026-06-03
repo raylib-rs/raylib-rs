@@ -276,6 +276,10 @@ fn main() {
         }
 
         // Movement computation
+        #[expect(
+            clippy::nonminimal_bool,
+            reason = "C-parity: boolean expression mirrors the C"
+        )]
         if !paused && ((bounded_t && t < d) || !bounded_t) {
             ball_position.x = (easings[easing_x].func)(t, 100.0, 700.0 - 170.0, d);
             ball_position.y = (easings[easing_y].func)(t, 100.0, 400.0 - 170.0, d);

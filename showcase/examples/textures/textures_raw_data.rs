@@ -62,6 +62,10 @@ fn main() {
 
     for y in 0..im_height {
         for x in 0..im_width {
+            #[expect(
+                clippy::identity_op,
+                reason = "C-parity: explicit +0/*1//1 kept to align with the sibling index expressions in the C"
+            )]
             if ((x / 32 + y / 32) / 1) % 2 == 0 {
                 checked_im.draw_pixel(x, y, Color::ORANGE);
             } else {

@@ -94,6 +94,10 @@ fn main() {
     // Define the vertices drawing position
     // NOTE: Initially same as points but updated every frame
     let mut positions: [Vector2; MAX_POINTS] = [Vector2::new(0.0, 0.0); MAX_POINTS];
+    #[expect(
+        clippy::manual_memcpy,
+        reason = "C-parity: C copies element-by-element in a loop"
+    )]
     for i in 0..MAX_POINTS {
         positions[i] = points[i];
     }

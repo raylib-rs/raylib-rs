@@ -72,6 +72,10 @@ fn main() {
     {
         // Update
         //----------------------------------------------------------------------------------
+        #[expect(
+            clippy::needless_bool_assign,
+            reason = "C-parity: C assigns the bool in if/else"
+        )]
         if rl.is_key_down(KeyboardKey::KEY_SPACE) {
             use_ttf = true;
         } else {

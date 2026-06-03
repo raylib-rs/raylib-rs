@@ -55,6 +55,7 @@ fn main() {
         //----------------------------------------------------------------------------------
         mouse_position = rl.get_mouse_position();
 
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && !drag_window {
             if Rectangle::new(0.0, 0.0, screen_width as f32, 20.0)
                 .check_collision_point_rec(mouse_position)

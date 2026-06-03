@@ -107,6 +107,10 @@ fn main() {
         dst_rec_v.height = mouse_position.y - dst_rec_v.y;
 
         // Set a minimum width and/or height
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if dst_rec1.width < 1.0 {
             dst_rec1.width = 1.0;
         }
@@ -116,6 +120,10 @@ fn main() {
         if dst_rec1.height < 1.0 {
             dst_rec1.height = 1.0;
         }
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if dst_rec2.width < 1.0 {
             dst_rec2.width = 1.0;
         }

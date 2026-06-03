@@ -108,6 +108,10 @@ fn main() {
                 *exp += 0.05;
             }
 
+            #[expect(
+                clippy::manual_clamp,
+                reason = "C-parity: C clamps with explicit if branches"
+            )]
             if *exp <= 0.5 {
                 *exp = 0.5;
             }

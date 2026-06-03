@@ -154,13 +154,14 @@ fn main() {
                 // call UnloadTexture explicitly via ffi to free the GL handle before replacing.
                 unsafe {
                     ffi::UnloadTexture(
-                        (*skybox.materials_mut()[0].maps_mut()
+                        skybox.materials_mut()[0].maps_mut()
                             [ffi::MaterialMapIndex::MATERIAL_MAP_CUBEMAP as usize]
-                            .as_mut())
-                        .texture,
+                            .as_mut()
+                            .texture,
                     );
                 }
 
+                #[expect(clippy::collapsible_else_if, reason = "C-parity: C nests the else-if")]
                 if use_hdr {
                     // HDR drop path: not exercised in this port (rlgl-level cubemap generation
                     // is not exposed by the safe wrapper). Keep visual parity with the C.
@@ -246,10 +247,10 @@ fn main() {
     // its handle but the Model RAII is about to free the model materials anyway.
     unsafe {
         ffi::UnloadTexture(
-            (*skybox.materials_mut()[0].maps_mut()
+            skybox.materials_mut()[0].maps_mut()
                 [ffi::MaterialMapIndex::MATERIAL_MAP_CUBEMAP as usize]
-                .as_mut())
-            .texture,
+                .as_mut()
+                .texture,
         );
     }
     // UnloadShader / UnloadModel / CloseWindow are handled by RAII drops.

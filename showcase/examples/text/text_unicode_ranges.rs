@@ -134,8 +134,8 @@ fn main() {
                 // Unicode range: Cyrillic
                 font = add_codepoint_range(font, FONT_PATH, 0x400, 0x4ff);
                 font = add_codepoint_range(font, FONT_PATH, 0x500, 0x52f);
-                font = add_codepoint_range(font, FONT_PATH, 0x2de0, 0x2Dff);
-                font = add_codepoint_range(font, FONT_PATH, 0xa640, 0xA69f);
+                font = add_codepoint_range(font, FONT_PATH, 0x2de0, 0x2DFF);
+                font = add_codepoint_range(font, FONT_PATH, 0xa640, 0xA69F);
             }
             if unicode_range >= 2 {
                 // Unicode range: Greek

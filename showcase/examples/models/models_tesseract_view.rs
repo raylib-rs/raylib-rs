@@ -24,6 +24,10 @@ use raylib_showcase::SourceViewer;
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
+#[expect(
+    clippy::assign_op_pattern,
+    reason = "C-parity: C writes x = x + y rather than the compound form; a statement-scoped attribute is rejected on the bare assignment expression by stable Rust (E0658), so suppressed at fn scope"
+)]
 fn main() {
     // Initialization
     //--------------------------------------------------------------------------------------

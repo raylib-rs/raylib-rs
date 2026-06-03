@@ -84,7 +84,7 @@ fn main() {
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_VERTEX_TEXCOORD02 as isize) =
             ffi::rlLoadVertexBuffer(
                 ptr as *const std::os::raw::c_void,
-                (mesh_ref.vertexCount * 2 * std::mem::size_of::<f32>() as i32) as i32,
+                mesh_ref.vertexCount * 2 * std::mem::size_of::<f32>() as i32,
                 false,
             );
         ffi::rlEnableVertexArray(mesh_ref.vaoId);

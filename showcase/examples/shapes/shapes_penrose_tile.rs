@@ -98,6 +98,7 @@ fn main() {
         // Update
         //----------------------------------------------------------------------------------
         let mut rebuild = false;
+        #[expect(clippy::collapsible_if, reason = "C-parity: C nests the conditionals")]
         if rl.is_key_pressed(KeyboardKey::KEY_UP) {
             if generations < max_generations {
                 generations += 1;

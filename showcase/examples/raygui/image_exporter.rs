@@ -157,6 +157,10 @@ fn main() {
 
         if image_loaded {
             image_scale += rl.get_mouse_wheel_move() * 0.05; // Image scale control
+            #[expect(
+                clippy::manual_clamp,
+                reason = "C-parity: C clamps with explicit if branches"
+            )]
             if image_scale <= 0.1 {
                 image_scale = 0.1;
             } else if image_scale >= 5.0 {

@@ -89,6 +89,10 @@ fn main() {
         }
 
         // Limit camera rotation to 80 degrees (-40 to 40)
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if camera.rotation > 40.0 {
             camera.rotation = 40.0;
         } else if camera.rotation < -40.0 {
@@ -99,6 +103,10 @@ fn main() {
         // Uses log scaling to provide consistent zoom speed
         camera.zoom = (camera.zoom.ln() + rl.get_mouse_wheel_move() * 0.1).exp();
 
+        #[expect(
+            clippy::manual_clamp,
+            reason = "C-parity: C clamps with explicit if branches"
+        )]
         if camera.zoom > 3.0 {
             camera.zoom = 3.0;
         } else if camera.zoom < 0.1 {
