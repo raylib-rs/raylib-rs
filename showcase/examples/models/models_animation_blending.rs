@@ -87,6 +87,10 @@ fn main() {
     let mut anim_current_frame1: f32 = 0.0; // Next animation frame (supporting interpolated frames)
     let mut anim_frame_speed1: f32 = 0.5; // Next animation play speed
 
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut anim_blend_factor: f32 = 0.0; // Blend factor from anim0[frame0] --> anim1[frame1], [0.0f..1.0f]
     // NOTE: 0.0f results in full anim0[] and 1.0f in full anim1[]
 
@@ -109,7 +113,15 @@ fn main() {
 
     let mut dropdown_edit_mode0 = false;
     let mut dropdown_edit_mode1 = false;
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut anim_frame_progress0: f32 = 0.0;
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut anim_frame_progress1: f32 = 0.0;
     let mut anim_blend_progress: f32 = 0.0;
 
@@ -145,6 +157,10 @@ fn main() {
                 // Set animation transition
                 anim_transition = true;
                 anim_blend_time_counter = 0.0;
+                #[expect(
+                    unused_assignments,
+                    reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+                )]
                 anim_blend_factor = 0.0;
             }
 
@@ -200,6 +216,10 @@ fn main() {
                     }
                     current_anim_playing = next_anim_to_play; // Update current animation playing
 
+                    #[expect(
+                        unused_assignments,
+                        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+                    )]
                     anim_blend_factor = 0.0; // Reset blend factor
                     anim_transition = false; // Exit transition mode
                     anim_blend_time_counter = 0.0;

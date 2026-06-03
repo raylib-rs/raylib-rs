@@ -285,6 +285,10 @@ fn main() {
     {
         let mut x = 0;
         let mut y = 0;
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_COLORS {
             color_rec[i].x = 2.0 + MARGIN_SIZE as f32 + x as f32;
             color_rec[i].y = 22.0 + 256.0 + MARGIN_SIZE as f32 + y as f32;
@@ -320,6 +324,10 @@ fn main() {
             let mouse = rl.get_mouse_position();
 
             // Check which pattern was clicked and set it as the active pattern
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..rec_pattern.len() {
                 if Rectangle::new(
                     2.0 + MARGIN_SIZE as f32 + rec_pattern[i].x,
@@ -335,6 +343,10 @@ fn main() {
             }
 
             // Check to see which color was clicked and set it as the active color
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..MAX_COLORS {
                 if color_rec[i].check_collision_point_rec(mouse) {
                     active_col = i;

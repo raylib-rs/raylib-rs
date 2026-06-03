@@ -75,6 +75,10 @@ fn load_hilbert_path(order: i32, size: f32) -> Vec<Vector2> {
 
     let mut hilbert_path = vec![Vector2::new(0.0, 0.0); stroke_count];
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..stroke_count {
         hilbert_path[i] = compute_hilbert_step(order, i as i32);
         hilbert_path[i].x = hilbert_path[i].x * len + len / 2.0;

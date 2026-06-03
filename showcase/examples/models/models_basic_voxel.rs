@@ -53,6 +53,10 @@ fn main() {
 
     // Initialize voxel world - fill with voxels
     let mut voxels = [[[false; WORLD_SIZE]; WORLD_SIZE]; WORLD_SIZE];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for x in 0..WORLD_SIZE {
         for y in 0..WORLD_SIZE {
             for z in 0..WORLD_SIZE {
@@ -87,6 +91,10 @@ fn main() {
             let mut closest_distance = 99999.0_f32;
             let mut closest_voxel_position = Vector3::new(-1.0, -1.0, -1.0);
             let mut voxel_found = false;
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for x in 0..WORLD_SIZE {
                 for y in 0..WORLD_SIZE {
                     for z in 0..WORLD_SIZE {
@@ -133,6 +141,10 @@ fn main() {
             c.draw_grid(10, 1.0);
 
             // Draw all voxels
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for x in 0..WORLD_SIZE {
                 for y in 0..WORLD_SIZE {
                     for z in 0..WORLD_SIZE {

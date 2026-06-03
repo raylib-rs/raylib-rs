@@ -46,6 +46,10 @@ fn main() {
     let mut stars_screen_pos: [Vector2; STAR_COUNT] = [Vector2::zero(); STAR_COUNT];
 
     // Setup the stars with a random position
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..STAR_COUNT {
         stars[i].x = rl.get_random_value::<i32>(-screen_width / 2..=screen_width / 2) as f32;
         stars[i].y = rl.get_random_value::<i32>(-screen_height / 2..=screen_height / 2) as f32;

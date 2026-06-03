@@ -49,6 +49,10 @@ fn main() {
     // Get sine wave points for line drawing
     let mut sine_points: [Vector2; MAX_SINEWAVE_POINTS] =
         [Vector2::new(0.0, 0.0); MAX_SINEWAVE_POINTS];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_SINEWAVE_POINTS {
         sine_points[i].x = i as f32 * rl.get_screen_width() as f32 / 180.0;
         sine_points[i].y = screen_height as f32 / 2.0
@@ -149,6 +153,10 @@ fn main() {
     //--------------------------------------------------------------------------------------
     // If still recording a GIF on close window, just finish (omitted — see top-of-file note)
     if gif_recording {
+        #[expect(
+            unused_assignments,
+            reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+        )]
         gif_recording = false;
     }
 

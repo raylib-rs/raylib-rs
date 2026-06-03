@@ -47,6 +47,10 @@ fn add_codepoint_range(font: Font, font_path: &str, start: i32, stop: i32) -> Fo
     }
 
     // Add new codepoints to list (provided range)
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in (current_range_size as usize)..(updated_codepoint_count as usize) {
         updated_codepoints[i] = start + (i as i32 - current_range_size);
     }

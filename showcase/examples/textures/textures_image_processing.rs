@@ -75,6 +75,10 @@ fn main() {
         [Rectangle::new(0.0, 0.0, 0.0, 0.0); NUM_PROCESSES];
     let mut mouse_hover_rec: i32 = -1;
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..NUM_PROCESSES {
         toggle_recs[i] = Rectangle::new(40.0, 50.0 + 32.0 * i as f32, 150.0, 30.0);
     }
@@ -91,6 +95,10 @@ fn main() {
         //----------------------------------------------------------------------------------
 
         // Mouse toggle group logic
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..NUM_PROCESSES {
             if toggle_recs[i].check_collision_point_rec(rl.get_mouse_position()) {
                 mouse_hover_rec = i as i32;

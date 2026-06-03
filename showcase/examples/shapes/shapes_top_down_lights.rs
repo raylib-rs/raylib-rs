@@ -179,6 +179,10 @@ fn main() {
                 }
 
                 // Merge in all the light masks
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for i in 0..MAX_LIGHTS {
                     if lights[i].active {
                         if let Some(mask) = lights[i].mask.as_ref() {
@@ -232,6 +236,10 @@ fn main() {
         );
 
         // Draw the lights
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_LIGHTS {
             if lights[i].active {
                 d.draw_circle(
@@ -248,6 +256,10 @@ fn main() {
                 d.draw_triangle_fan(&lights[0].shadows[s].vertices, Color::DARKPURPLE);
             }
 
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for b in 0..box_count {
                 if boxes[b].check_collision_recs(lights[0].bounds) {
                     d.draw_rectangle_rec(boxes[b], Color::PURPLE);
@@ -368,6 +380,10 @@ fn update_light(
     lights[slot].shadow_count = 0;
     lights[slot].valid = false;
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..count {
         // Are we in a box? if so we are not valid
         if boxes[i].check_collision_point_rec(lights[slot].position) {
@@ -496,6 +512,10 @@ fn setup_boxes(rl: &RaylibHandle, boxes: &mut [Rectangle], count: &mut usize) {
     boxes[3] = Rectangle::new(1000.0, 50.0, 40.0, 40.0);
     boxes[4] = Rectangle::new(500.0, 350.0, 40.0, 40.0);
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 5..MAX_BOXES {
         boxes[i] = Rectangle::new(
             rl.get_random_value::<i32>(0..=rl.get_screen_width()) as f32,

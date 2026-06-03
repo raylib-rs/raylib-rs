@@ -74,6 +74,10 @@ fn main() {
 
     // Search bones for sockets
     let bones = character_model.bones().unwrap();
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..bones.len() {
         // SAFETY: bones[i].name is a null-terminated inline char[32].
         let name = unsafe {

@@ -398,6 +398,10 @@ fn main() {
         }
 
         // Update light values (actually, only enable/disable them)
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_LIGHTS {
             update_light_values(&mut deferred_shader, &mut lights[i]);
         }
@@ -509,6 +513,10 @@ fn main() {
                     unsafe {
                         ffi::rlEnableShader(ffi::rlGetShaderIdDefault());
                     }
+                    #[expect(
+                        clippy::needless_range_loop,
+                        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                    )]
                     for i in 0..MAX_LIGHTS {
                         if lights[i].enabled != 0 {
                             c.draw_sphere_ex(lights[i].position, 0.2, 8, 8, lights[i].color);

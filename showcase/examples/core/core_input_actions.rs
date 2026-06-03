@@ -80,6 +80,10 @@ fn main() {
     };
 
     // Set default actions
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut action_set: i32 = 0;
     set_actions_default(&mut state);
     let mut release_action = false;

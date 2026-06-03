@@ -106,6 +106,10 @@ fn main() {
     // Initialize the vertex buffer for the particles and assign each particle random values
     let mut particles = [Particle::default(); MAX_PARTICLES];
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_PARTICLES {
         particles[i].x = rl.get_random_value::<i32>(20..=(screen_width - 20)) as f32;
         particles[i].y = rl.get_random_value::<i32>(50..=(screen_height - 20)) as f32;

@@ -208,6 +208,10 @@ fn main() {
 
     // Keyboard line 01
     let mut line01_key_widths: [i32; 15] = [0; 15];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..15 {
         line01_key_widths[i] = 45;
     }
@@ -232,6 +236,10 @@ fn main() {
 
     // Keyboard line 02
     let mut line02_key_widths: [i32; 15] = [0; 15];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..15 {
         line02_key_widths[i] = 45;
     }
@@ -257,6 +265,10 @@ fn main() {
 
     // Keyboard line 03
     let mut line03_key_widths: [i32; 15] = [0; 15];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..15 {
         line03_key_widths[i] = 45;
     }
@@ -282,6 +294,10 @@ fn main() {
 
     // Keyboard line 04
     let mut line04_key_widths: [i32; 14] = [0; 14];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..14 {
         line04_key_widths[i] = 45;
     }
@@ -306,6 +322,10 @@ fn main() {
 
     // Keyboard line 05
     let mut line05_key_widths: [i32; 14] = [0; 14];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..14 {
         line05_key_widths[i] = 45;
     }
@@ -330,6 +350,10 @@ fn main() {
 
     // Keyboard line 06
     let mut line06_key_widths: [i32; 11] = [0; 11];
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..11 {
         line06_key_widths[i] = 45;
     }

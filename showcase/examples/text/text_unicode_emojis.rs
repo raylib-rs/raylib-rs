@@ -251,6 +251,10 @@ fn randomize_emoji(
     *selected = -1;
     let start = rl.get_random_value::<i32>(45..=360);
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..EMOJI_COUNT {
         // 0-179 emoji codepoints (from emoji char array) each 4bytes + null char
         emoji[i].index = rl.get_random_value::<i32>(0..=179) * 5;
@@ -572,6 +576,10 @@ fn main() {
 
         // Draw random emojis in the background
         //------------------------------------------------------------------------------
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..EMOJI_COUNT {
             let txt = emoji_token(emoji[i].index as usize);
             let emoji_rect = Rectangle::new(

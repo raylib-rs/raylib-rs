@@ -105,6 +105,10 @@ fn main() {
 
         d.clear_background(Color::RAYWHITE);
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..current_collection_index {
             if let Some(ref tex) = collection[i].texture {
                 if tex.is_texture_valid() {

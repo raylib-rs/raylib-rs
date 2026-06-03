@@ -266,6 +266,10 @@ fn main() {
     // Init undo buffer to store MAX_UNDO_STATES states
     let mut states: Vec<PlayerState> = vec![PlayerState::default(); MAX_UNDO_STATES];
     // Init all undo states to current state
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_UNDO_STATES {
         states[i] = player;
     }

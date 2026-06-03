@@ -60,6 +60,10 @@ fn main() {
     let left_trigger_deadzone = -0.9_f32;
     let right_trigger_deadzone = -0.9_f32;
 
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut vibrate_button = Rectangle::new(0.0, 0.0, 0.0, 0.0);
 
     rl.set_target_fps(60); // Set our game to run at 60 frames-per-second

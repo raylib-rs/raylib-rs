@@ -54,6 +54,10 @@ fn main() {
             t_count = MAX_TOUCH_POINTS;
         }
         // Get touch points positions
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..t_count {
             touch_positions[i] = rl.get_touch_position(i as u32);
         }
@@ -66,6 +70,10 @@ fn main() {
 
         d.clear_background(Color::RAYWHITE);
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..t_count {
             // Make sure point is not (0, 0) as this means there is no touch for it
             if (touch_positions[i].x > 0.0) && (touch_positions[i].y > 0.0) {

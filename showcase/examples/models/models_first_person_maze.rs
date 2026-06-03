@@ -67,7 +67,15 @@ fn main() {
 
     // playerCellX/Y need to be visible to the HUD; declare here so we can read
     // them again after the borrow of `rl` ends.
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut player_cell_x: i32 = 0;
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut player_cell_y: i32 = 0;
     //--------------------------------------------------------------------------------------
 

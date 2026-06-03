@@ -39,6 +39,10 @@ fn main() {
     );
 
     let cube_position = Vector3::new(0.0, 0.0, 0.0);
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut cube_screen_position = Vector2::new(0.0, 0.0);
 
     rl.disable_cursor(); // Limit cursor to relative movement inside the window

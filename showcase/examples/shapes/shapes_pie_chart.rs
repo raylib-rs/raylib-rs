@@ -51,6 +51,10 @@ fn main() {
     let mut show_values = true;
     let mut show_percentages = false;
     let mut show_donut = false;
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut hovered_slice: i32 = -1;
     let mut scroll_content_offset = Vector2::zero();
     let mut view = Rectangle::new(0.0, 0.0, 0.0, 0.0);
@@ -91,6 +95,10 @@ fn main() {
         //----------------------------------------------------------------------------------
         // Calculate total value for percentage calculations
         total_value = 0.0;
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..(slice_count as usize) {
             total_value += values[i];
         }
@@ -114,6 +122,10 @@ fn main() {
                 }
 
                 let mut current_angle = 0.0;
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for i in 0..(slice_count as usize) {
                     let sweep = if total_value > 0.0 {
                         (values[i] / total_value) * 360.0
@@ -141,6 +153,10 @@ fn main() {
 
         // Draw the pie chart on the canvas
         let mut start_angle = 0.0;
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..(slice_count as usize) {
             let sweep_angle = if total_value > 0.0 {
                 (values[i] / total_value) * 360.0

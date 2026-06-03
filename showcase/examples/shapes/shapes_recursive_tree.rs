@@ -128,6 +128,10 @@ fn main() {
 
         d.clear_background(Color::RAYWHITE);
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..count {
             let branch = branches[i];
             if branch.length >= 2.0 {

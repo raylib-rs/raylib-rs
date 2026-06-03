@@ -99,6 +99,10 @@ fn main() {
             let frame_time = rl.get_frame_time();
             let screen_w = rl.get_screen_width();
             let screen_h = rl.get_screen_height();
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..bunnies_count {
                 bunnies[i].position.x += bunnies[i].speed.x * frame_time;
                 bunnies[i].position.y += bunnies[i].speed.y * frame_time;
@@ -124,6 +128,10 @@ fn main() {
 
         d.clear_background(Color::RAYWHITE);
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..bunnies_count {
             // NOTE: When internal batch buffer limit is reached (MAX_BATCH_ELEMENTS),
             // a draw call is launched and buffer starts being filled again;

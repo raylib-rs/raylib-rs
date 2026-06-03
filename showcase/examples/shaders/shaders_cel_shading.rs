@@ -230,6 +230,10 @@ fn main() {
             l.position = Vector3::new((-t * 0.3).sin() * 5.0, 5.0, (-t * 0.3).cos() * 5.0);
         }
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_LIGHTS {
             if let Some(l) = &mut lights[i] {
                 update_light_values(&mut cel_shader, l);

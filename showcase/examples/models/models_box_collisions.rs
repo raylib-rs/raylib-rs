@@ -40,6 +40,10 @@ fn main() {
 
     let mut player_position = Vector3::new(0.0, 1.0, 2.0);
     let player_size = Vector3::new(1.0, 2.0, 1.0);
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut player_color = Color::GREEN;
 
     let enemy_box_pos = Vector3::new(-4.0, 1.0, 0.0);

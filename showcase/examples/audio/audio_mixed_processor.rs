@@ -140,6 +140,10 @@ fn main() {
         );
 
         d.draw_rectangle(199, 199, 402, 34, Color::LIGHTGRAY);
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..400 {
             d.draw_line(
                 201 + i as i32,

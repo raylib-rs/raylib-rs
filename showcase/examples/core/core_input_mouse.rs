@@ -30,6 +30,10 @@ fn main() {
         .title("raylib [core] example - input mouse")
         .build();
 
+    #[expect(
+        unused_assignments,
+        reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+    )]
     let mut ball_position = Vector2::new(-100.0, -100.0);
     let mut ball_color = Color::DARKBLUE;
 

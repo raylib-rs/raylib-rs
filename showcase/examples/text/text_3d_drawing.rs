@@ -641,6 +641,10 @@ fn main() {
 
             if multicolor {
                 // Fill color array with random colors
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for i in 0..TEXT_MAX_LAYERS {
                     multi[i] = generate_random_color(0.5, 0.8, &mut rl);
                     multi[i].a = rl.get_random_value::<i32>(0..=255) as u8;

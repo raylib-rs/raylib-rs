@@ -127,6 +127,10 @@ fn gen_mesh_decal(
             // The way we calculate the vertices of the mesh triangle
             // depend on whether the mesh vertices are indexed or not
             if mesh.indices.is_null() {
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for v in 0..3 {
                     // SAFETY: mesh.vertices is vertexCount*3 floats; tri < triangleCount.
                     vertices[v] = unsafe {
@@ -138,6 +142,10 @@ fn gen_mesh_decal(
                     };
                 }
             } else {
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for v in 0..3 {
                     // SAFETY: indices array is triangleCount*3 u16; vertices is vertexCount*3 floats.
                     vertices[v] = unsafe {
@@ -159,6 +167,10 @@ fn gen_mesh_decal(
             // Transform all 3 vertices of the triangle
             // and check if they are inside our decal box
             let mut inside_count = 0;
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..3 {
                 // To projection space
                 let v = vertices[i].transform(projection);
@@ -188,6 +200,10 @@ fn gen_mesh_decal(
         Vector3::new(0.0, 0.0, -1.0),
     ];
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for face in 0..6 {
         // Swap current model builder (so we read from the one we just wrote to)
         mb_index = 1 - mb_index;
@@ -199,9 +215,25 @@ fn gen_mesh_decal(
 
         let mut i = 0;
         while i < in_verts.len() {
+            #[expect(
+                unused_assignments,
+                reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+            )]
             let mut n_v1 = Vector3::ZERO;
+            #[expect(
+                unused_assignments,
+                reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+            )]
             let mut n_v2 = Vector3::ZERO;
+            #[expect(
+                unused_assignments,
+                reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+            )]
             let mut n_v3 = Vector3::ZERO;
+            #[expect(
+                unused_assignments,
+                reason = "C-parity: C declares and initializes this before the loop/branch overwrites it"
+            )]
             let mut n_v4 = Vector3::ZERO;
 
             let d1 = in_verts[i].dot(planes[face]) - s;
@@ -288,6 +320,10 @@ fn gen_mesh_decal(
     // Allocate room for UVs
     if !the_mesh.vertices.is_empty() {
         let mut uvs = vec![Vector2::ZERO; the_mesh.vertices.len()];
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..the_mesh.vertices.len() {
             // Calculate the UVs based on the projected coords
             // They are clipped to (-decalSize .. decalSize) and we want them (0..1)
@@ -542,6 +578,10 @@ fn main() {
             }
 
             // Draw the decal models
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+            )]
             for i in 0..decal_models.len() {
                 c.draw_model(&decal_models[i], Vector3::ZERO, 1.0, Color::WHITE);
             }
@@ -592,6 +632,10 @@ fn main() {
         );
         y_pos += 15.0;
 
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..decal_models.len() {
             if i == 20 {
                 d.draw_text("...", x0 as i32, y_pos as i32, 10, Color::LIME);

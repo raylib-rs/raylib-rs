@@ -140,6 +140,10 @@ fn main() {
             // Spline control point focus and selection logic
             if selected_control_point.is_none() {
                 focused_control_point = None;
+                #[expect(
+                    clippy::needless_range_loop,
+                    reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+                )]
                 for i in 0..(point_count as usize - 1) {
                     if check_collision_point_circle(rl.get_mouse_position(), control[i].start, 6.0)
                     {

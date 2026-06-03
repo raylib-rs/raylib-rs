@@ -119,12 +119,20 @@ fn main() {
         speed: Vector2::zero(),
     }; MAX_STARS];
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for n in 0..MAX_STARS {
         reset_star(&mut stars[n], screen_width, screen_height, &mut rl);
     }
 
     // Progress all the stars on, so they don't all start in the centre
     for _m in 0..(screen_width / 2) {
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for n in 0..MAX_STARS {
             update_star(&mut stars[n], screen_width, screen_height, &mut rl);
         }
@@ -153,6 +161,10 @@ fn main() {
         radius_loc: 0,
     }; MAX_SPOTS];
 
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_SPOTS {
         let pos_name = format!("spots[{}].pos", i);
         let inner_name = format!("spots[{}].inner", i);
@@ -171,6 +183,10 @@ fn main() {
 
     // Randomize the locations and velocities of the spotlights
     // and initialize the shader locations
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..MAX_SPOTS {
         spots[i].position.x = rl.get_random_value::<i32>(64..=screen_width - 64) as f32;
         spots[i].position.y = rl.get_random_value::<i32>(64..=screen_height - 64) as f32;
@@ -202,11 +218,19 @@ fn main() {
         frame_counter += 1;
 
         // Move the stars, resetting them if the go offscreen
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for n in 0..MAX_STARS {
             update_star(&mut stars[n], screen_width, screen_height, &mut rl);
         }
 
         // Update the spots, send them to the shader
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..MAX_SPOTS {
             if i == 0 {
                 let mp = rl.get_mouse_position();
@@ -241,6 +265,10 @@ fn main() {
         d.clear_background(Color::DARKBLUE);
 
         // Draw stars and bobs
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for n in 0..MAX_STARS {
             // Single pixel is just too small these days!
             d.draw_rectangle(

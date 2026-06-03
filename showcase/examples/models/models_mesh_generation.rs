@@ -167,6 +167,10 @@ fn main() {
     // NOTE: Generated meshes could be exported using ExportMesh()
 
     // Set checked texture as default diffuse component for all models material
+    #[expect(
+        clippy::needless_range_loop,
+        reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+    )]
     for i in 0..NUM_MODELS {
         models[i].materials_mut()[0].set_material_texture(MATERIAL_MAP_ALBEDO, &texture);
     }

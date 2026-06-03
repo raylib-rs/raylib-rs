@@ -63,6 +63,10 @@ fn main() {
         d.draw_text("Fixed angles + rotating line", 10, 10, 20, Color::LIGHTGRAY);
 
         // Draw fixed-angle lines with colorful gradient
+        #[expect(
+            clippy::needless_range_loop,
+            reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
+        )]
         for i in 0..num_angles {
             let rad = angles[i] as f32 * ffi::DEG2RAD as f32;
             let end = Vector2::new(
