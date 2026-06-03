@@ -1005,7 +1005,6 @@ impl Image {
     /// benefits from smooth stochastic variation. Requires `SUPPORT_IMAGE_GENERATION`.
     #[cfg(feature = "SUPPORT_IMAGE_GENERATION")]
     pub fn gen_image_perlin_noise(
-        &self,
         width: i32,
         height: i32,
         offset_x: i32,
