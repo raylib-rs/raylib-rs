@@ -3,6 +3,10 @@ use crate::{databuf::DataBuf, error::CompressionError, ffi};
 use std::{ffi::CString, mem::MaybeUninit, path::Path};
 
 /// Compress data (DEFLATE algorithm)
+///
+/// Empty input returns `Err(CompressionFailed)` — raylib produces a
+/// zero-length result for it, which raylib-rs maps to an error rather than
+/// an empty buffer.
 /// ```rust
 /// use raylib::prelude::*;
 /// let data = compress_data(b"11111").unwrap();
@@ -37,6 +41,10 @@ pub fn compress_data(data: &[u8]) -> Result<DataBuf<[u8]>, CompressionError> {
 }
 
 /// Decompress data (DEFLATE algorithm)
+///
+/// Empty input or invalid/garbage input returns `Err(CompressionFailed)` —
+/// raylib produces a zero-length result for these, which raylib-rs maps to an
+/// error rather than an empty buffer.
 /// ```rust
 /// use raylib::prelude::*;
 /// let input: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
@@ -100,6 +108,9 @@ pub fn encode_data_base64(data: &[u8]) -> Result<DataBuf<[u8]>, Base64Error> {
 }
 
 /// Decode Base64 data
+///
+/// Empty input returns `Err(DecodeFailed)` — raylib produces a zero-length
+/// result for it, which raylib-rs maps to an error rather than an empty buffer.
 pub fn decode_data_base64(data: &[u8]) -> Result<DataBuf<[u8]>, Base64Error> {
     let mut output_size = MaybeUninit::<i32>::uninit();
     let null_trimmed_data = match data.iter().position(|&element| element == 0) {
