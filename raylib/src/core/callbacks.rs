@@ -1,5 +1,6 @@
 #![allow(non_camel_case_types)]
 
+use crate::core::error::SetCallbackError;
 use crate::{RaylibHandle, ffi};
 pub use raylib_sys::TraceLogLevel;
 use std::{
@@ -138,39 +139,6 @@ extern "C" fn custom_load_file_text_callback(a: *const c_char) -> *mut c_char {
     oh.as_ptr() as *mut c_char
 }
 
-/// Error returned when a callback registration fails because a callback of that type is already set.
-///
-/// Each callback slot in this module ([`set_trace_log_callback`],
-/// [`set_save_file_data_callback`], [`set_load_file_data_callback`],
-/// [`set_save_file_text_callback`], [`set_load_file_text_callback`]) holds at most one
-/// closure at a time. Calling the setter twice without intervening reset returns this error
-/// rather than overwriting silently. The inner `&str` names which callback type was already
-/// set (e.g. `"save file data"`); the `Display` impl includes it in the message.
-///
-/// # Examples
-///
-/// ```no_run
-/// use raylib::prelude::*;
-/// use raylib::core::callbacks::{set_save_file_data_callback, SetLogError};
-///
-/// fn writer(_path: &str, _bytes: &[u8]) -> bool { true }
-/// set_save_file_data_callback(writer).expect("first install");
-/// match set_save_file_data_callback(writer) {
-///     Err(e) => eprintln!("{e}"),       // "There is a save file data callback already set."
-///     Ok(()) => unreachable!(),
-/// }
-/// ```
-#[derive(Debug)]
-pub struct SetLogError<'a>(&'a str);
-
-impl std::fmt::Display for SetLogError<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("There is a {} callback already set.", self.0))
-    }
-}
-
-impl std::error::Error for SetLogError<'_> {}
-
 macro_rules! safe_callback_set_func {
     ($cb:expr, $target_cb:expr, $rawsetter:expr, $ogfunc:expr, $ty:literal) => {
         if $target_cb.load(Ordering::Acquire) == 0 {
@@ -178,13 +146,13 @@ macro_rules! safe_callback_set_func {
             unsafe { $rawsetter(Some($ogfunc)) };
             Ok(())
         } else {
-            Err(SetLogError($ty))
+            Err(SetCallbackError($ty))
         }
     };
 }
 
 /// Set custom trace log
-pub fn set_trace_log_callback<'a>(cb: fn(TraceLogLevel, &str)) -> Result<(), SetLogError<'a>> {
+pub fn set_trace_log_callback(cb: fn(TraceLogLevel, &str)) -> Result<(), SetCallbackError> {
     TRACE_LOG_CALLBACK.store(cb as usize, Ordering::Relaxed);
     #[cfg(not(feature = "nobuild"))]
     unsafe {
@@ -193,7 +161,7 @@ pub fn set_trace_log_callback<'a>(cb: fn(TraceLogLevel, &str)) -> Result<(), Set
     Ok(())
 }
 /// Set custom file binary data saver
-pub fn set_save_file_data_callback<'a>(cb: fn(&str, &[u8]) -> bool) -> Result<(), SetLogError<'a>> {
+pub fn set_save_file_data_callback(cb: fn(&str, &[u8]) -> bool) -> Result<(), SetCallbackError> {
     safe_callback_set_func!(
         cb,
         SAVE_FILE_DATA_CALLBACK,
@@ -205,7 +173,7 @@ pub fn set_save_file_data_callback<'a>(cb: fn(&str, &[u8]) -> bool) -> Result<()
 /// Set custom file binary data loader
 ///
 /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
-pub fn set_load_file_data_callback<'b>(cb: fn(&str) -> Vec<u8>) -> Result<(), SetLogError<'b>> {
+pub fn set_load_file_data_callback(cb: fn(&str) -> Vec<u8>) -> Result<(), SetCallbackError> {
     safe_callback_set_func!(
         cb,
         LOAD_FILE_DATA_CALLBACK,
@@ -215,7 +183,7 @@ pub fn set_load_file_data_callback<'b>(cb: fn(&str) -> Vec<u8>) -> Result<(), Se
     )
 }
 /// Set custom file text data saver
-pub fn set_save_file_text_callback<'a>(cb: fn(&str, &str) -> bool) -> Result<(), SetLogError<'a>> {
+pub fn set_save_file_text_callback(cb: fn(&str, &str) -> bool) -> Result<(), SetCallbackError> {
     safe_callback_set_func!(
         cb,
         SAVE_FILE_TEXT_CALLBACK,
@@ -227,7 +195,7 @@ pub fn set_save_file_text_callback<'a>(cb: fn(&str, &str) -> bool) -> Result<(),
 /// Set custom file text data loader
 ///
 /// Whatever you return from your callback will be intentionally leaked as Raylib is relied on to free it.
-pub fn set_load_file_text_callback<'a>(cb: fn(&str) -> String) -> Result<(), SetLogError<'a>> {
+pub fn set_load_file_text_callback(cb: fn(&str) -> String) -> Result<(), SetCallbackError> {
     safe_callback_set_func!(
         cb,
         LOAD_FILE_TEXT_CALLBACK,
@@ -504,7 +472,7 @@ impl RaylibHandle {
     pub fn set_trace_log_callback(
         &'_ mut self,
         cb: fn(TraceLogLevel, &str),
-    ) -> Result<(), SetLogError<'_>> {
+    ) -> Result<(), SetCallbackError> {
         set_trace_log_callback(cb)
     }
     /// Set custom file binary data saver
@@ -512,7 +480,7 @@ impl RaylibHandle {
     pub fn set_save_file_data_callback(
         &'_ mut self,
         cb: fn(&str, &[u8]) -> bool,
-    ) -> Result<(), SetLogError<'_>> {
+    ) -> Result<(), SetCallbackError> {
         set_save_file_data_callback(cb)
     }
     /// Set custom file binary data loader
@@ -522,7 +490,7 @@ impl RaylibHandle {
     pub fn set_load_file_data_callback(
         &'_ mut self,
         cb: fn(&str) -> Vec<u8>,
-    ) -> Result<(), SetLogError<'_>> {
+    ) -> Result<(), SetCallbackError> {
         set_load_file_data_callback(cb)
     }
     /// Set custom file text data saver
@@ -530,7 +498,7 @@ impl RaylibHandle {
     pub fn set_save_file_text_callback(
         &'_ mut self,
         cb: fn(&str, &str) -> bool,
-    ) -> Result<(), SetLogError<'_>> {
+    ) -> Result<(), SetCallbackError> {
         set_save_file_text_callback(cb)
     }
     /// Set custom file text data loader
@@ -540,7 +508,7 @@ impl RaylibHandle {
     pub fn set_load_file_text_callback(
         &'_ mut self,
         cb: fn(&str) -> String,
-    ) -> Result<(), SetLogError<'_>> {
+    ) -> Result<(), SetCallbackError> {
         set_load_file_text_callback(cb)
     }
 }

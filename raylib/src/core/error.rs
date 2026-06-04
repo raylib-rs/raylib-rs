@@ -918,6 +918,9 @@ pub enum LoadTextureError {
 
 /// Top-level error type that aggregates all raylib-rs domain errors.
 ///
+/// Marked `#[non_exhaustive]`: new domain errors may gain variants here in minor releases,
+/// so matches must include a wildcard arm.
+///
 /// # Examples
 ///
 /// ```no_run
@@ -926,22 +929,17 @@ pub enum LoadTextureError {
 /// fn handle(e: RaylibError) {
 ///     match e {
 ///         RaylibError::AudioInit(_) => eprintln!("audio device failed to initialize"),
-///         RaylibError::ExportWave(_) => eprintln!("wave export failed"),
 ///         RaylibError::LoadSound(_) => eprintln!("sound load failed"),
-///         RaylibError::Allocation(_) => eprintln!("raylib allocator failed"),
-///         RaylibError::Compression(_) => eprintln!("data compression failed"),
 ///         RaylibError::LoadModel(_) => eprintln!("model load failed"),
-///         RaylibError::LoadModelAnim(_) => eprintln!("model animation load failed"),
-///         RaylibError::SetMaterial(_) => eprintln!("material assignment out of bounds"),
-///         RaylibError::LoadMaterial(_) => eprintln!("material load failed"),
 ///         RaylibError::LoadFont(_) => eprintln!("font load failed"),
-///         RaylibError::InvalidImage(_) => eprintln!("image was invalid"),
-///         RaylibError::UpdateTexture(_) => eprintln!("texture update failed"),
 ///         RaylibError::LoadTexture(_) => eprintln!("texture load failed"),
+///         RaylibError::SetCallback(_) => eprintln!("callback slot already occupied"),
+///         other => eprintln!("raylib error: {other}"),
 ///     }
 /// }
 /// ```
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum RaylibError {
     /// Wraps an [`AudioInitError`] surfaced through `?` from an audio init call site.
     ///
@@ -1052,6 +1050,73 @@ pub enum RaylibError {
     /// **Recovery:** Inspect the inner [`LoadTextureError`] variant and apply its recovery.
     #[error("texture loading error")]
     LoadTexture(#[from] LoadTextureError),
+    /// Wraps an [`UpdateAudioStreamError`] surfaced through `?` from an audio-stream update
+    /// or callback-install site.
+    ///
+    /// **Cause:** An `AudioStream::update` or `set_audio_stream_callback` call propagated up
+    /// an [`UpdateAudioStreamError`].
+    ///
+    /// **Recovery:** Inspect the inner [`UpdateAudioStreamError`] variant and apply its
+    /// recovery.
+    #[error("audio stream update error")]
+    UpdateAudioStream(#[from] UpdateAudioStreamError),
+    /// Wraps an [`InvalidMeshError`] surfaced through `?` from a mesh-validation site.
+    ///
+    /// **Cause:** A mesh accessor or builder validated a [`crate::ffi::Mesh`] and found its
+    /// buffers inconsistent.
+    ///
+    /// **Recovery:** Inspect the inner [`InvalidMeshError`] variant and apply its recovery.
+    #[error("invalid mesh error")]
+    InvalidMesh(#[from] InvalidMeshError),
+    /// Wraps a [`GenMeshError`] surfaced through `?` from a mesh-generation site.
+    ///
+    /// **Cause:** A `MeshBuilder::build` (or other mesh-generation) call propagated up a
+    /// [`GenMeshError`].
+    ///
+    /// **Recovery:** Inspect the inner [`GenMeshError`] variant and apply its recovery.
+    #[error("mesh generation error")]
+    GenMesh(#[from] GenMeshError),
+    /// Wraps a [`Base64Error`] surfaced through `?` from a base64 encode/decode site.
+    ///
+    /// **Cause:** An `encode_data_base64` or `decode_data_base64` call propagated up a
+    /// [`Base64Error`].
+    ///
+    /// **Recovery:** Inspect the inner [`Base64Error`] variant and apply its recovery.
+    #[error("base64 error")]
+    Base64(#[from] Base64Error),
+    /// Wraps a [`LoadIconsError`] surfaced through `?` from a raygui icons-load site.
+    ///
+    /// **Cause:** A `gui_load_icons`/`gui_load_icons_from_memory` call propagated up a
+    /// [`LoadIconsError`].
+    ///
+    /// **Recovery:** Inspect the inner [`LoadIconsError`] variant and apply its recovery.
+    #[error("icons loading error")]
+    LoadIcons(#[from] LoadIconsError),
+    /// Wraps a [`LoadStyleFromMemoryError`] surfaced through `?` from a raygui style-load site.
+    ///
+    /// **Cause:** A `gui_load_style_from_memory` call propagated up a
+    /// [`LoadStyleFromMemoryError`].
+    ///
+    /// **Recovery:** Inspect the inner [`LoadStyleFromMemoryError`] variant and apply its
+    /// recovery.
+    #[error("style loading error")]
+    LoadStyleFromMemory(#[from] LoadStyleFromMemoryError),
+    /// Wraps a [`crate::core::pixel::PixelColorError`] surfaced through `?` from a
+    /// pixel-level color read/write site.
+    ///
+    /// **Cause:** A `get_pixel_color`/`set_pixel_color` call propagated up a
+    /// [`crate::core::pixel::PixelColorError`].
+    ///
+    /// **Recovery:** Inspect the inner error variant and apply its recovery.
+    #[error("pixel color error")]
+    PixelColor(#[from] crate::core::pixel::PixelColorError),
+    /// Wraps a [`SetCallbackError`] surfaced through `?` from a callback-install site.
+    ///
+    /// **Cause:** A `set_*_callback` call found its global slot already occupied.
+    ///
+    /// **Recovery:** Keep a single registration site per callback kind.
+    #[error("callback registration error")]
+    SetCallback(#[from] SetCallbackError),
 }
 
 /// Errors that can occur while loading a raygui `.rgi` icons file.
@@ -1164,6 +1229,42 @@ pub enum LoadStyleFromMemoryError {
     LengthOverflow(usize),
 }
 
+/// Error returned when installing a process-global callback whose slot is already occupied.
+///
+/// Each callback slot in [`crate::core::callbacks`] ([`set_save_file_data_callback`],
+/// [`set_load_file_data_callback`], [`set_save_file_text_callback`],
+/// [`set_load_file_text_callback`]) holds at most one function at a time. Calling a setter
+/// while its slot is occupied returns this error rather than silently overwriting. The inner
+/// `&'static str` names which callback kind was already set (e.g. `"save file data"`).
+///
+/// **Cause:** A previous call to the same setter installed a callback that has not been
+/// removed.
+///
+/// **Recovery:** Keep a single registration site per callback kind, or remove the existing
+/// callback (where an unset function exists) before installing a new one.
+///
+/// # Examples
+///
+/// ```no_run
+/// use raylib::prelude::*;
+/// use raylib::core::callbacks::set_save_file_data_callback;
+///
+/// fn writer(_path: &str, _bytes: &[u8]) -> bool { true }
+/// set_save_file_data_callback(writer).expect("first install");
+/// match set_save_file_data_callback(writer) {
+///     Err(e) => eprintln!("{e}"), // "there is a save file data callback already set"
+///     Ok(()) => unreachable!(),
+/// }
+/// ```
+///
+/// [`set_save_file_data_callback`]: crate::core::callbacks::set_save_file_data_callback
+/// [`set_load_file_data_callback`]: crate::core::callbacks::set_load_file_data_callback
+/// [`set_save_file_text_callback`]: crate::core::callbacks::set_save_file_text_callback
+/// [`set_load_file_text_callback`]: crate::core::callbacks::set_load_file_text_callback
+#[derive(Error, Debug)]
+#[error("there is a {0} callback already set")]
+pub struct SetCallbackError(pub(crate) &'static str);
+
 #[cfg(test)]
 mod load_icons_error_tests {
     use super::*;
@@ -1209,5 +1310,66 @@ mod load_icons_error_tests {
         let err: LoadIconsError = io_err.into();
         assert!(err.to_string().contains("denied"));
         assert!(matches!(err, LoadIconsError::Io(_)));
+    }
+}
+
+#[cfg(test)]
+mod set_callback_error_tests {
+    use super::*;
+
+    #[test]
+    fn display_names_the_occupied_slot() {
+        let e = SetCallbackError("save file data");
+        assert_eq!(
+            e.to_string(),
+            "there is a save file data callback already set"
+        );
+    }
+}
+
+#[cfg(test)]
+mod raylib_error_from_tests {
+    use super::*;
+    use crate::consts::PixelFormat;
+    use crate::core::pixel::PixelColorError;
+
+    #[test]
+    fn all_new_leaf_errors_convert_via_from() {
+        assert!(matches!(
+            RaylibError::from(UpdateAudioStreamError::CallbackSlotBusy),
+            RaylibError::UpdateAudioStream(_)
+        ));
+        assert!(matches!(
+            RaylibError::from(InvalidMeshError::TrianglePointMiscount),
+            RaylibError::InvalidMesh(_)
+        ));
+        assert!(matches!(
+            RaylibError::from(GenMeshError::InvalidMesh(
+                InvalidMeshError::TrianglePointMiscount
+            )),
+            RaylibError::GenMesh(_)
+        ));
+        assert!(matches!(
+            RaylibError::from(Base64Error::DecodeFailed),
+            RaylibError::Base64(_)
+        ));
+        assert!(matches!(
+            RaylibError::from(LoadIconsError::HeaderTruncated(3)),
+            RaylibError::LoadIcons(_)
+        ));
+        assert!(matches!(
+            RaylibError::from(LoadStyleFromMemoryError::LengthOverflow(5)),
+            RaylibError::LoadStyleFromMemory(_)
+        ));
+        assert!(matches!(
+            RaylibError::from(PixelColorError::CompressedFormat(
+                PixelFormat::PIXELFORMAT_COMPRESSED_DXT1_RGB
+            )),
+            RaylibError::PixelColor(_)
+        ));
+        assert!(matches!(
+            RaylibError::from(SetCallbackError("trace log")),
+            RaylibError::SetCallback(_)
+        ));
     }
 }
