@@ -19,7 +19,7 @@
 - Tier-1: `cargo nextest run -p raylib` and `cargo test --doc -p raylib`
 - Tier-2 (verbatim from CLAUDE.md — do not paraphrase):
   ```
-  cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION
+  cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION
   ```
 - Quality gates before each PR: `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`
 
@@ -534,7 +534,7 @@ Expected: PASS (default features → compression mods included)
 Run (SR features — compression mods compiled out unless the feature is added;
 this verifies the cfg-gating doesn't break the SR build):
 ```
-cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION -E 'binary(databuf_lifetimes)'
+cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION -E 'binary(databuf_lifetimes)'
 ```
 Expected: PASS (only the ungated tests run)
 
@@ -727,7 +727,7 @@ Executor notes for this file:
 
 Run (verbatim Tier-2 command, narrowed to the new binary):
 ```
-cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION -E 'binary(render_alloc_lifetimes)'
+cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION -E 'binary(render_alloc_lifetimes)'
 ```
 Expected: PASS (5 tests, each in its own process)
 
@@ -889,7 +889,7 @@ everywhere — it's additive and matches raylib's own config.h default):
           cargo +nightly test -p raylib -Z build-std
           --target x86_64-unknown-linux-gnu
           --no-default-features
-          --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_COMPRESSION_API,ENABLE_ASAN
+          --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION,SUPPORT_COMPRESSION_API,ENABLE_ASAN
           --test databuf_lifetimes -- --test-threads=1
 ```
 
@@ -946,7 +946,7 @@ cargo fmt --all
 cargo clippy --workspace --all-targets -- -D warnings
 cargo nextest run -p raylib
 cargo test --doc -p raylib
-cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION
+cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION
 ```
 Expected: all green. Record the test census while here:
 `cargo nextest list -p raylib | wc -l` (before-number is in the spec: 3
@@ -1084,7 +1084,7 @@ fn rlgl_vertex2i_renders() {
 
 Run:
 ```
-cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION -E 'binary(render_rlgl)'
+cargo nextest run -p raylib --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION -E 'binary(render_rlgl)'
 ```
 Expected: COMPILE ERROR — `no method named `vertex2i` found`
 
