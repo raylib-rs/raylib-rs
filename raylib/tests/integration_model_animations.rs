@@ -8,10 +8,12 @@
 use raylib::test_harness::with_headless;
 
 const ANIM_PATH: &str = "raylib-sys/raylib/examples/models/resources/models/iqm/guyanim.iqm";
-// NOTE: deliberately NOT gated on SUPPORT_FILEFORMAT_IQM — raylib's cmake
-// doesn't plumb that define without CUSTOMIZE_BUILD, so the C build follows
-// config.h defaults (IQM on) and this runs in the canonical Tier-2 leg,
-// matching the ungated ANIM_PATH tests above.
+// NOTE: deliberately NOT gated on SUPPORT_FILEFORMAT_IQM. Empirically, IQM
+// model+anim loading works in the canonical Tier-2 leg even though the
+// feature is absent (build.rs passes -DSUPPORT_FILEFORMAT_IQM=OFF, yet the
+// loaders remain compiled in — the precise cmake interaction is unpinned;
+// see the workstream done-note's future-work list). The sibling tests above
+// load the same .iqm asset ungated.
 const MODEL_PATH: &str = "raylib-sys/raylib/examples/models/resources/models/iqm/guy.iqm";
 
 #[test]
@@ -94,6 +96,7 @@ fn model_animations_drop_order_vs_model() {
                 let anims = rl
                     .load_model_animations(thread, ANIM_PATH)
                     .expect("animations load");
+                assert!(!anims.is_empty(), "expected >= 1 animation");
                 drop(anims); // drop animations while model is still live
                 drop(model);
             }
@@ -103,6 +106,7 @@ fn model_animations_drop_order_vs_model() {
                 let anims = rl
                     .load_model_animations(thread, ANIM_PATH)
                     .expect("animations load");
+                assert!(!anims.is_empty(), "expected >= 1 animation");
                 drop(model); // drop model while animations are still live
                 drop(anims);
             }

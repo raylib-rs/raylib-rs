@@ -98,7 +98,14 @@ fn image_colors_and_palette_lifetimes() {
 #[test]
 fn file_path_list_real_directory() {
     with_headless(32, 32, |rl, _thread| {
+        struct CleanupGuard(std::path::PathBuf);
+        impl Drop for CleanupGuard {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
         let dir = std::env::temp_dir().join(format!("raylib_fpl_{}", std::process::id()));
+        let _cleanup = CleanupGuard(dir.clone());
         std::fs::create_dir_all(&dir).unwrap();
         for name in ["a.txt", "b.txt", "c.txt"] {
             std::fs::write(dir.join(name), name.as_bytes()).unwrap();
@@ -133,8 +140,6 @@ fn file_path_list_real_directory() {
         let empty_list = rl.load_directory_files(empty.into_os_string());
         assert_eq!(empty_list.iter().count(), 0, "empty dir → 0 paths");
         drop(empty_list);
-
-        std::fs::remove_dir_all(&dir).ok();
     });
 }
 
