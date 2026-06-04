@@ -351,6 +351,8 @@ pub struct RaylibBuilder<'a> {
     width: i32,
     height: i32,
     title: &'a str,
+    #[cfg(feature = "log")]
+    bridge_log: bool,
 }
 #[inline]
 #[must_use]
@@ -376,6 +378,49 @@ impl<'a> RaylibBuilder<'a> {
         self.log_level = level;
         self
     }
+
+    /// Forwards raylib's `TraceLog` output into the [`log`] crate facade
+    /// (target `"raylib"`), so the application's logger (`env_logger`,
+    /// `tracing-log`, …) receives raylib's logs under standard
+    /// `RUST_LOG`-style filtering.
+    ///
+    /// Installed during [`build`](Self::build) *before* `InitWindow`, so
+    /// raylib's init logging is captured too. Makes the `log` facade the
+    /// single level filter by setting raylib's own threshold to `LOG_ALL`
+    /// — overriding any [`log_level`](Self::log_level) — and claims the
+    /// same single callback slot as
+    /// [`set_trace_log_callback`](crate::core::callbacks::set_trace_log_callback)
+    /// (mutually exclusive; last writer wins).
+    ///
+    /// The bridge only emits into the facade; install a logger yourself
+    /// (e.g. `env_logger::init()`) or the messages are silently dropped.
+    ///
+    /// Requires the `SUPPORT_TRACELOG` feature (included in `default`);
+    /// without it raylib's C-side `TraceLog` is compiled out and the
+    /// bridge receives nothing.
+    ///
+    /// The bridge runs inside raylib's trace-log callback: a logger that
+    /// itself calls back into raylib logging (e.g. via
+    /// [`trace_log`](crate::core::logging::trace_log)) would recurse
+    /// unboundedly — don't log to raylib from your `log` backend.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// // env_logger::init();   // any `log`-compatible logger
+    /// let (mut rl, thread) = raylib::init()
+    ///     .size(800, 450)
+    ///     .title("game")
+    ///     .log_to_rust()
+    ///     .build();
+    /// log::info!("app and raylib logs share one pipeline now");
+    /// ```
+    #[cfg(feature = "log")]
+    pub const fn log_to_rust(&mut self) -> &mut Self {
+        self.bridge_log = true;
+        self
+    }
+
     /// Sets the window to be resizable.
     pub const fn resizable(&mut self) -> &mut Self {
         self.window_resizable = true;
@@ -554,6 +599,15 @@ impl<'a> RaylibBuilder<'a> {
 
         unsafe {
             ffi::SetTraceLogLevel(self.log_level as i32);
+        }
+
+        // The log bridge claims the trace-log callback slot and makes the
+        // `log` facade the single filter — installed before InitWindow so
+        // init logging is captured, and after the SetTraceLogLevel above
+        // so its LOG_ALL override wins over `.log_level()`.
+        #[cfg(feature = "log")]
+        if self.bridge_log {
+            crate::core::logging::install_log_bridge();
         }
 
         let rl = init_window(self.width, self.height, self.title);
