@@ -26,7 +26,13 @@ fn databuf_slice_alloc_cycle() {
     assert_eq!(&*grown, &[1, 2, 3, 4, 5, 6, 7, 8]);
 }
 
-#[cfg(feature = "SUPPORT_COMPRESSION_API")]
+// The crate-level SUPPORT_COMPRESSION_API feature is not part of `default`
+// (default only forwards raylib-sys/default, which *does* compile the C
+// compression API). Gate on either so these tests run in the standard
+// default-features Tier-1 run AND under explicit feature builds, while
+// still compiling out under the software_renderer Tier-2 set (which enables
+// neither).
+#[cfg(any(feature = "default", feature = "SUPPORT_COMPRESSION_API"))]
 mod compression {
     use raylib::core::error::CompressionError;
     use raylib::prelude::*;
@@ -91,7 +97,9 @@ mod compression {
     }
 }
 
-#[cfg(feature = "SUPPORT_COMPRESSION_API")]
+// Same gate as mod compression above — runs under default features and
+// explicit SUPPORT_COMPRESSION_API, compiles out under the SR Tier-2 set.
+#[cfg(any(feature = "default", feature = "SUPPORT_COMPRESSION_API"))]
 mod base64 {
     use raylib::prelude::*;
 
