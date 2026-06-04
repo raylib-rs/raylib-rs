@@ -133,4 +133,4 @@ gh pr create --base unstable --repo raylib-rs/raylib-rs \
 ## Self-review notes
 
 - Spec coverage: impl deletion (T1S1), 13 derefs incl. the line-165 caution (T1S2), audit-gate verification + grep (T1S3), tests (T1S4), CHANGELOG (T2), gates+PR (T3). Non-goals respected (other From impls untouched). ✓
-- The audit counted "14 errors" across `--all-targets` (lib + test unit double-reporting one span); the textual change list is 13 `.into()` removals on 11 lines — the compile gate, not the count, is the source of truth. ✓
+- The audit counted 14 errors; the textual `.into()` list covers 13. The 14th consumer (found during execution) is `impl PartialEq for Color` — `self.is_equal(other)` passes `other: &Self` through the `impl Into<Color>` bound with no textual `.into()`. Fixed as `self.is_equal(*other)`. The compile gate, not the textual count, is the source of truth — and it caught exactly this. ✓

@@ -10,8 +10,15 @@
 The ws8e note asked for an audit of `Into<Color>` callsites and "analogous `From<&T>` impls
 on Vector2/3/4, Rectangle, etc." Findings:
 
-1. **No analogous impls exist.** `impl From<&Color> for Color` (`raylib-sys/src/color.rs:56-65`)
-   is the only `From<&T>` identity impl in the workspace. The audit target is this one impl.
+1. **No analogous identity impls exist.** `impl From<&Color> for Color`
+   (`raylib-sys/src/color.rs:56-65`) is the only `From<&T> for T` *identity* impl in the
+   workspace. The audit target is this one impl.
+   (The safe crate does carry ten **cross-type** borrowing converters —
+   `From<&Camera2D> for ffi::Camera2D`, `From<&Ray> for ffi::Ray`, etc. in
+   `core/{camera,math,texture,vr}.rs` — each one of a `From<ffi::T>`/`From<T>`/`From<&T>`
+   trio serving `impl Into<ffi::T>` bounds at FFI callsites. These are genuine conversions
+   between distinct types, not identity ceremony; they are out of scope here and recorded
+   as an observation for any future conversion-surface audit.)
 2. **Compile experiment** (impl disabled via `#[cfg(any())]`, then
    `cargo check --workspace --all-targets`): exactly **14 errors, all in
    `raylib-sys/src/color.rs` itself** — `self.into()` / `dst.into()`-style calls inside
@@ -53,5 +60,7 @@ remove it. There is no soundness/perf issue — this is API hygiene before the s
 - `cargo nextest run -p raylib-sys` and `cargo nextest run -p raylib` green (existing
   conversion/unit tests).
 - fmt + clippy `-D warnings` clean.
-- `grep -rn "From<&" raylib-sys/src raylib/src` returns nothing.
+- `grep -rn "From<&" raylib-sys/src` returns nothing (no identity `From<&T> for T` impls
+  remain; the safe crate's cross-type `From<&T> for ffi::T` trio-impls are out of scope —
+  see Audit findings #1).
 - CHANGELOG entry present. One PR to canonical `unstable`.
