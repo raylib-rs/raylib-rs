@@ -513,7 +513,11 @@ impl<T> DataBuf<[T]> {
         })
     }
 
-    /// Allocate memory managed by Raylib and initialize by copying.
+    /// Allocate memory managed by Raylib and initialize by cloning each element.
+    ///
+    /// If a `clone()` panics partway through, the already-cloned prefix is
+    /// dropped and the allocation is freed before the panic propagates — no
+    /// leak, no drop of uninitialized memory.
     ///
     /// # Panics
     ///
@@ -522,19 +526,43 @@ impl<T> DataBuf<[T]> {
     /// # Example
     /// ```
     /// # use raylib::prelude::DataBuf;
-    /// let src = [4, 8, -23, 9, 0];
-    /// let mut data_buf = DataBuf::<[i32]>::alloc_from_copy(&src).unwrap();
-    /// assert_eq!(data_buf.as_ref(), &src);
+    /// let src = vec![String::from("a"), String::from("b")];
+    /// let data_buf = DataBuf::<[String]>::alloc_from_clone(&src).unwrap();
+    /// assert_eq!(data_buf.as_ref(), src.as_slice());
     /// ```
     pub fn alloc_from_clone(src: &[T]) -> Result<Self, AllocationError>
     where
-        T: Copy,
+        T: Clone,
     {
         let mut buf = Self::alloc(src.len())?;
-        // SAFETY: `&[T]` and `&[MaybeUninit<T>]` have the same layout. Reference to is non-null.
-        let uninit_src = unsafe { &*(std::ptr::from_ref::<[T]>(src) as *const [MaybeUninit<T>]) };
-        buf.copy_from_slice(uninit_src);
-        // SAFETY: Valid elements have just been copied into `self` so it is initialized.
+
+        /// Drops the initialized prefix of the buffer if a `clone()` unwinds.
+        struct InitGuard<'a, T> {
+            buf: &'a mut [MaybeUninit<T>],
+            init: usize,
+        }
+        impl<T> Drop for InitGuard<'_, T> {
+            fn drop(&mut self) {
+                for elem in &mut self.buf[..self.init] {
+                    // SAFETY: the first `init` elements were initialized by
+                    // the clone loop below before the unwind began.
+                    unsafe { elem.assume_init_drop() };
+                }
+            }
+        }
+
+        let mut guard = InitGuard {
+            buf: buf.as_mut(),
+            init: 0,
+        };
+        while guard.init < src.len() {
+            let i = guard.init;
+            guard.buf[i].write(src[i].clone());
+            guard.init = i + 1;
+        }
+        // All elements initialized — disarm the guard (releases the borrow).
+        std::mem::forget(guard);
+        // SAFETY: the loop above initialized all `src.len()` elements.
         Ok(unsafe { buf.assume_init() })
     }
 
@@ -657,5 +685,72 @@ mod tests {
         }
         .expect("ptr should be convertible to DataBuf");
         assert_eq!(&*buf, &EXPECT);
+    }
+
+    #[test]
+    fn test_alloc_from_clone_non_copy() {
+        // A non-Copy T: this does not compile against the old `T: Copy` bound.
+        #[derive(Clone, PartialEq, Debug)]
+        struct NonCopy(String);
+        let src = [
+            NonCopy("a".into()),
+            NonCopy("b".into()),
+            NonCopy("c".into()),
+        ];
+        let buf = DataBuf::<[NonCopy]>::alloc_from_clone(&src).unwrap();
+        assert_eq!(&*buf, &src);
+    }
+
+    #[test]
+    fn test_alloc_from_clone_panic_drops_prefix() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct Bomb<'a> {
+            drops: &'a AtomicUsize,
+            clones: &'a AtomicUsize,
+            fuse: usize,
+        }
+        impl Clone for Bomb<'_> {
+            fn clone(&self) -> Self {
+                let n = self.clones.fetch_add(1, Ordering::SeqCst);
+                assert!(n + 1 != self.fuse, "boom: clone #{} hit the fuse", n + 1);
+                Bomb {
+                    drops: self.drops,
+                    clones: self.clones,
+                    fuse: self.fuse,
+                }
+            }
+        }
+        impl Drop for Bomb<'_> {
+            fn drop(&mut self) {
+                self.drops.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+
+        let drops = AtomicUsize::new(0);
+        let clones = AtomicUsize::new(0);
+        let mk = |fuse| Bomb {
+            drops: &drops,
+            clones: &clones,
+            fuse,
+        };
+        // Third clone panics.
+        let src = [mk(3), mk(3), mk(3)];
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            DataBuf::<[Bomb]>::alloc_from_clone(&src)
+        }));
+        assert!(result.is_err(), "the clone panic must propagate");
+        // The 2 successfully-cloned elements must have been dropped during
+        // unwind (the buffer free itself is validated by the ASAN/LSAN leg).
+        assert_eq!(
+            drops.load(Ordering::SeqCst),
+            2,
+            "prefix must be dropped on unwind"
+        );
+        drop(src);
+        assert_eq!(
+            drops.load(Ordering::SeqCst),
+            5,
+            "source elements drop normally"
+        );
     }
 }
