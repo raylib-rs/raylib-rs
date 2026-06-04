@@ -38,6 +38,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - `RaylibGuiIcons::gui_load_icons_raw` removed; use `gui_load_icons` / `gui_load_icons_with_names`.
 - `SetLogError` (core/callbacks) is replaced by `SetCallbackError` in `core::error` — a `thiserror` struct without the artificial lifetime parameter. The ~10 `set_*_callback` functions/methods now return `Result<(), SetCallbackError>`.
 - `RaylibError` is now `#[non_exhaustive]` and gained `#[from]` variants for `UpdateAudioStreamError`, `InvalidMeshError`, `GenMeshError`, `Base64Error`, `LoadIconsError`, `LoadStyleFromMemoryError`, `PixelColorError`, and `SetCallbackError` — every leaf error now composes via `?`. Exhaustive matches on `RaylibError` need a wildcard arm.
+- The identity `impl From<&Color> for Color` is removed — `&Color` no longer satisfies `Into<Color>` bounds (e.g. on draw functions). Dereference instead: `d.draw_x(.., *c)`. `Color` is `Copy`; no other type had such an impl.
 
 ### Added
 
