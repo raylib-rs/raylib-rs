@@ -52,6 +52,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 
 ### Added
 
+- Wrapper-family lifetime test pass: new `databuf_lifetimes` (windowless Tier-1, ASAN+LeakSanitizer CI target) and `render_alloc_lifetimes` (Tier-2) test binaries; the canonical Tier-2 feature list now includes `SUPPORT_MESH_GENERATION` so Mesh tests actually run in CI.
 - `software_renderer` feature + `raylib::test_harness` module (`with_headless`, `render_frame`, `render_frame_raw`, `pixel_at`, `assert_pixel`).
 - Safe `rlgl` module (`raylib::rlgl`): `rl_begin` / `rl_draw` / `rl_push_matrix` returning RAII guards (`RlImmediate`, `RlMatrix`); render-state toggles; `&Texture2D`/`&Shader` bind helpers.
 - `Vector2::{ZERO,ONE}` / `Vector3::{ZERO,ONE,X,Y,Z}` constants.
@@ -125,6 +126,8 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 
 ### Fixed
 
+- `DataBuf::<[T]>::alloc_from_clone` now performs a real element-wise clone (`T: Clone`; was bound `T: Copy` and identical to `alloc_from_copy`). A `clone()` panic mid-initialization drops the cloned prefix and frees the allocation before propagating.
+- `compress_data(b"")`, `decompress_data` on empty/invalid input, and `decode_data_base64(b"")` no longer panic (raylib returns a non-null, zero-length buffer for these; the wrappers now free it and return `Err` — the contract is documented on each fn).
 - **Mesh-accessor soundness** — all 10 `RaylibMesh` slice accessors guarded against null/zero (were `slice::from_raw_parts(null, n)`); `indices`/`indices_mut` corrected to `triangleCount * 3` (was `vertexCount`); 4 safe `texcoords`/`texcoords2` accessors added (PR #257 / #118 / #256 with attribution).
 - **Sound unsound impls** — removed `AsRef`/`AsMut<ffi::AudioStream> for Sound` which exposed raw pointer fields to safe mutation (from PR #277, partial — full refactor deferred).
 - **`c"..."` literal modernization** (PR #272, AmityWilder) — `CStr::from_bytes_with_nul` replaced by C-string literals in audio and file modules.
