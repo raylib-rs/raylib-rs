@@ -8,7 +8,10 @@
 use raylib::test_harness::with_headless;
 
 const ANIM_PATH: &str = "raylib-sys/raylib/examples/models/resources/models/iqm/guyanim.iqm";
-#[cfg(feature = "SUPPORT_FILEFORMAT_IQM")]
+// NOTE: deliberately NOT gated on SUPPORT_FILEFORMAT_IQM — raylib's cmake
+// doesn't plumb that define without CUSTOMIZE_BUILD, so the C build follows
+// config.h defaults (IQM on) and this runs in the canonical Tier-2 leg,
+// matching the ungated ANIM_PATH tests above.
 const MODEL_PATH: &str = "raylib-sys/raylib/examples/models/resources/models/iqm/guy.iqm";
 
 #[test]
@@ -79,7 +82,6 @@ fn model_animations_slice_views_in_bounds() {
 /// (c) Drop order vs the associated Model: ModelAnimations are allocated
 /// independently of the Model they animate, so dropping in either order
 /// (anims-before-model or model-before-anims) must be safe.
-#[cfg(feature = "SUPPORT_FILEFORMAT_IQM")]
 #[test]
 fn model_animations_drop_order_vs_model() {
     with_headless(64, 64, |rl, thread| {
