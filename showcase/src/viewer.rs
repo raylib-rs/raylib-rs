@@ -96,19 +96,11 @@ const FOOTER_FONT_SIZE: i32 = 12;
 const FOOTER_TOP_GAP: i32 = 6;
 
 impl SourceViewer {
-    /// Constructs a viewer keyed off the current `[[example]] name`
-    /// (resolved at runtime from the current executable's file stem;
-    /// `cargo run --example <name>` produces an executable named `<name>(.exe)`,
-    /// so the file stem matches the `[[example]] name` for registry lookup).
-    /// `env!("CARGO_BIN_NAME")` would also work but is only defined when
-    /// compiling the bin/example crate, not the lib that hosts this fn.
+    /// Constructs a viewer keyed off the current `[[example]] name`,
+    /// resolved at runtime by [`current_example_name`] (executable file
+    /// stem on desktop, page URL on the web).
     pub fn for_current_example() -> Self {
-        let name = std::env::current_exe()
-            .ok()
-            .as_deref()
-            .and_then(|p| p.file_stem())
-            .map(|s| s.to_string_lossy().to_string())
-            .unwrap_or_else(|| "<unknown>".to_string());
+        let name = current_example_name().unwrap_or_else(|| "<unknown>".to_string());
         Self::for_example(&name)
     }
 
@@ -333,6 +325,71 @@ impl SourceViewer {
     }
 }
 
+/// Resolves the current `[[example]] name` from the executable's file stem
+/// (`cargo run --example <name>` produces an executable named `<name>(.exe)`,
+/// so the file stem matches the `[[example]] name` for registry lookup).
+/// `env!("CARGO_BIN_NAME")` would also work but is only defined when
+/// compiling the bin/example crate, not the lib that hosts this fn.
+#[cfg(not(target_os = "emscripten"))]
+fn current_example_name() -> Option<String> {
+    let exe = std::env::current_exe().ok()?;
+    Some(exe.file_stem()?.to_string_lossy().into_owned())
+}
+
+/// Resolves the current `[[example]] name` from the page URL.
+///
+/// `std::env::current_exe()` always fails under emscripten — std reads
+/// `/proc/self/exe`, and emscripten's virtual FS only creates
+/// `/proc/self/fd` — which used to leave every web example unregistered:
+/// both source tabs rendered the "(source not registered…)" placeholder.
+/// The Pages site serves each example at `examples/<cat>/<name>.html`
+/// (synthesized by `xtask_build_pages` from the `[[example]] name`), so
+/// the page filename is the registry key.
+#[cfg(target_os = "emscripten")]
+fn current_example_name() -> Option<String> {
+    use std::ffi::{CStr, c_char};
+
+    unsafe extern "C" {
+        // emscripten.h: evaluates the script on the page and returns the
+        // result as a C string. The buffer is owned by the emscripten
+        // runtime and is only valid until the next call — copy it out
+        // immediately, never free it.
+        fn emscripten_run_script_string(script: *const c_char) -> *const c_char;
+    }
+
+    // Guarded so a non-browser host (e.g. node) yields "" instead of a
+    // ReferenceError aborting the runtime.
+    const SCRIPT: &CStr = c"(typeof location === 'object' && location && typeof location.pathname === 'string') ? location.pathname : ''";
+
+    // SAFETY: SCRIPT is a valid NUL-terminated C string. The returned
+    // pointer is either null or a valid NUL-terminated C string owned by
+    // the emscripten runtime; we copy it into an owned String before any
+    // further emscripten call could invalidate it, and never free it.
+    let pathname = unsafe {
+        let ptr = emscripten_run_script_string(SCRIPT.as_ptr());
+        if ptr.is_null() {
+            return None;
+        }
+        CStr::from_ptr(ptr).to_string_lossy().into_owned()
+    };
+    example_name_from_pathname(&pathname)
+}
+
+/// Extracts the example name from a Pages pathname like
+/// `/raylib-rs/examples/core/core_basic_window.html`.
+///
+/// Only used at runtime by the emscripten resolver, but kept un-gated so
+/// the parsing logic stays unit-testable on desktop.
+#[cfg_attr(not(target_os = "emscripten"), allow(dead_code))]
+fn example_name_from_pathname(pathname: &str) -> Option<String> {
+    let file = pathname.rsplit('/').next()?;
+    let name = file.strip_suffix(".html")?;
+    if name.is_empty() {
+        return None;
+    }
+    Some(name.to_string())
+}
+
 fn thumbnail_from_env() -> Option<ThumbnailCapture> {
     let frames = env::var("RAYLIB_SHOWCASE_THUMBNAIL_FRAMES").ok()?;
     let out = env::var("RAYLIB_SHOWCASE_THUMBNAIL_OUT").ok()?;
@@ -381,4 +438,41 @@ fn capture_and_exit(rl: &mut RaylibHandle, thread: &RaylibThread, out_path: &std
         process::exit(2);
     }
     process::exit(0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::example_name_from_pathname;
+
+    // The Pages site serves each example at `examples/<cat>/<name>.html`
+    // (synthesized by xtask_build_pages), so the page filename is the
+    // registry key the wasm build resolves at runtime.
+    #[test]
+    fn pages_pathname_resolves_example_name() {
+        assert_eq!(
+            example_name_from_pathname("/raylib-rs/examples/core/core_basic_window.html")
+                .as_deref(),
+            Some("core_basic_window"),
+        );
+    }
+
+    #[test]
+    fn bare_filename_resolves() {
+        assert_eq!(
+            example_name_from_pathname("raygui_controls_test_suite.html").as_deref(),
+            Some("raygui_controls_test_suite"),
+        );
+    }
+
+    #[test]
+    fn non_example_pathnames_are_rejected() {
+        // Directory pathname (trailing slash), no .html suffix, empty stem.
+        assert_eq!(
+            example_name_from_pathname("/raylib-rs/examples/core/"),
+            None
+        );
+        assert_eq!(example_name_from_pathname("/raylib-rs/index"), None);
+        assert_eq!(example_name_from_pathname("/raylib-rs/.html"), None);
+        assert_eq!(example_name_from_pathname(""), None);
+    }
 }
