@@ -221,6 +221,8 @@ fn main() {
             };
             let html = shell_template
                 .replace("{{{ EXAMPLE_NAME }}}", &m.name)
+                .replace("{{{ C_URL }}}", &m.c_url)
+                .replace("{{{ RUST_URL }}}", &m.rust_url)
                 .replace("{{{ SCRIPT }}}", &script_tag);
             fs::write(out_dir.join(format!("{}.html", m.name)), html).unwrap();
         } else {
