@@ -1,5 +1,15 @@
 # raylib-rs Changelog
 
+## Unreleased
+
+### Added
+
+- Opt-in `log` feature: `RaylibBuilder::log_to_rust()` forwards raylib's
+  `TraceLog` output into the [`log`](https://docs.rs/log) facade (target
+  `"raylib"`), making `RUST_LOG`-style filtering the single source of
+  truth. Levels map `TRACE/DEBUG/INFO/WARNING→trace/debug/info/warn`,
+  `ERROR`+`FATAL→error`. See the *Callbacks and logging* book chapter.
+
 ## 6.0.0-rc.2 — 2026-06-02
 
 Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024).
