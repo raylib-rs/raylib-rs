@@ -24,7 +24,7 @@ serde_json = "1.0"
 [build-dependencies]
 cmake = "0.1.51"
 cc = { version = "1.0", features = ["parallel"] }
-bindgen = "0.71"
+bindgen = "0.72.1"
 
 [features]
 # default features follow the cmake version: https://github.com/raysan5/raylib/wiki/CMake-Build-Options
