@@ -74,6 +74,54 @@ fn main() {
   There is no "unset" for `set_load_file_data_callback` etc. — they can only be
   set once per callback slot.
 
+## Routing raylib logs through the `log` crate
+
+With the opt-in `log` feature, the window builder can forward raylib's
+`TraceLog` output into the [`log`](https://docs.rs/log) facade, so your
+application's logger (`env_logger`, `tracing-log`, …) receives raylib's
+logs alongside your own:
+
+```toml
+[dependencies]
+raylib = { version = "6", features = ["log"] }
+log = "0.4"
+env_logger = "0.11"
+```
+
+```rust,ignore
+env_logger::init(); // any `log`-compatible logger
+
+let (mut rl, thread) = raylib::init()
+    .size(800, 450)
+    .title("game")
+    .log_to_rust()
+    .build();
+
+log::info!("app and raylib logs share one pipeline now");
+```
+
+Messages arrive under the target `"raylib"`, so `RUST_LOG=raylib=debug`
+scopes raylib's output independently of your app's.
+
+The bridge makes the `log` facade the single level filter: it sets
+raylib's own threshold to `LOG_ALL` (overriding `.log_level()`), so what
+you see is controlled entirely by your logger's configuration. Raylib
+levels map `TRACE→trace`, `DEBUG→debug`, `INFO→info`, `WARNING→warn`,
+and both `ERROR` and `FATAL` to `error` (the facade has no fatal level;
+raylib still aborts after a fatal log, unchanged).
+
+Two caveats:
+
+- The bridge claims the same single callback slot as
+  [`set_trace_log_callback`] — they are mutually exclusive, last writer
+  wins.
+- The bridge only *emits* into the facade. Without a logger installed,
+  the messages are silently dropped, like any library using `log`.
+  (It also requires the `SUPPORT_TRACELOG` feature, which is in the
+  default set.)
+
+[`set_trace_log_callback`]: https://docs.rs/raylib/latest/raylib/core/callbacks/fn.set_trace_log_callback.html
+
 ## See also
 
 - [Audio](./audio.md) — `AudioStream` and the audio processor callback.
