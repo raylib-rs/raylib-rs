@@ -534,8 +534,6 @@ impl<T> DataBuf<[T]> {
     where
         T: Clone,
     {
-        let mut buf = Self::alloc(src.len())?;
-
         /// Drops the initialized prefix of the buffer if a `clone()` unwinds.
         struct InitGuard<'a, T> {
             buf: &'a mut [MaybeUninit<T>],
@@ -550,6 +548,8 @@ impl<T> DataBuf<[T]> {
                 }
             }
         }
+
+        let mut buf = Self::alloc(src.len())?;
 
         let mut guard = InitGuard {
             buf: buf.as_mut(),
