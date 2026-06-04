@@ -395,6 +395,10 @@ impl<'a> RaylibBuilder<'a> {
     /// The bridge only emits into the facade; install a logger yourself
     /// (e.g. `env_logger::init()`) or the messages are silently dropped.
     ///
+    /// Requires the `SUPPORT_TRACELOG` feature (included in `default`);
+    /// without it raylib's C-side `TraceLog` is compiled out and the
+    /// bridge receives nothing.
+    ///
     /// # Examples
     ///
     /// ```no_run

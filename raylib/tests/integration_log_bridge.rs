@@ -35,7 +35,9 @@ static LOGGER: CaptureLogger = CaptureLogger {
 // other Tier-2 files; nextest gives per-test process isolation).
 #[test]
 fn builder_log_to_rust_bridges_init_logs() {
-    log::set_logger(&LOGGER).expect("logger installs once");
+    log::set_logger(&LOGGER).expect(
+        "another logger is already installed in this process — run via cargo nextest (per-test process isolation)"
+    );
     log::set_max_level(log::LevelFilter::Trace);
 
     let (_rl, _thread) = raylib::init()
