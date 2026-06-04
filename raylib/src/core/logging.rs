@@ -28,6 +28,7 @@ pub fn trace_log(msg_type: TraceLogLevel, text: &str) {
 /// `LOG_NONE` and `LOG_ALL` are threshold markers, never message levels —
 /// they are not emitted.
 #[cfg(feature = "log")]
+#[inline]
 fn log_bridge(level: TraceLogLevel, text: &str) {
     use log::Level;
     let level = match level {
@@ -41,10 +42,10 @@ fn log_bridge(level: TraceLogLevel, text: &str) {
     log::log!(target: "raylib", level, "{text}");
 }
 
-/// Claims the single trace-log callback slot with [`log_bridge`] and drops
-/// raylib's own threshold to `LOG_ALL`, making the `log` facade the single
-/// level filter. Called by `RaylibBuilder::build` when
-/// `.log_to_rust()` was requested.
+/// Claims the single trace-log callback slot with [`log_bridge`] and sets
+/// raylib's C-side log threshold to `LOG_ALL` so every message reaches the
+/// bridge, making the `log` facade the single level filter. Called by
+/// `RaylibBuilder::build` when `.log_to_rust()` was requested.
 #[cfg(feature = "log")]
 pub(crate) fn install_log_bridge() {
     // The trace-log slot intentionally overwrites (last writer wins); the
@@ -84,7 +85,8 @@ mod tests {
     // `cargo test` all unit tests share the process.
     #[test]
     fn bridge_forwards_trace_log_to_log_facade() {
-        log::set_logger(&LOGGER).expect("logger installs once");
+        log::set_logger(&LOGGER)
+            .expect("another logger is already installed in this process — run via cargo nextest (per-test process isolation)");
         log::set_max_level(log::LevelFilter::Trace);
         install_log_bridge();
 
