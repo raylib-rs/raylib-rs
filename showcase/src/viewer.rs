@@ -89,11 +89,6 @@ const TAB_BG_INACTIVE: Color = Color {
     a: 255,
 };
 const TEXT_FONT_SIZE: i32 = 14;
-// Smaller font for the "Source on GitHub: <url>" footer line so it doesn't
-// crowd the source viewport.
-const FOOTER_FONT_SIZE: i32 = 12;
-// Gap between the source body's last line and the footer URL.
-const FOOTER_TOP_GAP: i32 = 6;
 
 impl SourceViewer {
     /// Constructs a viewer keyed off the current `[[example]] name`,
@@ -189,9 +184,7 @@ impl SourceViewer {
     fn max_scroll(&self) -> i32 {
         let total_lines = self.lines().count() as i32;
         let body_top = TAB_Y + TAB_H + BODY_TOP_GAP;
-        // Footer URL line lives below the source viewport; reserve room for
-        // it so we don't scroll the last line under the footer.
-        let body_bottom = self.screen_h - PANEL_MARGIN - FOOTER_FONT_SIZE - FOOTER_TOP_GAP;
+        let body_bottom = self.screen_h - PANEL_MARGIN;
         let viewport_h = (body_bottom - body_top).max(self.line_height);
         let lines_visible = viewport_h / self.line_height;
         let bottom_line = (total_lines - lines_visible).max(0);
@@ -273,10 +266,7 @@ impl SourceViewer {
         );
 
         let body_top = TAB_Y + TAB_H + BODY_TOP_GAP;
-        // Reserve a slim footer band under the source body for the
-        // "Source on GitHub: <url>" line (WS9 P4 GitHub deep-link).
-        let footer_y = self.screen_h - PANEL_MARGIN - FOOTER_FONT_SIZE;
-        let body_bottom = footer_y - FOOTER_TOP_GAP;
+        let body_bottom = self.screen_h - PANEL_MARGIN;
         let body_left = PANEL_MARGIN;
         let viewport_h = body_bottom - body_top;
         let first_visible_line = (self.scroll_y / self.line_height).max(0);
@@ -290,27 +280,17 @@ impl SourceViewer {
             if idx > first_visible_line + lines_visible {
                 break;
             }
-            // Don't draw text that would spill into (or under) the footer
-            // band — keeps the URL line readable when the viewport is short.
+            // Don't draw text that would spill under the panel margin when
+            // the viewport is short.
             if y > body_bottom {
                 break;
             }
             d.draw_text(line, body_left, y, TEXT_FONT_SIZE, PANEL_FG);
             y += self.line_height;
         }
-
-        // Footer: link to the upstream source for the currently-shown tab.
-        // Rendered as plain text — terminals/canvases don't support real
-        // hyperlinks, so the URL is shown for copy-paste / out-of-band
-        // navigation. The Pages gallery exposes the same URLs as <a> tags.
-        if let Some(pair) = self.pair {
-            let url = match self.tab {
-                Tab::C => pair.c_url,
-                Tab::Rust => pair.rust_url,
-            };
-            let footer = format!("Source on GitHub: {}", url);
-            d.draw_text(&footer, body_left, footer_y, FOOTER_FONT_SIZE, PANEL_FG);
-        }
+        // The "Source on GitHub" links live in the page chrome (the Pages
+        // example shell renders them as real <a> tags under the canvas),
+        // not in the overlay — an in-canvas URL isn't clickable anyway.
     }
 
     fn lines(&self) -> std::str::Lines<'static> {
