@@ -324,6 +324,7 @@ fn gen_bindings() {
         .blocklist_type("Quaternion")
         .blocklist_type("Rectangle")
         .blocklist_type("Color")
+        .blocklist_type("__mingw_ldbl_type_t")
         .parse_callbacks(Box::new(TypeOverrideCallback))
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
