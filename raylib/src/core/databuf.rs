@@ -753,4 +753,175 @@ mod tests {
             "source elements drop normally"
         );
     }
+
+    #[test]
+    fn test_alloc_zst_errors() {
+        // Zero-sized T → zero bytes requested → rejected before the FFI call.
+        let r = DataBuf::<()>::alloc();
+        assert!(matches!(r, Err(AllocationError::ZeroBytes)), "got {r:?}");
+    }
+
+    #[test]
+    fn test_alloc_slice_zero_len_errors() {
+        let r = DataBuf::<[u8]>::alloc(0);
+        assert!(matches!(r, Err(AllocationError::ZeroBytes)), "got {r:?}");
+    }
+
+    #[test]
+    fn test_alloc_slice_layout_overflow_errors() {
+        // Layout::array overflows isize::MAX → IntoUIntFailed.
+        let r = DataBuf::<[u64]>::alloc(usize::MAX);
+        assert!(
+            matches!(r, Err(AllocationError::IntoUIntFailed)),
+            "got {r:?}"
+        );
+    }
+
+    #[test]
+    fn test_alloc_slice_over_u32_max_errors() {
+        // Fits in usize on 64-bit but the byte size exceeds u32::MAX — the
+        // largest request expressible through ffi::MemAlloc(unsigned int).
+        // (On 32-bit targets Layout::array overflows first; same variant.)
+        let count = (u32::MAX as usize) + 1;
+        let r = DataBuf::<[u8]>::alloc(count);
+        assert!(
+            matches!(r, Err(AllocationError::IntoUIntFailed)),
+            "got {r:?}"
+        );
+    }
+
+    #[test]
+    fn test_alloc_large_but_valid_succeeds() {
+        // 1 MiB: well within u32::MAX, must succeed and be fully writable.
+        const MIB: usize = 1 << 20;
+        let buf = DataBuf::<[u8]>::alloc_from_copy(&vec![0xA5u8; MIB]).unwrap();
+        assert_eq!(buf.len(), MIB);
+        assert!(buf.iter().all(|&b| b == 0xA5));
+    }
+
+    #[test]
+    fn test_alloc_from_error_returns_value() {
+        // ZST → ZeroBytes; the error tuple must hand the value back intact.
+        #[derive(Debug, PartialEq)]
+        struct Zst;
+        let (err, val) = DataBuf::alloc_from(Zst).unwrap_err();
+        assert!(matches!(err, AllocationError::ZeroBytes));
+        assert_eq!(val, Zst);
+    }
+
+    #[test]
+    fn test_realloc_grow_preserves_prefix() {
+        let buf = DataBuf::<[i32]>::alloc_from_copy(&[1, 2, 3]).unwrap();
+        let mut grown = buf.realloc(6).map_err(|(e, _)| e).expect("realloc grow");
+        grown[3].write(4);
+        grown[4].write(5);
+        grown[5].write(6);
+        // SAFETY: indices 0..3 were initialized by alloc_from_copy and are
+        // preserved by mem_realloc (documented); 3..6 were just written.
+        let grown = unsafe { grown.assume_init() };
+        assert_eq!(&*grown, &[1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn test_realloc_shrink_keeps_prefix() {
+        let buf = DataBuf::<[i32]>::alloc_from_copy(&[1, 2, 3, 4, 5, 6]).unwrap();
+        let shrunk = buf.realloc(3).map_err(|(e, _)| e).expect("realloc shrink");
+        // SAFETY: all 3 remaining elements were initialized before the shrink.
+        let shrunk = unsafe { shrunk.assume_init() };
+        assert_eq!(&*shrunk, &[1, 2, 3]);
+    }
+
+    #[test]
+    fn test_realloc_zero_returns_original_usable() {
+        let buf = DataBuf::<[i32]>::alloc_from_copy(&[7, 8, 9]).unwrap();
+        let (err, orig) = buf.realloc(0).unwrap_err();
+        assert!(matches!(err, AllocationError::ZeroBytes));
+        // The original buffer must come back untouched and still owned.
+        assert_eq!(&*orig, &[7, 8, 9]);
+    }
+
+    #[test]
+    fn test_slice_drop_count() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct DropCounter<'a>(&'a AtomicUsize);
+        impl Clone for DropCounter<'_> {
+            fn clone(&self) -> Self {
+                DropCounter(self.0)
+            }
+        }
+        impl Drop for DropCounter<'_> {
+            fn drop(&mut self) {
+                self.0.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+        let drops = AtomicUsize::new(0);
+        {
+            let src = [
+                DropCounter(&drops),
+                DropCounter(&drops),
+                DropCounter(&drops),
+            ];
+            let buf = DataBuf::<[DropCounter]>::alloc_from_clone(&src).unwrap();
+            assert_eq!(drops.load(Ordering::SeqCst), 0, "no drops while alive");
+            drop(buf);
+            assert_eq!(
+                drops.load(Ordering::SeqCst),
+                3,
+                "each buffer element dropped exactly once"
+            );
+            // `src` drops here → +3.
+        }
+        assert_eq!(drops.load(Ordering::SeqCst), 6);
+    }
+
+    #[test]
+    fn test_into_inner_suppresses_content_drop() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct DropCounter<'a>(&'a AtomicUsize);
+        impl Drop for DropCounter<'_> {
+            fn drop(&mut self) {
+                self.0.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+        let drops = AtomicUsize::new(0);
+        let buf = DataBuf::alloc_from(DropCounter(&drops))
+            .map_err(|(e, _)| e)
+            .unwrap();
+        let raw = buf.into_inner(); // DataBuf::drop suppressed
+        assert_eq!(drops.load(Ordering::SeqCst), 0, "into_inner must not drop");
+        raw.mem_free(); // manual free — omitting this is what the LSAN leg would flag
+        assert_eq!(
+            drops.load(Ordering::SeqCst),
+            0,
+            "mem_free is documented not to drop contents"
+        );
+    }
+
+    #[test]
+    fn test_view_parity() {
+        let mut buf = DataBuf::<[u8]>::alloc_from_copy(b"hello").unwrap();
+        assert_eq!(&*buf, b"hello"); // Deref
+        assert_eq!(buf.as_ref(), b"hello"); // inherent as_ref
+        buf.as_mut()[0] = b'H'; // inherent as_mut
+        assert_eq!(&*buf, b"Hello");
+        let via_trait: &[u8] = AsRef::as_ref(&buf); // trait AsRef
+        assert_eq!(via_trait, b"Hello");
+        let via_trait_mut: &mut [u8] = AsMut::as_mut(&mut buf); // trait AsMut
+        via_trait_mut[1] = b'E';
+        assert_eq!(&*buf, b"HEllo");
+    }
+
+    #[test]
+    #[should_panic(expected = "`count` should be positive")]
+    fn test_slice_from_raw_zero_count_panics() {
+        // SAFETY: 4 is non-zero.
+        let ptr = unsafe { ffi::MemAlloc(4) }.cast::<i32>();
+        assert!(!ptr.is_null(), "should be able to allocate");
+        // count == 0 with a non-null ptr violates slice_from_raw's contract.
+        // (The allocation leaks on the panic path — fine in a should_panic test
+        // that is not part of the LSAN run-set.)
+        // SAFETY: ptr is non-null and Raylib-allocated; count is intentionally
+        // zero to exercise the panic guard.
+        let _ = unsafe { DataBuf::slice_from_raw(ptr, MaybeUninit::new(0)) };
+    }
 }
