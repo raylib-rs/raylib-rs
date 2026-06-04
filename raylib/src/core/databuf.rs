@@ -777,11 +777,13 @@ mod tests {
         );
     }
 
+    /// 64-bit only: on 32-bit targets the count expression itself would
+    /// overflow usize before reaching `alloc`.
     #[test]
+    #[cfg(target_pointer_width = "64")]
     fn test_alloc_slice_over_u32_max_errors() {
         // Fits in usize on 64-bit but the byte size exceeds u32::MAX — the
         // largest request expressible through ffi::MemAlloc(unsigned int).
-        // (On 32-bit targets Layout::array overflows first; same variant.)
         let count = (u32::MAX as usize) + 1;
         let r = DataBuf::<[u8]>::alloc(count);
         assert!(
@@ -889,6 +891,8 @@ mod tests {
             .unwrap();
         let raw = buf.into_inner(); // DataBuf::drop suppressed
         assert_eq!(drops.load(Ordering::SeqCst), 0, "into_inner must not drop");
+        // mem_free frees the raw bytes; it does NOT call Drop on the contained
+        // value — the DropCounter's destructor is intentionally never run here.
         raw.mem_free(); // manual free — omitting this is what the LSAN leg would flag
         assert_eq!(
             drops.load(Ordering::SeqCst),
