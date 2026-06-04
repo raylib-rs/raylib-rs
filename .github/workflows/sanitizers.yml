@@ -18,6 +18,7 @@ jobs:
     # under ASAN/UBSAN to validate ModelAnimations::Drop doesn't double-free the heap
     # array allocated by LoadModelAnimations. Also exercises the FFI-heavy
     # software_renderer render tests for broader coverage.
+    # The databuf_lifetimes binary additionally runs with LeakSanitizer enabled.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v5
@@ -48,8 +49,25 @@ jobs:
           cargo +nightly test -p raylib -Z build-std
           --target x86_64-unknown-linux-gnu
           --no-default-features
-          --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,ENABLE_ASAN
-          --test render_shapes --test render_text --test integration_model_animations -- --test-threads=1
+          --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION,SUPPORT_COMPRESSION_API,ENABLE_ASAN
+          --test render_shapes --test render_text --test integration_model_animations --test render_alloc_lifetimes -- --test-threads=1
+      - name: ASAN+LSAN — Tier-1 wrapper lifetime tests (windowless)
+        # databuf_lifetimes never initializes raylib (no window, no rlsw
+        # context), so LeakSanitizer runs against a minimal-noise surface:
+        # every MemAlloc/MemFree crossing in DataBuf/compression/base64 is
+        # leak-checked. The render-test steps keep detect_leaks=0 (driver/
+        # context teardown noise).
+        continue-on-error: true
+        env:
+          RUSTFLAGS: "-Zsanitizer=address"
+          RUSTDOCFLAGS: "-Zsanitizer=address"
+          ASAN_OPTIONS: "detect_leaks=1"
+        run: >
+          cargo +nightly test -p raylib -Z build-std
+          --target x86_64-unknown-linux-gnu
+          --no-default-features
+          --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION,SUPPORT_COMPRESSION_API,ENABLE_ASAN
+          --test databuf_lifetimes -- --test-threads=1
       - name: UBSAN — software_renderer render tests
         # C side is instrumented via ENABLE_UBSAN (CompilerFlags.cmake:37 adds
         # -fsanitize=undefined). The Rust-side link step needs to pull libubsan
@@ -64,8 +82,8 @@ jobs:
           cargo +nightly test -p raylib -Z build-std
           --target x86_64-unknown-linux-gnu
           --no-default-features
-          --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,ENABLE_UBSAN
-          --test render_shapes --test render_text --test integration_model_animations -- --test-threads=1
+          --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION,SUPPORT_COMPRESSION_API,ENABLE_UBSAN
+          --test render_shapes --test render_text --test integration_model_animations --test databuf_lifetimes --test render_alloc_lifetimes -- --test-threads=1
       - name: UBSAN findings report
         if: always()
         run: bash ci/ubsan-report.sh
