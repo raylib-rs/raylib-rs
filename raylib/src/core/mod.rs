@@ -399,6 +399,11 @@ impl<'a> RaylibBuilder<'a> {
     /// without it raylib's C-side `TraceLog` is compiled out and the
     /// bridge receives nothing.
     ///
+    /// The bridge runs inside raylib's trace-log callback: a logger that
+    /// itself calls back into raylib logging (e.g. via
+    /// [`trace_log`](crate::core::logging::trace_log)) would recurse
+    /// unboundedly — don't log to raylib from your `log` backend.
+    ///
     /// # Examples
     ///
     /// ```no_run
