@@ -346,6 +346,11 @@ fn gen_bindings() {
         builder = builder.clang_arg("-D__STDC__");
     }
 
+    if target.ends_with("-windows-gnu") {
+        // workaround for __mingw_ldbl_type_t
+        builder = builder.clang_arg(format!("--target={target}"));
+    }
+
     if platform == Platform::Web {
         builder = builder
             .clang_arg("-fvisibility=default")
