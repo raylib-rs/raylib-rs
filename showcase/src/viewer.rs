@@ -2,7 +2,10 @@
 //!
 //! Each `examples/<cat>/<name>.rs` instantiates a `SourceViewer` after init
 //! and calls `update` + `draw` inside its main loop. The viewer is invisible
-//! by default; F1 toggles a full-screen overlay with C/Rust tabs.
+//! by default; F1 toggles a raygui window (`GuiWindowBox`) with C/Rust tab
+//! toggles, a `GuiScrollPanel` over the source text, and a Copy button that
+//! puts the active tab's source on the clipboard. GitHub links live on the
+//! Pages example pages, not in the overlay.
 //!
 //! Hidden thumbnail-capture branch: when the environment variables
 //! `RAYLIB_SHOWCASE_THUMBNAIL_FRAMES` and `RAYLIB_SHOWCASE_THUMBNAIL_OUT`
@@ -25,15 +28,18 @@ pub enum Tab {
     Rust,
 }
 
-// --- Layout constants (Fix D) ---
-const TAB_Y: i32 = 40;
-const TAB_W: i32 = 100;
-const TAB_H: i32 = 28;
-const HEADER_Y: i32 = 12;
-const HEADER_FONT_SIZE: i32 = 18;
-const TAB_FONT_SIZE: i32 = 20;
-const PANEL_MARGIN: i32 = 16;
-const BODY_TOP_GAP: i32 = 12;
+// --- raygui overlay layout ---
+const WINDOW_MARGIN: f32 = 24.0;
+const PAD: f32 = 8.0;
+// raygui's RAYGUI_WINDOWBOX_STATUSBAR_HEIGHT (title-bar height).
+const STATUSBAR_H: f32 = 24.0;
+const TAB_W: f32 = 60.0;
+const CTRL_H: f32 = 24.0;
+const COPY_W: f32 = 80.0;
+
+const HINT_TEXT: &str = "F1: view source";
+const HINT_FONT_SIZE: i32 = 18;
+const TEXT_FONT_SIZE: i32 = 14;
 
 /// The in-canvas source viewer.
 ///
@@ -47,7 +53,17 @@ pub struct SourceViewer {
     name: String,
     visible: bool,
     tab: Tab,
-    scroll_y: i32,
+    /// GuiScrollPanel scroll offset (raygui convention: components <= 0).
+    scroll: Vector2,
+    /// GuiScrollPanel's inner view rect from the previous frame; used by
+    /// the End key to compute the bottom scroll position.
+    view: Rectangle,
+    /// Widest-line width per tab ([C, Rust]), measured lazily in update()
+    /// so the scroll panel's content rect allows horizontal scrolling.
+    content_w: [Option<f32>; 2],
+    /// Copy click recorded by draw(), serviced by update() next frame
+    /// (clipboard access needs RaylibHandle).
+    pending_copy: bool,
     line_height: i32,
     thumbnail: Option<ThumbnailCapture>,
     frame_counter: usize,
@@ -61,39 +77,6 @@ struct ThumbnailCapture {
     target_frame: usize,
     out_path: PathBuf,
 }
-
-const HINT_TEXT: &str = "F1: view source";
-const HINT_FONT_SIZE: i32 = 18;
-const PANEL_BG: Color = Color {
-    r: 30,
-    g: 30,
-    b: 38,
-    a: 230,
-};
-const PANEL_FG: Color = Color {
-    r: 220,
-    g: 220,
-    b: 230,
-    a: 255,
-};
-const TAB_BG_ACTIVE: Color = Color {
-    r: 80,
-    g: 80,
-    b: 120,
-    a: 255,
-};
-const TAB_BG_INACTIVE: Color = Color {
-    r: 50,
-    g: 50,
-    b: 60,
-    a: 255,
-};
-const TEXT_FONT_SIZE: i32 = 14;
-// Smaller font for the "Source on GitHub: <url>" footer line so it doesn't
-// crowd the source viewport.
-const FOOTER_FONT_SIZE: i32 = 12;
-// Gap between the source body's last line and the footer URL.
-const FOOTER_TOP_GAP: i32 = 6;
 
 impl SourceViewer {
     /// Constructs a viewer keyed off the current `[[example]] name`,
@@ -113,7 +96,10 @@ impl SourceViewer {
             name: name.to_string(),
             visible: false,
             tab: Tab::C,
-            scroll_y: 0,
+            scroll: Vector2::new(0.0, 0.0),
+            view: Rectangle::new(0.0, 0.0, 0.0, 0.0),
+            content_w: [None, None],
+            pending_copy: false,
             line_height: TEXT_FONT_SIZE + 2,
             thumbnail,
             frame_counter: 0,
@@ -123,8 +109,16 @@ impl SourceViewer {
         }
     }
 
-    /// Per-frame update: handles F1 toggle, keyboard scroll, and the hidden
-    /// thumbnail-capture branch.
+    /// Index into per-tab caches: C = 0, Rust = 1.
+    const fn tab_idx(&self) -> usize {
+        match self.tab {
+            Tab::C => 0,
+            Tab::Rust => 1,
+        }
+    }
+
+    /// Per-frame update: handles F1 toggle, keyboard scroll, clipboard
+    /// servicing, and the hidden thumbnail-capture branch.
     ///
     /// Call this before [`draw`](SourceViewer::draw) inside the main loop.
     pub fn update(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
@@ -146,65 +140,76 @@ impl SourceViewer {
         if rl.is_key_pressed(KeyboardKey::KEY_F1) {
             self.visible = !self.visible;
             if self.visible {
-                self.scroll_y = 0;
+                self.scroll = Vector2::new(0.0, 0.0);
             }
         }
         if !self.visible {
             return;
         }
+
+        // Service the Copy click recorded by draw() last frame.
+        if self.pending_copy {
+            self.pending_copy = false;
+            if let Some(p) = self.pair {
+                let src = match self.tab {
+                    Tab::C => p.c,
+                    Tab::Rust => p.rust,
+                };
+                // Embedded sources are NUL-free text files; a NulError here
+                // would mean a corrupt registry — ignore rather than panic.
+                let _ = rl.set_clipboard_text(src);
+            }
+        }
+
         if rl.is_key_pressed(KeyboardKey::KEY_TAB) {
             self.tab = match self.tab {
                 Tab::C => Tab::Rust,
                 Tab::Rust => Tab::C,
             };
-            self.scroll_y = 0;
+            self.scroll = Vector2::new(0.0, 0.0);
         }
-        let lines_per_step = 10;
+
+        // Lazily measure the widest line of the active tab (once per tab).
+        if self.content_w[self.tab_idx()].is_none() {
+            let w = self
+                .lines()
+                .map(|l| rl.measure_text(l, TEXT_FONT_SIZE))
+                .max()
+                .unwrap_or(0);
+            self.content_w[self.tab_idx()] = Some(w as f32);
+        }
+
+        // Keyboard scrolling nudges the raygui scroll vector (y <= 0 when
+        // scrolled down); GuiScrollPanel clamps to the content bounds on the
+        // next draw. Mouse wheel + scrollbar drag are handled natively by
+        // GuiScrollPanel, so the old manual wheel handling is gone.
+        let step = (self.line_height * 10) as f32;
         if rl.is_key_pressed(KeyboardKey::KEY_PAGE_DOWN) {
-            self.scroll_y =
-                (self.scroll_y + self.line_height * lines_per_step).min(self.max_scroll());
+            self.scroll.y -= step;
         }
         if rl.is_key_pressed(KeyboardKey::KEY_PAGE_UP) {
-            self.scroll_y = (self.scroll_y - self.line_height * lines_per_step).max(0);
+            self.scroll.y += step;
         }
         if rl.is_key_pressed(KeyboardKey::KEY_HOME) {
-            self.scroll_y = 0;
+            self.scroll.y = 0.0;
         }
         if rl.is_key_pressed(KeyboardKey::KEY_END) {
-            self.scroll_y = self.max_scroll();
+            let content_h = self.lines().count() as f32 * self.line_height as f32;
+            self.scroll.y = -(content_h - self.view.height).max(0.0);
         }
-        let wheel = rl.get_mouse_wheel_move();
-        if wheel != 0.0 {
-            self.scroll_y = (self.scroll_y - (wheel * self.line_height as f32 * 3.0) as i32)
-                .max(0)
-                .min(self.max_scroll());
-        }
+        self.scroll.y = self.scroll.y.min(0.0);
     }
 
-    /// Returns the maximum scroll position: the offset that puts the last
-    /// screenful of lines at the top of the viewport.
+    /// Per-frame draw: renders either the small "F1: view source" hint or
+    /// the raygui overlay window, depending on visibility state.
     ///
-    /// Returns 0 when `screen_h` has not yet been populated (before the first
-    /// `update` call).
-    fn max_scroll(&self) -> i32 {
-        let total_lines = self.lines().count() as i32;
-        let body_top = TAB_Y + TAB_H + BODY_TOP_GAP;
-        // Footer URL line lives below the source viewport; reserve room for
-        // it so we don't scroll the last line under the footer.
-        let body_bottom = self.screen_h - PANEL_MARGIN - FOOTER_FONT_SIZE - FOOTER_TOP_GAP;
-        let viewport_h = (body_bottom - body_top).max(self.line_height);
-        let lines_visible = viewport_h / self.line_height;
-        let bottom_line = (total_lines - lines_visible).max(0);
-        bottom_line * self.line_height
-    }
-
-    /// Per-frame draw: renders either the small "F1: view source" hint or the
-    /// full overlay, depending on visibility state.
-    ///
-    /// Must be called inside a [`begin_drawing`](RaylibHandle::begin_drawing)
-    /// scope. Works with any draw handle, including nested mode guards such as
-    /// `RaylibMode3D`, `RaylibShaderMode`, etc. (Fix A).
-    pub fn draw<D: RaylibDraw>(&self, d: &mut D) {
+    /// Takes `&mut self` because raygui is immediate-mode: tab clicks, the
+    /// Copy button, and the window-box close button are all detected while
+    /// drawing. Must be called inside a
+    /// [`begin_drawing`](RaylibHandle::begin_drawing) scope. Works with any
+    /// draw handle, including nested mode guards such as `RaylibMode3D`,
+    /// `RaylibShaderMode`, etc. (Fix A).
+    pub fn draw<D: RaylibDraw>(&mut self, d: &mut D) {
         if self.thumbnail.is_some() {
             return;
         }
@@ -235,81 +240,76 @@ impl SourceViewer {
         d.draw_text(HINT_TEXT, x + pad, y + pad, HINT_FONT_SIZE, Color::WHITE);
     }
 
-    fn draw_overlay<D: RaylibDraw>(&self, d: &mut D) {
-        // Use cached screen dimensions from update() — no RaylibHandle needed (Fix A).
-        d.draw_rectangle(0, 0, self.screen_w, self.screen_h, PANEL_BG);
-
-        let header = format!(
-            "{}  —  F1: close · Tab: swap · PgUp/PgDn: scroll",
-            self.name
+    fn draw_overlay<D: RaylibDraw>(&mut self, d: &mut D) {
+        // raygui window inset from the canvas edges. The title-bar X closes.
+        let win = Rectangle::new(
+            WINDOW_MARGIN,
+            WINDOW_MARGIN,
+            self.screen_w as f32 - 2.0 * WINDOW_MARGIN,
+            self.screen_h as f32 - 2.0 * WINDOW_MARGIN,
         );
-        d.draw_text(&header, PANEL_MARGIN, HEADER_Y, HEADER_FONT_SIZE, PANEL_FG);
-
-        let c_bg = if self.tab == Tab::C {
-            TAB_BG_ACTIVE
-        } else {
-            TAB_BG_INACTIVE
-        };
-        let r_bg = if self.tab == Tab::Rust {
-            TAB_BG_ACTIVE
-        } else {
-            TAB_BG_INACTIVE
-        };
-        d.draw_rectangle(PANEL_MARGIN, TAB_Y, TAB_W, TAB_H, c_bg);
-        d.draw_text(
-            "C",
-            PANEL_MARGIN + TAB_W / 2 - 8,
-            TAB_Y + 6,
-            TAB_FONT_SIZE,
-            PANEL_FG,
-        );
-        d.draw_rectangle(PANEL_MARGIN + TAB_W + 4, TAB_Y, TAB_W, TAB_H, r_bg);
-        d.draw_text(
-            "Rust",
-            PANEL_MARGIN + TAB_W + 4 + TAB_W / 2 - 20,
-            TAB_Y + 6,
-            TAB_FONT_SIZE,
-            PANEL_FG,
-        );
-
-        let body_top = TAB_Y + TAB_H + BODY_TOP_GAP;
-        // Reserve a slim footer band under the source body for the
-        // "Source on GitHub: <url>" line (WS9 P4 GitHub deep-link).
-        let footer_y = self.screen_h - PANEL_MARGIN - FOOTER_FONT_SIZE;
-        let body_bottom = footer_y - FOOTER_TOP_GAP;
-        let body_left = PANEL_MARGIN;
-        let viewport_h = body_bottom - body_top;
-        let first_visible_line = (self.scroll_y / self.line_height).max(0);
-        let lines_visible = (viewport_h / self.line_height) + 2;
-        let mut y = body_top - (self.scroll_y % self.line_height);
-        for (i, line) in self.lines().enumerate() {
-            let idx = i as i32;
-            if idx < first_visible_line {
-                continue;
-            }
-            if idx > first_visible_line + lines_visible {
-                break;
-            }
-            // Don't draw text that would spill into (or under) the footer
-            // band — keeps the URL line readable when the viewport is short.
-            if y > body_bottom {
-                break;
-            }
-            d.draw_text(line, body_left, y, TEXT_FONT_SIZE, PANEL_FG);
-            y += self.line_height;
+        let title = format!("{} — F1: close · Tab: swap source", self.name);
+        if d.gui_window_box(win, &title) {
+            self.visible = false;
+            return;
         }
 
-        // Footer: link to the upstream source for the currently-shown tab.
-        // Rendered as plain text — terminals/canvases don't support real
-        // hyperlinks, so the URL is shown for copy-paste / out-of-band
-        // navigation. The Pages gallery exposes the same URLs as <a> tags.
-        if let Some(pair) = self.pair {
-            let url = match self.tab {
-                Tab::C => pair.c_url,
-                Tab::Rust => pair.rust_url,
-            };
-            let footer = format!("Source on GitHub: {}", url);
-            d.draw_text(&footer, body_left, footer_y, FOOTER_FONT_SIZE, PANEL_FG);
+        // Header strip: C/Rust tab toggles + right-aligned Copy button.
+        let header_y = win.y + STATUSBAR_H + PAD;
+        let mut active = self.tab_idx() as i32;
+        d.gui_toggle_group(
+            Rectangle::new(win.x + PAD, header_y, TAB_W, CTRL_H),
+            "C;Rust",
+            &mut active,
+        );
+        let new_tab = if active == 1 { Tab::Rust } else { Tab::C };
+        if new_tab != self.tab {
+            self.tab = new_tab;
+            self.scroll = Vector2::new(0.0, 0.0);
+        }
+        if d.gui_button(
+            Rectangle::new(win.x + win.width - PAD - COPY_W, header_y, COPY_W, CTRL_H),
+            "Copy",
+        ) {
+            // Serviced by update() next frame — clipboard needs RaylibHandle.
+            self.pending_copy = true;
+        }
+
+        // Body: scroll panel sized to the embedded source text.
+        let panel_y = header_y + CTRL_H + PAD;
+        let panel = Rectangle::new(
+            win.x + PAD,
+            panel_y,
+            win.width - 2.0 * PAD,
+            win.y + win.height - panel_y - PAD,
+        );
+        let line_h = self.line_height as f32;
+        let total_lines = self.lines().count();
+        let content_w = self.content_w[self.tab_idx()].unwrap_or(panel.width);
+        let content = Rectangle::new(
+            0.0,
+            0.0,
+            content_w + 2.0 * PAD,
+            total_lines as f32 * line_h + 2.0 * PAD,
+        );
+        let (_, view, scroll) =
+            d.gui_scroll_panel(panel, None::<&str>, content, self.scroll, self.view);
+        self.scroll = scroll;
+        self.view = view;
+
+        // Source lines, scissored to the panel's inner view so text never
+        // spills under the scrollbars or window chrome.
+        let (first, max_lines) = visible_line_range(scroll.y, PAD, view.height, line_h);
+        let x = (view.x + scroll.x + PAD) as i32;
+        let mut sd = d.begin_scissor_mode(
+            view.x as i32,
+            view.y as i32,
+            view.width as i32,
+            view.height as i32,
+        );
+        for (i, line) in self.lines().enumerate().skip(first).take(max_lines) {
+            let y = view.y + scroll.y + PAD + i as f32 * line_h;
+            sd.draw_text(line, x, y as i32, TEXT_FONT_SIZE, Color::DARKGRAY);
         }
     }
 
@@ -323,6 +323,20 @@ impl SourceViewer {
         };
         source.lines()
     }
+}
+
+/// Converts a raygui scroll offset into the slice of source lines worth
+/// drawing: `(first_line_index, max_line_count)`.
+///
+/// `scroll_y` is `GuiScrollPanel`'s vertical scroll (`<= 0` when scrolled
+/// down), `top_pad` the content rect's top padding, `view_h` the inner
+/// viewport height, `line_h` the per-line advance. The count includes two
+/// slop lines so partially-visible rows at both edges still draw; the
+/// scissor clip trims the spill.
+fn visible_line_range(scroll_y: f32, top_pad: f32, view_h: f32, line_h: f32) -> (usize, usize) {
+    let first = ((-scroll_y - top_pad) / line_h).floor().max(0.0) as usize;
+    let count = (view_h / line_h).ceil() as usize + 2;
+    (first, count)
 }
 
 /// Resolves the current `[[example]] name` from the executable's file stem
@@ -443,6 +457,32 @@ fn capture_and_exit(rl: &mut RaylibHandle, thread: &RaylibThread, out_path: &std
 #[cfg(test)]
 mod tests {
     use super::example_name_from_pathname;
+    use super::visible_line_range;
+
+    // raygui scroll convention: scroll.y <= 0 when scrolled down. The range
+    // helper converts (scroll, viewport, line height) into the slice of
+    // source lines worth drawing.
+    #[test]
+    fn visible_range_at_top() {
+        let (first, count) = visible_line_range(0.0, 8.0, 300.0, 16.0);
+        assert_eq!(first, 0);
+        // ceil(300/16) = 19 visible lines + 2 slop for partial rows.
+        assert_eq!(count, 21);
+    }
+
+    #[test]
+    fn visible_range_scrolled_down() {
+        // 168 px scrolled past 8 px top padding = 10 whole lines hidden.
+        let (first, _) = visible_line_range(-168.0, 8.0, 300.0, 16.0);
+        assert_eq!(first, 10);
+    }
+
+    #[test]
+    fn visible_range_overscroll_clamps_to_zero() {
+        // A positive (out-of-range) scroll must not underflow the index.
+        let (first, _) = visible_line_range(50.0, 8.0, 300.0, 16.0);
+        assert_eq!(first, 0);
+    }
 
     // The Pages site serves each example at `examples/<cat>/<name>.html`
     // (synthesized by xtask_build_pages), so the page filename is the
