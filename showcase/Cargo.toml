@@ -19,13 +19,13 @@ autobins = false
 default = []
 # Mirrors raylib's software_renderer for headless thumbnail generation.
 software_renderer = ["raylib/software_renderer"]
-# Required for the raygui examples in P3.
-raygui = ["raylib/raygui"]
 # Required for core_custom_frame_control (poll_input_events / swap_screen_buffer / wait_time).
 SUPPORT_CUSTOM_FRAME_CONTROL = ["raylib/SUPPORT_CUSTOM_FRAME_CONTROL"]
 
 [dependencies]
-raylib = { version = "6.0.0-rc.2", path = "../raylib" }
+# raygui is always-on: the F1 source viewer (src/viewer.rs) renders raygui
+# controls in every example.
+raylib = { version = "6.0.0-rc.2", path = "../raylib", features = ["raygui"] }
 phf = { version = "0.11", features = ["macros"] }
 toml = "0.8"
 serde = { version = "1", features = ["derive"] }
@@ -70,7 +70,6 @@ path = "examples/audio/audio_sound_positioning.rs"
 [[example]]
 name = "audio_amp_envelope"
 path = "examples/audio/audio_amp_envelope.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "audio_mixed_processor"
@@ -139,12 +138,10 @@ path = "examples/core/core_basic_screen_manager.rs"
 [[example]]
 name = "core_clipboard_text"
 path = "examples/core/core_clipboard_text.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "core_compute_hash"
 path = "examples/core/core_compute_hash.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "core_custom_frame_control"
@@ -162,7 +159,6 @@ path = "examples/core/core_delta_time.rs"
 [[example]]
 name = "core_directory_files"
 path = "examples/core/core_directory_files.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "core_drop_files"
@@ -403,12 +399,10 @@ path = "examples/models/models_animation_gpu_skinning.rs"
 [[example]]
 name = "models_animation_timing"
 path = "examples/models/models_animation_timing.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "models_animation_blending"
 path = "examples/models/models_animation_blending.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "models_animation_blend_custom"
@@ -509,7 +503,6 @@ path = "examples/shaders/shaders_ascii_rendering.rs"
 [[example]]
 name = "shaders_color_correction"
 path = "examples/shaders/shaders_color_correction.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shaders_custom_uniform"
@@ -522,7 +515,6 @@ path = "examples/shaders/shaders_eratosthenes_sieve.rs"
 [[example]]
 name = "shaders_game_of_life"
 path = "examples/shaders/shaders_game_of_life.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shaders_julia_set"
@@ -631,7 +623,6 @@ path = "examples/shapes/shapes_basic_shapes.rs"
 [[example]]
 name = "shapes_circle_sector_drawing"
 path = "examples/shapes/shapes_circle_sector_drawing.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shapes_dashed_line"
@@ -704,12 +695,10 @@ path = "examples/shapes/shapes_digital_clock.rs"
 [[example]]
 name = "shapes_hilbert_curve"
 path = "examples/shapes/shapes_hilbert_curve.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shapes_kaleidoscope"
 path = "examples/shapes/shapes_kaleidoscope.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shapes_logo_raylib"
@@ -726,7 +715,6 @@ path = "examples/shapes/shapes_math_angle_rotation.rs"
 [[example]]
 name = "shapes_math_sine_cosine"
 path = "examples/shapes/shapes_math_sine_cosine.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shapes_vector_angle"
@@ -759,17 +747,14 @@ path = "examples/shapes/shapes_rectangle_scaling.rs"
 [[example]]
 name = "shapes_ring_drawing"
 path = "examples/shapes/shapes_ring_drawing.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shapes_rounded_rectangle_drawing"
 path = "examples/shapes/shapes_rounded_rectangle_drawing.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shapes_pie_chart"
 path = "examples/shapes/shapes_pie_chart.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shapes_penrose_tile"
@@ -778,12 +763,10 @@ path = "examples/shapes/shapes_penrose_tile.rs"
 [[example]]
 name = "shapes_recursive_tree"
 path = "examples/shapes/shapes_recursive_tree.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shapes_rlgl_color_wheel"
 path = "examples/shapes/shapes_rlgl_color_wheel.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shapes_rlgl_triangle"
@@ -792,12 +775,10 @@ path = "examples/shapes/shapes_rlgl_triangle.rs"
 [[example]]
 name = "shapes_splines_drawing"
 path = "examples/shapes/shapes_splines_drawing.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "shapes_triangle_strip"
 path = "examples/shapes/shapes_triangle_strip.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "textures_background_scrolling"
@@ -930,62 +911,50 @@ path = "examples/textures/textures_to_image.rs"
 [[example]]
 name = "scroll_panel"
 path = "examples/raygui/scroll_panel.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "portable_window"
 path = "examples/raygui/portable_window.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "floating_window"
 path = "examples/raygui/floating_window.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "image_exporter"
 path = "examples/raygui/image_exporter.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "image_importer_raw"
 path = "examples/raygui/image_importer_raw.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "style_selector"
 path = "examples/raygui/style_selector.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "custom_input_box"
 path = "examples/raygui/custom_input_box.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "custom_sliders"
 path = "examples/raygui/custom_sliders.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "animation_curve"
 path = "examples/raygui/animation_curve.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "controls_test_suite"
 path = "examples/raygui/controls_test_suite.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "custom_file_dialog"
 path = "examples/raygui/custom_file_dialog.rs"
-required-features = ["raygui"]
 
 [[example]]
 name = "property_list"
 path = "examples/raygui/property_list.rs"
-required-features = ["raygui"]
 
 [[bin]]
 name = "gen-thumbnails"
