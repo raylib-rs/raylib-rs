@@ -44,6 +44,12 @@ impl<'a, T: RaylibDraw> RlImmediate<'a, T> {
         unsafe { ffi::rlVertex3f(x, y, z) }
     }
 
+    /// Emit a 2D vertex (integer coordinates).
+    #[inline]
+    pub fn vertex2i(&mut self, x: i32, y: i32) {
+        unsafe { ffi::rlVertex2i(x, y) }
+    }
+
     /// Set the current vertex color (8-bit RGBA).
     #[inline]
     pub fn color4ub(&mut self, color: impl Into<Color>) {

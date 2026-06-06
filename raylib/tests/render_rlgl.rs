@@ -187,3 +187,34 @@ fn count_blue(img: &Image, x0: i32, x1: i32, y0: i32, y1: i32) -> u32 {
     }
     count
 }
+
+#[test]
+fn rlgl_vertex2i_renders() {
+    raylib::test_harness::with_headless(100, 100, |rl, thread| {
+        let img = raylib::test_harness::render_frame(rl, thread, |d| {
+            d.clear_background(Color::BLACK);
+            unsafe {
+                let tex = raylib::ffi::GetShapesTexture();
+                let tw = tex.width as f32;
+                let th = tex.height as f32;
+                let rect = raylib::ffi::GetShapesTextureRectangle();
+                raylib::ffi::rlSetTexture(tex.id);
+                let mut v = d.rl_begin(DrawMode::Quads);
+                v.normal3f(0.0, 0.0, 1.0);
+                v.color4ub(Color::RED);
+                v.texcoord2f(rect.x / tw, rect.y / th);
+                v.vertex2i(20, 20);
+                v.texcoord2f(rect.x / tw, (rect.y + rect.height) / th);
+                v.vertex2i(20, 80);
+                v.texcoord2f((rect.x + rect.width) / tw, (rect.y + rect.height) / th);
+                v.vertex2i(80, 80);
+                v.texcoord2f((rect.x + rect.width) / tw, rect.y / th);
+                v.vertex2i(80, 20);
+                drop(v); // rlEnd
+                raylib::ffi::rlSetTexture(0);
+            }
+        });
+        let red = count_red(&img, 0, 100, 0, 100);
+        assert!(red > 100, "vertex2i quad produced too few red px: {red}");
+    });
+}
