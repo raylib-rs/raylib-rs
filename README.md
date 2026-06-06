@@ -200,7 +200,7 @@ Two-tier test surface; both run in CI on Windows, Linux, and macOS:
   ```sh
   cargo nextest run -p raylib \
     --no-default-features \
-    --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,raygui
+    --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION,raygui
   ```
 
 raylib's single-init constraint is **per-process, not per-thread**, so `cargo nextest run` (per-test process isolation) is the recommended runner. `cargo test --doc` is still used for doctests; `nextest` does not run them. Contributors without `cargo-nextest` can fall back to `cargo test ... -- --test-threads=1` for files with at most one `with_headless` test per binary.

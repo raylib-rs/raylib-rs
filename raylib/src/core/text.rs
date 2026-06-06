@@ -588,3 +588,35 @@ impl RaylibHandle {
         unsafe { ffi::SetTextLineSpacing(spacing) }
     }
 }
+
+#[cfg(test)]
+mod rslice_tests {
+    use super::*;
+
+    #[test]
+    fn rslice_glyphinfo_drop_routes_through_unload_font_data() {
+        // Build the wrapper over a raylib-allocated, zeroed GlyphInfo array —
+        // the same shape a loader would produce. UnloadFontData unloads each
+        // glyph's image (RL_FREE(NULL) is a no-op for zeroed glyphs) and then
+        // frees the array; ASAN validates both frees.
+        //
+        // GlyphInfo is #[repr(transparent)] over ffi::GlyphInfo, so the Drop
+        // impl's cast (`as *mut _` from *mut GlyphInfo → *mut ffi::GlyphInfo)
+        // is layout-compatible with what we allocate here.
+        const COUNT: usize = 2;
+        let bytes: u32 = (std::mem::size_of::<GlyphInfo>() * COUNT)
+            .try_into()
+            .unwrap();
+        // SAFETY: `bytes` is non-zero (GlyphInfo is non-ZST, COUNT > 0).
+        let ptr = unsafe { ffi::MemAlloc(bytes) }.cast::<GlyphInfo>();
+        assert!(!ptr.is_null(), "MemAlloc should not return null");
+        // SAFETY: ptr is valid for COUNT GlyphInfo elements and exclusively owned here.
+        unsafe { std::ptr::write_bytes(ptr, 0, COUNT) };
+        // SAFETY: ptr is unique, non-dangling, raylib-allocated, and valid
+        // for COUNT initialized (zeroed) elements.
+        let boxed = unsafe { Box::from_raw(std::slice::from_raw_parts_mut(ptr, COUNT)) };
+        let slice = RSliceGlyphInfo(ManuallyDrop::new(boxed));
+        assert_eq!(slice.len(), COUNT);
+        drop(slice); // must free via UnloadFontData, not the Rust allocator
+    }
+}

@@ -3,6 +3,10 @@ use crate::{databuf::DataBuf, error::CompressionError, ffi};
 use std::{ffi::CString, mem::MaybeUninit, path::Path};
 
 /// Compress data (DEFLATE algorithm)
+///
+/// Empty input returns `Err(CompressionFailed)` — raylib produces a
+/// zero-length result for it, which raylib-rs maps to an error rather than
+/// an empty buffer.
 /// ```rust
 /// use raylib::prelude::*;
 /// let data = compress_data(b"11111").unwrap();
@@ -21,14 +25,26 @@ pub fn compress_data(data: &[u8]) -> Result<DataBuf<[u8]>, CompressionError> {
             )
         }
     };
+    // SAFETY: `out_length` is initialized whenever `buffer` is non-null.
+    if !buffer.is_null() && unsafe { out_length.assume_init() } < 1 {
+        // A non-null buffer with no contents: free it and report failure
+        // instead of tripping slice_from_raw's count >= 1 assert.
+        // SAFETY: `buffer` is non-null and raylib-allocated.
+        unsafe { ffi::MemFree(buffer.cast()) };
+        return Err(CompressionError::CompressionFailed);
+    }
     // SAFETY: `CompressData` returns a unique, owned pointer that is safe to dereference for
     // `out_length` valid, initialized elements if `buffer` is not null. It also guarantees
-    // `out_length` is initialized if `buffer` is non-null.
+    // `out_length` is initialized if `buffer` is non-null. The count >= 1 case is handled above.
     unsafe { DataBuf::slice_from_raw(buffer, out_length) }
         .ok_or(CompressionError::CompressionFailed)
 }
 
 /// Decompress data (DEFLATE algorithm)
+///
+/// Empty input or invalid/garbage input returns `Err(CompressionFailed)` —
+/// raylib produces a zero-length result for these, which raylib-rs maps to an
+/// error rather than an empty buffer.
 /// ```rust
 /// use raylib::prelude::*;
 /// let input: &[u8] = &[1, 5, 0, 250, 255, 49, 49, 49, 49, 49];
@@ -37,11 +53,8 @@ pub fn compress_data(data: &[u8]) -> Result<DataBuf<[u8]>, CompressionError> {
 /// assert_eq!(data.as_ref(), expected);
 /// ```
 pub fn decompress_data(data: &[u8]) -> Result<DataBuf<[u8]>, CompressionError> {
-    #[cfg(debug_assertions)]
-    println!("{:?}", data.len());
-
     let mut out_length = MaybeUninit::uninit();
-    // CompressData doesn't actually modify the data, but the header is wrong
+    // DecompressData doesn't actually modify the data, but the header is wrong
     let buffer = {
         unsafe {
             ffi::DecompressData(
@@ -51,9 +64,17 @@ pub fn decompress_data(data: &[u8]) -> Result<DataBuf<[u8]>, CompressionError> {
             )
         }
     };
+    // SAFETY: `out_length` is initialized whenever `buffer` is non-null.
+    if !buffer.is_null() && unsafe { out_length.assume_init() } < 1 {
+        // A non-null buffer with no contents: free it and report failure
+        // instead of tripping slice_from_raw's count >= 1 assert.
+        // SAFETY: `buffer` is non-null and raylib-allocated.
+        unsafe { ffi::MemFree(buffer.cast()) };
+        return Err(CompressionError::CompressionFailed);
+    }
     // SAFETY: `DecompressData` returns a unique, owned pointer that is safe to dereference for
     // `out_length` valid, initialized elements if `buffer` is not null. It also guarantees
-    // `out_length` is initialized if `buffer` is non-null.
+    // `out_length` is initialized if `buffer` is non-null. The count >= 1 case is handled above.
     unsafe { DataBuf::slice_from_raw(buffer, out_length) }
         .ok_or(CompressionError::CompressionFailed)
 }
@@ -87,6 +108,9 @@ pub fn encode_data_base64(data: &[u8]) -> Result<DataBuf<[u8]>, Base64Error> {
 }
 
 /// Decode Base64 data
+///
+/// Empty input returns `Err(DecodeFailed)` — raylib produces a zero-length
+/// result for it, which raylib-rs maps to an error rather than an empty buffer.
 pub fn decode_data_base64(data: &[u8]) -> Result<DataBuf<[u8]>, Base64Error> {
     let mut output_size = MaybeUninit::<i32>::uninit();
     let null_trimmed_data = match data.iter().position(|&element| element == 0) {
@@ -103,5 +127,13 @@ pub fn decode_data_base64(data: &[u8]) -> Result<DataBuf<[u8]>, Base64Error> {
             output_size.as_mut_ptr(),
         )
     };
+    // SAFETY: `output_size` is initialized whenever `bytes` is non-null.
+    if !bytes.is_null() && unsafe { output_size.assume_init() } < 1 {
+        // A non-null buffer with no contents: free it and report failure
+        // instead of tripping slice_from_raw's count >= 1 assert.
+        // SAFETY: `bytes` is non-null and raylib-allocated.
+        unsafe { ffi::MemFree(bytes.cast()) };
+        return Err(Base64Error::DecodeFailed);
+    }
     unsafe { DataBuf::slice_from_raw(bytes, output_size) }.ok_or(Base64Error::DecodeFailed)
 }

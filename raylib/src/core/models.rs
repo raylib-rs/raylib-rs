@@ -1749,7 +1749,7 @@ mod mesh_soundness {
         // Accessors must return empty slices, not call slice::from_raw_parts(null, _).
         // We use WeakMesh (no-drop) so no UnloadMesh is called on a null-pointer mesh.
         let ffi_mesh: ffi::Mesh = unsafe { std::mem::zeroed() };
-        let m = WeakMesh(ffi_mesh);
+        let mut m = WeakMesh(ffi_mesh);
         assert!(
             m.vertices().is_empty(),
             "vertices() on null ptr must be empty"
@@ -1763,6 +1763,10 @@ mod mesh_soundness {
             "texcoords() on null ptr must be empty"
         );
         assert!(
+            m.texcoords2().is_empty(),
+            "texcoords2() on null ptr must be empty"
+        );
+        assert!(
             m.tangents().is_empty(),
             "tangents() on null ptr must be empty"
         );
@@ -1771,6 +1775,14 @@ mod mesh_soundness {
             m.indices().is_empty(),
             "indices() on null ptr must be empty"
         );
+        // The _mut accessors share the same null guard — verify all of them.
+        assert!(m.vertices_mut().is_empty());
+        assert!(m.normals_mut().is_empty());
+        assert!(m.texcoords_mut().is_empty());
+        assert!(m.texcoords2_mut().is_empty());
+        assert!(m.tangents_mut().is_empty());
+        assert!(m.colors_mut().is_empty());
+        assert!(m.indices_mut().is_empty());
         // WeakMesh does not call UnloadMesh on drop, so no cleanup needed.
     }
 }

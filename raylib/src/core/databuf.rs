@@ -513,7 +513,11 @@ impl<T> DataBuf<[T]> {
         })
     }
 
-    /// Allocate memory managed by Raylib and initialize by copying.
+    /// Allocate memory managed by Raylib and initialize by cloning each element.
+    ///
+    /// If a `clone()` panics partway through, the already-cloned prefix is
+    /// dropped and the allocation is freed before the panic propagates — no
+    /// leak, no drop of uninitialized memory.
     ///
     /// # Panics
     ///
@@ -522,19 +526,43 @@ impl<T> DataBuf<[T]> {
     /// # Example
     /// ```
     /// # use raylib::prelude::DataBuf;
-    /// let src = [4, 8, -23, 9, 0];
-    /// let mut data_buf = DataBuf::<[i32]>::alloc_from_copy(&src).unwrap();
-    /// assert_eq!(data_buf.as_ref(), &src);
+    /// let src = vec![String::from("a"), String::from("b")];
+    /// let data_buf = DataBuf::<[String]>::alloc_from_clone(&src).unwrap();
+    /// assert_eq!(data_buf.as_ref(), src.as_slice());
     /// ```
     pub fn alloc_from_clone(src: &[T]) -> Result<Self, AllocationError>
     where
-        T: Copy,
+        T: Clone,
     {
+        /// Drops the initialized prefix of the buffer if a `clone()` unwinds.
+        struct InitGuard<'a, T> {
+            buf: &'a mut [MaybeUninit<T>],
+            init: usize,
+        }
+        impl<T> Drop for InitGuard<'_, T> {
+            fn drop(&mut self) {
+                for elem in &mut self.buf[..self.init] {
+                    // SAFETY: the first `init` elements were initialized by
+                    // the clone loop below before the unwind began.
+                    unsafe { elem.assume_init_drop() };
+                }
+            }
+        }
+
         let mut buf = Self::alloc(src.len())?;
-        // SAFETY: `&[T]` and `&[MaybeUninit<T>]` have the same layout. Reference to is non-null.
-        let uninit_src = unsafe { &*(std::ptr::from_ref::<[T]>(src) as *const [MaybeUninit<T>]) };
-        buf.copy_from_slice(uninit_src);
-        // SAFETY: Valid elements have just been copied into `self` so it is initialized.
+
+        let mut guard = InitGuard {
+            buf: buf.as_mut(),
+            init: 0,
+        };
+        while guard.init < src.len() {
+            let i = guard.init;
+            guard.buf[i].write(src[i].clone());
+            guard.init = i + 1;
+        }
+        // All elements initialized — disarm the guard (releases the borrow).
+        std::mem::forget(guard);
+        // SAFETY: the loop above initialized all `src.len()` elements.
         Ok(unsafe { buf.assume_init() })
     }
 
@@ -657,5 +685,247 @@ mod tests {
         }
         .expect("ptr should be convertible to DataBuf");
         assert_eq!(&*buf, &EXPECT);
+    }
+
+    #[test]
+    fn test_alloc_from_clone_non_copy() {
+        // A non-Copy T: this does not compile against the old `T: Copy` bound.
+        #[derive(Clone, PartialEq, Debug)]
+        struct NonCopy(String);
+        let src = [
+            NonCopy("a".into()),
+            NonCopy("b".into()),
+            NonCopy("c".into()),
+        ];
+        let buf = DataBuf::<[NonCopy]>::alloc_from_clone(&src).unwrap();
+        assert_eq!(&*buf, &src);
+    }
+
+    #[test]
+    fn test_alloc_from_clone_panic_drops_prefix() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct Bomb<'a> {
+            drops: &'a AtomicUsize,
+            clones: &'a AtomicUsize,
+            fuse: usize,
+        }
+        impl Clone for Bomb<'_> {
+            fn clone(&self) -> Self {
+                let n = self.clones.fetch_add(1, Ordering::SeqCst);
+                assert!(n + 1 != self.fuse, "boom: clone #{} hit the fuse", n + 1);
+                Bomb {
+                    drops: self.drops,
+                    clones: self.clones,
+                    fuse: self.fuse,
+                }
+            }
+        }
+        impl Drop for Bomb<'_> {
+            fn drop(&mut self) {
+                self.drops.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+
+        let drops = AtomicUsize::new(0);
+        let clones = AtomicUsize::new(0);
+        let mk = |fuse| Bomb {
+            drops: &drops,
+            clones: &clones,
+            fuse,
+        };
+        // Third clone panics.
+        let src = [mk(3), mk(3), mk(3)];
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            DataBuf::<[Bomb]>::alloc_from_clone(&src)
+        }));
+        assert!(result.is_err(), "the clone panic must propagate");
+        // The 2 successfully-cloned elements must have been dropped during
+        // unwind (the buffer free itself is validated by the ASAN/LSAN leg).
+        assert_eq!(
+            drops.load(Ordering::SeqCst),
+            2,
+            "prefix must be dropped on unwind"
+        );
+        drop(src);
+        assert_eq!(
+            drops.load(Ordering::SeqCst),
+            5,
+            "source elements drop normally"
+        );
+    }
+
+    #[test]
+    fn test_alloc_zst_errors() {
+        // Zero-sized T → zero bytes requested → rejected before the FFI call.
+        let r = DataBuf::<()>::alloc();
+        assert!(matches!(r, Err(AllocationError::ZeroBytes)), "got {r:?}");
+    }
+
+    #[test]
+    fn test_alloc_slice_zero_len_errors() {
+        let r = DataBuf::<[u8]>::alloc(0);
+        assert!(matches!(r, Err(AllocationError::ZeroBytes)), "got {r:?}");
+    }
+
+    #[test]
+    fn test_alloc_slice_layout_overflow_errors() {
+        // Layout::array overflows isize::MAX → IntoUIntFailed.
+        let r = DataBuf::<[u64]>::alloc(usize::MAX);
+        assert!(
+            matches!(r, Err(AllocationError::IntoUIntFailed)),
+            "got {r:?}"
+        );
+    }
+
+    /// 64-bit only: on 32-bit targets the count expression itself would
+    /// overflow usize before reaching `alloc`.
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn test_alloc_slice_over_u32_max_errors() {
+        // Fits in usize on 64-bit but the byte size exceeds u32::MAX — the
+        // largest request expressible through ffi::MemAlloc(unsigned int).
+        let count = (u32::MAX as usize) + 1;
+        let r = DataBuf::<[u8]>::alloc(count);
+        assert!(
+            matches!(r, Err(AllocationError::IntoUIntFailed)),
+            "got {r:?}"
+        );
+    }
+
+    #[test]
+    fn test_alloc_large_but_valid_succeeds() {
+        // 1 MiB: well within u32::MAX, must succeed and be fully writable.
+        const MIB: usize = 1 << 20;
+        let buf = DataBuf::<[u8]>::alloc_from_copy(&vec![0xA5u8; MIB]).unwrap();
+        assert_eq!(buf.len(), MIB);
+        assert!(buf.iter().all(|&b| b == 0xA5));
+    }
+
+    #[test]
+    fn test_alloc_from_error_returns_value() {
+        // ZST → ZeroBytes; the error tuple must hand the value back intact.
+        #[derive(Debug, PartialEq)]
+        struct Zst;
+        let (err, val) = DataBuf::alloc_from(Zst).unwrap_err();
+        assert!(matches!(err, AllocationError::ZeroBytes));
+        assert_eq!(val, Zst);
+    }
+
+    #[test]
+    fn test_realloc_grow_preserves_prefix() {
+        let buf = DataBuf::<[i32]>::alloc_from_copy(&[1, 2, 3]).unwrap();
+        let mut grown = buf.realloc(6).map_err(|(e, _)| e).expect("realloc grow");
+        grown[3].write(4);
+        grown[4].write(5);
+        grown[5].write(6);
+        // SAFETY: indices 0..3 were initialized by alloc_from_copy and are
+        // preserved by mem_realloc (documented); 3..6 were just written.
+        let grown = unsafe { grown.assume_init() };
+        assert_eq!(&*grown, &[1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn test_realloc_shrink_keeps_prefix() {
+        let buf = DataBuf::<[i32]>::alloc_from_copy(&[1, 2, 3, 4, 5, 6]).unwrap();
+        let shrunk = buf.realloc(3).map_err(|(e, _)| e).expect("realloc shrink");
+        // SAFETY: all 3 remaining elements were initialized before the shrink.
+        let shrunk = unsafe { shrunk.assume_init() };
+        assert_eq!(&*shrunk, &[1, 2, 3]);
+    }
+
+    #[test]
+    fn test_realloc_zero_returns_original_usable() {
+        let buf = DataBuf::<[i32]>::alloc_from_copy(&[7, 8, 9]).unwrap();
+        let (err, orig) = buf.realloc(0).unwrap_err();
+        assert!(matches!(err, AllocationError::ZeroBytes));
+        // The original buffer must come back untouched and still owned.
+        assert_eq!(&*orig, &[7, 8, 9]);
+    }
+
+    #[test]
+    fn test_slice_drop_count() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct DropCounter<'a>(&'a AtomicUsize);
+        impl Clone for DropCounter<'_> {
+            fn clone(&self) -> Self {
+                DropCounter(self.0)
+            }
+        }
+        impl Drop for DropCounter<'_> {
+            fn drop(&mut self) {
+                self.0.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+        let drops = AtomicUsize::new(0);
+        {
+            let src = [
+                DropCounter(&drops),
+                DropCounter(&drops),
+                DropCounter(&drops),
+            ];
+            let buf = DataBuf::<[DropCounter]>::alloc_from_clone(&src).unwrap();
+            assert_eq!(drops.load(Ordering::SeqCst), 0, "no drops while alive");
+            drop(buf);
+            assert_eq!(
+                drops.load(Ordering::SeqCst),
+                3,
+                "each buffer element dropped exactly once"
+            );
+            // `src` drops here → +3.
+        }
+        assert_eq!(drops.load(Ordering::SeqCst), 6);
+    }
+
+    #[test]
+    fn test_into_inner_suppresses_content_drop() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct DropCounter<'a>(&'a AtomicUsize);
+        impl Drop for DropCounter<'_> {
+            fn drop(&mut self) {
+                self.0.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+        let drops = AtomicUsize::new(0);
+        let buf = DataBuf::alloc_from(DropCounter(&drops))
+            .map_err(|(e, _)| e)
+            .unwrap();
+        let raw = buf.into_inner(); // DataBuf::drop suppressed
+        assert_eq!(drops.load(Ordering::SeqCst), 0, "into_inner must not drop");
+        // mem_free frees the raw bytes; it does NOT call Drop on the contained
+        // value — the DropCounter's destructor is intentionally never run here.
+        raw.mem_free(); // manual free — omitting this is what the LSAN leg would flag
+        assert_eq!(
+            drops.load(Ordering::SeqCst),
+            0,
+            "mem_free is documented not to drop contents"
+        );
+    }
+
+    #[test]
+    fn test_view_parity() {
+        let mut buf = DataBuf::<[u8]>::alloc_from_copy(b"hello").unwrap();
+        assert_eq!(&*buf, b"hello"); // Deref
+        assert_eq!(buf.as_ref(), b"hello"); // inherent as_ref
+        buf.as_mut()[0] = b'H'; // inherent as_mut
+        assert_eq!(&*buf, b"Hello");
+        let via_trait: &[u8] = AsRef::as_ref(&buf); // trait AsRef
+        assert_eq!(via_trait, b"Hello");
+        let via_trait_mut: &mut [u8] = AsMut::as_mut(&mut buf); // trait AsMut
+        via_trait_mut[1] = b'E';
+        assert_eq!(&*buf, b"HEllo");
+    }
+
+    #[test]
+    #[should_panic(expected = "`count` should be positive")]
+    fn test_slice_from_raw_zero_count_panics() {
+        // SAFETY: 4 is non-zero.
+        let ptr = unsafe { ffi::MemAlloc(4) }.cast::<i32>();
+        assert!(!ptr.is_null(), "should be able to allocate");
+        // count == 0 with a non-null ptr violates slice_from_raw's contract.
+        // (The allocation leaks on the panic path — fine in a should_panic test
+        // that is not part of the LSAN run-set.)
+        // SAFETY: ptr is non-null and Raylib-allocated; count is intentionally
+        // zero to exercise the panic guard.
+        let _ = unsafe { DataBuf::slice_from_raw(ptr, MaybeUninit::new(0)) };
     }
 }
