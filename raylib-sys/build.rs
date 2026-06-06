@@ -330,7 +330,11 @@ fn gen_bindings() {
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .clang_arg("-I../raylib/src")
+        // Vendored raylib headers, relative to the build-script CWD (the package
+        // root). nobuild.h resolves raylib.h/raymath.h/rlgl.h through this -I;
+        // binding.h's quoted ../raylib/src/ includes resolve file-relative and
+        // don't need it.
+        .clang_arg("-Iraylib/src")
         .clang_arg("-std=c99")
         .clang_arg(plat)
         // RAYMATH_IMPLEMENTATION makes RMAPI expand to `extern inline` so
@@ -474,7 +478,7 @@ fn main() {
     let header;
     #[cfg(feature = "nobuild")]
     {
-        header = "/usr/include/raylib.h"
+        header = "binding/nobuild.h"
     }
     #[cfg(not(feature = "nobuild"))]
     {
