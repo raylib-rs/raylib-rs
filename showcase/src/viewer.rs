@@ -143,9 +143,6 @@ impl SourceViewer {
                 self.scroll = Vector2::new(0.0, 0.0);
             }
         }
-        if !self.visible {
-            return;
-        }
 
         // Service the Copy click recorded by draw() last frame.
         if self.pending_copy {
@@ -159,6 +156,10 @@ impl SourceViewer {
                 // would mean a corrupt registry — ignore rather than panic.
                 let _ = rl.set_clipboard_text(src);
             }
+        }
+
+        if !self.visible {
+            return;
         }
 
         if rl.is_key_pressed(KeyboardKey::KEY_TAB) {
@@ -262,7 +263,10 @@ impl SourceViewer {
             "C;Rust",
             &mut active,
         );
-        let new_tab = if active == 1 { Tab::Rust } else { Tab::C };
+        let new_tab = match active {
+            1 => Tab::Rust,
+            _ => Tab::C,
+        };
         if new_tab != self.tab {
             self.tab = new_tab;
             self.scroll = Vector2::new(0.0, 0.0);
@@ -482,6 +486,15 @@ mod tests {
         // A positive (out-of-range) scroll must not underflow the index.
         let (first, _) = visible_line_range(50.0, 8.0, 300.0, 16.0);
         assert_eq!(first, 0);
+    }
+
+    #[test]
+    fn visible_range_zero_viewport_first_frame() {
+        // Before the first draw the scroll panel's view rect is zeroed; the
+        // helper must stay sane (only the 2 slop lines, no underflow).
+        let (first, count) = visible_line_range(0.0, 8.0, 0.0, 16.0);
+        assert_eq!(first, 0);
+        assert_eq!(count, 2);
     }
 
     // The Pages site serves each example at `examples/<cat>/<name>.html`
