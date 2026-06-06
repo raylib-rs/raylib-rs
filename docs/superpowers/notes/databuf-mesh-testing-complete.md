@@ -421,6 +421,15 @@ exactly the class of finding the leg was added for:
 No leak (LSAN) findings were reported before the ASAN halt; the post-fix
 sweep is the authoritative leak record.
 
+#### Post-fix verification (2026-06-06)
+
+Sanitizers run **27052505012** (`workflow_dispatch` on the PR-B branch with
+the guard in place): fully green. ASAN+LSAN step (`detect_leaks=1`) ran all
+**11/11** `databuf_lifetimes` tests with **zero ASAN errors and zero
+LeakSanitizer reports** — no further findings were hiding behind the halted
+first run, and the wrapper family leaks nothing under LSAN. The ASAN and
+UBSAN render-test steps also passed.
+
 ## Dead-code disposition
 
 **`RSliceGlyphInfo`** — producer-less from the safe API's perspective. No public
