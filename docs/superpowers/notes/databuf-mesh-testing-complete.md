@@ -251,7 +251,7 @@ changed (the count is 1, which satisfies `slice_from_raw`'s assert).
 | empty dir → count == 0 (pinned: non-null paths array even for empty dir) | `file_path_list_real_directory` | `render_alloc_lifetimes.rs` |
 | Drop via `UnloadDirectoryFiles` (ASAN validates free) | `file_path_list_real_directory` | `render_alloc_lifetimes.rs` |
 
-### Mesh slice accessors (8 accessor pairs)
+### Mesh slice accessors (7 accessor pairs)
 
 | Edge case | Test fn | File |
 |---|---|---|
@@ -327,7 +327,7 @@ changed (the count is 1, which satisfies `slice_from_raw`'s assert).
 - `test_slice_from_raw_zero_count_panics` (new, `#[should_panic]`)
 
 **`raylib/src/core/models.rs`** (in-file, `mesh_soundness` module):
-- `null_field_accessors_are_empty_not_ub` (extended to all 8 accessor pairs — was single-case)
+- `null_field_accessors_are_empty_not_ub` (extended to all 7 accessor pairs — the plan said "8", but `RaylibMesh` has exactly 7 slice-accessor pairs: vertices/normals/texcoords/texcoords2/tangents/colors/indices; `bones` lives on `RaylibModel`)
 
 **`raylib/src/core/text.rs`** (in-file, `rslice_tests` module):
 - `rslice_glyphinfo_drop_routes_through_unload_font_data` (new)
@@ -415,29 +415,6 @@ gap.
 ## Future-work list
 
 > The sub-list below was seeded during the rlgl coverage audit (Task 8) for the maintainer checkpoint.
-
-**Seeded during audit:**
-
-- The IQM-survives-`-DSUPPORT_FILEFORMAT_IQM=OFF` cmake mystery (from
-  `raylib/tests/integration_model_animations.rs`'s NOTE — investigate why format-disabling doesn't
-  compile loaders out under `CUSTOMIZE_BUILD`).
-- `RSliceGlyphInfo` is producer-less (dead code from a caller's perspective) — wire to a
-  glyph-loading API or remove next breaking cycle. (The type is produced internally in tests via
-  `MemAlloc` to verify `Drop`, but no public `fn` returns `RSliceGlyphInfo`; `load_font_data`
-  returns `Option<GlyphInfo>` instead.)
-
-**Future-work rlgl fns (37 — safe-state tier follow-up candidates):**
-
-`rlCheckErrors`, `rlClearColor`, `rlClearScreenBuffers`, `rlColorMask`,
-`rlDisableColorBlend`, `rlDisableDepthMask`, `rlDisablePointMode`, `rlDisableScissorTest`,
-`rlDisableSmoothLines`, `rlDisableWireMode`, `rlEnableColorBlend`, `rlEnableDepthMask`,
-`rlEnablePointMode`, `rlEnableScissorTest`, `rlEnableSmoothLines`, `rlEnableWireMode`,
-`rlFrustum`, `rlGetCullDistanceFar`, `rlGetCullDistanceNear`, `rlGetLineWidth`,
-`rlGetMatrixModelview` (also used internally), `rlGetMatrixProjection` (also used internally),
-`rlGetMatrixTransform`, `rlGetPixelFormatName`, `rlGetPointSize`,
-`rlLoadDrawCube`, `rlLoadDrawQuad`, `rlReadScreenPixels`,
-`rlScissor`, `rlSetBlendFactors`, `rlSetBlendFactorsSeparate`, `rlSetBlendMode`,
-`rlSetClipPlanes`, `rlSetCullFace`, `rlSetLineWidth`, `rlSetPointSize`, `rlViewport`.
 
 **Seeded during audit:**
 
