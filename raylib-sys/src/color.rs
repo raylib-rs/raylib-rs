@@ -61,7 +61,7 @@ impl From<(u8, u8, u8, u8)> for Color {
 
 impl Color {
     /// produces Color from a hex string(6 characters long)
-    pub fn from_hex(color_hex_str: &str) -> Result<Color, std::num::ParseIntError> {
+    pub fn from_hex(color_hex_str: &str) -> Result<Color, core::num::ParseIntError> {
         let color = i32::from_str_radix(color_hex_str, 16)?;
         let b = color % 0x100;
         let g = (color - b) / 0x100 % 0x100;

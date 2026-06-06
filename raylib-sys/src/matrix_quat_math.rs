@@ -164,7 +164,7 @@ impl Matrix {
     }
 }
 
-impl std::ops::Mul for Matrix {
+impl core::ops::Mul for Matrix {
     type Output = Matrix;
     #[inline]
     fn mul(self, rhs: Matrix) -> Matrix {
@@ -172,14 +172,14 @@ impl std::ops::Mul for Matrix {
         unsafe { crate::MatrixMultiply(self, rhs) }
     }
 }
-impl std::ops::MulAssign for Matrix {
+impl core::ops::MulAssign for Matrix {
     #[inline]
     fn mul_assign(&mut self, rhs: Matrix) {
         *self = *self * rhs;
     }
 }
 
-impl std::ops::Add for Matrix {
+impl core::ops::Add for Matrix {
     type Output = Matrix;
     #[inline]
     fn add(self, rhs: Matrix) -> Matrix {
@@ -187,14 +187,14 @@ impl std::ops::Add for Matrix {
         unsafe { crate::MatrixAdd(self, rhs) }
     }
 }
-impl std::ops::AddAssign for Matrix {
+impl core::ops::AddAssign for Matrix {
     #[inline]
     fn add_assign(&mut self, rhs: Matrix) {
         *self = *self + rhs;
     }
 }
 
-impl std::ops::Sub for Matrix {
+impl core::ops::Sub for Matrix {
     type Output = Matrix;
     #[inline]
     fn sub(self, rhs: Matrix) -> Matrix {
@@ -202,7 +202,7 @@ impl std::ops::Sub for Matrix {
         unsafe { crate::MatrixSubtract(self, rhs) }
     }
 }
-impl std::ops::SubAssign for Matrix {
+impl core::ops::SubAssign for Matrix {
     #[inline]
     fn sub_assign(&mut self, rhs: Matrix) {
         *self = *self - rhs;
@@ -388,7 +388,7 @@ impl Quaternion {
     }
 }
 
-impl std::ops::Add for Quaternion {
+impl core::ops::Add for Quaternion {
     type Output = Quaternion;
     #[inline]
     fn add(self, rhs: Quaternion) -> Quaternion {
@@ -396,14 +396,14 @@ impl std::ops::Add for Quaternion {
         unsafe { crate::QuaternionAdd(self, rhs) }
     }
 }
-impl std::ops::AddAssign for Quaternion {
+impl core::ops::AddAssign for Quaternion {
     #[inline]
     fn add_assign(&mut self, rhs: Quaternion) {
         *self = *self + rhs;
     }
 }
 
-impl std::ops::Sub for Quaternion {
+impl core::ops::Sub for Quaternion {
     type Output = Quaternion;
     #[inline]
     fn sub(self, rhs: Quaternion) -> Quaternion {
@@ -411,14 +411,14 @@ impl std::ops::Sub for Quaternion {
         unsafe { crate::QuaternionSubtract(self, rhs) }
     }
 }
-impl std::ops::SubAssign for Quaternion {
+impl core::ops::SubAssign for Quaternion {
     #[inline]
     fn sub_assign(&mut self, rhs: Quaternion) {
         *self = *self - rhs;
     }
 }
 
-impl std::ops::Mul for Quaternion {
+impl core::ops::Mul for Quaternion {
     type Output = Quaternion;
     #[inline]
     fn mul(self, rhs: Quaternion) -> Quaternion {
@@ -426,14 +426,14 @@ impl std::ops::Mul for Quaternion {
         unsafe { crate::QuaternionMultiply(self, rhs) }
     }
 }
-impl std::ops::MulAssign for Quaternion {
+impl core::ops::MulAssign for Quaternion {
     #[inline]
     fn mul_assign(&mut self, rhs: Quaternion) {
         *self = *self * rhs;
     }
 }
 
-impl std::ops::Mul<f32> for Quaternion {
+impl core::ops::Mul<f32> for Quaternion {
     type Output = Quaternion;
     #[inline]
     fn mul(self, rhs: f32) -> Quaternion {
@@ -441,14 +441,14 @@ impl std::ops::Mul<f32> for Quaternion {
         unsafe { crate::QuaternionScale(self, rhs) }
     }
 }
-impl std::ops::MulAssign<f32> for Quaternion {
+impl core::ops::MulAssign<f32> for Quaternion {
     #[inline]
     fn mul_assign(&mut self, rhs: f32) {
         *self = *self * rhs;
     }
 }
 
-impl std::ops::Div for Quaternion {
+impl core::ops::Div for Quaternion {
     type Output = Quaternion;
     #[inline]
     fn div(self, rhs: Quaternion) -> Quaternion {
@@ -456,7 +456,7 @@ impl std::ops::Div for Quaternion {
         unsafe { crate::QuaternionDivide(self, rhs) }
     }
 }
-impl std::ops::DivAssign for Quaternion {
+impl core::ops::DivAssign for Quaternion {
     #[inline]
     fn div_assign(&mut self, rhs: Quaternion) {
         *self = *self / rhs;

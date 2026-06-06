@@ -319,6 +319,7 @@ fn gen_bindings() {
     }
     let mut builder = bindgen::Builder::default()
         .header(header)
+        .use_core()
         .rustified_enum(".+")
         .derive_partialeq(true)
         .derive_default(true)
@@ -350,6 +351,16 @@ fn gen_bindings() {
     if platform == Platform::Desktop && os == PlatformOS::Windows {
         // odd workaround for booleans being broken
         builder = builder.clang_arg("-D__STDC__");
+    }
+
+    // nobuild bindings may be consumed cross-target via nobindgen +
+    // RAYLIB_BINDGEN_LOCATION (e.g. the no-std CI leg compile-checks a
+    // host-generated binding for thumbv7em). bindgen's layout asserts
+    // hardcode the generating host's pointer width and break such
+    // compile-only cross-checks; hosted default builds keep them.
+    #[cfg(feature = "nobuild")]
+    {
+        builder = builder.layout_tests(false);
     }
 
     if platform == Platform::Web {

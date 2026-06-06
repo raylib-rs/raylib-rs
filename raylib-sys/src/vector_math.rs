@@ -247,7 +247,7 @@ impl Vector2 {
     }
 }
 
-impl std::ops::Add for Vector2 {
+impl core::ops::Add for Vector2 {
     type Output = Vector2;
     #[inline]
     fn add(self, rhs: Vector2) -> Vector2 {
@@ -255,14 +255,14 @@ impl std::ops::Add for Vector2 {
         unsafe { crate::Vector2Add(self, rhs) }
     }
 }
-impl std::ops::AddAssign for Vector2 {
+impl core::ops::AddAssign for Vector2 {
     #[inline]
     fn add_assign(&mut self, rhs: Vector2) {
         *self = *self + rhs;
     }
 }
 
-impl std::ops::Sub for Vector2 {
+impl core::ops::Sub for Vector2 {
     type Output = Vector2;
     #[inline]
     fn sub(self, rhs: Vector2) -> Vector2 {
@@ -270,14 +270,14 @@ impl std::ops::Sub for Vector2 {
         unsafe { crate::Vector2Subtract(self, rhs) }
     }
 }
-impl std::ops::SubAssign for Vector2 {
+impl core::ops::SubAssign for Vector2 {
     #[inline]
     fn sub_assign(&mut self, rhs: Vector2) {
         *self = *self - rhs;
     }
 }
 
-impl std::ops::Mul<f32> for Vector2 {
+impl core::ops::Mul<f32> for Vector2 {
     type Output = Vector2;
     #[inline]
     fn mul(self, rhs: f32) -> Vector2 {
@@ -285,14 +285,14 @@ impl std::ops::Mul<f32> for Vector2 {
         unsafe { crate::Vector2Scale(self, rhs) }
     }
 }
-impl std::ops::MulAssign<f32> for Vector2 {
+impl core::ops::MulAssign<f32> for Vector2 {
     #[inline]
     fn mul_assign(&mut self, rhs: f32) {
         *self = *self * rhs;
     }
 }
 
-impl std::ops::Mul<Vector2> for Vector2 {
+impl core::ops::Mul<Vector2> for Vector2 {
     type Output = Vector2;
     #[inline]
     fn mul(self, rhs: Vector2) -> Vector2 {
@@ -301,7 +301,7 @@ impl std::ops::Mul<Vector2> for Vector2 {
     }
 }
 
-impl std::ops::Div<Vector2> for Vector2 {
+impl core::ops::Div<Vector2> for Vector2 {
     type Output = Vector2;
     #[inline]
     fn div(self, rhs: Vector2) -> Vector2 {
@@ -310,7 +310,7 @@ impl std::ops::Div<Vector2> for Vector2 {
     }
 }
 
-impl std::ops::Neg for Vector2 {
+impl core::ops::Neg for Vector2 {
     type Output = Vector2;
     #[inline]
     fn neg(self) -> Vector2 {
@@ -662,7 +662,7 @@ pub fn vector3_ortho_normalize(v1: &mut Vector3, v2: &mut Vector3) {
     unsafe { crate::Vector3OrthoNormalize(v1 as *mut _, v2 as *mut _) }
 }
 
-impl std::ops::Add for Vector3 {
+impl core::ops::Add for Vector3 {
     type Output = Vector3;
     #[inline]
     fn add(self, rhs: Vector3) -> Vector3 {
@@ -670,14 +670,14 @@ impl std::ops::Add for Vector3 {
         unsafe { crate::Vector3Add(self, rhs) }
     }
 }
-impl std::ops::AddAssign for Vector3 {
+impl core::ops::AddAssign for Vector3 {
     #[inline]
     fn add_assign(&mut self, rhs: Vector3) {
         *self = *self + rhs;
     }
 }
 
-impl std::ops::Sub for Vector3 {
+impl core::ops::Sub for Vector3 {
     type Output = Vector3;
     #[inline]
     fn sub(self, rhs: Vector3) -> Vector3 {
@@ -685,14 +685,14 @@ impl std::ops::Sub for Vector3 {
         unsafe { crate::Vector3Subtract(self, rhs) }
     }
 }
-impl std::ops::SubAssign for Vector3 {
+impl core::ops::SubAssign for Vector3 {
     #[inline]
     fn sub_assign(&mut self, rhs: Vector3) {
         *self = *self - rhs;
     }
 }
 
-impl std::ops::Mul<f32> for Vector3 {
+impl core::ops::Mul<f32> for Vector3 {
     type Output = Vector3;
     #[inline]
     fn mul(self, rhs: f32) -> Vector3 {
@@ -700,14 +700,14 @@ impl std::ops::Mul<f32> for Vector3 {
         unsafe { crate::Vector3Scale(self, rhs) }
     }
 }
-impl std::ops::MulAssign<f32> for Vector3 {
+impl core::ops::MulAssign<f32> for Vector3 {
     #[inline]
     fn mul_assign(&mut self, rhs: f32) {
         *self = *self * rhs;
     }
 }
 
-impl std::ops::Mul<Vector3> for Vector3 {
+impl core::ops::Mul<Vector3> for Vector3 {
     type Output = Vector3;
     #[inline]
     fn mul(self, rhs: Vector3) -> Vector3 {
@@ -716,7 +716,7 @@ impl std::ops::Mul<Vector3> for Vector3 {
     }
 }
 
-impl std::ops::Div<Vector3> for Vector3 {
+impl core::ops::Div<Vector3> for Vector3 {
     type Output = Vector3;
     #[inline]
     fn div(self, rhs: Vector3) -> Vector3 {
@@ -725,7 +725,7 @@ impl std::ops::Div<Vector3> for Vector3 {
     }
 }
 
-impl std::ops::Neg for Vector3 {
+impl core::ops::Neg for Vector3 {
     type Output = Vector3;
     #[inline]
     fn neg(self) -> Vector3 {
@@ -904,7 +904,7 @@ impl Vector4 {
     }
 }
 
-impl std::ops::Add for Vector4 {
+impl core::ops::Add for Vector4 {
     type Output = Vector4;
     #[inline]
     fn add(self, rhs: Vector4) -> Vector4 {
@@ -912,14 +912,14 @@ impl std::ops::Add for Vector4 {
         unsafe { crate::Vector4Add(self, rhs) }
     }
 }
-impl std::ops::AddAssign for Vector4 {
+impl core::ops::AddAssign for Vector4 {
     #[inline]
     fn add_assign(&mut self, rhs: Vector4) {
         *self = *self + rhs;
     }
 }
 
-impl std::ops::Sub for Vector4 {
+impl core::ops::Sub for Vector4 {
     type Output = Vector4;
     #[inline]
     fn sub(self, rhs: Vector4) -> Vector4 {
@@ -927,14 +927,14 @@ impl std::ops::Sub for Vector4 {
         unsafe { crate::Vector4Subtract(self, rhs) }
     }
 }
-impl std::ops::SubAssign for Vector4 {
+impl core::ops::SubAssign for Vector4 {
     #[inline]
     fn sub_assign(&mut self, rhs: Vector4) {
         *self = *self - rhs;
     }
 }
 
-impl std::ops::Mul<f32> for Vector4 {
+impl core::ops::Mul<f32> for Vector4 {
     type Output = Vector4;
     #[inline]
     fn mul(self, rhs: f32) -> Vector4 {
@@ -942,14 +942,14 @@ impl std::ops::Mul<f32> for Vector4 {
         unsafe { crate::Vector4Scale(self, rhs) }
     }
 }
-impl std::ops::MulAssign<f32> for Vector4 {
+impl core::ops::MulAssign<f32> for Vector4 {
     #[inline]
     fn mul_assign(&mut self, rhs: f32) {
         *self = *self * rhs;
     }
 }
 
-impl std::ops::Mul<Vector4> for Vector4 {
+impl core::ops::Mul<Vector4> for Vector4 {
     type Output = Vector4;
     #[inline]
     fn mul(self, rhs: Vector4) -> Vector4 {
@@ -958,7 +958,7 @@ impl std::ops::Mul<Vector4> for Vector4 {
     }
 }
 
-impl std::ops::Div<Vector4> for Vector4 {
+impl core::ops::Div<Vector4> for Vector4 {
     type Output = Vector4;
     #[inline]
     fn div(self, rhs: Vector4) -> Vector4 {
@@ -967,7 +967,7 @@ impl std::ops::Div<Vector4> for Vector4 {
     }
 }
 
-impl std::ops::Neg for Vector4 {
+impl core::ops::Neg for Vector4 {
     type Output = Vector4;
     #[inline]
     fn neg(self) -> Vector4 {

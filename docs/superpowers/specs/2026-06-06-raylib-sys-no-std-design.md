@@ -93,11 +93,17 @@ revert. A gated check that silently compiles out proves nothing.
 branch-protection required-checks list is unaffected. Add it as required — it
 is fast.
 
-**Contingency (not built up-front):** if thumb chokes on host-specific output
-(e.g. u128 long-double externs), fall back to passing `--target` through to
-bindgen's clang args. Rejected-for-now alternative (b2): committing a reference
-`bindings.rs` — large generated file that drifts with every raylib/bindgen
-bump; revisit with the nobuild-CI-matrix queue item (13) if it wants one.
+**Contingency (resolved during implementation):** the host-generated binding
+failed the thumb check on bindgen *layout assertions* (host 64-bit sizes vs
+32-bit ARM), not on missing-std paths. The spec's original fallback (pass
+`--target` to bindgen's clang args) would require target libc headers
+(newlib) on every generating host, so instead `nobuild` bindings are
+generated with `.layout_tests(false)` — the proof leg is a compile-only
+no-std check, not an ARM ABI claim; hosted default builds keep layout tests
+(plus `tests/layout_compat.rs`). Rejected-for-now alternative (b2):
+committing a reference `bindings.rs` — large generated file that drifts with
+every raylib/bindgen bump; revisit with the nobuild-CI-matrix queue item
+(13) if it wants one.
 
 **Plan refinements:** the CI job also checks `--features
 nobuild,nobindgen,mint` to prove the `mint` adapter is no-std-clean, and

@@ -1,3 +1,12 @@
+//! Raw FFI bindings for [raylib](https://www.raylib.com/).
+//!
+//! The crate is unconditionally `#![no_std]` — it depends only on `core`, so
+//! it builds for embedded/no-std targets (linking raylib's C library for such
+//! a target is the consumer's responsibility; see the `nobuild` and
+//! `nobindgen` features). std consumers are unaffected. The `mint` adapter
+//! feature is no-std-compatible; `glam` and `serde` currently require a
+//! std-capable target.
+#![no_std]
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
