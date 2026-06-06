@@ -9,6 +9,22 @@
   `"raylib"`), making `RUST_LOG`-style filtering the single source of
   truth. Levels map `TRACE/DEBUG/INFO/WARNING→trace/debug/info/warn`,
   `ERROR`+`FATAL→error`. See the *Callbacks and logging* book chapter.
+- `raylib-sys` is now unconditionally `#![no_std]` (adopts community PR
+  [#251](https://github.com/raylib-rs/raylib-rs/pull/251) by @nbe1233,
+  adapted for 6.0). Zero feature changes — std consumers and
+  `default-features = false` users are unaffected. The crate now builds for
+  no-std targets (CI-checked against `thumbv7em-none-eabihf` via the
+  `nobuild`/`nobindgen` escape hatches; the `mint` adapter feature is included
+  in that check). `glam`/`serde` currently require a std-capable target.
+  `nobuild` bindings are generated without bindgen layout assertions so they
+  can be compile-checked cross-target; hosted default builds keep them.
+
+### Fixed
+
+- `nobindgen` now actually skips running bindgen in `build.rs` (previously it
+  only ignored the output), and `nobuild` bindgen finds the vendored raylib
+  headers again (`-I../raylib/src` resolved outside the package — broken on
+  any host without a system-wide raylib, likely including docs.rs).
 
 ## 6.0.0-rc.2 — 2026-06-02
 
