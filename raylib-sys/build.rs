@@ -281,6 +281,7 @@ fn build_with_cmake(src_path: &str) {
     }
 }
 
+#[cfg(not(feature = "nobindgen"))]
 fn gen_bindings() {
     let target = env::var("TARGET").expect("Cargo build scripts always have TARGET");
     let (platform, os) = platform_from_target(&target);
@@ -518,6 +519,10 @@ fn main() {
     let raylib_src = "./raylib";
     build_with_cmake(raylib_src);
 
+    // `nobindgen` consumers supply a pregenerated binding via RAYLIB_BINDGEN_LOCATION
+    // (see src/lib.rs); skip bindgen entirely — it may not be runnable for the
+    // build target (e.g. the no-std CI leg cross-checking thumbv7em-none-eabihf).
+    #[cfg(not(feature = "nobindgen"))]
     gen_bindings();
 
     link(platform, platform_os);

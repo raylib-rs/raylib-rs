@@ -99,6 +99,11 @@ bindgen's clang args. Rejected-for-now alternative (b2): committing a reference
 `bindings.rs` — large generated file that drifts with every raylib/bindgen
 bump; revisit with the nobuild-CI-matrix queue item (13) if it wants one.
 
+**Plan refinements:** the CI job also checks `--features
+nobuild,nobindgen,mint` to prove the `mint` adapter is no-std-clean, and
+`thumbv7em-none-eabihf` is added to `rust-toolchain.toml` targets so local
+runs need no manual `rustup target add`.
+
 ## Code changes
 
 - `raylib-sys/src/lib.rs`: `#![no_std]` at top; existing `allow` attrs stay.
@@ -106,8 +111,12 @@ bump; revisit with the nobuild-CI-matrix queue item (13) if it wants one.
   `core::ops::`.
 - `raylib-sys/src/color.rs`: `std::num::ParseIntError` →
   `core::num::ParseIntError`.
-- `raylib-sys/build.rs`: add `.use_core()` to the bindgen builder. No other
-  build.rs changes — build scripts run on the host with std.
+- `raylib-sys/build.rs`: add `.use_core()` to the bindgen builder, and gate
+  `gen_bindings()` behind `#[cfg(not(feature = "nobindgen"))]` so `nobindgen`
+  does what its docs claim (planning discovery: build.rs ran bindgen even
+  under `nobindgen`, which would have made the proof leg run bindgen against
+  the thumb target). Build scripts otherwise unchanged — they run on the
+  host with std.
 - `raylib-sys/tests/`: unchanged.
 - `raylib-sys/Cargo.toml`: unchanged (no feature edits).
 
