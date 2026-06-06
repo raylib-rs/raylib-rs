@@ -284,5 +284,5 @@ The implementer + reviewer briefs are the canonical text dispatched to subagents
 - **Related memories:**
   - `showcase-c-rust-port-style` — the visual-parity rule itself.
   - `examples-not-bins` — why `[[example]]` not `[[bin]]`.
-  - `rgui-feature-gate-rule` — `#[cfg(feature = "raygui")]` discipline (rare for examples since `required-features` already gates them; matters for any helper added to the lib crate).
+  - `rgui-feature-gate-rule` — `#[cfg(feature = "raygui")]` discipline (applies to the raylib crate, where raygui is still optional; showcase examples need no gate since raygui is always-on in the showcase).
   - `skip-std-equivalent-fns` — when an example calls a raylib API that Rust std handles, prefer std; don't extend the safe API for std-equivalents.
