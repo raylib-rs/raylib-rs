@@ -18,8 +18,16 @@
 //!   [`Shader`](crate::core::shaders::Shader) RAII handles instead of raw ids.
 //!
 //! GL-object *lifecycle* (create/destroy) stays with those safe types and raw
-//! [`ffi`]; the full 161-fn rlgl surface is still available there as a
-//! power-user escape hatch.
+//! [`ffi`]; the full rlgl surface is still available there as a power-user
+//! escape hatch.
+//!
+//! ## Coverage policy
+//!
+//! The safe surface deliberately covers the immediate-mode, matrix-stack, and
+//! render-state slice of rlgl. The per-function disposition of the entire
+//! rlgl FFI surface (wrapped / escape-hatch / future-work) is recorded in
+//! `docs/superpowers/notes/databuf-mesh-testing-complete.md`, along with the
+//! census script to regenerate it after a raylib bump.
 //!
 //! All entry points are on [`RaylibRlgl`], blanket-implemented for every draw
 //! handle, so they are only callable inside a `begin_drawing` frame.
