@@ -109,14 +109,24 @@ pub fn encode_data_base64(data: &[u8]) -> Result<DataBuf<[u8]>, Base64Error> {
 
 /// Decode Base64 data
 ///
-/// Empty input returns `Err(DecodeFailed)` — raylib produces a zero-length
-/// result for it, which raylib-rs maps to an error rather than an empty buffer.
+/// Empty input (or input that is nothing but `'='` padding) returns
+/// `Err(DecodeFailed)` without calling into raylib — the C decoder's
+/// backward padding scan reads out of bounds on such input.
 pub fn decode_data_base64(data: &[u8]) -> Result<DataBuf<[u8]>, Base64Error> {
     let mut output_size = MaybeUninit::<i32>::uninit();
     let null_trimmed_data = match data.iter().position(|&element| element == 0) {
         Some(pos) => &data[..pos],
         None => data,
     };
+    // Upstream raylib's DecodeDataBase64 scans backwards over trailing '='
+    // padding without a lower bound (rcore.c: `while (text[ending] == '=')`
+    // with `ending` starting at strlen-1) — for empty or all-'=' input the
+    // scan reads below the start of the buffer (found as a heap-buffer-
+    // overflow by the ASAN+LSAN CI leg, sanitizers run 27052350281). Reject
+    // those inputs before the FFI call; they cannot decode to anything.
+    if null_trimmed_data.is_empty() || null_trimmed_data.iter().all(|&b| b == b'=') {
+        return Err(Base64Error::DecodeFailed);
+    }
     let mut c_str = Vec::with_capacity(null_trimmed_data.len() + 1);
     c_str.extend_from_slice(null_trimmed_data);
     c_str.push(0);
