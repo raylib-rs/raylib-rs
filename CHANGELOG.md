@@ -53,6 +53,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 ### Added
 
 - Wrapper-family lifetime test pass: new `databuf_lifetimes` (windowless Tier-1, ASAN+LeakSanitizer CI target) and `render_alloc_lifetimes` (Tier-2) test binaries; the canonical Tier-2 feature list now includes `SUPPORT_MESH_GENERATION` so Mesh tests actually run in CI.
+- `RlImmediate::vertex2i` — the one immediate-mode vertex-emission fn missing from the safe rlgl surface. The full rlgl coverage disposition (wrapped / escape-hatch / future-work) is recorded in `docs/superpowers/notes/databuf-mesh-testing-complete.md`.
 - `software_renderer` feature + `raylib::test_harness` module (`with_headless`, `render_frame`, `render_frame_raw`, `pixel_at`, `assert_pixel`).
 - Safe `rlgl` module (`raylib::rlgl`): `rl_begin` / `rl_draw` / `rl_push_matrix` returning RAII guards (`RlImmediate`, `RlMatrix`); render-state toggles; `&Texture2D`/`&Shader` bind helpers.
 - `Vector2::{ZERO,ONE}` / `Vector3::{ZERO,ONE,X,Y,Z}` constants.
