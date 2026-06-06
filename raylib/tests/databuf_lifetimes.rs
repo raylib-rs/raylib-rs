@@ -146,15 +146,34 @@ mod base64 {
     fn base64_decode_empty_input_pinned() {
         // PINNING TEST — probed 2026-06-03: decode_data_base64(b"") returned
         // a non-null buffer with out_length == 0, which tripped
-        // slice_from_raw's count >= 1 assert from safe code. After the fix in
-        // data.rs, the non-null + count < 1 case is freed and mapped to
-        // Err(DecodeFailed).
-        // pinned 2026-06-03: empty input → Err(DecodeFailed)
+        // slice_from_raw's count >= 1 assert from safe code. The first
+        // canonical ASAN run (2026-06-06, run 27052350281) then showed that
+        // result was produced *after* an out-of-bounds read: the C decoder's
+        // backward '='-padding scan has no lower bound and reads text[-1] on
+        // empty input. data.rs now rejects empty input before the FFI call.
+        // pinned 2026-06-06: empty input → Err(DecodeFailed), FFI not reached
         use raylib::core::error::Base64Error;
         let r = decode_data_base64(b"");
         assert!(
             matches!(r, Err(Base64Error::DecodeFailed)),
             "decode of empty must be Err(DecodeFailed), got {r:?}"
         );
+    }
+
+    #[test]
+    fn base64_decode_all_padding_pinned() {
+        // PINNING TEST — same upstream OOB as the empty-input case: input
+        // that is nothing but '=' makes the C decoder's backward padding scan
+        // walk below the start of the buffer (rcore.c DecodeDataBase64 has no
+        // `ending >= 0` bound). data.rs rejects all-'=' input pre-FFI.
+        // pinned 2026-06-06: all-'=' input → Err(DecodeFailed), FFI not reached
+        use raylib::core::error::Base64Error;
+        for input in [&b"="[..], b"==", b"====", b"========"] {
+            let r = decode_data_base64(input);
+            assert!(
+                matches!(r, Err(Base64Error::DecodeFailed)),
+                "decode of all-padding input {input:?} must be Err(DecodeFailed), got {r:?}"
+            );
+        }
     }
 }

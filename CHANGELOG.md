@@ -129,6 +129,7 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 
 - `DataBuf::<[T]>::alloc_from_clone` now performs a real element-wise clone (`T: Clone`; was bound `T: Copy` and identical to `alloc_from_copy`). A `clone()` panic mid-initialization drops the cloned prefix and frees the allocation before propagating.
 - `compress_data(b"")`, `decompress_data` on empty/invalid input, and `decode_data_base64(b"")` no longer panic (raylib returns a non-null, zero-length buffer for these; the wrappers now free it and return `Err` — the contract is documented on each fn).
+- `decode_data_base64` rejects empty and all-`'='` input before calling raylib — the C decoder's backward padding scan reads out of bounds on such input (heap-buffer-overflow found by the new ASAN+LSAN CI leg on its first canonical run).
 - **Mesh-accessor soundness** — all 10 `RaylibMesh` slice accessors guarded against null/zero (were `slice::from_raw_parts(null, n)`); `indices`/`indices_mut` corrected to `triangleCount * 3` (was `vertexCount`); 4 safe `texcoords`/`texcoords2` accessors added (PR #257 / #118 / #256 with attribution).
 - **Sound unsound impls** — removed `AsRef`/`AsMut<ffi::AudioStream> for Sound` which exposed raw pointer fields to safe mutation (from PR #277, partial — full refactor deferred).
 - **`c"..."` literal modernization** (PR #272, AmityWilder) — `CStr::from_bytes_with_nul` replaced by C-string literals in audio and file modules.

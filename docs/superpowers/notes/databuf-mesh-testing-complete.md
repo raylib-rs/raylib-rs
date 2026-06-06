@@ -392,13 +392,34 @@ noise that is hard to suppress portably).
 `ASAN_OPTIONS=detect_leaks=1`, `--test databuf_lifetimes`). The new Tier-2
 files were added to the existing ASAN/UBSAN render-test steps' `--test` list.
 
-### LSAN findings — first canonical run
+### ASAN/LSAN findings — first canonical run (2026-06-06)
 
-First canonical run: **pending** — the sanitizers workflow triggers on push to
-`unstable`; PR #320 (PR-A, wrapper-family tests + alloc_from_clone fix + CI
-sanitizers extension) is green and awaiting merge as of 2026-06-05. To be
-updated with the run's findings before this PR (PR-B, rlgl coverage + disposition
-table) merges.
+First canonical run after PR #320 merged: sanitizers run **27052350281** on
+`unstable`. The new ASAN+LSAN step found a real bug on its first execution —
+exactly the class of finding the leg was added for:
+
+- **`AddressSanitizer: heap-buffer-overflow` (READ of size 1) in
+  `DecodeDataBase64`** (upstream raylib, `rcore.c`), triggered by the
+  `base64_decode_empty_input_pinned` test. The C decoder computes
+  `ending = strlen(text) - 1` and scans backwards
+  (`while (text[ending] == '=')`) with **no `ending >= 0` bound** — for
+  empty input it immediately reads `text[-1]` (one byte before our 1-byte
+  NUL-terminator Vec; shadow `fa[fa]01`). Input consisting entirely of `'='`
+  walks below the buffer the same way. The previously-pinned "non-null buffer
+  with `out_length == 0`" result for empty input was being produced *after*
+  this OOB read. ASAN halts on first error, so the remaining 9 tests in the
+  binary did not run in that pass.
+- **Fix (this PR):** `decode_data_base64` now rejects empty and all-`'='`
+  input before the FFI call (`Err(DecodeFailed)`); pinning tests updated
+  (`base64_decode_empty_input_pinned` re-pinned 2026-06-06, new
+  `base64_decode_all_padding_pinned`). The full ASAN+LSAN sweep was re-run
+  via `workflow_dispatch` on the PR-B branch with the guard in place — see
+  the verification subsection below for the clean-run record.
+- **Upstream:** the missing `ending >= 0` bound is a raylib C bug
+  (`rcore.c` `DecodeDataBase64`) — report upstream; added to future-work.
+
+No leak (LSAN) findings were reported before the ASAN halt; the post-fix
+sweep is the authoritative leak record.
 
 ## Dead-code disposition
 
@@ -425,6 +446,10 @@ gap.
   glyph-loading API or remove next breaking cycle. (The type is produced internally in tests via
   `MemAlloc` to verify `Drop`, but no public `fn` returns `RSliceGlyphInfo`; `load_font_data`
   returns `Option<GlyphInfo>` instead.)
+- Report the `DecodeDataBase64` out-of-bounds read upstream to raysan5/raylib
+  (`rcore.c`: the backward `'='`-padding scan `while (text[ending] == '=')`
+  starts at `strlen(text) - 1` with no `ending >= 0` bound — OOB for empty or
+  all-`'='` input; found by this workstream's ASAN leg, run 27052350281).
 
 **Future-work rlgl fns (37 — safe-state tier follow-up candidates):**
 
