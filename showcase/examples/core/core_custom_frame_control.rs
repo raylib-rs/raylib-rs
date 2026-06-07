@@ -119,7 +119,7 @@ fn main() {
                 Color::MAROON,
             );
             d.draw_text(
-                &format!("PosX: {:03.0}", position),
+                &format!("PosX: {position:03.0}"),
                 position as i32 - 50,
                 screen_h / 2 + 40,
                 20,
@@ -148,7 +148,7 @@ fn main() {
                 Color::GRAY,
             );
             d.draw_text(
-                &format!("TARGET FPS: {}", target_fps),
+                &format!("TARGET FPS: {target_fps}"),
                 screen_w - 220,
                 10,
                 20,
