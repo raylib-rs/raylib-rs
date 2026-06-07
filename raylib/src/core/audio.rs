@@ -49,6 +49,13 @@ make_thin_wrapper_lifetime!(
     /// // Later, trigger playback:
     /// unsafe { raylib::ffi::PlaySound(*sound) };
     /// ```
+    ///
+    /// ```compile_fail
+    /// # use raylib::prelude::*;
+    /// fn corrupt(sound: &mut Sound<'_>) {
+    ///     sound.stream.buffer = std::ptr::null_mut(); // no DerefMut on Sound (issue #276)
+    /// }
+    /// ```
     Sound,
     ffi::Sound,
     RaylibAudio,

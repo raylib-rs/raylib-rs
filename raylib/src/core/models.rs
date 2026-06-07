@@ -89,6 +89,16 @@ make_thin_wrapper!(
     /// let verts = mesh.vertices();
     /// println!("cube has {} vertices", verts.len());
     /// ```
+    ///
+    /// Mutable access to the raw FFI struct is `unsafe` — corrupting the
+    /// counts the slice accessors trust is no longer possible in safe code:
+    ///
+    /// ```compile_fail
+    /// # use raylib::prelude::*;
+    /// fn corrupt(mesh: &mut Mesh) {
+    ///     mesh.vertexCount += 5; // no DerefMut on Mesh (issue #276)
+    /// }
+    /// ```
     Mesh,
     ffi::Mesh,
     |mesh: ffi::Mesh| ffi::UnloadMesh(mesh),
