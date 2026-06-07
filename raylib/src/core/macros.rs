@@ -373,9 +373,10 @@ macro_rules! readonly_deref_impl_wrapper {
 ///
 /// impl Drop      for $name { /* takes the Box, leaks it back to raw, and calls ($dropfunc)(ptr) */ }
 /// impl AsRef<Box<[$t]>>  for $name { ... }
-/// impl AsMut<Box<[$t]>>  for $name { ... }
 /// impl Deref     for $name { type Target = Box<[$t]>; ... }
-/// impl DerefMut  for $name { ... }
+/// impl $name { pub fn as_mut_slice(&mut self) -> &mut [$t] { ... } }
+/// // No AsMut/DerefMut to the Box: swapping the allocation out (mem::take)
+/// // would free the raylib-owned buffer via the global allocator (issue #276).
 /// ```
 macro_rules! make_rslice {
     ($(#[$attrs:meta])* $name:ident, $t:ty, $dropfunc:expr) => {
