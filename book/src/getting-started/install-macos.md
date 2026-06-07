@@ -4,7 +4,7 @@ raylib-rs builds on macOS with the default Apple clang toolchain. Both Apple Sil
 
 ## Prerequisites
 
-1. **Rust 1.85+** — install via [rustup](https://rustup.rs/).
+1. **Rust 1.88+** — install via [rustup](https://rustup.rs/).
 
 2. **Xcode Command Line Tools** — provides `clang`, `ar`, and the macOS SDK headers. Install once with:
    ```text

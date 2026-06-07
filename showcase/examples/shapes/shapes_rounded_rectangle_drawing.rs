@@ -99,7 +99,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 40.0, 105.0, 20.0),
             "Width",
-            format!("{:.2}", width),
+            format!("{width:.2}"),
             &mut width,
             0.0,
             screen_w as f32 - 300.0,
@@ -107,7 +107,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 70.0, 105.0, 20.0),
             "Height",
-            format!("{:.2}", height),
+            format!("{height:.2}"),
             &mut height,
             0.0,
             screen_h as f32 - 50.0,
@@ -115,7 +115,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 140.0, 105.0, 20.0),
             "Roundness",
-            format!("{:.2}", roundness),
+            format!("{roundness:.2}"),
             &mut roundness,
             0.0,
             1.0,
@@ -123,7 +123,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 170.0, 105.0, 20.0),
             "Thickness",
-            format!("{:.2}", line_thick),
+            format!("{line_thick:.2}"),
             &mut line_thick,
             0.0,
             20.0,
@@ -131,7 +131,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 240.0, 105.0, 20.0),
             "Segments",
-            format!("{:.2}", segments),
+            format!("{segments:.2}"),
             &mut segments,
             0.0,
             60.0,

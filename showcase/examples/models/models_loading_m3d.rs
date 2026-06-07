@@ -158,7 +158,7 @@ fn main() {
                 .into_owned()
         };
         d.draw_text(
-            &format!("Current animation: {}", anim_name),
+            &format!("Current animation: {anim_name}"),
             10,
             10,
             20,

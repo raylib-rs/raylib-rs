@@ -153,8 +153,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/depth_write.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/depth_write.fs"
         )),
     );
     rl.set_target_fps(60); // Set our game to run at 60 frames-per-second

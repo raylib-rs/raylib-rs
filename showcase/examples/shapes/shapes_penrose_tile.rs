@@ -146,7 +146,7 @@ fn main() {
             Color::DARKGRAY,
         );
         d.draw_text(
-            &format!("generations: {}", generations),
+            &format!("generations: {generations}"),
             10,
             50,
             20,

@@ -54,8 +54,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/raymarching.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/raymarching.fs"
         )),
     );
 

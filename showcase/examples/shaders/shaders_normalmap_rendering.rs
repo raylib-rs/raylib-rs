@@ -64,12 +64,10 @@ fn main() {
     let mut shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/normalmap.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/normalmap.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/normalmap.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/normalmap.fs"
         )),
     );
 
@@ -219,7 +217,7 @@ fn main() {
         };
         let toggle_str = if use_normal_map != 0 { "On" } else { "Off" };
         d.draw_text(
-            &format!("Use key [N] to toggle normal map: {}", toggle_str),
+            &format!("Use key [N] to toggle normal map: {toggle_str}"),
             10,
             10,
             10,
@@ -242,7 +240,7 @@ fn main() {
             Color::BLACK,
         );
         d.draw_text(
-            &format!("Specular Exponent: {:.2}", specular_exponent),
+            &format!("Specular Exponent: {specular_exponent:.2}"),
             10,
             10 + y_offset * 3,
             10,

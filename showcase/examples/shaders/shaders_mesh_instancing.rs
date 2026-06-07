@@ -67,11 +67,11 @@ fn create_light(
         position,
         target,
         color,
-        enabled_loc: shader.get_shader_location(&format!("lights[{}].enabled", index)),
-        type_loc: shader.get_shader_location(&format!("lights[{}].type", index)),
-        position_loc: shader.get_shader_location(&format!("lights[{}].position", index)),
-        target_loc: shader.get_shader_location(&format!("lights[{}].target", index)),
-        color_loc: shader.get_shader_location(&format!("lights[{}].color", index)),
+        enabled_loc: shader.get_shader_location(&format!("lights[{index}].enabled")),
+        type_loc: shader.get_shader_location(&format!("lights[{index}].type")),
+        position_loc: shader.get_shader_location(&format!("lights[{index}].position")),
+        target_loc: shader.get_shader_location(&format!("lights[{index}].target")),
+        color_loc: shader.get_shader_location(&format!("lights[{index}].color")),
     };
 
     update_light_values(shader, &mut light);
@@ -143,12 +143,10 @@ fn main() {
     let mut shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/lighting_instancing.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/lighting_instancing.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/lighting.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/lighting.fs"
         )),
     );
     // Get shader locations

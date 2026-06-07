@@ -496,7 +496,7 @@ fn main() {
             Color::DARKGRAY,
         );
         d.draw_text(
-            &format!("TEXT PARTICLE COUNT: {}", particle_count),
+            &format!("TEXT PARTICLE COUNT: {particle_count}"),
             10,
             screen_h - 30,
             20,

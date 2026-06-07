@@ -70,7 +70,7 @@ fn main() {
             Color::MAROON,
         );
 
-        d.draw_text(&format!("{}", rand_value), 360, 180, 80, Color::LIGHTGRAY);
+        d.draw_text(&format!("{rand_value}"), 360, 180, 80, Color::LIGHTGRAY);
 
         viewer.draw(&mut d);
         //----------------------------------------------------------------------------------

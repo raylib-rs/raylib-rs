@@ -118,11 +118,10 @@ fn main() {
             let rust_path = manifest_dir
                 .join("examples")
                 .join(&category)
-                .join(format!("{}.rs", name));
+                .join(format!("{name}.rs"));
             if !rust_path.exists() {
                 errors.push(format!(
-                    "C example {}/{} has no Rust port at showcase/examples/{}/{}.rs",
-                    category, fname, category, name,
+                    "C example {category}/{fname} has no Rust port at showcase/examples/{category}/{name}.rs",
                 ));
                 continue;
             }
@@ -146,7 +145,7 @@ fn main() {
             }
             let dirname = entry.file_name().to_string_lossy().to_string();
             // The "<dirname>/<dirname>.c" file is the example entry point.
-            let candidate = entry.path().join(format!("{}.c", dirname));
+            let candidate = entry.path().join(format!("{dirname}.c"));
             if !candidate.exists() {
                 // No matching entry point — this dir contains only helpers or
                 // a template (e.g. standalone/raygui_standalone.c). Skip.
@@ -156,7 +155,7 @@ fn main() {
             let rust_path = manifest_dir
                 .join("examples")
                 .join("raygui")
-                .join(format!("{}.rs", name));
+                .join(format!("{name}.rs"));
             if !rust_path.exists() {
                 // raygui examples land in P3. Only error if examples/raygui/
                 // already exists (the maintainer has started porting raygui
@@ -208,9 +207,9 @@ fn main() {
     if !errors.is_empty() {
         for e in &errors {
             if strict {
-                eprintln!("build.rs: ERROR: {}", e);
+                eprintln!("build.rs: ERROR: {e}");
             } else {
-                println!("cargo:warning=showcase: {}", e);
+                println!("cargo:warning=showcase: {e}");
             }
         }
         if strict {
@@ -284,8 +283,7 @@ fn main() {
             Ok(p) => p,
             Err(e) => {
                 println!(
-                    "cargo:warning=showcase: failed to parse wasm-exclude.toml ({}); treating as empty exclusion list",
-                    e,
+                    "cargo:warning=showcase: failed to parse wasm-exclude.toml ({e}); treating as empty exclusion list",
                 );
                 WasmExcludeFile::default()
             }
@@ -392,8 +390,7 @@ fn resolve_submodule_remote(workspace_root: &Path, key: &str, fallback: &str) ->
             let raw = String::from_utf8_lossy(&o.stdout).trim().to_string();
             if raw.is_empty() {
                 println!(
-                    "cargo:warning=showcase: .gitmodules has no value for {}; using fallback {}",
-                    key, fallback,
+                    "cargo:warning=showcase: .gitmodules has no value for {key}; using fallback {fallback}",
                 );
                 normalize_remote(fallback)
             } else {
@@ -411,8 +408,7 @@ fn resolve_submodule_remote(workspace_root: &Path, key: &str, fallback: &str) ->
         }
         Err(e) => {
             println!(
-                "cargo:warning=showcase: failed to invoke git for {} ({}); using fallback {}",
-                key, e, fallback,
+                "cargo:warning=showcase: failed to invoke git for {key} ({e}); using fallback {fallback}",
             );
             normalize_remote(fallback)
         }
@@ -433,8 +429,7 @@ fn resolve_showcase_remote(workspace_root: &Path) -> String {
             let raw = String::from_utf8_lossy(&o.stdout).trim().to_string();
             if raw.is_empty() {
                 println!(
-                    "cargo:warning=showcase: `git remote get-url origin` returned empty; using fallback {}",
-                    FALLBACK_SHOWCASE_REMOTE,
+                    "cargo:warning=showcase: `git remote get-url origin` returned empty; using fallback {FALLBACK_SHOWCASE_REMOTE}",
                 );
                 FALLBACK_SHOWCASE_REMOTE.to_string()
             } else {
@@ -451,8 +446,7 @@ fn resolve_showcase_remote(workspace_root: &Path) -> String {
         }
         Err(e) => {
             println!(
-                "cargo:warning=showcase: failed to invoke git remote get-url origin ({}); using fallback {}",
-                e, FALLBACK_SHOWCASE_REMOTE,
+                "cargo:warning=showcase: failed to invoke git remote get-url origin ({e}); using fallback {FALLBACK_SHOWCASE_REMOTE}",
             );
             FALLBACK_SHOWCASE_REMOTE.to_string()
         }
@@ -463,10 +457,7 @@ fn resolve_showcase_remote(workspace_root: &Path) -> String {
 /// (e.g. the `6.0-rc` branch name) on any failure.
 fn resolve_git_head(repo: &Path, fallback: &str) -> String {
     if !repo.exists() {
-        println!(
-            "cargo:warning=showcase: {:?} does not exist; using ref fallback {}",
-            repo, fallback,
-        );
+        println!("cargo:warning=showcase: {repo:?} does not exist; using ref fallback {fallback}",);
         return fallback.to_string();
     }
     let out = Command::new("git")
@@ -479,8 +470,7 @@ fn resolve_git_head(repo: &Path, fallback: &str) -> String {
             let raw = String::from_utf8_lossy(&o.stdout).trim().to_string();
             if raw.is_empty() {
                 println!(
-                    "cargo:warning=showcase: `git rev-parse HEAD` in {:?} returned empty; using ref fallback {}",
-                    repo, fallback,
+                    "cargo:warning=showcase: `git rev-parse HEAD` in {repo:?} returned empty; using ref fallback {fallback}",
                 );
                 fallback.to_string()
             } else {
@@ -498,8 +488,7 @@ fn resolve_git_head(repo: &Path, fallback: &str) -> String {
         }
         Err(e) => {
             println!(
-                "cargo:warning=showcase: failed to invoke git rev-parse in {:?} ({}); using ref fallback {}",
-                repo, e, fallback,
+                "cargo:warning=showcase: failed to invoke git rev-parse in {repo:?} ({e}); using ref fallback {fallback}",
             );
             fallback.to_string()
         }
@@ -518,12 +507,12 @@ fn normalize_remote(raw: &str) -> String {
     // SSH short-form: `git@host:owner/repo`
     let https = if let Some(rest) = trimmed.strip_prefix("git@") {
         if let Some((host, path)) = rest.split_once(':') {
-            format!("https://{}/{}", host, path)
+            format!("https://{host}/{path}")
         } else {
             trimmed.to_string()
         }
     } else if let Some(rest) = trimmed.strip_prefix("ssh://git@") {
-        format!("https://{}", rest)
+        format!("https://{rest}")
     } else {
         trimmed.to_string()
     };

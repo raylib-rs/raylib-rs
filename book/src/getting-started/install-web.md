@@ -4,7 +4,7 @@ raylib-rs targets `wasm32-unknown-emscripten`, which compiles your game to WebAs
 
 ## Prerequisites
 
-1. **Rust 1.85+** — install via [rustup](https://rustup.rs/).
+1. **Rust 1.88+** — install via [rustup](https://rustup.rs/).
 
 2. **The wasm32-unknown-emscripten target:**
    ```text

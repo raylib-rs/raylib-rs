@@ -124,9 +124,9 @@ fn main() {
         }
 
         // Render various variables for reference
-        d.draw_text(&format!("animation: {}", anim), 10, 10, 20, Color::DARKGRAY);
+        d.draw_text(&format!("animation: {anim}"), 10, 10, 20, Color::DARKGRAY);
         d.draw_text(
-            &format!("direction frame: {:.0}", dir),
+            &format!("direction frame: {dir:.0}"),
             10,
             40,
             20,

@@ -208,7 +208,7 @@ fn main() {
         d.draw_fps(10, 10);
 
         d.draw_text(
-            &format!("Screen Size: [{}, {}]", sw, sh),
+            &format!("Screen Size: [{sw}, {sh}]"),
             10,
             40,
             10,

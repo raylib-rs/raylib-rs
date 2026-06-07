@@ -148,7 +148,7 @@ fn main() {
         d.draw_circle_v(mouse_pos, 4.0, Color::DARKGRAY);
         d.draw_text_ex(
             &font_default,
-            &format!("[{}, {}]", mouse_x, mouse_y),
+            &format!("[{mouse_x}, {mouse_y}]"),
             mouse_pos + Vector2::new(-44.0, -24.0),
             20.0,
             2.0,

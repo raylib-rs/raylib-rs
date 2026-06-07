@@ -114,14 +114,14 @@ jobs:
           submodules: recursive
       - name: Install Linux build deps
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y cmake libasound2-dev libudev-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
-      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: dtolnay/rust-toolchain@1.88.0
       # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: check-msrv
       - name: Build on MSRV
-        run: cargo +1.85.0 build -p raylib -p raylib-sys --features full
+        run: cargo +1.88.0 build -p raylib -p raylib-sys --features full
 
   no-std:
     runs-on: ubuntu-latest

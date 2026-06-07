@@ -139,8 +139,7 @@ fn main() {
             &thread,
             None,
             Some(&format!(
-                "resources/shaders/shaders/glsl{}/{}.fs",
-                GLSL_VERSION, name
+                "resources/shaders/shaders/glsl{GLSL_VERSION}/{name}.fs"
             )),
         ));
     }

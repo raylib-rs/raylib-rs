@@ -52,8 +52,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/ascii.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/ascii.fs"
         )),
     );
 
@@ -135,10 +134,7 @@ fn main() {
 
         d.draw_rectangle(0, 0, screen_width, 40, Color::BLACK);
         d.draw_text(
-            &format!(
-                "Ascii effect - FontSize:{:2.0} - [Left] -1 [Right] +1 ",
-                font_size
-            ),
+            &format!("Ascii effect - FontSize:{font_size:2.0} - [Left] -1 [Right] +1 "),
             120,
             10,
             20,

@@ -51,12 +51,10 @@ fn main() {
     let mut shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/vertex_displacement.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/vertex_displacement.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/vertex_displacement.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/vertex_displacement.fs"
         )),
     );
 

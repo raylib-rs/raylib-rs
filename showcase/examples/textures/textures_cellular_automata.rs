@@ -280,7 +280,7 @@ fn main() {
         }
 
         d.draw_text(
-            &format!("RULE: {}", rule),
+            &format!("RULE: {rule}"),
             DRAW_RULE_START_X + DRAW_RULE_SPACING * 4,
             DRAW_RULE_START_Y + 1,
             30,

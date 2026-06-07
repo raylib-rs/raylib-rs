@@ -21,6 +21,14 @@
 
 ### Changed
 
+- **MSRV raised 1.85 → 1.88.** Driver: transitive deps now require newer
+  toolchains (`wasip2` needs 1.87 on wasi targets); 1.88 also stabilizes
+  let-chains for edition 2024. All pinning sites bumped lock-step
+  (`rust-toolchain.toml`, `rust-version` in all three crates, the CI `msrv`
+  gate, the `pages`/`showcase` toolchain pins, README + book install pages).
+  Policy recorded in `CLAUDE.md`: the floor may rise in minor releases when
+  deps or meaningful language features demand it, staying roughly a year
+  behind stable.
 - Removed the unmaintained [`paste`](https://rustsec.org/advisories/RUSTSEC-2024-0436)
   dependency: the audio-callback trampoline pool is now built with const
   generics + the existing `seq-macro` (zero new deps). Behavior is unchanged;
@@ -38,7 +46,7 @@
 
 ## 6.0.0-rc.2 — 2026-06-02
 
-Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024).
+Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.88** (edition 2024; the rc.2 snapshot itself shipped declaring 1.85 — see Unreleased → Changed).
 
 > Release candidate 2 for the 6.0 line — published as `6.0.0-rc.2` to
 > get wider eyes on the canonical merge before the final `6.0.0` cut.
@@ -54,13 +62,13 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.85** (edition 2024
 - Skeletal-animation API redesigned around RAII (`ModelAnimations` collection; the singular `UnloadModelAnimation` is gone in 6.0, making per-item ownership unsound).
 - New `software_renderer` feature wires raylib's `rlsw` (Platform::Memory) backend for fully headless rendering — no GPU or window required.
 - raygui at 6.0 parity (57/57 functions, module split into grouped sub-traits, `impl AsRef<str>` + thread-local scratch buffer); new safe immediate-mode `rlgl` module (`RlMatrix`/`RlImmediate` RAII guards, `&Texture2D`/`&Shader` bind helpers).
-- Layered CI: `check.yml` / `test.yml` / `web.yml` / `sanitizers.yml` / `book.yml`; quality hard-gates (fmt, clippy `-Dwarnings`, `deny(missing_docs)`, cargo-deny, MSRV 1.85) fail on violation.
+- Layered CI: `check.yml` / `test.yml` / `web.yml` / `sanitizers.yml` / `book.yml`; quality hard-gates (fmt, clippy `-Dwarnings`, `deny(missing_docs)`, cargo-deny, pinned-MSRV build) fail on violation.
 - mdBook docs at `book/` — 28 chapters covering quickstart, platform build guides, core concepts, and per-module chapters. WS9 added per-module "See also" footers + a new Showcase examples appendix.
 - **WS9 showcase finale** — new `showcase` workspace crate at `showcase/` ports **229** raylib examples (217 raylib core + 12 raygui) to idiomatic raylib-rs under a visual-parity rule. Each port carries an in-canvas F1 source-viewer overlay with C-vs-Rust tabs and a "Source on GitHub" deep-link footer (URLs derived at build time from `.gitmodules` + submodule SHAs). Deployed as a Pages gallery at <https://raylib-rs.github.io/raylib-rs/> with thumbnail tiles, per-tile C/Rust GitHub links, name filter, and per-example emscripten output wrapped in gallery chrome via a shared `example_shell.html`. CI matrix gate is `WS9_STRICT_PAIRING=1` — missing pairs escalate to build break, not warn-only noise.
 
 ### Breaking
 
-- **MSRV is now 1.85** (edition 2024).
+- **MSRV is now 1.88** (edition 2024; raised from the rc-line's 1.85 pre-final — see Unreleased → Changed).
 - `MintVec2`/`MintVec3`/`MintVec4`/`MintMatrix`/`MintQuat` are `#[deprecated]` — use the native types directly. The `mint` feature opt-in remains.
 - `glam`/`mint`/`serde` are **no longer default-on** for `raylib-sys`; enable them explicitly as optional features.
 - **raygui** module split into grouped sub-traits (`RaylibGuiState`, `RaylibGuiContainers`, `RaylibGuiControls`, `RaylibGuiAdvanced`, `RaylibGuiIcons`); control-label parameters are now `impl AsRef<str>` (no `CStr` required).

@@ -158,7 +158,7 @@ fn main() {
         );
 
         d.draw_text("Press SPACE to change MODE", 460, 10, 20, Color::DARKGRAY);
-        d.draw_text(&format!("ANGLE: {:2.2}", angle), 10, 70, 20, Color::LIME);
+        d.draw_text(&format!("ANGLE: {angle:2.2}"), 10, 70, 20, Color::LIME);
 
         viewer.draw(&mut d);
         //----------------------------------------------------------------------------------

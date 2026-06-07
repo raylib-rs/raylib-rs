@@ -1,6 +1,6 @@
 # raylib-rs
 
-Rust binding for [raylib](http://www.raylib.com/). **raylib 6.0 has been merged** into the canonical repo (`raylib-rs/raylib-rs`, default branch `unstable`) — see the "raylib 6.0 upgrade" section below for the workstream history and decisions that shaped this codebase. MSRV **1.85** (edition 2024, pinned in `rust-toolchain.toml`). Work now happens directly on `origin` (`raylib-rs/raylib-rs`).
+Rust binding for [raylib](http://www.raylib.com/). **raylib 6.0 has been merged** into the canonical repo (`raylib-rs/raylib-rs`, default branch `unstable`) — see the "raylib 6.0 upgrade" section below for the workstream history and decisions that shaped this codebase. MSRV **1.88** (edition 2024 floor is 1.85; bumped for transitive deps — `wasip2` needs 1.87 — plus let-chains; pinned in `rust-toolchain.toml`). **MSRV policy:** the floor may rise in minor releases when deps or meaningful language features demand it, staying roughly a year behind stable; bump every pinning site lock-step — `rust-toolchain.toml`, `rust-version` in all three crate manifests, the `msrv` job in `check.yml` (action pin + `cargo +X` command), the toolchain pins in `pages.yml`/`showcase.yml`, README, the four book install pages, and this file. Work now happens directly on `origin` (`raylib-rs/raylib-rs`).
 
 ## Workspace layout
 
@@ -59,6 +59,6 @@ The 6.0 upgrade has landed on `raylib-rs/raylib-rs:unstable`. This section is pr
 **6.0 decisions that change how you work here:**
 - **Math types own their layout, zero math deps by default.** `Vector2/3/4` + `Matrix` are **bindgen-generated** (don't hand-roll FFI structs without a concrete blocker — see the memory note); `Quaternion` is a distinct `#[repr(C)]` struct (C aliases it to `Vector4`). Their math comes from **raylib's own raymath via a C-shim** (`binding/raymath_shim.c`, `RAYMATH_IMPLEMENTATION`), wrapped as methods/operators. `mint`, `glam`, `serde` are **optional features** — never assume they're present.
 - **Test everything practical (required):** Tier-1 unit tests for window-independent fns (raymath, collision, color, file/text); Tier-2 headless rendering tests via the `software_renderer` feature (rlsw + memory platform, no GPU/window — `PLATFORM=Memory`).
-- **Quality gates (enforced since WS6):** fmt + clippy `-Dwarnings`, `deny(missing_docs)` + doctests, cargo-deny + MSRV 1.85. Sanitizers are informational only (Miri can't cross FFI).
+- **Quality gates (enforced since WS6):** fmt + clippy `-Dwarnings`, `deny(missing_docs)` + doctests, cargo-deny + MSRV 1.88. Sanitizers are informational only (Miri can't cross FFI).
 
 `TODO.md` is the older high-level list (platform docs, Android, community PRs, book site, `mise.toml`) — superseded by the workstream plans above.

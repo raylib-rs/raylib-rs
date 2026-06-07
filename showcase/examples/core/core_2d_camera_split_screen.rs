@@ -141,7 +141,7 @@ fn main() {
                 for i in 0..(screen_width / PLAYER_SIZE as i32) {
                     for j in 0..(screen_height / PLAYER_SIZE as i32) {
                         c.draw_text(
-                            &format!("[{},{}]", i, j),
+                            &format!("[{i},{j}]"),
                             10 + PLAYER_SIZE as i32 * i,
                             15 + PLAYER_SIZE as i32 * j,
                             10,
@@ -188,7 +188,7 @@ fn main() {
                 for i in 0..(screen_width / PLAYER_SIZE as i32) {
                     for j in 0..(screen_height / PLAYER_SIZE as i32) {
                         c.draw_text(
-                            &format!("[{},{}]", i, j),
+                            &format!("[{i},{j}]"),
                             10 + PLAYER_SIZE as i32 * i,
                             15 + PLAYER_SIZE as i32 * j,
                             10,

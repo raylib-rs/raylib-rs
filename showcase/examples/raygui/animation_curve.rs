@@ -288,7 +288,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(inner_x, inner_y, inner_w / 2.0, font_size),
             "",
-            format!("Animation Time: {:.2}s", animation_time),
+            format!("Animation Time: {animation_time:.2}s"),
             &mut animation_time,
             1.0,
             8.0,
@@ -341,7 +341,7 @@ fn main() {
                 time_line_rect.width,
                 2.0 * font_size,
             ),
-            format!("Normalized Time: {:.3}", t),
+            format!("Normalized Time: {t:.3}"),
         );
         if d.gui_button(
             Rectangle::new(

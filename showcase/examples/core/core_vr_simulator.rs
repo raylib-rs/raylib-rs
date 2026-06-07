@@ -61,8 +61,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/core/shaders/glsl{}/distortion.fs",
-            GLSL_VERSION
+            "resources/core/shaders/glsl{GLSL_VERSION}/distortion.fs"
         )),
     );
 

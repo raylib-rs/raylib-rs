@@ -124,14 +124,14 @@ fn main() {
         d.clear_background(Color::RAYWHITE);
 
         d.draw_text(
-            &format!("sine frequency: {}", sine_frequency),
+            &format!("sine frequency: {sine_frequency}"),
             screen_width - 220,
             10,
             20,
             Color::RED,
         );
         d.draw_text(
-            &format!("pan: {:.2}", pan),
+            &format!("pan: {pan:.2}"),
             screen_width - 220,
             30,
             20,

@@ -69,8 +69,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/color_mix.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/color_mix.fs"
         )),
     );
 

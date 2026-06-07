@@ -407,7 +407,7 @@ fn main() {
 
             if (frame_counter / 15) % 2 == 1 {
                 d.draw_text(
-                    &format!("PLAYING RECORDED EVENTS... [{}]", current_play_frame),
+                    &format!("PLAYING RECORDED EVENTS... [{current_play_frame}]"),
                     50,
                     170,
                     10,

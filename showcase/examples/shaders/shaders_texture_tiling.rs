@@ -75,8 +75,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/tiling.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/tiling.fs"
         )),
     );
     texture.set_texture_wrap(&thread, TextureWrap::TEXTURE_WRAP_REPEAT);

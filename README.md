@@ -11,7 +11,7 @@
 
 raylib-rs is a safe, idiomatic Rust binding for [raylib](http://www.raylib.com/) **6.0**.
 
-- **MSRV:** Rust **1.85** (edition 2024, pinned in `rust-toolchain.toml`).
+- **MSRV:** Rust **1.88** (edition 2024; pinned in `rust-toolchain.toml`).
 - **Repository:** <https://github.com/raylib-rs/raylib-rs>
 - **Crates:** [`raylib`](https://crates.io/crates/raylib) (safe wrapper), [`raylib-sys`](https://crates.io/crates/raylib-sys) (raw FFI).
 - **Docs:** rustdoc on [docs.rs/raylib](https://docs.rs/raylib); narrative [book](#documentation) and live [examples gallery](#showcase--live-gallery) below.

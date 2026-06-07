@@ -532,7 +532,7 @@ fn main() {
             10,
             Color::BLACK,
         );
-        let angle_string = format!("{}", current_angle_degrees);
+        let angle_string = format!("{current_angle_degrees}");
         let angle_string_dot = angle_string.find('.').unwrap_or(angle_string.len());
         let trim_end = (angle_string_dot + 3).min(angle_string.len());
         let angle_string_trim = &angle_string[..trim_end];

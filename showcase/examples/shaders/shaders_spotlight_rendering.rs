@@ -157,8 +157,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/spotlight.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/spotlight.fs"
         )),
     );
 
@@ -178,9 +177,9 @@ fn main() {
         reason = "C-parity: mirrors the C for (i = 0; i < n; i++) indexed loop"
     )]
     for i in 0..MAX_SPOTS {
-        let pos_name = format!("spots[{}].pos", i);
-        let inner_name = format!("spots[{}].inner", i);
-        let radius_name = format!("spots[{}].radius", i);
+        let pos_name = format!("spots[{i}].pos");
+        let inner_name = format!("spots[{i}].inner");
+        let radius_name = format!("spots[{i}].radius");
 
         spots[i].position_loc = shdr_spot.get_shader_location(&pos_name);
         spots[i].inner_loc = shdr_spot.get_shader_location(&inner_name);

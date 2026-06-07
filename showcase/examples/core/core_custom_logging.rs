@@ -33,7 +33,7 @@ fn custom_trace_log(msg_type: TraceLogLevel, text: &str) {
     let days = secs / 86400;
     // Anchor: 1970-01-01 = day 0; we render the absolute date with a small chunk of math.
     let (y, mo, d) = epoch_days_to_ymd(days as i64);
-    print!("[{:04}-{:02}-{:02} {:02}:{:02}:{:02}] ", y, mo, d, h, m, s);
+    print!("[{y:04}-{mo:02}-{d:02} {h:02}:{m:02}:{s:02}] ");
 
     match msg_type {
         TraceLogLevel::LOG_INFO => print!("[INFO] : "),
@@ -43,7 +43,7 @@ fn custom_trace_log(msg_type: TraceLogLevel, text: &str) {
         _ => {}
     }
 
-    println!("{}", text);
+    println!("{text}");
 }
 
 //------------------------------------------------------------------------------------

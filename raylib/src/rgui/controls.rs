@@ -94,9 +94,7 @@ pub trait RaylibGuiControls {
     ) -> bool {
         debug_assert!(
             min_value <= max_value,
-            "gui_spinner: min_value ({}) must be <= max_value ({})",
-            min_value,
-            max_value
+            "gui_spinner: min_value ({min_value}) must be <= max_value ({max_value})"
         );
         unsafe {
             ffi::GuiSpinner(
@@ -122,9 +120,7 @@ pub trait RaylibGuiControls {
     ) -> bool {
         debug_assert!(
             min_value <= max_value,
-            "gui_value_box: min_value ({}) must be <= max_value ({})",
-            min_value,
-            max_value
+            "gui_value_box: min_value ({min_value}) must be <= max_value ({max_value})"
         );
         unsafe {
             ffi::GuiValueBox(
@@ -150,9 +146,7 @@ pub trait RaylibGuiControls {
     ) -> bool {
         debug_assert!(
             min_value <= max_value,
-            "gui_slider: min_value ({}) must be <= max_value ({})",
-            min_value,
-            max_value
+            "gui_slider: min_value ({min_value}) must be <= max_value ({max_value})"
         );
         let (l, r) = scratch_txt_two(text_left, text_right);
         unsafe { ffi::GuiSlider(bounds.into(), l, r, value, min_value, max_value) > 0 }
@@ -170,9 +164,7 @@ pub trait RaylibGuiControls {
     ) -> bool {
         debug_assert!(
             min_value <= max_value,
-            "gui_slider_bar: min_value ({}) must be <= max_value ({})",
-            min_value,
-            max_value
+            "gui_slider_bar: min_value ({min_value}) must be <= max_value ({max_value})"
         );
         let (l, r) = scratch_txt_two(text_left, text_right);
         unsafe { ffi::GuiSliderBar(bounds.into(), l, r, value, min_value, max_value) > 0 }
@@ -190,9 +182,7 @@ pub trait RaylibGuiControls {
     ) -> bool {
         debug_assert!(
             min_value <= max_value,
-            "gui_progress_bar: min_value ({}) must be <= max_value ({})",
-            min_value,
-            max_value
+            "gui_progress_bar: min_value ({min_value}) must be <= max_value ({max_value})"
         );
         let (l, r) = scratch_txt_two(text_left, text_right);
         unsafe { ffi::GuiProgressBar(bounds.into(), l, r, value, min_value, max_value) > 0 }

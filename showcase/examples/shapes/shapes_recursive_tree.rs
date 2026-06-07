@@ -151,7 +151,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 40.0, 120.0, 20.0),
             "Angle",
-            format!("{:.0}", angle),
+            format!("{angle:.0}"),
             &mut angle,
             0.0,
             180.0,
@@ -159,7 +159,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 70.0, 120.0, 20.0),
             "Length",
-            format!("{:.0}", length),
+            format!("{length:.0}"),
             &mut length,
             12.0,
             240.0,
@@ -167,7 +167,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 100.0, 120.0, 20.0),
             "Decay",
-            format!("{:.2}", branch_decay),
+            format!("{branch_decay:.2}"),
             &mut branch_decay,
             0.1,
             0.78,
@@ -175,7 +175,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 130.0, 120.0, 20.0),
             "Depth",
-            format!("{:.0}", tree_depth),
+            format!("{tree_depth:.0}"),
             &mut tree_depth,
             1.0,
             10.0,
@@ -183,7 +183,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 160.0, 120.0, 20.0),
             "Thick",
-            format!("{:.0}", thick),
+            format!("{thick:.0}"),
             &mut thick,
             1.0,
             8.0,

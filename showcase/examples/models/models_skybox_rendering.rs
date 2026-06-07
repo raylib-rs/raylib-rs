@@ -58,12 +58,10 @@ fn main() {
     let mut skybox_shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/models/shaders/glsl{}/skybox.vs",
-            GLSL_VERSION
+            "resources/models/shaders/glsl{GLSL_VERSION}/skybox.vs"
         )),
         Some(&format!(
-            "resources/models/shaders/glsl{}/skybox.fs",
-            GLSL_VERSION
+            "resources/models/shaders/glsl{GLSL_VERSION}/skybox.fs"
         )),
     );
 
@@ -85,12 +83,10 @@ fn main() {
     let _shdr_cubemap = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/models/shaders/glsl{}/cubemap.vs",
-            GLSL_VERSION
+            "resources/models/shaders/glsl{GLSL_VERSION}/cubemap.vs"
         )),
         Some(&format!(
-            "resources/models/shaders/glsl{}/cubemap.fs",
-            GLSL_VERSION
+            "resources/models/shaders/glsl{GLSL_VERSION}/cubemap.fs"
         )),
     );
 
@@ -225,14 +221,14 @@ fn main() {
 
         if use_hdr {
             d.draw_text(
-                &format!("Panorama image from hdrihaven.com: {}", basename),
+                &format!("Panorama image from hdrihaven.com: {basename}"),
                 10,
                 sh - 20,
                 10,
                 Color::BLACK,
             );
         } else {
-            d.draw_text(&format!(": {}", basename), 10, sh - 20, 10, Color::BLACK);
+            d.draw_text(&format!(": {basename}"), 10, sh - 20, 10, Color::BLACK);
         }
 
         d.draw_fps(10, 10);

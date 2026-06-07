@@ -235,14 +235,14 @@ fn main() {
         );
         d.draw_text("middle click to shake", 10, 70, 10, Color::DARKGRAY);
         d.draw_text(
-            &format!("BALL COUNT: {}", ball_count),
+            &format!("BALL COUNT: {ball_count}"),
             10,
             screen_h - 70,
             20,
             Color::BLACK,
         );
         d.draw_text(
-            &format!("GRAVITY: {:.2}", gravity),
+            &format!("GRAVITY: {gravity:.2}"),
             10,
             screen_h - 40,
             20,

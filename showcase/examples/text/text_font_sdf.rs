@@ -114,10 +114,7 @@ fn main() {
     let mut shader = rl.load_shader(
         &thread,
         None,
-        Some(&format!(
-            "resources/text/shaders/glsl{}/sdf.fs",
-            GLSL_VERSION
-        )),
+        Some(&format!("resources/text/shaders/glsl{GLSL_VERSION}/sdf.fs")),
     );
 
     // SAFETY: SetTextureFilter required for SDF font — pure state-setter on the GPU texture.
@@ -224,7 +221,7 @@ fn main() {
 
         d.draw_text("FONT SIZE: 16.0", screen_w - 240, 20, 20, Color::DARKGRAY);
         d.draw_text(
-            &format!("RENDER SIZE: {:05.2}", font_size),
+            &format!("RENDER SIZE: {font_size:05.2}"),
             screen_w - 240,
             50,
             20,

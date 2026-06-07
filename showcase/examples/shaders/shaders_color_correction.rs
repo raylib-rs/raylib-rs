@@ -59,8 +59,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/color_correction.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/color_correction.fs"
         )),
     );
 
@@ -164,7 +163,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(645.0, 100.0, 120.0, 20.0),
             "Contrast",
-            format!("{:.0}", contrast),
+            format!("{contrast:.0}"),
             &mut contrast,
             -100.0,
             100.0,
@@ -172,7 +171,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(645.0, 130.0, 120.0, 20.0),
             "Saturation",
-            format!("{:.0}", saturation),
+            format!("{saturation:.0}"),
             &mut saturation,
             -100.0,
             100.0,
@@ -180,7 +179,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(645.0, 160.0, 120.0, 20.0),
             "Brightness",
-            format!("{:.0}", brightness),
+            format!("{brightness:.0}"),
             &mut brightness,
             -100.0,
             100.0,

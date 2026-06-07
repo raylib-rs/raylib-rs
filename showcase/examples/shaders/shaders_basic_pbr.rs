@@ -172,12 +172,10 @@ fn main() {
     let mut shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/pbr.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/pbr.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/pbr.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/pbr.fs"
         )),
     );
     // SAFETY: Shader.locs is a *mut c_int array; we write the PBR map indices in-place.

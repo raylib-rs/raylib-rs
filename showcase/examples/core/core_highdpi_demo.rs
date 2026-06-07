@@ -111,7 +111,7 @@ fn main() {
         draw_text_center(
             &mut d,
             &font_default,
-            &format!("Window is {} \"logical points\" wide", screen_w),
+            &format!("Window is {screen_w} \"logical points\" wide"),
             window_center,
             logical_grid_desc_y,
             20,
@@ -134,7 +134,7 @@ fn main() {
             draw_text_center(
                 &mut d,
                 &font_default,
-                &format!("{}", i),
+                &format!("{i}"),
                 i,
                 logical_grid_label_y,
                 10,
@@ -180,7 +180,7 @@ fn main() {
                 draw_text_center(
                     &mut d,
                     &font_default,
-                    &format!("{}", i),
+                    &format!("{i}"),
                     x,
                     pixel_grid_label_y,
                     10,
@@ -196,7 +196,7 @@ fn main() {
         draw_text_center(
             &mut d,
             &font_default,
-            &format!("Window is {} \"physical pixels\" wide", render_w),
+            &format!("Window is {render_w} \"physical pixels\" wide"),
             window_center,
             pixel_grid_desc_y,
             20,

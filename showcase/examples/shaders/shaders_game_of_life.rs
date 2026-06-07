@@ -136,8 +136,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/game_of_life.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/game_of_life.fs"
         )),
     );
 
@@ -568,7 +567,7 @@ fn main() {
             &mut mode,
         );
 
-        d.draw_text(&format!("Zoom: {}x", zoom), 710, 316, 8, Color::GRAY);
+        d.draw_text(&format!("Zoom: {zoom}x"), 710, 316, 8, Color::GRAY);
         button_zoom_in = d.gui_button(Rectangle::new(710.0, 328.0, 80.0, 16.0), "Zoom in");
         button_zom_out = d.gui_button(Rectangle::new(710.0, 346.0, 80.0, 16.0), "Zoom out");
 

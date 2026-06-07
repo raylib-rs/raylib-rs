@@ -99,12 +99,10 @@ fn main() {
     let shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/lightmap.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/lightmap.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/lightmap.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/lightmap.fs"
         )),
     );
 
@@ -236,7 +234,7 @@ fn main() {
         );
 
         d.draw_text(
-            &format!("LIGHTMAP: {}x{} pixels", MAP_SIZE, MAP_SIZE),
+            &format!("LIGHTMAP: {MAP_SIZE}x{MAP_SIZE} pixels"),
             render_width - 130,
             20 + MAP_SIZE * 8,
             10,

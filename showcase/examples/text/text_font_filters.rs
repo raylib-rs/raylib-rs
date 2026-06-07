@@ -191,7 +191,7 @@ fn main() {
 
         d.draw_rectangle(0, screen_height - 80, screen_width, 80, Color::LIGHTGRAY);
         d.draw_text(
-            &format!("Font size: {:05.2}", font_size),
+            &format!("Font size: {font_size:05.2}"),
             20,
             screen_height - 50,
             10,

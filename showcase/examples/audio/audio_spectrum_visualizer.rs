@@ -235,8 +235,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/audio/shaders/glsl{}/fft.fs",
-            GLSL_VERSION
+            "resources/audio/shaders/glsl{GLSL_VERSION}/fft.fs"
         )),
     );
 

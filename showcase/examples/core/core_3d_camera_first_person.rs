@@ -218,13 +218,13 @@ fn main() {
             CameraMode::CAMERA_ORBITAL => "ORBITAL",
             _ => "CUSTOM",
         };
-        d.draw_text(&format!("- Mode: {}", mode_str), 610, 30, 10, Color::BLACK);
+        d.draw_text(&format!("- Mode: {mode_str}"), 610, 30, 10, Color::BLACK);
         let proj_str = match camera.projection {
             CameraProjection::CAMERA_PERSPECTIVE => "PERSPECTIVE",
             CameraProjection::CAMERA_ORTHOGRAPHIC => "ORTHOGRAPHIC",
         };
         d.draw_text(
-            &format!("- Projection: {}", proj_str),
+            &format!("- Projection: {proj_str}"),
             610,
             45,
             10,

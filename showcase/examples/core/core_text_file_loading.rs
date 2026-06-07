@@ -225,7 +225,7 @@ fn main() {
         // Header displaying which file is being read currently
         d.draw_rectangle(0, 0, screen_width, text_top - 10, Color::BEIGE);
         d.draw_text(
-            &format!("File: {}", file_name),
+            &format!("File: {file_name}"),
             10,
             10,
             font_size,

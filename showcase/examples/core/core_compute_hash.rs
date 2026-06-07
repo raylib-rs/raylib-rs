@@ -35,7 +35,7 @@ fn get_data_as_hex_text(bytes: &[u8]) -> String {
         let mut buf = [0u8; 4];
         buf[..chunk.len()].copy_from_slice(chunk);
         let word = u32::from_le_bytes(buf);
-        write!(&mut s, "{:08X}", word).expect("write to String never fails");
+        write!(&mut s, "{word:08X}").expect("write to String never fails");
     }
     s
 }
@@ -224,14 +224,14 @@ fn main() {
                 Ok(buf) => {
                     let slice: &[u8] = &buf;
                     // The C encoder includes a trailing NUL; trim if present.
-                    let s = if slice.last() == Some(&0) {
+
+                    if slice.last() == Some(&0) {
                         std::str::from_utf8(&slice[..slice.len() - 1])
                             .unwrap_or("")
                             .to_string()
                     } else {
                         std::str::from_utf8(slice).unwrap_or("").to_string()
-                    };
-                    s
+                    }
                 }
                 Err(_) => String::new(),
             };

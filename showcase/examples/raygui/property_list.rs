@@ -209,7 +209,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(ctrl_x, y, hw, row_h),
             "",
-            format!("{:.0}", p_vec2_x),
+            format!("{p_vec2_x:.0}"),
             &mut p_vec2_x,
             -100.0,
             100.0,
@@ -217,7 +217,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(ctrl_x + hw + 2.0, y, hw, row_h),
             "",
-            format!("{:.0}", p_vec2_y),
+            format!("{p_vec2_y:.0}"),
             &mut p_vec2_y,
             -100.0,
             100.0,
@@ -229,7 +229,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(ctrl_x, y, tw, row_h),
             "",
-            format!("{:.0}", p_vec3_x),
+            format!("{p_vec3_x:.0}"),
             &mut p_vec3_x,
             -100.0,
             100.0,
@@ -237,7 +237,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(ctrl_x + tw + 2.0, y, tw, row_h),
             "",
-            format!("{:.0}", p_vec3_y),
+            format!("{p_vec3_y:.0}"),
             &mut p_vec3_y,
             -100.0,
             100.0,
@@ -245,7 +245,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(ctrl_x + 2.0 * (tw + 2.0), y, tw, row_h),
             "",
-            format!("{:.0}", p_vec3_z),
+            format!("{p_vec3_z:.0}"),
             &mut p_vec3_z,
             -100.0,
             100.0,
@@ -256,7 +256,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(ctrl_x, y, qw, row_h),
             "",
-            format!("{:.0}", p_vec4_x),
+            format!("{p_vec4_x:.0}"),
             &mut p_vec4_x,
             -100.0,
             100.0,
@@ -264,7 +264,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(ctrl_x + qw + 2.0, y, qw, row_h),
             "",
-            format!("{:.0}", p_vec4_y),
+            format!("{p_vec4_y:.0}"),
             &mut p_vec4_y,
             -100.0,
             100.0,
@@ -272,7 +272,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(ctrl_x + 2.0 * (qw + 2.0), y, qw, row_h),
             "",
-            format!("{:.0}", p_vec4_z),
+            format!("{p_vec4_z:.0}"),
             &mut p_vec4_z,
             -100.0,
             100.0,
@@ -280,7 +280,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(ctrl_x + 3.0 * (qw + 2.0), y, qw, row_h),
             "",
-            format!("{:.0}", p_vec4_w),
+            format!("{p_vec4_w:.0}"),
             &mut p_vec4_w,
             -100.0,
             100.0,

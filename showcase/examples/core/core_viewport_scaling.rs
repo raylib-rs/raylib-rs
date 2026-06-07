@@ -492,14 +492,14 @@ fn main() {
         d.draw_rectangle_lines_ex(info_rect, 1.0, Color::BLUE);
 
         d.draw_text(
-            &format!("Window Resolution: {} x {}", screen_width, screen_height),
+            &format!("Window Resolution: {screen_width} x {screen_height}"),
             15,
             15,
             10,
             Color::BLACK,
         );
         d.draw_text(
-            &format!("Game Resolution: {} x {}", game_width, game_height),
+            &format!("Game Resolution: {game_width} x {game_height}"),
             15,
             30,
             10,

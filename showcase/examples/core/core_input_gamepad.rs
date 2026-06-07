@@ -167,13 +167,7 @@ fn main() {
         d.clear_background(Color::RAYWHITE);
 
         if gp_available {
-            d.draw_text(
-                &format!("GP{}: {}", gamepad, gp_name),
-                10,
-                10,
-                10,
-                Color::BLACK,
-            );
+            d.draw_text(&format!("GP{gamepad}: {gp_name}"), 10, 10, 10, Color::BLACK);
 
             #[expect(
                 clippy::search_is_some,
@@ -555,7 +549,7 @@ fn main() {
             }
 
             d.draw_text(
-                &format!("DETECTED AXIS [{}]:", axis_count),
+                &format!("DETECTED AXIS [{axis_count}]:"),
                 10,
                 50,
                 10,
@@ -607,7 +601,7 @@ fn main() {
             }
         } else {
             d.draw_text(
-                &format!("GP{}: NOT DETECTED", gamepad),
+                &format!("GP{gamepad}: NOT DETECTED"),
                 10,
                 10,
                 10,

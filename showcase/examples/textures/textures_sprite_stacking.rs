@@ -108,14 +108,14 @@ fn main() {
             Color::DARKGRAY,
         );
         d.draw_text(
-            &format!("current spacing: {:.01}", stack_spacing),
+            &format!("current spacing: {stack_spacing:.01}"),
             10,
             50,
             20,
             Color::DARKGRAY,
         );
         d.draw_text(
-            &format!("current speed: {:.02}", rotation_speed),
+            &format!("current speed: {rotation_speed:.02}"),
             10,
             70,
             20,

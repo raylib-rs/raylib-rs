@@ -69,11 +69,11 @@ fn create_light(
         position,
         target,
         color,
-        enabled_loc: shader.get_shader_location(&format!("lights[{}].enabled", index)),
-        type_loc: shader.get_shader_location(&format!("lights[{}].type", index)),
-        position_loc: shader.get_shader_location(&format!("lights[{}].position", index)),
-        target_loc: shader.get_shader_location(&format!("lights[{}].target", index)),
-        color_loc: shader.get_shader_location(&format!("lights[{}].color", index)),
+        enabled_loc: shader.get_shader_location(&format!("lights[{index}].enabled")),
+        type_loc: shader.get_shader_location(&format!("lights[{index}].type")),
+        position_loc: shader.get_shader_location(&format!("lights[{index}].position")),
+        target_loc: shader.get_shader_location(&format!("lights[{index}].target")),
+        color_loc: shader.get_shader_location(&format!("lights[{index}].color")),
     };
 
     update_light_values(shader, &mut light);
@@ -125,12 +125,10 @@ fn main() {
     let mut cel_shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/cel.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/cel.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/cel.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/cel.fs"
         )),
     );
     // SAFETY: Shader.locs offset write (SHADER_LOC_VECTOR_VIEW).
@@ -155,12 +153,10 @@ fn main() {
     let mut outline_shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/outline_hull.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/outline_hull.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/outline_hull.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/outline_hull.fs"
         )),
     );
     let outline_thickness_loc = outline_shader.get_shader_location("outlineThickness");
@@ -312,7 +308,7 @@ fn main() {
             },
         );
         d.draw_text(
-            &format!("Bands: {:.0}  [Q/E]", num_bands),
+            &format!("Bands: {num_bands:.0}  [Q/E]"),
             10,
             115,
             20,
