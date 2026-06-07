@@ -1,3 +1,25 @@
+/// Escape-hatch mutable access to a wrapper's raw FFI value.
+///
+/// Implemented by every thin wrapper. For wrappers classified *sound*
+/// (see the per-type `// SOUNDNESS:` comments at the `make_thin_wrapper!`
+/// call sites) this duplicates `AsMut`; for *readonly* wrappers it is the
+/// only mutable access to the raw struct — and it is `unsafe`, because
+/// the wrapper's safe API trusts invariants of the raw fields (issue #276).
+pub trait AsRawMut<T> {
+    /// Mutable access to the wrapped raw FFI value.
+    ///
+    /// # Safety
+    ///
+    /// Callers must uphold the wrapper's invariants:
+    /// - do **not** corrupt count/dimension/format fields that safe
+    ///   accessors use to derive slice lengths or buffer sizes (e.g.
+    ///   `Mesh::vertexCount`, `Image::width`/`height`/`format`), and
+    /// - do **not** reassign pointer fields that are owned and freed by
+    ///   `Drop` (e.g. `Model::meshes`, `Font::glyphs`), unless you take
+    ///   over ownership of the previous allocation.
+    unsafe fn as_raw_mut(&mut self) -> &mut T;
+}
+
 /// Internal helper. Generates a `#[repr(transparent)]` newtype wrapping an
 /// FFI value, with `Drop` calling the supplied `Unload*` raylib function.
 ///
@@ -62,6 +84,17 @@ macro_rules! make_thin_wrapper {
         deref_impl_wrapper!($name, $t, $dropfunc, 0);
         gen_from_raw_wrapper!($name, $t, $dropfunc, 0);
     };
+    ($(#[$attrs:meta])* $name:ident, $t:ty, $dropfunc:expr, readonly) => {
+        $(#[$attrs])*
+        #[repr(transparent)]
+        #[derive(Debug)]
+        #[allow(missing_docs)]
+        pub struct $name(pub(crate) $t);
+
+        impl_wrapper!($name, $t, $dropfunc, 0);
+        readonly_deref_impl_wrapper!($name, $t, $dropfunc, 0);
+        gen_from_raw_wrapper!($name, $t, $dropfunc, 0);
+    };
 }
 
 /// Internal helper. Like [`make_thin_wrapper!`] but with a lifetime
@@ -121,6 +154,15 @@ macro_rules! make_thin_wrapper_lifetime {
 
         impl_wrapper!($name<'a>, $t1, $dropfunc, 0);
         deref_impl_wrapper!($name<'a>, $t1, $dropfunc, 0);
+    };
+    ($(#[$attrs:meta])* $name:ident, $t1:ty, $t2:ty, $dropfunc:expr, readonly) => {
+        $(#[$attrs])*
+        #[derive(Debug)]
+        #[allow(missing_docs)]
+        pub struct $name<'a>(pub(crate) $t1, &'a $t2);
+
+        impl_wrapper!($name<'a>, $t1, $dropfunc, 0);
+        readonly_deref_impl_wrapper!($name<'a>, $t1, $dropfunc, 0);
     };
 }
 
@@ -240,6 +282,7 @@ macro_rules! gen_from_raw_wrapper {
 /// impl[<'a>] AsMut<$t>  for $name[<'a>] { fn as_mut(&mut self) -> &mut $t { &mut self.$rawfield } }
 /// impl[<'a>] Deref      for $name[<'a>] { type Target = $t; fn deref(&self) -> &$t { ... } }
 /// impl[<'a>] DerefMut   for $name[<'a>] { fn deref_mut(&mut self) -> &mut $t { ... } }
+/// impl[<'a>] AsRawMut<$t> for $name[<'a>] { unsafe fn as_raw_mut(&mut self) -> &mut $t { ... } }
 /// ```
 macro_rules! deref_impl_wrapper {
     ($name:ident$(<$lifetime:tt>)?, $t:ty, $dropfunc:expr, $rawfield:tt) => {
@@ -266,6 +309,40 @@ macro_rules! deref_impl_wrapper {
         impl$(<$lifetime>)? std::ops::DerefMut for $name$(<$lifetime>)? {
             #[inline]
             fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.$rawfield
+            }
+        }
+
+        impl$(<$lifetime>)? crate::core::AsRawMut<$t> for $name$(<$lifetime>)? {
+            unsafe fn as_raw_mut(&mut self) -> &mut $t {
+                &mut self.$rawfield
+            }
+        }
+    };
+}
+
+/// Internal helper. Read half of the deref family only (`Deref` +
+/// `AsRef`), plus the `unsafe` [`AsRawMut`] escape hatch. Used by the
+/// `readonly` wrapper mode for types whose safe API trusts raw fields
+/// (issue #276) — see the `// SOUNDNESS:` comment at each call site.
+macro_rules! readonly_deref_impl_wrapper {
+    ($name:ident$(<$lifetime:tt>)?, $t:ty, $dropfunc:expr, $rawfield:tt) => {
+        impl$(<$lifetime>)? std::convert::AsRef<$t> for $name$(<$lifetime>)? {
+            fn as_ref(&self) -> &$t {
+                &self.$rawfield
+            }
+        }
+
+        impl$(<$lifetime>)? std::ops::Deref for $name$(<$lifetime>)? {
+            type Target = $t;
+            #[inline]
+            fn deref(&self) -> &Self::Target {
+                &self.$rawfield
+            }
+        }
+
+        impl$(<$lifetime>)? crate::core::AsRawMut<$t> for $name$(<$lifetime>)? {
+            unsafe fn as_raw_mut(&mut self) -> &mut $t {
                 &mut self.$rawfield
             }
         }
@@ -312,8 +389,8 @@ macro_rules! make_rslice {
     };
 }
 
-/// Internal helper. Emits the `Drop` + `AsRef` / `AsMut` / `Deref` /
-/// `DerefMut` impls for an rslice wrapper produced by [`make_rslice!`].
+/// Internal helper. Emits the `Drop` + `AsRef` / `Deref` impls for an
+/// rslice wrapper produced by [`make_rslice!`].
 ///
 /// The `Drop` impl is the load-bearing piece: it takes the inner
 /// `ManuallyDrop<Box<[T]>>`, calls `Box::leak` to recover the raw pointer
@@ -322,6 +399,12 @@ macro_rules! make_rslice {
 /// `MemFree`). This keeps the wrapper correct under raylib builds that
 /// use a custom allocator.
 ///
+/// The `AsMut<Box<[T]>>` and `DerefMut` impls are intentionally absent:
+/// exposing `&mut Box<[Color]>` would allow `mem::take` to drop the inner
+/// `Box` through the global allocator, bypassing the raylib-owned `Unload*`
+/// free path — a double-free. Use `as_mut_slice` for element mutation
+/// instead (see issue #276).
+///
 /// Not intended to be called outside of [`make_rslice!`].
 ///
 /// Expansion shape (conceptual):
@@ -329,9 +412,8 @@ macro_rules! make_rslice {
 /// ```text
 /// impl Drop for $name { /* see above */ }
 /// impl AsRef<Box<[T]>> for $name { ... }
-/// impl AsMut<Box<[T]>> for $name { ... }
 /// impl Deref     for $name { type Target = Box<[T]>; ... }
-/// impl DerefMut  for $name { ... }
+/// impl $name { pub fn as_mut_slice(&mut self) -> &mut [Color] { ... } }
 /// ```
 macro_rules! impl_rslice {
     ($name:ident, $t:ty, $dropfunc:expr, $rawfield:tt) => {
@@ -351,12 +433,6 @@ macro_rules! impl_rslice {
             }
         }
 
-        impl std::convert::AsMut<$t> for $name {
-            fn as_mut(&mut self) -> &mut $t {
-                &mut self.$rawfield
-            }
-        }
-
         impl std::ops::Deref for $name {
             type Target = $t;
             #[inline]
@@ -365,10 +441,13 @@ macro_rules! impl_rslice {
             }
         }
 
-        impl std::ops::DerefMut for $name {
+        impl $name {
+            /// Mutable access to the elements. The `Box` itself is not
+            /// exposed (replacing it would free the raylib-owned buffer
+            /// through the global allocator — see issue #276).
             #[inline]
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.$rawfield
+            pub fn as_mut_slice(&mut self) -> &mut [crate::ffi::Color] {
+                &mut self.$rawfield[..]
             }
         }
     };
