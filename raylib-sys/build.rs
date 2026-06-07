@@ -13,7 +13,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 
   3. This notice may not be removed or altered from any source distribution.
 */
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 
 extern crate bindgen;
 
@@ -281,6 +281,7 @@ fn build_with_cmake(src_path: &str) {
     }
 }
 
+#[cfg(not(feature = "nobindgen"))]
 fn gen_bindings() {
     let target = env::var("TARGET").expect("Cargo build scripts always have TARGET");
     let (platform, os) = platform_from_target(&target);
@@ -318,6 +319,7 @@ fn gen_bindings() {
     }
     let mut builder = bindgen::Builder::default()
         .header(header)
+        .use_core()
         .rustified_enum(".+")
         .derive_partialeq(true)
         .derive_default(true)
@@ -329,7 +331,11 @@ fn gen_bindings() {
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .clang_arg("-I../raylib/src")
+        // Vendored raylib headers, relative to the build-script CWD (the package
+        // root). nobuild.h resolves raylib.h/raymath.h/rlgl.h through this -I;
+        // binding.h's quoted ../raylib/src/ includes resolve file-relative and
+        // don't need it.
+        .clang_arg("-Iraylib/src")
         .clang_arg("-std=c99")
         .clang_arg(plat)
         // RAYMATH_IMPLEMENTATION makes RMAPI expand to `extern inline` so
@@ -345,6 +351,16 @@ fn gen_bindings() {
     if platform == Platform::Desktop && os == PlatformOS::Windows {
         // odd workaround for booleans being broken
         builder = builder.clang_arg("-D__STDC__");
+    }
+
+    // nobuild bindings may be consumed cross-target via nobindgen +
+    // RAYLIB_BINDGEN_LOCATION (e.g. the no-std CI leg compile-checks a
+    // host-generated binding for thumbv7em). bindgen's layout asserts
+    // hardcode the generating host's pointer width and break such
+    // compile-only cross-checks; hosted default builds keep them.
+    #[cfg(feature = "nobuild")]
+    {
+        builder = builder.layout_tests(false);
     }
 
     if platform == Platform::Web {
@@ -473,7 +489,7 @@ fn main() {
     let header;
     #[cfg(feature = "nobuild")]
     {
-        header = "/usr/include/raylib.h"
+        header = "binding/nobuild.h"
     }
     #[cfg(not(feature = "nobuild"))]
     {
@@ -518,6 +534,10 @@ fn main() {
     let raylib_src = "./raylib";
     build_with_cmake(raylib_src);
 
+    // `nobindgen` consumers supply a pregenerated binding via RAYLIB_BINDGEN_LOCATION
+    // (see src/lib.rs); skip bindgen entirely — it may not be runnable for the
+    // build target (e.g. the no-std CI leg cross-checking thumbv7em-none-eabihf).
+    #[cfg(not(feature = "nobindgen"))]
     gen_bindings();
 
     link(platform, platform_os);

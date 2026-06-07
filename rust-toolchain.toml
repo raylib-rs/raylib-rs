@@ -4,4 +4,5 @@
 [toolchain]
 channel = "1.85.0"
 components = ["rustfmt", "clippy"]
-targets = ["wasm32-unknown-emscripten"]
+# thumbv7em-none-eabihf: no-std proof target for raylib-sys (check.yml `no-std` job)
+targets = ["wasm32-unknown-emscripten", "thumbv7em-none-eabihf"]

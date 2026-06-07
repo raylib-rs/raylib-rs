@@ -122,3 +122,44 @@ jobs:
           shared-key: check-msrv
       - name: Build on MSRV
         run: cargo +1.85.0 build -p raylib -p raylib-sys --features full
+
+  no-std:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: check-no-std
+      # rust-toolchain.toml installs the thumb target automatically; this is a
+      # cheap idempotent belt-and-suspenders for runners with a preinstalled
+      # toolchain.
+      - name: Add no-std target
+        run: rustup target add thumbv7em-none-eabihf
+      # Step 1 of the proof: bindgen runs on the host (build scripts always
+      # have std); `nobuild` skips the C compile entirely. The build-script
+      # JSON message pinpoints the exact out_dir — newest-file heuristics can
+      # pick up bindings from other feature sets.
+      - name: Generate binding on host and locate it (bindgen only, no C build)
+        run: |
+          out_dir=$(cargo check -p raylib-sys --features nobuild --message-format=json \
+            | jq -r 'select(.reason == "build-script-executed" and (.package_id | tostring | contains("raylib-sys"))) | .out_dir' \
+            | tail -n1)
+          test -f "$out_dir/bindings.rs"
+          # nobuild bindings are generated without bindgen layout asserts
+          # (host pointer widths would break the cross-target compile check).
+          if grep -q 'Size of' "$out_dir/bindings.rs"; then
+            echo "::error::selected binding still contains layout asserts - wrong artifact"
+            exit 1
+          fi
+          echo "RAYLIB_BINDGEN_LOCATION=$out_dir/bindings.rs" >> "$GITHUB_ENV"
+      # Step 2: a real no-std target proves the crate graph builds without
+      # std. The binding is host-flavored — fine for a compile-only proof; it
+      # never runs.
+      - name: Check raylib-sys on a no-std target
+        run: cargo check -p raylib-sys --target thumbv7em-none-eabihf --no-default-features --features nobuild,nobindgen
+      # mint is documented as no-std-compatible — keep that claim honest.
+      - name: Check raylib-sys + mint on a no-std target
+        run: cargo check -p raylib-sys --target thumbv7em-none-eabihf --no-default-features --features nobuild,nobindgen,mint
