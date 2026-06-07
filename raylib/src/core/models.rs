@@ -1065,6 +1065,43 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + crate::core::AsRawMut<ffi::Mate
         }
     }
 
+    /// Replace the material's shader.
+    ///
+    /// Copies the shader's inline FFI struct into the material — the same
+    /// semantics as raylib C's `material.shader = shader`. The [`Shader`]
+    /// wrapper keeps ownership of the shader (and frees it on drop), so it
+    /// must outlive every use of this material.
+    ///
+    /// [`Shader`]: crate::shaders::Shader
+    #[inline]
+    fn set_shader(&mut self, shader: impl AsRef<ffi::Shader>) {
+        // SAFETY: shader is an inline value field — writing it cannot
+        // corrupt the maps pointer (the only field the safe API trusts).
+        unsafe {
+            self.as_raw_mut().shader = *shader.as_ref();
+        }
+    }
+
+    /// Set one material map's color (e.g. albedo tint).
+    ///
+    /// # Panics
+    ///
+    /// Never — `index` is an enum bounded by `MAX_MATERIAL_MAPS`.
+    #[inline]
+    fn set_map_color(
+        &mut self,
+        index: crate::consts::MaterialMapIndex,
+        color: impl Into<ffi::Color>,
+    ) {
+        *self.maps_mut()[index as usize].color_mut() = color.into();
+    }
+
+    /// Set one material map's scalar value (e.g. metalness/roughness).
+    #[inline]
+    fn set_map_value(&mut self, index: crate::consts::MaterialMapIndex, value: f32) {
+        *self.maps_mut()[index as usize].value_mut() = value;
+    }
+
     /// Set texture for a material map type (MATERIAL_MAP_ALBEDO, MATERIAL_MAP_SPECULAR, etc.).
     #[inline]
     fn set_material_texture(
