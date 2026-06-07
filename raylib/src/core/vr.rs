@@ -2,11 +2,13 @@
 use crate::core::{RaylibHandle, RaylibThread};
 use crate::ffi;
 
+// SOUNDNESS: full deref — all fields inline Matrix/f32 arrays; nothing to invalid-free, no trusted counts.
 make_thin_wrapper!(
     /// VrStereoConfig, VR stereo rendering configuration for simulator
     VrStereoConfig,
     ffi::VrStereoConfig,
-    ffi::UnloadVrStereoConfig
+    ffi::UnloadVrStereoConfig,
+    true
 );
 
 /// VrDeviceInfo, Head-Mounted-Display device parameters

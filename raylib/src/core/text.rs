@@ -8,11 +8,12 @@ use crate::error::LoadFontError;
 use crate::ffi;
 use crate::ffi::Rectangle;
 
-use std::convert::{AsMut, AsRef, TryInto};
+use std::convert::{AsRef, TryInto};
 use std::ffi::{CString, OsString};
 use std::mem::ManuallyDrop;
 
 fn no_drop<T>(_thing: T) {}
+// SOUNDNESS: readonly — P1 (chars slice trusts glyphs×glyphCount) + P2 (Drop=UnloadFont frees recs/glyphs).
 make_thin_wrapper!(
     /// Font: a glyph atlas texture plus per-glyph metrics.
     ///
@@ -48,23 +49,27 @@ make_thin_wrapper!(
     /// ```
     Font,
     ffi::Font,
-    ffi::UnloadFont
+    ffi::UnloadFont,
+    readonly
 );
-make_thin_wrapper!(WeakFont, ffi::Font, no_drop);
+// SOUNDNESS: readonly — P1 (same RaylibFont accessors); no_drop removes P2.
+make_thin_wrapper!(WeakFont, ffi::Font, no_drop, readonly);
+// SOUNDNESS: full deref — inline scalars + inline Image value; this wrapper neither sizes nor frees the image data.
 make_thin_wrapper!(
     /// GlyphInfo, font characters glyphs info
     GlyphInfo,
     ffi::GlyphInfo,
-    no_drop
+    no_drop,
+    true
 );
 
 /// An owned slice of [`GlyphInfo`] data allocated by raylib, freed via `UnloadFontData` on drop.
 ///
 /// Wraps a raylib-allocated `Box<[GlyphInfo]>` and calls `UnloadFontData` on drop so the
 /// glyph buffer is returned to raylib's allocator rather than Rust's. Implements
-/// [`Deref`](std::ops::Deref) + [`DerefMut`](std::ops::DerefMut) to `Box<[GlyphInfo]>` so
-/// it acts like a slice: index with `slice[i]`, iterate with `slice.iter()`, or read
-/// `slice.len()` directly.
+/// [`Deref`](std::ops::Deref) to `Box<[GlyphInfo]>` so it acts like a slice: index with
+/// `slice[i]`, iterate with `slice.iter()`, or read `slice.len()` directly. For mutable
+/// element access use [`as_mut_slice`](RSliceGlyphInfo::as_mut_slice).
 ///
 /// # Construction
 ///
@@ -77,6 +82,8 @@ make_thin_wrapper!(
 ///
 /// - [`GlyphInfo`] — per-codepoint metrics held in the slice.
 /// - [`Font`] — owning font built from this glyph data.
+// SOUNDNESS: rslice — Box mut-half removed (mem::take would double-free via UnloadFontData);
+// element access via as_mut_slice.
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct RSliceGlyphInfo(pub(crate) std::mem::ManuallyDrop<std::boxed::Box<[GlyphInfo]>>);
@@ -101,12 +108,6 @@ impl std::convert::AsRef<Box<[GlyphInfo]>> for RSliceGlyphInfo {
     }
 }
 
-impl std::convert::AsMut<Box<[GlyphInfo]>> for RSliceGlyphInfo {
-    fn as_mut(&mut self) -> &mut Box<[GlyphInfo]> {
-        &mut self.0
-    }
-}
-
 impl std::ops::Deref for RSliceGlyphInfo {
     type Target = Box<[GlyphInfo]>;
     #[inline]
@@ -115,10 +116,13 @@ impl std::ops::Deref for RSliceGlyphInfo {
     }
 }
 
-impl std::ops::DerefMut for RSliceGlyphInfo {
+impl RSliceGlyphInfo {
+    /// Mutable access to the elements. The `Box` itself is not exposed
+    /// (replacing it would free the raylib-owned buffer through the
+    /// global allocator — see issue #276).
     #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    pub fn as_mut_slice(&mut self) -> &mut [GlyphInfo] {
+        &mut self.0[..]
     }
 }
 
@@ -367,7 +371,7 @@ impl RaylibFont for Font {}
 ///
 /// - [`Font`] — owning font handle.
 /// - [`GlyphInfo`] — per-codepoint metrics returned by [`get_glyph_info`](Self::get_glyph_info).
-pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
+pub trait RaylibFont: AsRef<ffi::Font> + crate::core::AsRawMut<ffi::Font> {
     /// Base size (default chars height)
     #[inline]
     #[must_use]
@@ -395,11 +399,11 @@ pub trait RaylibFont: AsRef<ffi::Font> + AsMut<ffi::Font> {
     #[inline]
     #[must_use]
     fn chars_mut(&mut self) -> &mut [GlyphInfo] {
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (reads glyphs/glyphCount to build a slice — does not corrupt the pointer or count).
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().glyphs as *mut GlyphInfo,
-                self.as_ref().glyphCount as usize,
-            )
+            let f = self.as_raw_mut();
+            std::slice::from_raw_parts_mut(f.glyphs as *mut GlyphInfo, f.glyphCount as usize)
         }
     }
 
@@ -492,18 +496,19 @@ impl Font {
     ) -> Result<Font, LoadFontError> {
         let f = unsafe {
             let mut f = std::mem::zeroed::<Font>();
-            f.baseSize = base_size;
+            // Direct field access on the concrete Font wrapper (inherent impl, not trait method).
+            f.0.baseSize = base_size;
             f.set_chars(chars);
 
             let atlas = ffi::GenImageFontAtlas(
-                f.glyphs,
+                f.0.glyphs,
                 &mut f.0.recs,
-                f.baseSize,
-                f.glyphCount,
+                f.0.baseSize,
+                f.0.glyphCount,
                 padding,
                 pack_method,
             );
-            f.texture = ffi::LoadTextureFromImage(atlas);
+            f.0.texture = ffi::LoadTextureFromImage(atlas);
             ffi::UnloadImage(atlas);
             f
         };
@@ -515,22 +520,26 @@ impl Font {
 
     /// Sets the character data on the current Font.
     fn set_chars(&mut self, chars: &[ffi::GlyphInfo]) {
+        // Direct field access on the concrete Font wrapper (inherent impl, not trait method).
+        // SAFETY: we are building a fresh Font struct (called from from_data with zeroed Font);
+        // writing glyphCount then glyphs does not corrupt other invariants.
         unsafe {
-            self.glyphCount = chars.len() as i32;
-            let data_size = self.glyphCount as usize * std::mem::size_of::<ffi::GlyphInfo>();
+            self.0.glyphCount = chars.len() as i32;
+            let data_size = self.0.glyphCount as usize * std::mem::size_of::<ffi::GlyphInfo>();
             let ci_arr_ptr = ffi::MemAlloc(data_size.try_into().unwrap()); // raylib frees this data in UnloadFont
             std::ptr::copy(
                 chars.as_ptr(),
                 ci_arr_ptr as *mut ffi::GlyphInfo,
                 chars.len(),
             );
-            self.glyphs = ci_arr_ptr as *mut ffi::GlyphInfo;
+            self.0.glyphs = ci_arr_ptr as *mut ffi::GlyphInfo;
         }
     }
 
     /// Sets the texture on the current Font, and takes ownership of `tex`.
     fn set_texture(&mut self, tex: Texture2D) {
-        self.texture = tex.0;
+        // Direct field access on the concrete Font wrapper (inherent impl, not trait method).
+        self.0.texture = tex.0;
         std::mem::forget(tex); // UnloadFont will also unload the texture
     }
 }

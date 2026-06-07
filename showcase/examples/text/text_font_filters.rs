@@ -50,7 +50,7 @@ fn main() {
     // SAFETY: font owns its texture; raylib's GenTextureMipmaps takes a `*mut Texture2D`
     // and mutates id/mipmaps in-place. We never use the texture concurrently.
     unsafe {
-        let f: &mut raylib::ffi::Font = std::convert::AsMut::as_mut(&mut font);
+        let f: &mut raylib::ffi::Font = font.as_raw_mut();
         raylib::ffi::GenTextureMipmaps(&mut f.texture);
     }
 

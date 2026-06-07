@@ -85,7 +85,7 @@ fn main() {
     }
 
     let mut music = audio.new_music("resources/audio/mini1111.xm").unwrap();
-    music.looping = false; // Rust: Music DerefMut exposes the ffi struct; mutate the field directly.
+    music.set_looping(false);
     let mut pitch: f32 = 1.0;
 
     music.play_stream();

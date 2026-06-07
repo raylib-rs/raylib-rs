@@ -139,11 +139,19 @@ impl ExactSizeIterator for FilePathIter<'_> {
     }
 }
 
-make_thin_wrapper!(FilePathList, ffi::FilePathList, ffi::UnloadDirectoryFiles);
+// SOUNDNESS: readonly — P1 (paths slice trusts paths×count) + P2 (Drop=UnloadDirectoryFiles frees paths and each string).
+make_thin_wrapper!(
+    FilePathList,
+    ffi::FilePathList,
+    ffi::UnloadDirectoryFiles,
+    readonly
+);
+// SOUNDNESS: readonly — P1/P2 like FilePathList (Drop=UnloadDroppedFiles).
 make_thin_wrapper!(
     DroppedFilePathList,
     ffi::FilePathList,
-    ffi::UnloadDroppedFiles
+    ffi::UnloadDroppedFiles,
+    readonly
 );
 
 impl FilePathList {

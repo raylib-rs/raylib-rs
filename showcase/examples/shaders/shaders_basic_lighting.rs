@@ -141,7 +141,7 @@ fn main() {
     // SAFETY: Shader.locs is a *mut c_int array of MAX_SHADER_LOCS valid for the lifetime of `shader`.
     unsafe {
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_VECTOR_VIEW as isize) = view_loc;
     }

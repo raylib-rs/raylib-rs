@@ -77,11 +77,11 @@ fn main() {
     // SAFETY: write into shader.locs[NORMAL] and [VECTOR_VIEW]; backing array lives as long as the shader.
     unsafe {
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_MAP_NORMAL as isize) = normal_map_loc;
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_VECTOR_VIEW as isize) = view_pos_loc;
     }
@@ -100,26 +100,17 @@ fn main() {
         .unwrap();
 
     // Set the plane model's shader and texture maps
-    plane.materials_mut()[0].as_mut().shader = *shader.as_ref();
+    plane.materials_mut()[0].set_shader(&shader);
     let mut diffuse_texture = rl
         .load_texture(&thread, "resources/shaders/tiles_diffuse.png")
         .unwrap();
     let mut normal_texture = rl
         .load_texture(&thread, "resources/shaders/tiles_normal.png")
         .unwrap();
-    // SAFETY: install diffuse + normal textures into material[0]; Texture2D RAII keeps ids alive.
-    unsafe {
-        (*plane.materials_mut()[0]
-            .as_mut()
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *diffuse_texture.as_ref();
-        (*plane.materials_mut()[0]
-            .as_mut()
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_NORMAL as isize))
-        .texture = *normal_texture.as_ref();
-    }
+    plane.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &diffuse_texture);
+    plane.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_NORMAL, &normal_texture);
 
     // Generate Mipmaps and use TRILINEAR filtering to help with texture aliasing
     diffuse_texture.gen_texture_mipmaps();
@@ -256,13 +247,10 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind external resources so plane's Drop doesn't double-free.
-    // SAFETY: clear shader handle and texture ids on the loaded model's materials[0].
+    plane.materials_mut()[0].clear_shader();
+    // SAFETY: zero out the texture ids so UnloadMaterial doesn't double-free.
     unsafe {
-        let mat = plane.materials_mut()[0].as_mut();
-        mat.shader = ffi::Shader {
-            id: 0,
-            locs: std::ptr::null_mut(),
-        };
+        let mat = plane.materials_mut()[0].as_raw_mut();
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))

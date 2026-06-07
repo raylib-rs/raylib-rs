@@ -179,7 +179,7 @@ fn main() {
     // SAFETY: Shader.locs is a *mut c_int array of MAX_SHADER_LOCS valid for the lifetime of `shader`.
     unsafe {
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_VECTOR_VIEW as isize) = view_loc;
     }
@@ -198,7 +198,7 @@ fn main() {
         for j in 0..mat_count {
             // Copy the shader's ffi handle into the model's material[j].shader.
             // Shader RAII still owns the GPU resource; the Model materials reference it by id.
-            models[i].materials_mut()[j].as_mut().shader = *shader.as_ref();
+            models[i].materials_mut()[j].set_shader(&shader);
         }
     }
 

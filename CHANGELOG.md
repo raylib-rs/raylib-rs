@@ -19,6 +19,26 @@
   `nobuild` bindings are generated without bindgen layout assertions so they
   can be compile-checked cross-target; hosted default builds keep them.
 
+### Breaking
+
+- **Wrapper soundness (resolves [#276](https://github.com/raylib-rs/raylib-rs/issues/276), supersedes #277 by @AmityWilder):**
+  `DerefMut`/`AsMut<ffi::T>` are removed from wrappers whose safe API trusts
+  raw fields — `Image`, `Mesh`, `Model`, `Material`, `Font`, `Shader`,
+  `ModelAnimation`, their `Weak*` variants, `FilePathList`,
+  `DroppedFilePathList`, `Wave`, `Sound`, `Music`, `AudioStream` (read access
+  via `Deref`/`AsRef` is unchanged). Raw mutation is now
+  `unsafe fn as_raw_mut()` (new `AsRawMut` trait, in the prelude). New safe
+  setters cover the common cases: `RaylibMaterial::set_shader`,
+  `set_map_color`, `set_map_value`. `ImageColors`/`ImagePalette` no longer
+  expose `&mut Box<[Color]>` (use `as_mut_slice`). `Texture2D`,
+  `RenderTexture2D`, `VrStereoConfig` and other inline-data wrappers keep the
+  full deref family — every classification is documented as a `// SOUNDNESS:`
+  comment at its `make_thin_wrapper!` call site. `RSliceGlyphInfo` likewise
+  only exposes elements via `as_mut_slice`. `update_model_animation`/
+  `update_model_animation_ex` now take `impl AsRef<ffi::Model>` (they pass
+  the model by value to C). Additional safe setters: `RaylibMaterial::clear_shader`,
+  `Music::set_looping`.
+
 ### Changed
 
 - **MSRV raised 1.85 → 1.88.** Driver: transitive deps now require newer

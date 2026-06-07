@@ -65,7 +65,7 @@ fn main() {
     );
     // Mirror C's `model.materials[1].shader = skinningShader;`. The model
     // does not own the shader — `skinning_shader` continues to manage its lifetime.
-    *model.materials_mut()[1].shader_mut().as_mut() = *skinning_shader.as_ref();
+    model.materials_mut()[1].set_shader(&skinning_shader);
 
     // Load gltf model animations
     let anims = rl

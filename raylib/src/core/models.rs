@@ -20,6 +20,7 @@ use std::ffi::CString;
 use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
+// SOUNDNESS: readonly — P1 (meshes/materials/bones slices trust meshCount/materialCount/boneCount) + P2 (Drop=UnloadModel frees meshes/materials/skeleton arrays).
 make_thin_wrapper!(
     /// Loaded 3-D model with its associated meshes and materials.
     ///
@@ -54,9 +55,12 @@ make_thin_wrapper!(
     /// ```
     Model,
     ffi::Model,
-    ffi::UnloadModel
+    ffi::UnloadModel,
+    readonly
 );
-make_thin_wrapper!(WeakModel, ffi::Model, no_drop);
+// SOUNDNESS: readonly — P1 (same RaylibModel slice accessors); no_drop removes P2.
+make_thin_wrapper!(WeakModel, ffi::Model, no_drop, readonly);
+// SOUNDNESS: readonly — P1 (vertices/normals/etc. slices trust vertexCount/triangleCount) + P2 (Drop=UnloadMesh frees every pointer field).
 make_thin_wrapper!(
     /// Per-mesh vertex and index data uploaded to the GPU.
     ///
@@ -85,11 +89,24 @@ make_thin_wrapper!(
     /// let verts = mesh.vertices();
     /// println!("cube has {} vertices", verts.len());
     /// ```
+    ///
+    /// Mutable access to the raw FFI struct is `unsafe` — corrupting the
+    /// counts the slice accessors trust is no longer possible in safe code:
+    ///
+    /// ```compile_fail
+    /// # use raylib::prelude::*;
+    /// fn corrupt(mesh: &mut Mesh) {
+    ///     mesh.vertexCount += 5; // no DerefMut on Mesh (issue #276)
+    /// }
+    /// ```
     Mesh,
     ffi::Mesh,
-    |mesh: ffi::Mesh| ffi::UnloadMesh(mesh)
+    |mesh: ffi::Mesh| ffi::UnloadMesh(mesh),
+    readonly
 );
-make_thin_wrapper!(WeakMesh, ffi::Mesh, no_drop);
+// SOUNDNESS: readonly — P1 (same RaylibMesh slice accessors); no_drop removes P2.
+make_thin_wrapper!(WeakMesh, ffi::Mesh, no_drop, readonly);
+// SOUNDNESS: readonly — P1 (maps slice trusts the maps pointer) + P2 (Drop=UnloadMaterial frees maps).
 make_thin_wrapper!(
     /// Rendering material: a shader plus up to `MAX_MATERIAL_MAPS` texture maps.
     ///
@@ -100,27 +117,36 @@ make_thin_wrapper!(
     /// Freed via `UnloadMaterial` on drop.
     Material,
     ffi::Material,
-    ffi::UnloadMaterial
+    ffi::UnloadMaterial,
+    readonly
 );
-make_thin_wrapper!(WeakMaterial, ffi::Material, no_drop);
+// SOUNDNESS: readonly — P1 (maps slice trusts the maps pointer); no_drop removes P2.
+make_thin_wrapper!(WeakMaterial, ffi::Material, no_drop, readonly);
+// SOUNDNESS: full deref — inline name[32]/parent only; no trusted counts, no owned pointers.
 make_thin_wrapper!(
     /// Bone, skeletal animation bone
     BoneInfo,
     ffi::BoneInfo,
-    no_drop
+    no_drop,
+    true
 );
+// SOUNDNESS: readonly — P1 (keyframe accessors trust framePoses/frameCount); freed by the owning ModelAnimations, not this wrapper.
 make_thin_wrapper!(
     /// A single model animation: a non-owning view into a `ModelAnimations` collection.
     ModelAnimation,
     ffi::ModelAnimation,
-    no_drop
+    no_drop,
+    readonly
 );
-make_thin_wrapper!(WeakModelAnimation, ffi::ModelAnimation, no_drop);
+// SOUNDNESS: readonly — P1 (keyframe accessors trust framePoses/frameCount); no_drop removes P2.
+make_thin_wrapper!(WeakModelAnimation, ffi::ModelAnimation, no_drop, readonly);
+// SOUNDNESS: full deref — inline texture/color/value fields; no trusted counts, no owned pointers.
 make_thin_wrapper!(
     /// MaterialMap
     MaterialMap,
     ffi::MaterialMap,
-    no_drop
+    no_drop,
+    true
 );
 
 // Weak things can be clone
@@ -307,12 +333,12 @@ impl RaylibHandle {
     pub fn update_model_animation(
         &mut self,
         _: &RaylibThread,
-        mut model: impl AsMut<ffi::Model>,
+        model: impl AsRef<ffi::Model>,
         anim: impl AsRef<ffi::ModelAnimation>,
         frame: f32,
     ) {
         unsafe {
-            ffi::UpdateModelAnimation(*model.as_mut(), *anim.as_ref(), frame);
+            ffi::UpdateModelAnimation(*model.as_ref(), *anim.as_ref(), frame);
         }
     }
 
@@ -325,7 +351,7 @@ impl RaylibHandle {
     pub fn update_model_animation_ex(
         &mut self,
         _: &RaylibThread,
-        mut model: impl AsMut<ffi::Model>,
+        model: impl AsRef<ffi::Model>,
         anim_a: impl AsRef<ffi::ModelAnimation>,
         frame_a: f32,
         anim_b: impl AsRef<ffi::ModelAnimation>,
@@ -334,7 +360,7 @@ impl RaylibHandle {
     ) {
         unsafe {
             ffi::UpdateModelAnimationEx(
-                *model.as_mut(),
+                *model.as_ref(),
                 *anim_a.as_ref(),
                 frame_a,
                 *anim_b.as_ref(),
@@ -381,7 +407,7 @@ impl Model {
 /// - [`Model`] — the owned model type this trait extends
 /// - [`RaylibMesh`] — sibling trait for per-mesh accessors
 /// - [`RaylibMaterial`] — sibling trait for per-material accessors
-pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
+pub trait RaylibModel: AsRef<ffi::Model> + crate::core::AsRawMut<ffi::Model> {
     #[inline]
     #[must_use]
     /// Local transform matrix
@@ -410,7 +436,10 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     /// - [`RaylibModel::transform`] — read the current transform
     #[inline]
     fn set_transform(&mut self, mat: &Matrix) {
-        self.as_mut().transform = *mat;
+        // SAFETY: transform is an inline Matrix — not a trusted count or owned pointer.
+        unsafe {
+            self.as_raw_mut().transform = *mat;
+        }
     }
 
     /// Meshes array
@@ -449,11 +478,11 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     #[inline]
     #[must_use]
     fn meshes_mut(&mut self) -> &mut [WeakMesh] {
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (no count/pointer corruption — reads meshes/meshCount then returns a slice).
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.as_mut().meshes as *mut WeakMesh,
-                self.as_mut().meshCount as usize,
-            )
+            let m = self.as_raw_mut();
+            std::slice::from_raw_parts_mut(m.meshes as *mut WeakMesh, m.meshCount as usize)
         }
     }
     /// Materials array
@@ -471,10 +500,13 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
     #[inline]
     #[must_use]
     fn materials_mut(&mut self) -> &mut [WeakMaterial] {
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (no count/pointer corruption — reads materials/materialCount then returns a slice).
         unsafe {
+            let m = self.as_raw_mut();
             std::slice::from_raw_parts_mut(
-                self.as_mut().materials as *mut WeakMaterial,
-                self.as_mut().materialCount as usize,
+                m.materials as *mut WeakMaterial,
+                m.materialCount as usize,
             )
         }
     }
@@ -501,10 +533,13 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
             return None;
         }
 
+        // SAFETY: bones is non-null (checked above); raw mut access: this method upholds
+        // the wrapper invariants itself (no count/pointer corruption — only reads the bones slice).
         Some(unsafe {
+            let m = self.as_raw_mut();
             std::slice::from_raw_parts_mut(
-                self.as_mut().skeleton.bones as *mut BoneInfo,
-                self.as_mut().skeleton.boneCount as usize,
+                m.skeleton.bones as *mut BoneInfo,
+                m.skeleton.boneCount as usize,
             )
         })
     }
@@ -528,7 +563,8 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
         }
         // SAFETY: bindPose is non-null (checked above) and points to a valid ffi::Transform.
         // Transform is #[repr(C)] over ffi::Transform, so the cast is sound.
-        Some(unsafe { &mut *(self.as_mut().skeleton.bindPose as *mut Transform) })
+        // Raw mut access: this method upholds the wrapper invariants itself (no count/pointer corruption).
+        Some(unsafe { &mut *(self.as_raw_mut().skeleton.bindPose as *mut Transform) })
     }
     #[inline]
     #[must_use]
@@ -563,7 +599,9 @@ pub trait RaylibModel: AsRef<ffi::Model> + AsMut<ffi::Model> {
         } else if material_id >= self.as_ref().materialCount {
             Err(SetMaterialError::MaterialIdOutOfBounds)
         } else {
-            unsafe { ffi::SetModelMeshMaterial(self.as_mut(), mesh_id, material_id) };
+            // SAFETY: SetModelMeshMaterial writes the mesh->material index mapping;
+            // it does not corrupt count or pointer fields — invariants upheld.
+            unsafe { ffi::SetModelMeshMaterial(self.as_raw_mut(), mesh_id, material_id) };
             Ok(())
         }
     }
@@ -605,7 +643,7 @@ impl Mesh {
 /// - [`Mesh`] — the owned mesh type this trait extends
 /// - [`MeshBuilder`] — assemble a custom mesh from typed vertex slices
 /// - [`RaylibModel`] — sibling trait for whole-model accessors
-pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
+pub trait RaylibMesh: AsRef<ffi::Mesh> + crate::core::AsRawMut<ffi::Mesh> {
     /// Upload mesh vertex data in GPU and provide VAO/VBO ids
     ///
     /// # Safety
@@ -614,7 +652,9 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     /// must not already have GPU buffers allocated (i.e., `vaoId` and all `vboId` must be 0).
     #[inline]
     unsafe fn upload(&mut self, dynamic: bool) {
-        unsafe { ffi::UploadMesh(self.as_mut(), dynamic) };
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (UploadMesh writes vaoId/vboId — not trusted count or vertex pointer fields).
+        unsafe { ffi::UploadMesh(self.as_raw_mut(), dynamic) };
     }
     /// Update mesh vertex data in GPU for a specific buffer index
     ///
@@ -650,7 +690,9 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     #[must_use]
     fn vertices_mut(&mut self) -> &mut [Vector3] {
-        let m = self.as_mut();
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (only reads vertices/vertexCount to build a slice — no count/pointer corruption).
+        let m = unsafe { self.as_raw_mut() };
         if m.vertices.is_null() || m.vertexCount == 0 {
             return &mut [];
         }
@@ -674,7 +716,9 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     #[must_use]
     fn normals_mut(&mut self) -> &mut [Vector3] {
-        let m = self.as_mut();
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (only reads normals/vertexCount to build a slice — no count/pointer corruption).
+        let m = unsafe { self.as_raw_mut() };
         if m.normals.is_null() || m.vertexCount == 0 {
             return &mut [];
         }
@@ -697,7 +741,9 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     #[must_use]
     fn texcoords_mut(&mut self) -> &mut [Vector2] {
-        let m = self.as_mut();
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (only reads texcoords/vertexCount to build a slice — no count/pointer corruption).
+        let m = unsafe { self.as_raw_mut() };
         if m.texcoords.is_null() || m.vertexCount == 0 {
             return &mut [];
         }
@@ -723,7 +769,9 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     #[must_use]
     fn texcoords2_mut(&mut self) -> &mut [Vector2] {
-        let m = self.as_mut();
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (only reads texcoords2/vertexCount to build a slice — no count/pointer corruption).
+        let m = unsafe { self.as_raw_mut() };
         if m.texcoords2.is_null() || m.vertexCount == 0 {
             return &mut [];
         }
@@ -747,7 +795,9 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     #[must_use]
     fn tangents_mut(&mut self) -> &mut [Vector3] {
-        let m = self.as_mut();
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (only reads tangents/vertexCount to build a slice — no count/pointer corruption).
+        let m = unsafe { self.as_raw_mut() };
         if m.tangents.is_null() || m.vertexCount == 0 {
             return &mut [];
         }
@@ -771,7 +821,9 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     #[must_use]
     fn colors_mut(&mut self) -> &mut [Color] {
-        let m = self.as_mut();
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (only reads colors/vertexCount to build a slice — no count/pointer corruption).
+        let m = unsafe { self.as_raw_mut() };
         if m.colors.is_null() || m.vertexCount == 0 {
             return &mut [];
         }
@@ -794,7 +846,9 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     #[inline]
     #[must_use]
     fn indices_mut(&mut self) -> &mut [u16] {
-        let m = self.as_mut();
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (only reads indices/triangleCount to build a slice — no count/pointer corruption).
+        let m = unsafe { self.as_raw_mut() };
         if m.indices.is_null() || m.triangleCount == 0 {
             return &mut [];
         }
@@ -894,8 +948,10 @@ pub trait RaylibMesh: AsRef<ffi::Mesh> + AsMut<ffi::Mesh> {
     // NOTE: New VBO for tangents is generated at default location and also binded to mesh VAO
     #[inline]
     fn gen_mesh_tangents(&mut self, _: &RaylibThread) {
+        // SAFETY: GenMeshTangents computes and stores tangent data into the mesh arrays;
+        // raw mut access: this method upholds the wrapper invariants itself (no count corruption).
         unsafe {
-            ffi::GenMeshTangents(self.as_mut());
+            ffi::GenMeshTangents(self.as_raw_mut());
         }
     }
 
@@ -979,7 +1035,7 @@ impl RaylibMaterial for Material {}
 /// - [`Material`] — the owned material type this trait extends
 /// - [`MaterialMap`] — per-slot texture / color / value triple
 /// - [`RaylibModel::materials_mut`] — borrow a model's materials
-pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
+pub trait RaylibMaterial: AsRef<ffi::Material> + crate::core::AsRawMut<ffi::Material> {
     /// Material shader
     #[must_use]
     #[inline]
@@ -990,7 +1046,9 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     #[inline]
     /// Material shader
     fn shader_mut(&mut self) -> &mut crate::shaders::WeakShader {
-        unsafe { std::mem::transmute(&mut self.as_mut().shader) }
+        // SAFETY: transmuting the inline shader field; raw mut access cannot
+        // corrupt maps (the only trusted pointer) — invariants upheld.
+        unsafe { std::mem::transmute(&mut self.as_raw_mut().shader) }
     }
     #[must_use]
     #[inline]
@@ -1007,12 +1065,67 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
     #[inline]
     /// Material maps array (MAX_MATERIAL_MAPS)
     fn maps_mut(&mut self) -> &mut [MaterialMap] {
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (reads the maps pointer to build a fixed-length slice — does not corrupt the pointer).
         unsafe {
             std::slice::from_raw_parts_mut(
-                self.as_mut().maps as *mut MaterialMap,
+                self.as_raw_mut().maps as *mut MaterialMap,
                 consts::MAX_MATERIAL_MAPS as usize,
             )
         }
+    }
+
+    /// Replace the material's shader.
+    ///
+    /// Copies the shader's inline FFI struct into the material — the same
+    /// semantics as raylib C's `material.shader = shader`. The [`Shader`]
+    /// wrapper keeps ownership of the shader (and frees it on drop), so it
+    /// must outlive every use of this material.
+    ///
+    /// [`Shader`]: crate::shaders::Shader
+    #[inline]
+    fn set_shader(&mut self, shader: impl AsRef<ffi::Shader>) {
+        // SAFETY: shader is an inline value field — writing it cannot
+        // corrupt the maps pointer (the only field the safe API trusts).
+        unsafe {
+            self.as_raw_mut().shader = *shader.as_ref();
+        }
+    }
+
+    /// Reset the material's shader to "none" (`id: 0`, no locations array).
+    ///
+    /// Used when tearing down a material whose shader is owned elsewhere, so
+    /// the material no longer references it.
+    #[inline]
+    fn clear_shader(&mut self) {
+        // SAFETY: shader is an inline value field — writing it cannot
+        // corrupt the maps pointer (the only field the safe API trusts).
+        unsafe {
+            self.as_raw_mut().shader = ffi::Shader {
+                id: 0,
+                locs: std::ptr::null_mut(),
+            };
+        }
+    }
+
+    /// Set one material map's color (e.g. albedo tint).
+    ///
+    /// # Panics
+    ///
+    /// Never — `index` is an enum bounded by `MAX_MATERIAL_MAPS`.
+    #[inline]
+    fn set_map_color(
+        &mut self,
+        index: crate::consts::MaterialMapIndex,
+        color: impl Into<ffi::Color>,
+    ) {
+        *self.maps_mut()[index as usize].color_mut() = color.into();
+    }
+
+    /// Set one material map's scalar value (e.g. metalness/roughness).
+    #[inline]
+    fn set_map_value(&mut self, index: crate::consts::MaterialMapIndex, value: f32) {
+        *self.maps_mut()[index as usize].value_mut() = value;
     }
 
     /// Set texture for a material map type (MATERIAL_MAP_ALBEDO, MATERIAL_MAP_SPECULAR, etc.).
@@ -1022,8 +1135,14 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + AsMut<ffi::Material> {
         map_type: crate::consts::MaterialMapIndex,
         texture: impl AsRef<ffi::Texture2D>,
     ) {
+        // SAFETY: SetMaterialTexture writes one map's texture handle; counts
+        // and owned pointers are untouched.
         unsafe {
-            ffi::SetMaterialTexture(self.as_mut(), (map_type as u32) as i32, *texture.as_ref())
+            ffi::SetMaterialTexture(
+                self.as_raw_mut(),
+                (map_type as u32) as i32,
+                *texture.as_ref(),
+            )
         }
     }
 
@@ -1280,7 +1399,9 @@ impl ModelAnimation {
 ///
 /// - [`ModelAnimation`] — the parent animation type
 /// - [`ModelAnimations`] — RAII owner that yields `&ModelAnimation` slices
-pub trait RaylibModelAnimation: AsRef<ffi::ModelAnimation> + AsMut<ffi::ModelAnimation> {
+pub trait RaylibModelAnimation:
+    AsRef<ffi::ModelAnimation> + crate::core::AsRawMut<ffi::ModelAnimation>
+{
     #[must_use]
     /// Poses array by frame
     fn frame_poses(&self) -> Vec<&[Transform]> {

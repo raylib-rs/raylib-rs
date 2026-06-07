@@ -91,6 +91,7 @@ impl ExactSizeIterator for AutomationEventIter<'_> {
     }
 }
 
+// SOUNDNESS: opted out (false) — hand-written accessor surface; nothing raw leaks.
 make_thin_wrapper!(
     AutomationEventList,
     ffi::AutomationEventList,
@@ -133,6 +134,7 @@ impl AutomationEventList {
     }
 }
 
+// SOUNDNESS: opted out (false) — hand-written accessor surface; nothing raw leaks.
 make_thin_wrapper!(
     AutomationEvent,
     ffi::AutomationEvent,

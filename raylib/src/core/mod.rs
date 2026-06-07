@@ -1,6 +1,8 @@
 #[macro_use]
 mod macros;
 
+pub use macros::AsRawMut;
+
 pub mod audio;
 /// Automation event recording and playback for deterministic input replay.
 ///
