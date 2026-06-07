@@ -48,18 +48,17 @@ jobs:
           shared-key: showcase-build
       - name: Build examples (default features)
         run: cargo build -p raylib-showcase --examples
-      - name: Build examples (raygui)
-        run: cargo build -p raylib-showcase --examples --features raygui
       # Clippy gate (post-cleanup, 2026-06-03): the example ports are clippy-clean;
       # C-parity lints carry tightest-scope #[expect(reason = "C-parity: …")]. Deny
       # warnings so a new port must land warning-free or with a documented #[expect].
-      # The base leg catches default-feature-only warnings; the raygui +
-      # SUPPORT_CUSTOM_FRAME_CONTROL superset leg builds every example (including the
-      # otherwise-skipped feature-gated ones, e.g. core_custom_frame_control).
+      # raygui is always-on for the showcase (the F1 source viewer renders raygui
+      # controls), so the default build already covers the gui examples; the
+      # SUPPORT_CUSTOM_FRAME_CONTROL superset leg additionally builds the
+      # feature-gated core_custom_frame_control.
       - name: Clippy examples (default features, deny warnings)
         run: cargo clippy -p raylib-showcase --examples -- -D warnings
-      - name: Clippy examples (raygui + custom frame control, deny warnings)
-        run: cargo clippy -p raylib-showcase --examples --features raygui,SUPPORT_CUSTOM_FRAME_CONTROL -- -D warnings
+      - name: Clippy examples (custom frame control, deny warnings)
+        run: cargo clippy -p raylib-showcase --examples --features SUPPORT_CUSTOM_FRAME_CONTROL -- -D warnings
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Unit tests

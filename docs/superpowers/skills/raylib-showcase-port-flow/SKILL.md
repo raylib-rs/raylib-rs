@@ -81,8 +81,8 @@ Append to `showcase/Cargo.toml`:
 [[example]]
 name = "<name>"
 path = "examples/<cat>/<name>.rs"
-# For raygui examples only:
-# required-features = ["raygui"]
+# raygui is always-on for the showcase (the F1 source viewer is raygui-based)
+# — raygui examples need no required-features gate.
 ```
 
 ### Step 6: Build both targets
@@ -205,7 +205,7 @@ The implementer + reviewer briefs are the canonical text dispatched to subagents
 >    name = "<name>"
 >    path = "examples/<CATEGORY>/<name>.rs"
 >    ```
->    (For raygui examples: add `required-features = ["raygui"]`.)
+>    (raygui is always-on for the showcase — no required-features gate for raygui examples.)
 > 5. Run `cargo build -p raylib-showcase --example <name>`. Must pass.
 > 6. Run `cargo build -p raylib-showcase --target wasm32-unknown-emscripten --example <name>`. If it fails:
 >    - If the failure is due to a wasm-incompatible raylib API (LoadDroppedFiles, native dialogs, threads, audio recording, etc.), add an entry to `showcase/wasm-exclude.toml`:
@@ -255,7 +255,7 @@ The implementer + reviewer briefs are the canonical text dispatched to subagents
 > 2. **Three viewer-wiring lines** are present and correctly placed: `use raylib_showcase::SourceViewer;`, `let mut viewer = SourceViewer::for_current_example();` after init, `viewer.update(&mut rl, &thread);` + `viewer.draw(&mut d);` inside the loop. `viewer.update` is the **two-arg** form.
 > 3. **Every `unsafe { … }` block carries a `// SAFETY:` comment** that names the soundness reason.
 > 4. **No `mem::transmute` of C magic numbers to typed Rust enums** (UB). Match-based mapping with sentinel `None` is the accepted pattern.
-> 5. `[[example]]` entry in `showcase/Cargo.toml` matches `name` + `path`. For raygui examples: `required-features = ["raygui"]` is present.
+> 5. `[[example]]` entry in `showcase/Cargo.toml` matches `name` + `path`. (raygui is always-on for the showcase; raygui examples need no required-features gate.)
 > 6. `cargo build -p raylib-showcase --example <name>` is clean.
 > 7. `cargo build -p raylib-showcase --target wasm32-unknown-emscripten --example <name>` is clean **or** the example is in `wasm-exclude.toml` with a legitimate desktop-only reason. Shader examples that blanket-pinned glsl330 and wasm-excluded as the workaround are rejected.
 > 8. No edits outside the allowed paths: `showcase/examples/<CATEGORY>/`, `showcase/Cargo.toml`, `showcase/wasm-exclude.toml`, `showcase/thumbnails.toml`, plus any `raylib/src/` extensions noted in the implementer report.
@@ -284,5 +284,5 @@ The implementer + reviewer briefs are the canonical text dispatched to subagents
 - **Related memories:**
   - `showcase-c-rust-port-style` — the visual-parity rule itself.
   - `examples-not-bins` — why `[[example]]` not `[[bin]]`.
-  - `rgui-feature-gate-rule` — `#[cfg(feature = "raygui")]` discipline (rare for examples since `required-features` already gates them; matters for any helper added to the lib crate).
+  - `rgui-feature-gate-rule` — `#[cfg(feature = "raygui")]` discipline (applies to the raylib crate, where raygui is still optional; showcase examples need no gate since raygui is always-on in the showcase).
   - `skip-std-equivalent-fns` — when an example calls a raylib API that Rust std handles, prefer std; don't extend the safe API for std-equivalents.
