@@ -3,12 +3,11 @@
 //! raylib's C-side audio processors (`AttachAudioStreamProcessor`,
 //! `AttachAudioMixedProcessor`) accept only a function pointer — no
 //! user-data parameter. To thread closure state through, we
-//! pre-register **30 trampolines** (named `callback_0` through
-//! `callback_29`), each with its own
-//! `LazyLock<Mutex<AudioCallbackWithUserData>>` slot. A consumer
-//! reserves a free slot via [`set_context`], the trampoline for that
-//! slot looks up the closure context, and [`clear_context`] frees the
-//! slot.
+//! pre-register **30 trampolines** (`trampoline::<0>` through
+//! `trampoline::<29>`), each reading its own slot in the [`CLOSURES`]
+//! pool. A consumer reserves a free slot via [`set_context`], the
+//! trampoline for that slot looks up the closure context, and
+//! [`clear_context`] frees the slot.
 //!
 //! Consumers:
 //! - Per-stream: [`attach_audio_stream_processor_with_user_data`] /
@@ -20,10 +19,9 @@
 //! `stream_processor_with_user_data_wrapper.rs` for historical
 //! reasons; it now covers both kinds of audio processors.
 
-use paste::paste;
 use raylib_sys::{AttachAudioStreamProcessor, AudioStream, DetachAudioStreamProcessor};
 use seq_macro::seq;
-use std::sync::{LazyLock, Mutex};
+use std::sync::Mutex;
 
 // region: -- AudioCallbackWithUserData --
 
@@ -35,6 +33,10 @@ type RawAudioCallbackWithUserData = extern "C" fn(
     data_ptr: *mut ::std::os::raw::c_void,
     frames: u32,
 ) -> ();
+
+/// The signature raylib actually accepts: no user-data parameter.
+/// Each pool slot owns one trampoline of this shape.
+type RawAudioCallback = extern "C" fn(data_ptr: *mut ::std::os::raw::c_void, frames: u32);
 
 /// This is a tuple of `user_data` which represents
 /// our context (see RawAudioCallbackWithUserData)
@@ -58,10 +60,10 @@ impl AudioCallbackWithUserData {
             callback: Some(raw_callback),
         }
     }
-}
 
-impl Default for AudioCallbackWithUserData {
-    fn default() -> Self {
+    /// An empty slot value: no callback registered, null user data.
+    /// `const` so the slot pool can be built in a `static` initializer.
+    const fn empty() -> Self {
         AudioCallbackWithUserData {
             user_data: std::ptr::null_mut(),
             callback: None,
@@ -69,98 +71,95 @@ impl Default for AudioCallbackWithUserData {
     }
 }
 
-// endregion: -- AudioCallbackWithUserData --
-
-// region: -- raw callbacks and linkage
-// raw callback and linkage to AudioCallbackWithUserData
-// we only support a limited amount of callbacks - since
-// we need a dedicated callback function for each
-// callback or closure we plug in. This is caused by the
-// absence of a `user_data` context in the callbacks
-// supported by raylib.
-
-macro_rules! generate_functions {
-  ( $( $n:literal ),* ) => {
-    paste! {
-        $(
-            /// For each supported callback the data for our context.
-            /// (here we have N "slots" with context data)
-            static [< CLOSURE_ $n >]:  LazyLock<Mutex<AudioCallbackWithUserData>> = LazyLock::new(|| Mutex::new(AudioCallbackWithUserData::default()));
-        )*
-
-          /// Function to set our context
-          /// and returns the slot used to store the context.
-          #[allow(unpredictable_function_pointer_comparisons)]
-          pub(crate) fn set_context(audio_callback: AudioCallbackWithUserData) -> usize {
-              $(
-                  {
-                      let mut guard = [< CLOSURE_ $n >].lock().unwrap();
-                      if (*guard).callback == None {
-                        *guard = audio_callback;
-                        return $n;
-                      }
-                  }
-              )*
-              panic!("index out of bounds");
-          }
-
-          /// Function to clear our context given the slot of the context.
-          #[allow(unpredictable_function_pointer_comparisons)]
-          pub(crate) fn clear_context(index: usize) {
-              $(
-                  if index == $n {
-                      let mut guard = [< CLOSURE_ $n >].lock().unwrap();
-                      if (*guard).callback == None {
-                          panic!(
-                              "No callbacks registered under this number ({}).",
-                              index
-                          );
-                      }
-                      *guard = AudioCallbackWithUserData::default();
-                      return;
-                  }
-              )*
-              panic!("clear_context: index {} out of bounds", index);
-          }
-
-          $(
-            /// The real callback passed to raylib.
-            /// Each callback has a fixed association with
-            /// a given context "slot".
-            #[unsafe(no_mangle)]
-            pub extern "C" fn [< callback_ $n >](data_ptr: *mut ::std::os::raw::c_void, frames: u32) -> () {
-              let guard = [< CLOSURE_ $n >].lock().unwrap();
-              let audio_callback = &(*guard);
-              if let Some(callback) = audio_callback.callback {
-                (callback)(audio_callback.user_data, data_ptr, frames);
-              } else {
-                  panic!("unexpected: no callback $n set")
-              }
-            }
-          )*
-
-          /// Function to get the callback for a given context
-          /// given the slot of the context.
-          pub(crate) fn get_callback(index: usize) -> extern "C" fn(data_ptr: *mut ::std::os::raw::c_void, frames: u32) {
-            $(
-                if index == $n {
-                    return [< callback_ $n >];
-                }
-            )*
-            panic!("get_callback: index out of bounds");
-          }
-        }
-  }
+impl Default for AudioCallbackWithUserData {
+    fn default() -> Self {
+        Self::empty()
+    }
 }
 
-// here, you can control how many callbacks are supported
-seq!(I in 1..30 {
-    generate_functions!( 0#(,I)* );
+// endregion: -- AudioCallbackWithUserData --
+
+// region: -- trampoline pool
+// We only support a limited number of callbacks, since raylib's
+// callback signatures carry no `user_data` pointer: every registered
+// closure needs a dedicated `extern "C" fn` whose identity encodes
+// which context slot to read.
+
+/// Number of trampoline slots in the shared pool.
+/// Keep the `seq!` range building [`TRAMPOLINES`] in sync — the array
+/// type makes a mismatch a compile error.
+const SLOTS: usize = 30;
+
+/// One context slot per trampoline; `trampoline::<N>` reads `CLOSURES[N]`.
+static CLOSURES: [Mutex<AudioCallbackWithUserData>; SLOTS] =
+    [const { Mutex::new(AudioCallbackWithUserData::empty()) }; SLOTS];
+
+/// The real callback passed to raylib. Each monomorphization has a
+/// fixed association with one context slot. The slot guard is held
+/// while the user callback runs, so `clear_context` cannot free a
+/// context out from under an in-flight invocation.
+///
+/// (A fn pointer needs no `no_mangle`/`pub`: raylib stores and calls
+/// the pointer we hand it at attach time.)
+extern "C" fn trampoline<const N: usize>(data_ptr: *mut ::std::os::raw::c_void, frames: u32) {
+    let guard = CLOSURES[N].lock().unwrap();
+    if let Some(callback) = guard.callback {
+        (callback)(guard.user_data, data_ptr, frames);
+    } else {
+        panic!("unexpected: no callback {N} set");
+    }
+}
+
+/// Per-slot trampoline fn pointers, indexable by slot id.
+static TRAMPOLINES: [RawAudioCallback; SLOTS] = seq!(N in 0..30 {
+    [
+        #(
+            trampoline::<N>,
+        )*
+    ]
 });
 
-// endregion: -- raw callbacks and linkage
+/// Reserve the first free slot, store `audio_callback` there, and
+/// return the slot index. Panics when all [`SLOTS`] slots are taken.
+pub(crate) fn set_context(audio_callback: AudioCallbackWithUserData) -> usize {
+    for (index, slot) in CLOSURES.iter().enumerate() {
+        let mut guard = slot.lock().unwrap();
+        if guard.callback.is_none() {
+            *guard = audio_callback;
+            return index;
+        }
+    }
+    panic!("no free audio callback slot (max {SLOTS})");
+}
 
-/// Here, we c
+/// Clear the context stored at `index`, freeing the slot.
+/// Panics if the index is out of bounds or the slot is already empty.
+pub(crate) fn clear_context(index: usize) {
+    let Some(slot) = CLOSURES.get(index) else {
+        panic!("clear_context: index {index} out of bounds");
+    };
+    let mut guard = slot.lock().unwrap();
+    if guard.callback.is_none() {
+        panic!("No callbacks registered under this number ({index}).");
+    }
+    *guard = AudioCallbackWithUserData::empty();
+}
+
+/// The trampoline associated with the context slot `index`.
+/// Panics if the index is out of bounds.
+pub(crate) fn get_callback(index: usize) -> RawAudioCallback {
+    let Some(&trampoline) = TRAMPOLINES.get(index) else {
+        panic!("get_callback: index {index} out of bounds");
+    };
+    trampoline
+}
+
+// endregion: -- trampoline pool
+
+/// Attach a closure-driven processor to `stream`. Reserves a slot from
+/// the shared pool and calls the C-side `AttachAudioStreamProcessor`
+/// with that slot's trampoline. Returns the slot index — pass it to
+/// [`detach_audio_stream_processor_with_user_data`] when done.
 pub fn attach_audio_stream_processor_with_user_data(
     stream: AudioStream,
     callback: AudioCallbackWithUserData,
@@ -227,4 +226,61 @@ pub(crate) fn detach_audio_mixed_processor_with_user_data(index: usize) {
         raylib_sys::DetachAudioMixedProcessor(Some(trampoline));
     }
     clear_context(index);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    extern "C" fn test_cb(
+        _user_data: *mut ::std::os::raw::c_void,
+        _data_ptr: *mut ::std::os::raw::c_void,
+        _frames: u32,
+    ) {
+    }
+
+    /// One combined test on purpose: the pool is a process-global
+    /// shared by every test in this binary, so parallel tests would
+    /// race for slots (and a `should_panic` test would poison a slot
+    /// mutex for everyone else).
+    #[test]
+    fn slot_pool_reserve_reuse_and_distinct_trampolines() {
+        // Fill every slot; indices must be distinct and in-bounds.
+        let indices: Vec<usize> = (0..SLOTS)
+            .map(|_| {
+                set_context(AudioCallbackWithUserData::new(
+                    std::ptr::null_mut(),
+                    test_cb,
+                ))
+            })
+            .collect();
+        let mut sorted = indices.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), SLOTS, "slot indices must be distinct");
+        assert!(sorted.iter().all(|&i| i < SLOTS));
+
+        // Each slot must map to its own trampoline (raylib's detach
+        // does identity-matching on the fn pointer).
+        let mut ptrs: Vec<usize> = (0..SLOTS).map(|i| get_callback(i) as usize).collect();
+        ptrs.sort_unstable();
+        ptrs.dedup();
+        assert_eq!(ptrs.len(), SLOTS, "each slot needs a distinct trampoline");
+
+        // Clearing a middle slot makes it the next one reserved
+        // (first-free-wins ordering).
+        clear_context(7);
+        assert_eq!(
+            set_context(AudioCallbackWithUserData::new(
+                std::ptr::null_mut(),
+                test_cb
+            )),
+            7
+        );
+
+        // Leave the pool empty for any future test in this binary.
+        for i in 0..SLOTS {
+            clear_context(i);
+        }
+    }
 }
