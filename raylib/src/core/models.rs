@@ -323,12 +323,12 @@ impl RaylibHandle {
     pub fn update_model_animation(
         &mut self,
         _: &RaylibThread,
-        mut model: impl AsMut<ffi::Model>,
+        model: impl AsRef<ffi::Model>,
         anim: impl AsRef<ffi::ModelAnimation>,
         frame: f32,
     ) {
         unsafe {
-            ffi::UpdateModelAnimation(*model.as_mut(), *anim.as_ref(), frame);
+            ffi::UpdateModelAnimation(*model.as_ref(), *anim.as_ref(), frame);
         }
     }
 
@@ -341,7 +341,7 @@ impl RaylibHandle {
     pub fn update_model_animation_ex(
         &mut self,
         _: &RaylibThread,
-        mut model: impl AsMut<ffi::Model>,
+        model: impl AsRef<ffi::Model>,
         anim_a: impl AsRef<ffi::ModelAnimation>,
         frame_a: f32,
         anim_b: impl AsRef<ffi::ModelAnimation>,
@@ -350,7 +350,7 @@ impl RaylibHandle {
     ) {
         unsafe {
             ffi::UpdateModelAnimationEx(
-                *model.as_mut(),
+                *model.as_ref(),
                 *anim_a.as_ref(),
                 frame_a,
                 *anim_b.as_ref(),

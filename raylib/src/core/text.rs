@@ -67,9 +67,9 @@ make_thin_wrapper!(
 ///
 /// Wraps a raylib-allocated `Box<[GlyphInfo]>` and calls `UnloadFontData` on drop so the
 /// glyph buffer is returned to raylib's allocator rather than Rust's. Implements
-/// [`Deref`](std::ops::Deref) + [`DerefMut`](std::ops::DerefMut) to `Box<[GlyphInfo]>` so
-/// it acts like a slice: index with `slice[i]`, iterate with `slice.iter()`, or read
-/// `slice.len()` directly.
+/// [`Deref`](std::ops::Deref) to `Box<[GlyphInfo]>` so it acts like a slice: index with
+/// `slice[i]`, iterate with `slice.iter()`, or read `slice.len()` directly. For mutable
+/// element access use [`as_mut_slice`](RSliceGlyphInfo::as_mut_slice).
 ///
 /// # Construction
 ///
@@ -82,6 +82,8 @@ make_thin_wrapper!(
 ///
 /// - [`GlyphInfo`] — per-codepoint metrics held in the slice.
 /// - [`Font`] — owning font built from this glyph data.
+// SOUNDNESS: rslice — Box mut-half removed (mem::take would double-free via UnloadFontData);
+// element access via as_mut_slice.
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct RSliceGlyphInfo(pub(crate) std::mem::ManuallyDrop<std::boxed::Box<[GlyphInfo]>>);
@@ -106,12 +108,6 @@ impl std::convert::AsRef<Box<[GlyphInfo]>> for RSliceGlyphInfo {
     }
 }
 
-impl std::convert::AsMut<Box<[GlyphInfo]>> for RSliceGlyphInfo {
-    fn as_mut(&mut self) -> &mut Box<[GlyphInfo]> {
-        &mut self.0
-    }
-}
-
 impl std::ops::Deref for RSliceGlyphInfo {
     type Target = Box<[GlyphInfo]>;
     #[inline]
@@ -120,10 +116,13 @@ impl std::ops::Deref for RSliceGlyphInfo {
     }
 }
 
-impl std::ops::DerefMut for RSliceGlyphInfo {
+impl RSliceGlyphInfo {
+    /// Mutable access to the elements. The `Box` itself is not exposed
+    /// (replacing it would free the raylib-owned buffer through the
+    /// global allocator — see issue #276).
     #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    pub fn as_mut_slice(&mut self) -> &mut [GlyphInfo] {
+        &mut self.0[..]
     }
 }
 
