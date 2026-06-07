@@ -335,3 +335,47 @@ mod serde_tests {
         assert_eq!(serde_json::from_str::<Color>(&j).unwrap(), c);
     }
 }
+
+/// Tuple/array `From` conversions for the vector types (no features needed).
+mod tuple_conversions {
+    use raylib_sys::{Vector2, Vector3, Vector4};
+
+    #[test]
+    fn vector2_from_tuple_and_array() {
+        assert_eq!(Vector2::from((1.0, 2.0)), Vector2 { x: 1.0, y: 2.0 });
+        assert_eq!(Vector2::from([1.0, 2.0]), Vector2 { x: 1.0, y: 2.0 });
+    }
+
+    #[test]
+    fn vector3_from_tuple_and_array() {
+        let expected = Vector3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        assert_eq!(Vector3::from((1.0, 2.0, 3.0)), expected);
+        assert_eq!(Vector3::from([1.0, 2.0, 3.0]), expected);
+    }
+
+    #[test]
+    fn vector4_from_tuple_and_array() {
+        let expected = Vector4 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+            w: 4.0,
+        };
+        assert_eq!(Vector4::from((1.0, 2.0, 3.0, 4.0)), expected);
+        assert_eq!(Vector4::from([1.0, 2.0, 3.0, 4.0]), expected);
+    }
+
+    #[test]
+    fn into_inference_at_call_sites() {
+        // The point of the impls: `impl Into<Vector2>` params accept tuples/arrays.
+        fn takes(v: impl Into<Vector2>) -> Vector2 {
+            v.into()
+        }
+        assert_eq!(takes((5.0, 6.0)), Vector2 { x: 5.0, y: 6.0 });
+        assert_eq!(takes([5.0, 6.0]), Vector2 { x: 5.0, y: 6.0 });
+    }
+}

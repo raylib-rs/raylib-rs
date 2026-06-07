@@ -18,6 +18,10 @@
   in that check). `glam`/`serde` currently require a std-capable target.
   `nobuild` bindings are generated without bindgen layout assertions so they
   can be compile-checked cross-target; hosted default builds keep them.
+- `Vector2`/`Vector3`/`Vector4` gain `From` conversions from tuples and arrays
+  (`(f32, f32)`/`[f32; 2]`, etc.), matching `Color`'s existing tuple `From`.
+  Combined with the `impl Into<Vector2>` draw-API parameters this lets call
+  sites pass coordinates directly, e.g. `d.draw_pixel_v((10.0, 20.0), c)`.
 
 ### Breaking
 

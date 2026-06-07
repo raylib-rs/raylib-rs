@@ -247,6 +247,21 @@ impl Vector2 {
     }
 }
 
+impl From<(f32, f32)> for Vector2 {
+    /// Construct from an `(x, y)` tuple.
+    #[inline]
+    fn from((x, y): (f32, f32)) -> Self {
+        Vector2 { x, y }
+    }
+}
+impl From<[f32; 2]> for Vector2 {
+    /// Construct from an `[x, y]` array.
+    #[inline]
+    fn from([x, y]: [f32; 2]) -> Self {
+        Vector2 { x, y }
+    }
+}
+
 impl core::ops::Add for Vector2 {
     type Output = Vector2;
     #[inline]
@@ -662,6 +677,21 @@ pub fn vector3_ortho_normalize(v1: &mut Vector3, v2: &mut Vector3) {
     unsafe { crate::Vector3OrthoNormalize(v1 as *mut _, v2 as *mut _) }
 }
 
+impl From<(f32, f32, f32)> for Vector3 {
+    /// Construct from an `(x, y, z)` tuple.
+    #[inline]
+    fn from((x, y, z): (f32, f32, f32)) -> Self {
+        Vector3 { x, y, z }
+    }
+}
+impl From<[f32; 3]> for Vector3 {
+    /// Construct from an `[x, y, z]` array.
+    #[inline]
+    fn from([x, y, z]: [f32; 3]) -> Self {
+        Vector3 { x, y, z }
+    }
+}
+
 impl core::ops::Add for Vector3 {
     type Output = Vector3;
     #[inline]
@@ -901,6 +931,21 @@ impl Vector4 {
     pub fn equals(self, other: Vector4) -> bool {
         // SAFETY: pure value-in/out, no preconditions.
         unsafe { crate::Vector4Equals(self, other) != 0 }
+    }
+}
+
+impl From<(f32, f32, f32, f32)> for Vector4 {
+    /// Construct from an `(x, y, z, w)` tuple.
+    #[inline]
+    fn from((x, y, z, w): (f32, f32, f32, f32)) -> Self {
+        Vector4 { x, y, z, w }
+    }
+}
+impl From<[f32; 4]> for Vector4 {
+    /// Construct from an `[x, y, z, w]` array.
+    #[inline]
+    fn from([x, y, z, w]: [f32; 4]) -> Self {
+        Vector4 { x, y, z, w }
     }
 }
 
