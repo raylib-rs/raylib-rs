@@ -19,6 +19,16 @@
   `nobuild` bindings are generated without bindgen layout assertions so they
   can be compile-checked cross-target; hosted default builds keep them.
 
+### Changed
+
+- Removed the unmaintained [`paste`](https://rustsec.org/advisories/RUSTSEC-2024-0436)
+  dependency: the audio-callback trampoline pool is now built with const
+  generics + the existing `seq-macro` (zero new deps). Behavior is unchanged;
+  the thirty `callback_0`…`callback_29` `no_mangle` symbols the old macro
+  exported are no longer emitted (they were never reachable Rust API, only
+  linker-namespace pollution). The matching `deny.toml` advisory ignore was
+  retired.
+
 ### Fixed
 
 - `nobindgen` now actually skips running bindgen in `build.rs` (previously it
