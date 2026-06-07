@@ -63,7 +63,7 @@ fn main() {
             Color::GRAY,
         );
         d.draw_text(
-            &format!("Box position Y: {:03}", box_position_y),
+            &format!("Box position Y: {box_position_y:03}"),
             10,
             40,
             20,

@@ -91,12 +91,10 @@ fn main() {
     let shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/others/shaders/glsl{}/point_particle.vs",
-            GLSL_VERSION
+            "resources/others/shaders/glsl{GLSL_VERSION}/point_particle.vs"
         )),
         Some(&format!(
-            "resources/others/shaders/glsl{}/point_particle.fs",
-            GLSL_VERSION
+            "resources/others/shaders/glsl{GLSL_VERSION}/point_particle.fs"
         )),
     );
 
@@ -170,7 +168,7 @@ fn main() {
 
         d.draw_rectangle(10, 10, 210, 30, Color::MAROON);
         d.draw_text(
-            &format!("{} particles in one vertex buffer", MAX_PARTICLES),
+            &format!("{MAX_PARTICLES} particles in one vertex buffer"),
             20,
             20,
             10,

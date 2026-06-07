@@ -77,7 +77,7 @@ fn main() {
         d.gui_group_box(Rectangle::new(66.0, 24.0, 276.0, 312.0), "STANDARD");
         d.gui_slider(
             Rectangle::new(96.0, 48.0, 216.0, 16.0),
-            format!("{:0.2}", value),
+            format!("{value:0.2}"),
             "",
             &mut value,
             0.0,
@@ -87,7 +87,7 @@ fn main() {
         // sliders inside the same group so the slider count and value sharing are preserved.
         d.gui_slider(
             Rectangle::new(96.0, 120.0, 216.0, 24.0),
-            format!("{:0.2}", value),
+            format!("{value:0.2}"),
             "",
             &mut value,
             0.0,
@@ -95,7 +95,7 @@ fn main() {
         );
         d.gui_slider_bar(
             Rectangle::new(96.0, 200.0, 216.0, 24.0),
-            format!("{:0.2}", value),
+            format!("{value:0.2}"),
             "",
             &mut value,
             0.0,
@@ -106,7 +106,7 @@ fn main() {
         if d.gui_slider(
             Rectangle::new(408.0, 48.0, 216.0, 16.0),
             "",
-            format!("{:0.2}", value),
+            format!("{value:0.2}"),
             &mut value,
             0.0,
             1.0,
@@ -118,7 +118,7 @@ fn main() {
         if d.gui_slider(
             Rectangle::new(408.0, 120.0, 216.0, 24.0),
             "",
-            format!("{:0.2}", value),
+            format!("{value:0.2}"),
             &mut value,
             0.0,
             1.0,
@@ -128,7 +128,7 @@ fn main() {
         if d.gui_slider_bar(
             Rectangle::new(408.0, 200.0, 216.0, 24.0),
             "",
-            format!("{:0.2}", value),
+            format!("{value:0.2}"),
             &mut value,
             0.0,
             1.0,

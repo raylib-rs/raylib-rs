@@ -409,7 +409,7 @@ fn main() {
         d.gui_slider(
             Rectangle::new(355.0, 400.0, 165.0, 20.0),
             "TEST",
-            format!("{:2.2}", slider_value),
+            format!("{slider_value:2.2}"),
             &mut slider_value,
             -50.0,
             100.0,

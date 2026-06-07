@@ -223,7 +223,7 @@ fn main() {
 
         // Draw player current tile
         d.draw_text(
-            &format!("Current tile: [{},{}]", player_tile_x, player_tile_y),
+            &format!("Current tile: [{player_tile_x},{player_tile_y}]"),
             10,
             10,
             20,

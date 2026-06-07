@@ -89,11 +89,11 @@ fn create_light(
         position,
         target,
         color,
-        enabled_loc: shader.get_shader_location(&format!("lights[{}].enabled", index)),
-        type_loc: shader.get_shader_location(&format!("lights[{}].type", index)),
-        position_loc: shader.get_shader_location(&format!("lights[{}].position", index)),
-        target_loc: shader.get_shader_location(&format!("lights[{}].target", index)),
-        color_loc: shader.get_shader_location(&format!("lights[{}].color", index)),
+        enabled_loc: shader.get_shader_location(&format!("lights[{index}].enabled")),
+        type_loc: shader.get_shader_location(&format!("lights[{index}].type")),
+        position_loc: shader.get_shader_location(&format!("lights[{index}].position")),
+        target_loc: shader.get_shader_location(&format!("lights[{index}].target")),
+        color_loc: shader.get_shader_location(&format!("lights[{index}].color")),
     };
 
     update_light_values(shader, &mut light);
@@ -146,24 +146,20 @@ fn main() {
     let gbuffer_shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/gbuffer.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/gbuffer.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/gbuffer.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/gbuffer.fs"
         )),
     );
 
     let mut deferred_shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/deferred_shading.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/deferred_shading.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/deferred_shading.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/deferred_shading.fs"
         )),
     );
     // SAFETY: Shader.locs offset write (SHADER_LOC_VECTOR_VIEW).

@@ -127,12 +127,10 @@ fn main() {
     let mut shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/base.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/base.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/rounded_rectangle.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/rounded_rectangle.fs"
         )),
     );
 

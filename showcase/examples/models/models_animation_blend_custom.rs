@@ -344,12 +344,10 @@ fn main() {
     let skinning_shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/models/shaders/glsl{}/skinning.vs",
-            GLSL_VERSION
+            "resources/models/shaders/glsl{GLSL_VERSION}/skinning.vs"
         )),
         Some(&format!(
-            "resources/models/shaders/glsl{}/skinning.fs",
-            GLSL_VERSION
+            "resources/models/shaders/glsl{GLSL_VERSION}/skinning.fs"
         )),
     );
     // Mirror C's `model.materials[1].shader = skinningShader;`. The model only stores a
@@ -450,8 +448,8 @@ fn main() {
                 .to_string_lossy()
                 .into_owned()
         };
-        d.draw_text(&format!("ANIM 0: {}", anim0_name), 10, 10, 20, Color::GRAY);
-        d.draw_text(&format!("ANIM 1: {}", anim1_name), 10, 40, 20, Color::GRAY);
+        d.draw_text(&format!("ANIM 0: {anim0_name}"), 10, 10, 20, Color::GRAY);
+        d.draw_text(&format!("ANIM 1: {anim1_name}"), 10, 40, 20, Color::GRAY);
         let sh = d.get_screen_height();
         d.draw_text(
             &format!(

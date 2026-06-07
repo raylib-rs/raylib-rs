@@ -236,7 +236,7 @@ fn main() {
                     d.gui_get_style(GuiControl::DEFAULT, GuiDefaultProperty::LINE_COLOR) as u32,
                 );
                 d.draw_text(
-                    &format!("SCALE x{:.0}", image_scale),
+                    &format!("SCALE x{image_scale:.0}"),
                     20,
                     screen_height - 40,
                     20,
@@ -277,7 +277,7 @@ fn main() {
             );
             d.gui_label(
                 Rectangle::new(window_offset.x + 85.0, window_offset.y + 50.0, 75.0, 20.0),
-                format!("{} bytes", data_size),
+                format!("{data_size} bytes"),
             );
             d.gui_group_box(
                 Rectangle::new(window_offset.x + 10.0, window_offset.y + 85.0, 180.0, 80.0),

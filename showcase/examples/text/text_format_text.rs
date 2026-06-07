@@ -56,17 +56,17 @@ fn main() {
         d.clear_background(Color::RAYWHITE);
 
         // idiomatic: upstream uses TextFormat("Score: %08i", score); Rust uses format!
-        d.draw_text(&format!("Score: {:08}", score), 200, 80, 20, Color::RED);
+        d.draw_text(&format!("Score: {score:08}"), 200, 80, 20, Color::RED);
 
         d.draw_text(
-            &format!("HiScore: {:08}", hiscore),
+            &format!("HiScore: {hiscore:08}"),
             200,
             120,
             20,
             Color::GREEN,
         );
 
-        d.draw_text(&format!("Lives: {:02}", lives), 200, 160, 40, Color::BLUE);
+        d.draw_text(&format!("Lives: {lives:02}"), 200, 160, 40, Color::BLUE);
 
         d.draw_text(
             &format!("Elapsed Time: {:05.2} ms", frame_time * 1000.0),

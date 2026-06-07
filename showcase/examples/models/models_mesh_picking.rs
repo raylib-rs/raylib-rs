@@ -243,7 +243,7 @@ fn main() {
 
         // Draw some debug GUI text
         d.draw_text(
-            &format!("Hit Object: {}", hit_object_name),
+            &format!("Hit Object: {hit_object_name}"),
             10,
             50,
             10,

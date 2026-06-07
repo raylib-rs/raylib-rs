@@ -531,8 +531,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/text/shaders/glsl{}/alpha_discard.fs",
-            GLSL_VERSION
+            "resources/text/shaders/glsl{GLSL_VERSION}/alpha_discard.fs"
         )),
     );
 
@@ -754,7 +753,7 @@ fn main() {
                 {
                     let mut mat = sm.rl_push_matrix();
                     mat.rl_rotatef(180.0, 0.0, 1.0, 0.0);
-                    let opt = format!("< SIZE: {:3.1} >", font_size);
+                    let opt = format!("< SIZE: {font_size:3.1} >");
                     quads += opt.len() as i32;
                     let m_sz = font.measure_text(&opt, 0.8, 0.1);
                     let mut pos = Vector3::new(-m_sz.x / 2.0, 0.01, 2.0);
@@ -771,7 +770,7 @@ fn main() {
                     );
                     pos.z += 0.5 + m_sz.y;
 
-                    let opt = format!("< SPACING: {:3.1} >", font_spacing);
+                    let opt = format!("< SPACING: {font_spacing:3.1} >");
                     quads += opt.len() as i32;
                     let m_sz = font.measure_text(&opt, 0.8, 0.1);
                     pos.x = -m_sz.x / 2.0;
@@ -788,7 +787,7 @@ fn main() {
                     );
                     pos.z += 0.5 + m_sz.y;
 
-                    let opt = format!("< LINE: {:3.1} >", line_spacing);
+                    let opt = format!("< LINE: {line_spacing:3.1} >");
                     quads += opt.len() as i32;
                     let m_sz = font.measure_text(&opt, 0.8, 0.1);
                     pos.x = -m_sz.x / 2.0;
@@ -847,7 +846,7 @@ fn main() {
                     );
                     pos.z += 0.5 + m_sz.y;
 
-                    let opt = format!("< LAYER DISTANCE: {:.3} >", layer_distance);
+                    let opt = format!("< LAYER DISTANCE: {layer_distance:.3} >");
                     quads += opt.len() as i32;
                     let m_sz = font.measure_text(&opt, 0.8, 0.1);
                     pos.x = -m_sz.x / 2.0;

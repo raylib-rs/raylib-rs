@@ -110,7 +110,7 @@ fn main() {
 
         d.draw_text("FRAME SPEED: ", 165, 210, 10, Color::DARKGRAY);
         d.draw_text(
-            &format!("{:02} FPS", frames_speed),
+            &format!("{frames_speed:02} FPS"),
             575,
             210,
             10,

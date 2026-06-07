@@ -147,10 +147,7 @@ fn main() {
 
         d.draw_rectangle(0, 0, screen_w, 70, Color::BLACK);
         d.draw_text(
-            &format!(
-                "Total codepoints contained in provided text: {}",
-                codepoint_count
-            ),
+            &format!("Total codepoints contained in provided text: {codepoint_count}"),
             10,
             10,
             20,
@@ -158,8 +155,7 @@ fn main() {
         );
         d.draw_text(
             &format!(
-                "Total codepoints required for font atlas (duplicates excluded): {}",
-                codepoints_no_dups_count
+                "Total codepoints required for font atlas (duplicates excluded): {codepoints_no_dups_count}"
             ),
             10,
             40,

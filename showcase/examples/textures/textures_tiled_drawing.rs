@@ -465,7 +465,7 @@ fn main() {
             Color::BLACK,
         );
         d.draw_text(
-            &format!("{:.2}x", scale),
+            &format!("{scale:.2}x"),
             2 + MARGIN_SIZE,
             92 + 256 + MARGIN_SIZE,
             20,
@@ -480,7 +480,7 @@ fn main() {
             Color::BLACK,
         );
         d.draw_text(
-            &format!("{:.0} degrees", rotation),
+            &format!("{rotation:.0} degrees"),
             2 + MARGIN_SIZE,
             134 + 256 + MARGIN_SIZE,
             20,
@@ -497,7 +497,7 @@ fn main() {
 
         // Draw FPS
         d.draw_text(
-            &format!("{} FPS", fps),
+            &format!("{fps} FPS"),
             2 + MARGIN_SIZE,
             2 + MARGIN_SIZE,
             20,

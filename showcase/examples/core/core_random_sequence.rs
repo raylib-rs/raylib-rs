@@ -207,7 +207,7 @@ fn main() {
         }
 
         d.draw_text(
-            &format!("Count: {} rectangles", rect_count),
+            &format!("Count: {rect_count} rectangles"),
             10,
             10,
             20,

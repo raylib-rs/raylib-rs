@@ -298,7 +298,7 @@ fn main() {
 
         // Display the number of rendered triangles
         d.draw_text(
-            &format!("triangle count: {}", triangle_count),
+            &format!("triangle count: {triangle_count}"),
             8,
             395,
             20,

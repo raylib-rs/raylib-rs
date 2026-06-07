@@ -136,7 +136,7 @@ fn main() {
         d.draw_text("MUSIC SHOULD BE PLAYING!", 255, 150, 20, Color::LIGHTGRAY);
 
         d.draw_text(
-            &format!("EXPONENT = {:.2}", exp_value),
+            &format!("EXPONENT = {exp_value:.2}"),
             215,
             180,
             20,

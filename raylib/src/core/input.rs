@@ -127,7 +127,7 @@ impl RaylibHandle {
                     Err(err) => {
                         trace_log(
                             TraceLogLevel::LOG_WARNING,
-                            format!("Result of get_gamepad_name was not valid UTF-8; \"{}\". Returning None.",err).as_str(),
+                            format!("Result of get_gamepad_name was not valid UTF-8; \"{err}\". Returning None.").as_str(),
                         );
                         None
                     }

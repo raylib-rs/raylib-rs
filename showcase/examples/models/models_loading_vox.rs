@@ -66,11 +66,11 @@ fn create_light(
         position,
         target,
         color,
-        enabled_loc: shader.get_shader_location(&format!("lights[{}].enabled", index)),
-        type_loc: shader.get_shader_location(&format!("lights[{}].type", index)),
-        position_loc: shader.get_shader_location(&format!("lights[{}].position", index)),
-        target_loc: shader.get_shader_location(&format!("lights[{}].target", index)),
-        color_loc: shader.get_shader_location(&format!("lights[{}].color", index)),
+        enabled_loc: shader.get_shader_location(&format!("lights[{index}].enabled")),
+        type_loc: shader.get_shader_location(&format!("lights[{index}].type")),
+        position_loc: shader.get_shader_location(&format!("lights[{index}].position")),
+        target_loc: shader.get_shader_location(&format!("lights[{index}].target")),
+        color_loc: shader.get_shader_location(&format!("lights[{index}].color")),
     };
 
     update_light_values(shader, &mut light);
@@ -164,12 +164,10 @@ fn main() {
     let mut shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/models/shaders/glsl{}/voxel_lighting.vs",
-            GLSL_VERSION
+            "resources/models/shaders/glsl{GLSL_VERSION}/voxel_lighting.vs"
         )),
         Some(&format!(
-            "resources/models/shaders/glsl{}/voxel_lighting.fs",
-            GLSL_VERSION
+            "resources/models/shaders/glsl{GLSL_VERSION}/voxel_lighting.fs"
         )),
     );
 
@@ -364,7 +362,7 @@ fn main() {
                 .into_owned()
         };
         d.draw_text(
-            &format!("VOX model file: {}", basename),
+            &format!("VOX model file: {basename}"),
             10,
             10,
             20,

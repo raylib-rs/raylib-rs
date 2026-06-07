@@ -80,7 +80,7 @@ fn main() {
                 // Draw circle and touch index number
                 d.draw_circle_v(touch_positions[i], 34.0, Color::ORANGE);
                 d.draw_text(
-                    &format!("{}", i),
+                    &format!("{i}"),
                     touch_positions[i].x as i32 - 10,
                     touch_positions[i].y as i32 - 70,
                     40,

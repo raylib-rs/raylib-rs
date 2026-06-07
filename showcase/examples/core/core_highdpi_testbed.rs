@@ -161,14 +161,14 @@ fn main() {
             Color::DARKGRAY,
         );
         d.draw_text(
-            &format!("SCREEN SIZE: {}x{}", screen_w, screen_h),
+            &format!("SCREEN SIZE: {screen_w}x{screen_h}"),
             50,
             130,
             20,
             Color::DARKGRAY,
         );
         d.draw_text(
-            &format!("RENDER SIZE: {}x{}", render_w, render_h),
+            &format!("RENDER SIZE: {render_w}x{render_h}"),
             50,
             170,
             20,
@@ -197,7 +197,7 @@ fn main() {
             Color::BLACK,
         );
         d.draw_text(
-            &format!("[{},{}]", mouse_x, mouse_y),
+            &format!("[{mouse_x},{mouse_y}]"),
             mouse_pos.x as i32 - 44,
             if mouse_pos.y > screen_h as f32 - 60.0 {
                 mouse_pos.y as i32 - 46

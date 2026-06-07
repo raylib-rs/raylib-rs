@@ -149,8 +149,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/depth_render.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/depth_render.fs"
         )),
     );
     let depth_loc = depth_shader.get_shader_location("depthTexture");

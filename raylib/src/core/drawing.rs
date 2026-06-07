@@ -42,8 +42,7 @@ impl RaylibHandle {
             ffi::BeginDrawing();
         };
 
-        let d = RaylibDrawHandle(self);
-        d
+        RaylibDrawHandle(self)
     }
     /// Setup canvas (framebuffer) to start drawing.
     // Every FnMut is a FnOnce, but not every FnOnce is a FnMut. The closure may possibly execute multiple times throughout the program, but not multiple times in a single call to this method.

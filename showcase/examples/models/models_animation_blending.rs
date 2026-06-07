@@ -60,12 +60,10 @@ fn main() {
     let _skinning_shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/models/shaders/glsl{}/skinning.vs",
-            GLSL_VERSION
+            "resources/models/shaders/glsl{GLSL_VERSION}/skinning.vs"
         )),
         Some(&format!(
-            "resources/models/shaders/glsl{}/skinning.fs",
-            GLSL_VERSION
+            "resources/models/shaders/glsl{GLSL_VERSION}/skinning.fs"
         )),
     );
 
@@ -294,7 +292,7 @@ fn main() {
                 height: 12.0,
             },
             "",
-            format!("x{:.1}", anim_frame_speed0),
+            format!("x{anim_frame_speed0:.1}"),
             &mut anim_frame_speed0,
             0.1,
             2.0,
@@ -310,7 +308,7 @@ fn main() {
                 width: 160.0,
                 height: 12.0,
             },
-            format!("{:.1}x", anim_frame_speed1),
+            format!("{anim_frame_speed1:.1}x"),
             "",
             &mut anim_frame_speed1,
             0.1,

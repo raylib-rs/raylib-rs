@@ -157,7 +157,7 @@ fn main() {
                 height: 24.0,
             },
             "FRAME SPEED: ",
-            format!("x{:.1}", anim_frame_speed),
+            format!("x{anim_frame_speed:.1}"),
             &mut anim_frame_speed,
             0.1,
             2.0,

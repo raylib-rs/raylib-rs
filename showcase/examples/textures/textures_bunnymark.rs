@@ -149,7 +149,7 @@ fn main() {
 
         d.draw_rectangle(0, 0, screen_width, 40, Color::BLACK);
         d.draw_text(
-            &format!("bunnies: {}", bunnies_count),
+            &format!("bunnies: {bunnies_count}"),
             120,
             10,
             20,

@@ -112,7 +112,7 @@ fn main() {
         d.draw_text("C: Cycle Color", 15, 75, 10, Color::BLACK);
 
         d.draw_text(
-            &format!("Dash: {:.0} | Space: {:.0}", dash_length, blank_length),
+            &format!("Dash: {dash_length:.0} | Space: {blank_length:.0}"),
             15,
             115,
             10,

@@ -203,7 +203,7 @@ fn main() {
             4,
             Color::RED,
         );
-        d.draw_text(&format!("Sine {:.2}", sin_rad), 640, 190, 6, Color::RED);
+        d.draw_text(&format!("Sine {sin_rad:.2}"), 640, 190, 6, Color::RED);
         d.draw_circle_v(
             Vector2::new(
                 start.x + (angle / 360.0) * start.width,
@@ -228,7 +228,7 @@ fn main() {
             4,
             Color::BLUE,
         );
-        d.draw_text(&format!("Cosine {:.2}", cos_rad), 640, 210, 6, Color::BLUE);
+        d.draw_text(&format!("Cosine {cos_rad:.2}"), 640, 210, 6, Color::BLUE);
         d.draw_circle_v(
             Vector2::new(
                 start.x + (angle / 360.0) * start.width,
@@ -247,17 +247,11 @@ fn main() {
             Color::PURPLE,
         );
         d.draw_line_dashed(center, tangent_point, 10, 4, Color::PURPLE);
-        d.draw_text(
-            &format!("Tangent {:.2}", tangent),
-            640,
-            230,
-            6,
-            Color::PURPLE,
-        );
+        d.draw_text(&format!("Tangent {tangent:.2}"), 640, 230, 6, Color::PURPLE);
 
         // Cotangent (orange)
         d.draw_text(
-            &format!("Cotangent {:.2}", cotangent),
+            &format!("Cotangent {cotangent:.2}"),
             640,
             250,
             6,
@@ -267,7 +261,7 @@ fn main() {
         // Complementary angle (beige)
         d.draw_circle_sector_lines(center, radius * 0.6, -angle, -90.0, 36, Color::BEIGE);
         d.draw_text(
-            &format!("Complementary  {:.0}\u{00B0}", complementary),
+            &format!("Complementary  {complementary:.0}\u{00B0}"),
             640,
             150,
             6,
@@ -277,7 +271,7 @@ fn main() {
         // Supplementary angle (darkblue)
         d.draw_circle_sector_lines(center, radius * 0.5, -angle, -180.0, 36, Color::DARKBLUE);
         d.draw_text(
-            &format!("Supplementary  {:.0}\u{00B0}", supplementary),
+            &format!("Supplementary  {supplementary:.0}\u{00B0}"),
             640,
             130,
             6,
@@ -287,7 +281,7 @@ fn main() {
         // Explementary angle (pink)
         d.draw_circle_sector_lines(center, radius * 0.4, -angle, -360.0, 36, Color::PINK);
         d.draw_text(
-            &format!("Explementary  {:.0}\u{00B0}", explementary),
+            &format!("Explementary  {explementary:.0}\u{00B0}"),
             640,
             170,
             6,
@@ -319,7 +313,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(640.0, 40.0, 120.0, 20.0),
             "Angle",
-            format!("{:.0}\u{00B0}", angle),
+            format!("{angle:.0}\u{00B0}"),
             &mut angle,
             0.0,
             360.0,

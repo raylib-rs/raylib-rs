@@ -76,8 +76,7 @@ fn main() {
         &thread,
         None,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/mask.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/mask.fs"
         )),
     );
 
@@ -187,12 +186,12 @@ fn main() {
         d.draw_rectangle(
             16,
             698,
-            d.measure_text(&format!("Frame: {}", frames_counter), 20) + 8,
+            d.measure_text(&format!("Frame: {frames_counter}"), 20) + 8,
             42,
             Color::BLUE,
         );
         d.draw_text(
-            &format!("Frame: {}", frames_counter),
+            &format!("Frame: {frames_counter}"),
             20,
             700,
             20,

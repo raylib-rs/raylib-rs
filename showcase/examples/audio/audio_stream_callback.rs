@@ -298,7 +298,7 @@ fn main() {
 
         d.clear_background(Color::RAYWHITE);
         d.draw_text(
-            &format!("frequency: {}", new_freq),
+            &format!("frequency: {new_freq}"),
             screen_width - 220,
             10,
             20,

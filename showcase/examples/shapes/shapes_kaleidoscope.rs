@@ -191,7 +191,7 @@ fn main() {
         reset_button_clicked = d.gui_button(reset_button_rec, "Reset");
 
         d.draw_text(
-            &format!("LINES: {}/{}", current_line_counter, MAX_DRAW_LINES),
+            &format!("LINES: {current_line_counter}/{MAX_DRAW_LINES}"),
             10,
             screen_height - 30,
             20,

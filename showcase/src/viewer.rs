@@ -440,7 +440,7 @@ fn capture_and_exit(rl: &mut RaylibHandle, thread: &RaylibThread, out_path: &std
     // Fix C: surface directory-creation failures instead of silently swallowing them.
     if let Some(parent) = out_path.parent() {
         if let Err(e) = std::fs::create_dir_all(parent) {
-            eprintln!("gen_thumbnails: create_dir_all({:?}) failed: {}", parent, e);
+            eprintln!("gen_thumbnails: create_dir_all({parent:?}) failed: {e}");
             process::exit(2);
         }
     }
@@ -449,10 +449,7 @@ fn capture_and_exit(rl: &mut RaylibHandle, thread: &RaylibThread, out_path: &std
     // layer, so we verify the file exists after the write.
     img.export_image(&out_str);
     if !out_path.exists() {
-        eprintln!(
-            "gen_thumbnails: export_image({:?}) did not produce a file",
-            out_path
-        );
+        eprintln!("gen_thumbnails: export_image({out_path:?}) did not produce a file");
         process::exit(2);
     }
     process::exit(0);

@@ -206,7 +206,7 @@ fn main() {
         d.clear_background(bg_color);
 
         d.draw_text(
-            &format!("{}-h mode, space to change", hour_mode),
+            &format!("{hour_mode}-h mode, space to change"),
             10,
             30,
             20,

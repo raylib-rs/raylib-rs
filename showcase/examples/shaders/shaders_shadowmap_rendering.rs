@@ -161,12 +161,10 @@ fn main() {
     let mut shadow_shader = rl.load_shader(
         &thread,
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/shadowmap.vs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/shadowmap.vs"
         )),
         Some(&format!(
-            "resources/shaders/shaders/glsl{}/shadowmap.fs",
-            GLSL_VERSION
+            "resources/shaders/shaders/glsl{GLSL_VERSION}/shadowmap.fs"
         )),
     );
     let view_pos_loc = shadow_shader.get_shader_location("viewPos");

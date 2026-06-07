@@ -220,7 +220,7 @@ fn main() {
 
         // Draw UI text
         d.draw_text(
-            &format!("Point Count: {}", num_points),
+            &format!("Point Count: {num_points}"),
             10,
             screen_height - 50,
             40,

@@ -621,14 +621,14 @@ fn main() {
 
         d.draw_text("Main model", x0 as i32, y_pos as i32, 10, Color::LIME);
         d.draw_text(
-            &format!("{}", vertex_count),
+            &format!("{vertex_count}"),
             x1 as i32,
             y_pos as i32,
             10,
             Color::LIME,
         );
         d.draw_text(
-            &format!("{}", triangle_count),
+            &format!("{triangle_count}"),
             x2 as i32,
             y_pos as i32,
             10,
@@ -677,14 +677,14 @@ fn main() {
 
         d.draw_text("TOTAL", x0 as i32, y_pos as i32, 10, Color::LIME);
         d.draw_text(
-            &format!("{}", vertex_count),
+            &format!("{vertex_count}"),
             x1 as i32,
             y_pos as i32,
             10,
             Color::LIME,
         );
         d.draw_text(
-            &format!("{}", triangle_count),
+            &format!("{triangle_count}"),
             x2 as i32,
             y_pos as i32,
             10,

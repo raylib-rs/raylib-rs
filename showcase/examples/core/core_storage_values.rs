@@ -74,17 +74,11 @@ fn main() {
 
         d.clear_background(Color::RAYWHITE);
 
-        d.draw_text(&format!("SCORE: {}", score), 280, 130, 40, Color::MAROON);
-        d.draw_text(
-            &format!("HI-SCORE: {}", hiscore),
-            210,
-            200,
-            50,
-            Color::BLACK,
-        );
+        d.draw_text(&format!("SCORE: {score}"), 280, 130, 40, Color::MAROON);
+        d.draw_text(&format!("HI-SCORE: {hiscore}"), 210, 200, 50, Color::BLACK);
 
         d.draw_text(
-            &format!("frames: {}", frames_counter),
+            &format!("frames: {frames_counter}"),
             10,
             10,
             20,
@@ -130,22 +124,16 @@ fn save_storage_value(position: u32, value: i32) -> bool {
             }
             file_data[pos_bytes..pos_bytes + int_size].copy_from_slice(&value.to_ne_bytes());
             let success = std::fs::write(STORAGE_DATA_FILE, &file_data).is_ok();
-            println!(
-                "FILEIO: [{}] Saved storage value: {}",
-                STORAGE_DATA_FILE, value
-            );
+            println!("FILEIO: [{STORAGE_DATA_FILE}] Saved storage value: {value}");
             success
         }
         Err(_) => {
-            println!("FILEIO: [{}] File created successfully", STORAGE_DATA_FILE);
+            println!("FILEIO: [{STORAGE_DATA_FILE}] File created successfully");
             let data_size = (position as usize + 1) * int_size;
             let mut file_data = vec![0u8; data_size];
             file_data[pos_bytes..pos_bytes + int_size].copy_from_slice(&value.to_ne_bytes());
             let success = std::fs::write(STORAGE_DATA_FILE, &file_data).is_ok();
-            println!(
-                "FILEIO: [{}] Saved storage value: {}",
-                STORAGE_DATA_FILE, value
-            );
+            println!("FILEIO: [{STORAGE_DATA_FILE}] Saved storage value: {value}");
             success
         }
     }
@@ -159,20 +147,14 @@ fn load_storage_value(position: u32) -> i32 {
     let pos_bytes = position as usize * int_size;
     if let Ok(file_data) = std::fs::read(STORAGE_DATA_FILE) {
         if file_data.len() < pos_bytes + int_size {
-            println!(
-                "FILEIO: [{}] Failed to find storage position: {}",
-                STORAGE_DATA_FILE, position
-            );
+            println!("FILEIO: [{STORAGE_DATA_FILE}] Failed to find storage position: {position}");
         } else {
             let bytes: [u8; 4] = file_data[pos_bytes..pos_bytes + int_size]
                 .try_into()
                 .unwrap();
             value = i32::from_ne_bytes(bytes);
         }
-        println!(
-            "FILEIO: [{}] Loaded storage value: {}",
-            STORAGE_DATA_FILE, value
-        );
+        println!("FILEIO: [{STORAGE_DATA_FILE}] Loaded storage value: {value}");
     }
     value
 }

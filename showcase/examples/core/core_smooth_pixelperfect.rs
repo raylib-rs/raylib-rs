@@ -148,17 +148,14 @@ fn main() {
         }
 
         d.draw_text(
-            &format!("Screen resolution: {}x{}", screen_width, screen_height),
+            &format!("Screen resolution: {screen_width}x{screen_height}"),
             10,
             10,
             20,
             Color::DARKBLUE,
         );
         d.draw_text(
-            &format!(
-                "World resolution: {}x{}",
-                virtual_screen_width, virtual_screen_height
-            ),
+            &format!("World resolution: {virtual_screen_width}x{virtual_screen_height}"),
             10,
             40,
             20,

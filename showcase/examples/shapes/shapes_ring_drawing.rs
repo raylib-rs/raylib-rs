@@ -117,7 +117,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(600.0, 40.0, 120.0, 20.0),
             "StartAngle",
-            format!("{:.2}", start_angle),
+            format!("{start_angle:.2}"),
             &mut start_angle,
             -450.0,
             450.0,
@@ -125,7 +125,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(600.0, 70.0, 120.0, 20.0),
             "EndAngle",
-            format!("{:.2}", end_angle),
+            format!("{end_angle:.2}"),
             &mut end_angle,
             -450.0,
             450.0,
@@ -134,7 +134,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(600.0, 140.0, 120.0, 20.0),
             "InnerRadius",
-            format!("{:.2}", inner_radius),
+            format!("{inner_radius:.2}"),
             &mut inner_radius,
             0.0,
             100.0,
@@ -142,7 +142,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(600.0, 170.0, 120.0, 20.0),
             "OuterRadius",
-            format!("{:.2}", outer_radius),
+            format!("{outer_radius:.2}"),
             &mut outer_radius,
             0.0,
             200.0,
@@ -151,7 +151,7 @@ fn main() {
         d.gui_slider_bar(
             Rectangle::new(600.0, 240.0, 120.0, 20.0),
             "Segments",
-            format!("{:.2}", segments),
+            format!("{segments:.2}"),
             &mut segments,
             0.0,
             100.0,

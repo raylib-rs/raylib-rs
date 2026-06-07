@@ -260,9 +260,7 @@ mod glam_tests {
         let expected = glam::Mat4::from_translation(glam::vec3(1.0, 2.0, 3.0));
         assert!(
             g.abs_diff_eq(expected, 1e-5),
-            "got {:?} expected {:?}",
-            g,
-            expected
+            "got {g:?} expected {expected:?}"
         );
     }
 }

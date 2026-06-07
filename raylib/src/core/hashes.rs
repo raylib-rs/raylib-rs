@@ -193,7 +193,7 @@ mod tests {
         use std::fmt::Write;
         let mut s = String::with_capacity(bytes.len() * 2);
         for b in bytes {
-            write!(&mut s, "{:02x}", b).expect("write to String never fails");
+            write!(&mut s, "{b:02x}").expect("write to String never fails");
         }
         s
     }

@@ -122,24 +122,21 @@ fn main() {
         d.clear_background(Color::RAYWHITE);
 
         d.draw_text(
-            &format!("TOTAL GIF FRAMES:  {:02}", anim_frames),
+            &format!("TOTAL GIF FRAMES:  {anim_frames:02}"),
             50,
             30,
             20,
             Color::LIGHTGRAY,
         );
         d.draw_text(
-            &format!("CURRENT FRAME: {:02}", current_anim_frame),
+            &format!("CURRENT FRAME: {current_anim_frame:02}"),
             50,
             60,
             20,
             Color::GRAY,
         );
         d.draw_text(
-            &format!(
-                "CURRENT FRAME IMAGE.DATA OFFSET: {:02}",
-                next_frame_data_offset
-            ),
+            &format!("CURRENT FRAME IMAGE.DATA OFFSET: {next_frame_data_offset:02}"),
             50,
             90,
             20,
@@ -148,7 +145,7 @@ fn main() {
 
         d.draw_text("FRAMES DELAY: ", 100, 305, 10, Color::DARKGRAY);
         d.draw_text(
-            &format!("{:02} frames", frame_delay),
+            &format!("{frame_delay:02} frames"),
             620,
             305,
             10,

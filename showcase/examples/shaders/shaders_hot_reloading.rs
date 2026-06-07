@@ -40,7 +40,7 @@ fn main() {
         .build();
 
     let frag_shader_file_name_fmt = "resources/shaders/shaders/glsl{}/reload.fs";
-    let frag_shader_file_name = format!("resources/shaders/shaders/glsl{}/reload.fs", GLSL_VERSION);
+    let frag_shader_file_name = format!("resources/shaders/shaders/glsl{GLSL_VERSION}/reload.fs");
     // SAFETY: pure FFI call returning a long file modification time; the input is a C string.
     let mut frag_shader_file_mod_time: i64 = unsafe {
         let cs = std::ffi::CString::new(frag_shader_file_name.clone()).unwrap();
@@ -125,7 +125,7 @@ fn main() {
         // Format the file modification time as a unix timestamp; the C version pipes it through
         // asctime(localtime(...)) for a human-readable form. We display the raw seconds-epoch
         // value here to avoid a libc bind dependency for `struct tm`.
-        let last_mod_string = format!("unix-time {}", frag_shader_file_mod_time);
+        let last_mod_string = format!("unix-time {frag_shader_file_mod_time}");
 
         // Draw
         //----------------------------------------------------------------------------------
@@ -162,7 +162,7 @@ fn main() {
         }
 
         d.draw_text(
-            &format!("Shader last modification: {}", last_mod_string),
+            &format!("Shader last modification: {last_mod_string}"),
             10,
             430,
             10,

@@ -524,7 +524,7 @@ fn main() {
                     "\"-O3 -sUSE_GLFW=3 -sASSERTIONS=1 -sWASM=1 -sASYNCIFY -sGL_ENABLE_GET_PROC_ADDRESS=1\""
                 );
             } else {
-                panic!("\nError regarding EMCC_CFLAGS: {:?}\n", e);
+                panic!("\nError regarding EMCC_CFLAGS: {e:?}\n");
             }
         }
     }
