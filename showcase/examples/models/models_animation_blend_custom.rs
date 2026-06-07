@@ -352,7 +352,7 @@ fn main() {
     );
     // Mirror C's `model.materials[1].shader = skinningShader;`. The model only stores a
     // non-owning handle; skinning_shader retains ownership and is unloaded on drop.
-    *model.materials_mut()[1].shader_mut().as_mut() = *skinning_shader.as_ref();
+    model.materials_mut()[1].set_shader(&skinning_shader);
 
     // Load gltf model animations
     let anims = rl
@@ -407,7 +407,8 @@ fn main() {
         // When upperBodyBlend is OFF: uniform blend at 0.5 (50% walk, 50% attack)
         let blend_factor = if upper_body_blend { 1.0 } else { 0.5 };
         update_model_animation_bones(
-            model.as_mut(),
+            // SAFETY: update_model_animation_bones only writes bone/pose fields; it does not touch meshCount/materialCount or owned mesh/material pointers.
+            unsafe { model.as_raw_mut() },
             &anim0,
             anim_current_frame0,
             &anim1,

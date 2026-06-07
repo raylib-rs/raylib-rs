@@ -155,11 +155,11 @@ fn main() {
     // SAFETY: Shader.locs is a *mut c_int array of MAX_SHADER_LOCS valid for the lifetime of `shader`.
     unsafe {
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_MATRIX_MVP as isize) = mvp_loc;
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_VECTOR_VIEW as isize) = view_loc;
     }
@@ -181,28 +181,14 @@ fn main() {
     // NOTE: We are assigning the intancing shader to material.shader
     // to be used on mesh drawing with DrawMeshInstanced()
     let mut mat_instances = rl.load_material_default(&thread);
-    mat_instances.as_mut().shader = *shader.as_ref();
-    // SAFETY: write diffuse color into the just-loaded default material's ALBEDO map.
-    unsafe {
-        (*mat_instances
-            .as_mut()
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .color = Color::RED;
-    }
+    mat_instances.set_shader(&shader);
+    mat_instances.set_map_color(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, Color::RED);
 
     // Load default material (using raylib intenral default shader) for non-instanced mesh drawing
     // WARNING: Default shader enables vertex color attribute BUT GenMeshCube() does not generate vertex colors, so,
     // when drawing the color attribute is disabled and a default color value is provided as input for thevertex attribute
     let mut mat_default = rl.load_material_default(&thread);
-    // SAFETY: write diffuse color into the default material's ALBEDO map.
-    unsafe {
-        (*mat_default
-            .as_mut()
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .color = Color::BLUE;
-    }
+    mat_default.set_map_color(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, Color::BLUE);
 
     rl.set_target_fps(60); // Set our game to run at 60 frames-per-second
     let mut viewer = SourceViewer::for_current_example();
@@ -267,10 +253,13 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Clear external shader handle from the instancing material so its Drop won't free our shader twice.
-    mat_instances.as_mut().shader = ffi::Shader {
-        id: 0,
-        locs: std::ptr::null_mut(),
-    };
+    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
+    unsafe {
+        mat_instances.as_raw_mut().shader = ffi::Shader {
+            id: 0,
+            locs: std::ptr::null_mut(),
+        };
+    }
     // Materials are WeakMaterial — they don't auto-unload. Leak is benign at shutdown
     // (matches the C source which also doesn't explicitly UnloadMaterial here).
     // UnloadShader / CloseWindow handled by RAII drops.

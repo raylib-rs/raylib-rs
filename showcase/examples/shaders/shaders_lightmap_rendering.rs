@@ -62,7 +62,7 @@ fn main() {
     // second UV channel by allocating texcoords2 via raylib's MemAlloc (libc::malloc would be
     // wrong under custom allocators). raylib will free texcoords2 in UnloadMesh.
     unsafe {
-        let mesh_ref = mesh.as_mut();
+        let mesh_ref = mesh.as_raw_mut();
         let count = (mesh_ref.vertexCount as usize) * 2;
         let bytes = count * std::mem::size_of::<f32>();
         let ptr = ffi::MemAlloc(bytes as u32) as *mut f32;

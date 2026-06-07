@@ -171,7 +171,7 @@ fn main() {
     // SAFETY: write shader.locs[SHADER_LOC_VECTOR_VIEW]; backing array lives as long as the shader.
     unsafe {
         *shadow_shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_VECTOR_VIEW as isize) = view_pos_loc;
     }
@@ -201,13 +201,13 @@ fn main() {
     let mut cube = rl
         .load_model_from_mesh(&thread, unsafe { cube_mesh.make_weak() })
         .unwrap();
-    cube.materials_mut()[0].as_mut().shader = *shadow_shader.as_ref();
+    cube.materials_mut()[0].set_shader(&shadow_shader);
     let mut robot = rl
         .load_model(&thread, "resources/shaders/models/robot.glb")
         .unwrap();
     let mat_count = robot.materials().len();
     for i in 0..mat_count {
-        robot.materials_mut()[i].as_mut().shader = *shadow_shader.as_ref();
+        robot.materials_mut()[i].set_shader(&shadow_shader);
     }
 
     let mut anims = rl
@@ -364,16 +364,17 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind shader from materials so model Drop doesn't double-free.
-    cube.materials_mut()[0].as_mut().shader = ffi::Shader {
-        id: 0,
-        locs: std::ptr::null_mut(),
-    };
-    let mat_count = robot.materials().len();
-    for i in 0..mat_count {
-        robot.materials_mut()[i].as_mut().shader = ffi::Shader {
+    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
+    unsafe {
+        let null_shader = ffi::Shader {
             id: 0,
             locs: std::ptr::null_mut(),
         };
+        cube.materials_mut()[0].as_raw_mut().shader = null_shader;
+        let mat_count = robot.materials().len();
+        for i in 0..mat_count {
+            robot.materials_mut()[i].as_raw_mut().shader = null_shader;
+        }
     }
     let _ = &mut anims; // ModelAnimations are unloaded via RAII drop
     unload_shadowmap_render_texture(&shadow_map);

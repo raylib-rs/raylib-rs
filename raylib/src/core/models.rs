@@ -428,7 +428,7 @@ pub trait RaylibModel: AsRef<ffi::Model> + crate::core::AsRawMut<ffi::Model> {
     fn set_transform(&mut self, mat: &Matrix) {
         // SAFETY: transform is an inline Matrix — not a trusted count or owned pointer.
         unsafe {
-            self.as_raw_mut().transform = (*mat).into();
+            self.as_raw_mut().transform = *mat;
         }
     }
 

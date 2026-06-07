@@ -83,7 +83,7 @@ fn main() {
         .load_model_from_mesh(&thread, unsafe { plane_mesh.make_weak() })
         .unwrap();
     // Set plane model material
-    plane_model.materials_mut()[0].as_mut().shader = *shader.as_ref();
+    plane_model.materials_mut()[0].set_shader(&shader);
 
     let mut time = 0.0f32;
 
@@ -135,10 +135,13 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind shader from model.material so Drop doesn't double-free.
-    plane_model.materials_mut()[0].as_mut().shader = ffi::Shader {
-        id: 0,
-        locs: std::ptr::null_mut(),
-    };
+    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
+    unsafe {
+        plane_model.materials_mut()[0].as_raw_mut().shader = ffi::Shader {
+            id: 0,
+            locs: std::ptr::null_mut(),
+        };
+    }
     // UnloadShader / UnloadModel / UnloadTexture / CloseWindow handled by RAII drops.
     //--------------------------------------------------------------------------------------
 }

@@ -63,7 +63,7 @@ fn main() {
     // SAFETY: install diffuse texture into model.material[0]; Texture2D RAII keeps id alive.
     unsafe {
         (*model.materials_mut()[0]
-            .as_mut()
+            .as_raw_mut()
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
         .texture = *texture.as_ref();
@@ -81,7 +81,7 @@ fn main() {
     texture.set_texture_wrap(&thread, TextureWrap::TEXTURE_WRAP_REPEAT);
     let tiling_loc = shader.get_shader_location("tiling");
     shader.set_shader_value(tiling_loc, tiling);
-    model.materials_mut()[0].as_mut().shader = *shader.as_ref();
+    model.materials_mut()[0].set_shader(&shader);
 
     rl.disable_cursor(); // Limit cursor to relative movement inside the window
 
@@ -137,7 +137,7 @@ fn main() {
     // Unbind shader and external diffuse texture so model Drop doesn't double-free.
     // SAFETY: clear shader handle + diffuse texture id in materials[0].
     unsafe {
-        let mat = model.materials_mut()[0].as_mut();
+        let mat = model.materials_mut()[0].as_raw_mut();
         mat.shader = ffi::Shader {
             id: 0,
             locs: std::ptr::null_mut(),

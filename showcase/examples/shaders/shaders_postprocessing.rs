@@ -107,7 +107,7 @@ fn main() {
     // SAFETY: install diffuse texture into material[0]; Texture2D RAII keeps id alive.
     unsafe {
         (*model.materials_mut()[0]
-            .as_mut()
+            .as_raw_mut()
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
         .texture = *texture.as_ref(); // Set model diffuse texture
@@ -239,7 +239,7 @@ fn main() {
     // SAFETY: clear diffuse texture id in materials[0].
     unsafe {
         (*model.materials_mut()[0]
-            .as_mut()
+            .as_raw_mut()
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
         .texture

@@ -166,7 +166,7 @@ fn main() {
     unsafe {
         let view_loc = deferred_shader.get_shader_location("viewPosition");
         *deferred_shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_VECTOR_VIEW as isize) = view_loc;
     }
@@ -283,8 +283,8 @@ fn main() {
     }
 
     // Assign our lighting shader to model
-    model.materials_mut()[0].as_mut().shader = *gbuffer_shader.as_ref();
-    cube.materials_mut()[0].as_mut().shader = *gbuffer_shader.as_ref();
+    model.materials_mut()[0].set_shader(&gbuffer_shader);
+    cube.materials_mut()[0].set_shader(&gbuffer_shader);
 
     // Create lights
     //--------------------------------------------------------------------------------------
@@ -627,14 +627,15 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind shader from materials so UnloadModel doesn't double-unload it (gbuffer_shader RAII owns it).
-    model.materials_mut()[0].as_mut().shader = ffi::Shader {
-        id: 0,
-        locs: std::ptr::null_mut(),
-    };
-    cube.materials_mut()[0].as_mut().shader = ffi::Shader {
-        id: 0,
-        locs: std::ptr::null_mut(),
-    };
+    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
+    unsafe {
+        let null_shader = ffi::Shader {
+            id: 0,
+            locs: std::ptr::null_mut(),
+        };
+        model.materials_mut()[0].as_raw_mut().shader = null_shader;
+        cube.materials_mut()[0].as_raw_mut().shader = null_shader;
+    }
 
     // Unload geometry buffer and all attached textures
     // SAFETY: matched against the rlgl loaders above.

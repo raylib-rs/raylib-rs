@@ -135,14 +135,14 @@ fn main() {
     unsafe {
         let view_loc = cel_shader.get_shader_location("viewPos");
         *cel_shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_VECTOR_VIEW as isize) = view_loc;
     }
 
     // Apply cel shader to model, keep copy of default shader
     let default_shader = model.materials_mut()[0].as_ref().shader;
-    model.materials_mut()[0].as_mut().shader = *cel_shader.as_ref();
+    model.materials_mut()[0].set_shader(&cel_shader);
 
     // numBands: controls toon quantization steps (2 = hard binary, 20 = near-smooth)
     let mut num_bands: f32 = 10.0;
@@ -200,9 +200,12 @@ fn main() {
         if rl.is_key_pressed(KeyboardKey::KEY_Z) {
             cel_enabled = !cel_enabled;
             if cel_enabled {
-                model.materials_mut()[0].as_mut().shader = *cel_shader.as_ref(); // Apply cel shader to model
+                model.materials_mut()[0].set_shader(&cel_shader); // Apply cel shader to model
             } else {
-                model.materials_mut()[0].as_mut().shader = default_shader; // Apply default shader to model
+                // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
+                unsafe {
+                    model.materials_mut()[0].as_raw_mut().shader = default_shader;
+                } // Apply default shader to model
             }
         }
 
@@ -260,14 +263,17 @@ fn main() {
                     ffi::rlSetCullFace(ffi::rlCullMode::RL_CULL_FACE_FRONT as i32);
                 }
 
-                model.materials_mut()[0].as_mut().shader = *outline_shader.as_ref();
+                model.materials_mut()[0].set_shader(&outline_shader);
 
                 c.draw_model(&model, Vector3::zero(), 0.75, Color::WHITE);
 
                 if cel_enabled {
-                    model.materials_mut()[0].as_mut().shader = *cel_shader.as_ref(); // Apply cel shader to model
+                    model.materials_mut()[0].set_shader(&cel_shader); // Apply cel shader to model
                 } else {
-                    model.materials_mut()[0].as_mut().shader = default_shader; // Apply default shader to model
+                    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
+                    unsafe {
+                        model.materials_mut()[0].as_raw_mut().shader = default_shader;
+                    } // Apply default shader to model
                 }
 
                 // SAFETY: pure rlgl state restore.
@@ -324,6 +330,9 @@ fn main() {
     // UnloadModel / UnloadShader / CloseWindow handled by RAII drops.
     // First, clear the cel_shader / outline_shader pointer from model.materials[0] so the model's
     // Drop (UnloadModel → UnloadMaterial) doesn't try to free a shader we still own via RAII.
-    model.materials_mut()[0].as_mut().shader = default_shader;
+    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
+    unsafe {
+        model.materials_mut()[0].as_raw_mut().shader = default_shader;
+    }
     //--------------------------------------------------------------------------------------
 }

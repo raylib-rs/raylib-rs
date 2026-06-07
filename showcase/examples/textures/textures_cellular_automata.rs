@@ -153,9 +153,9 @@ fn main() {
 
             // Reset image
             // SAFETY: ImageClearBackground takes the image by pointer. We have exclusive
-            // access via `&mut image` (raylib reads no other state); single-threaded use.
+            // access (raylib reads no other state); single-threaded use.
             unsafe {
-                raylib::ffi::ImageClearBackground(&mut *image, Color::RAYWHITE);
+                raylib::ffi::ImageClearBackground(image.as_raw_mut(), Color::RAYWHITE);
             }
             image.draw_pixel(IMAGE_WIDTH / 2, 0, Color::BLACK);
             line = 1;

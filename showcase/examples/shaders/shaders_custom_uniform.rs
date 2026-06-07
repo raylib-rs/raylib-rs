@@ -62,7 +62,7 @@ fn main() {
         .unwrap(); // Load model texture (diffuse map)
     // SAFETY: copy ffi::Texture2D handle into materials[0].maps[ALBEDO/DIFFUSE].texture; Texture2D RAII keeps it alive.
     unsafe {
-        let mat = model.materials_mut()[0].as_mut();
+        let mat = model.materials_mut()[0].as_raw_mut();
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
@@ -166,7 +166,7 @@ fn main() {
     // Unbind texture from model.material so Drop doesn't double-free; Texture2D RAII owns it.
     // SAFETY: zero out the texture id in the ALBEDO map.
     unsafe {
-        let mat = model.materials_mut()[0].as_mut();
+        let mat = model.materials_mut()[0].as_raw_mut();
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))

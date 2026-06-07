@@ -182,7 +182,7 @@ fn main() {
     unsafe {
         let albedo_loc = shader.get_shader_location("albedoMap");
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_MAP_ALBEDO as isize) = albedo_loc;
         // WARNING: Metalness, roughness, and ambient occlusion are all packed into a MRA texture
@@ -190,12 +190,12 @@ fn main() {
         // shader already takes care of it accordingly
         let mra_loc = shader.get_shader_location("mraMap");
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_MAP_METALNESS as isize) = mra_loc;
         let normal_loc = shader.get_shader_location("normalMap");
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_MAP_NORMAL as isize) = normal_loc;
         // WARNING: Similar to the MRA map, the emissive map packs different information
@@ -203,19 +203,19 @@ fn main() {
         // It is binded to SHADER_LOC_MAP_EMISSION location an properly processed on shader
         let emissive_loc = shader.get_shader_location("emissiveMap");
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_MAP_EMISSION as isize) = emissive_loc;
         let albedo_color_loc = shader.get_shader_location("albedoColor");
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_COLOR_DIFFUSE as isize) = albedo_color_loc;
 
         // Setup additional required shader locations, including lights data
         let view_loc = shader.get_shader_location("viewPos");
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_VECTOR_VIEW as isize) = view_loc;
     }
@@ -253,33 +253,17 @@ fn main() {
         .unwrap();
 
     // Assign already setup PBR shader to model.materials[0], used by models.meshes[0]
-    car.materials_mut()[0].as_mut().shader = *shader.as_ref();
+    car.materials_mut()[0].set_shader(&shader);
 
     // Setup materials[0].maps default parameters
-    // SAFETY: indexing into materials[0].maps (raw FFI pointer array).
-    unsafe {
-        let mat = car.materials_mut()[0].as_mut();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .color = Color::WHITE;
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_METALNESS as isize))
-        .value = 1.0;
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ROUGHNESS as isize))
-        .value = 0.0;
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_OCCLUSION as isize))
-        .value = 1.0;
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION as isize))
-        .color = Color::new(255, 162, 0, 255);
-    }
+    car.materials_mut()[0].set_map_color(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, Color::WHITE);
+    car.materials_mut()[0].set_map_value(ffi::MaterialMapIndex::MATERIAL_MAP_METALNESS, 1.0);
+    car.materials_mut()[0].set_map_value(ffi::MaterialMapIndex::MATERIAL_MAP_ROUGHNESS, 0.0);
+    car.materials_mut()[0].set_map_value(ffi::MaterialMapIndex::MATERIAL_MAP_OCCLUSION, 1.0);
+    car.materials_mut()[0].set_map_color(
+        ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION,
+        Color::new(255, 162, 0, 255),
+    );
 
     // Setup materials[0].maps default textures
     let car_albedo = rl
@@ -296,7 +280,7 @@ fn main() {
         .unwrap();
     // SAFETY: copy ffi::Texture2D handles into car.materials[0].maps[*].texture; lifetimes managed by Texture2D RAII.
     unsafe {
-        let mat = car.materials_mut()[0].as_mut();
+        let mat = car.materials_mut()[0].as_raw_mut();
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
@@ -321,32 +305,15 @@ fn main() {
         .unwrap();
 
     // Assign material shader for our floor model, same PBR shader
-    floor.materials_mut()[0].as_mut().shader = *shader.as_ref();
+    floor.materials_mut()[0].set_shader(&shader);
 
-    // SAFETY: indexing into materials[0].maps (raw FFI pointer array).
-    unsafe {
-        let mat = floor.materials_mut()[0].as_mut();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .color = Color::WHITE;
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_METALNESS as isize))
-        .value = 0.8;
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ROUGHNESS as isize))
-        .value = 0.1;
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_OCCLUSION as isize))
-        .value = 1.0;
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION as isize))
-        .color = Color::BLACK;
-    }
+    floor.materials_mut()[0]
+        .set_map_color(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, Color::WHITE);
+    floor.materials_mut()[0].set_map_value(ffi::MaterialMapIndex::MATERIAL_MAP_METALNESS, 0.8);
+    floor.materials_mut()[0].set_map_value(ffi::MaterialMapIndex::MATERIAL_MAP_ROUGHNESS, 0.1);
+    floor.materials_mut()[0].set_map_value(ffi::MaterialMapIndex::MATERIAL_MAP_OCCLUSION, 1.0);
+    floor.materials_mut()[0]
+        .set_map_color(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION, Color::BLACK);
 
     let floor_albedo = rl
         .load_texture(&thread, "resources/shaders/road_a.png")
@@ -359,7 +326,7 @@ fn main() {
         .unwrap();
     // SAFETY: copy ffi::Texture2D handles into floor.materials[0].maps[*].texture; lifetimes managed by Texture2D RAII.
     unsafe {
-        let mat = floor.materials_mut()[0].as_mut();
+        let mat = floor.materials_mut()[0].as_raw_mut();
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
@@ -600,19 +567,20 @@ fn main() {
     //--------------------------------------------------------------------------------------
     // Unbind (disconnect) shader from car.material[0] / floor.material[0] before they drop —
     // RAII drop of `shader` would otherwise be aliased by the materials' shader field.
-    car.materials_mut()[0].as_mut().shader = ffi::Shader {
-        id: 0,
-        locs: std::ptr::null_mut(),
-    };
-    floor.materials_mut()[0].as_mut().shader = ffi::Shader {
-        id: 0,
-        locs: std::ptr::null_mut(),
-    };
+    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
+    unsafe {
+        let null_shader = ffi::Shader {
+            id: 0,
+            locs: std::ptr::null_mut(),
+        };
+        car.materials_mut()[0].as_raw_mut().shader = null_shader;
+        floor.materials_mut()[0].as_raw_mut().shader = null_shader;
+    }
     // The Texture2D RAII handles still own the GPU textures; unbind from the material maps so
     // car/floor's Drop (UnloadModel → UnloadMaterial) doesn't double-free.
     // SAFETY: zero out the .texture fields of materials[0].maps so UnloadMaterial doesn't free.
     unsafe {
-        let mat = car.materials_mut()[0].as_mut();
+        let mat = car.materials_mut()[0].as_raw_mut();
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
@@ -633,7 +601,7 @@ fn main() {
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION as isize))
         .texture
         .id = 0;
-        let mat = floor.materials_mut()[0].as_mut();
+        let mat = floor.materials_mut()[0].as_raw_mut();
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))

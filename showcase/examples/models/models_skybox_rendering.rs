@@ -76,7 +76,7 @@ fn main() {
     skybox_shader.set_shader_value(vflipped_loc, if use_hdr { 1i32 } else { 0i32 });
 
     // Assign the skybox shader to the model's material[0]
-    skybox.materials_mut()[0].as_mut().shader = *skybox_shader.as_ref();
+    skybox.materials_mut()[0].set_shader(&skybox_shader);
 
     // Load cubemap shader and setup required shader locations
     // NOTE: kept for visual parity with the C example, though only used in the HDR branch below.

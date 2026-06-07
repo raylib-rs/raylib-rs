@@ -72,7 +72,7 @@ fn main() {
 
     // SAFETY: assign shader and diffuse texture into material[0]; both kept alive by RAII guards.
     unsafe {
-        let mat = model.materials_mut()[0].as_mut();
+        let mat = model.materials_mut()[0].as_raw_mut();
         mat.shader = *shader.as_ref(); // Set shader effect to 3d model
         (*mat
             .maps
@@ -130,7 +130,7 @@ fn main() {
     // Unbind so model Drop doesn't double-free what RAII guards own.
     // SAFETY: clear the shader+diffuse texture handles in material[0].
     unsafe {
-        let mat = model.materials_mut()[0].as_mut();
+        let mat = model.materials_mut()[0].as_raw_mut();
         mat.shader = ffi::Shader {
             id: 0,
             locs: std::ptr::null_mut(),

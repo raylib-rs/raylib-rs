@@ -87,12 +87,12 @@ fn main() {
     // SAFETY: install diffuse texture into both models' material[0]; Texture2D RAII keeps id alive.
     unsafe {
         (*model1.materials_mut()[0]
-            .as_mut()
+            .as_raw_mut()
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
         .texture = *tex_diffuse.as_ref();
         (*model2.materials_mut()[0]
-            .as_mut()
+            .as_raw_mut()
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
         .texture = *tex_diffuse.as_ref();
@@ -106,12 +106,12 @@ fn main() {
     // SAFETY: install mask texture into both models' MATERIAL_MAP_EMISSION slot; Texture2D RAII keeps id alive.
     unsafe {
         (*model1.materials_mut()[0]
-            .as_mut()
+            .as_raw_mut()
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION as isize))
         .texture = *tex_mask.as_ref();
         (*model2.materials_mut()[0]
-            .as_mut()
+            .as_raw_mut()
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION as isize))
         .texture = *tex_mask.as_ref();
@@ -120,7 +120,7 @@ fn main() {
     // SAFETY: write shader.locs[SHADER_LOC_MAP_EMISSION] for the active shader.
     unsafe {
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_MAP_EMISSION as isize) = mask_loc;
     }
@@ -129,8 +129,8 @@ fn main() {
     let shader_frame = shader.get_shader_location("frame");
 
     // Apply the shader to the two models
-    model1.materials_mut()[0].as_mut().shader = *shader.as_ref();
-    model2.materials_mut()[0].as_mut().shader = *shader.as_ref();
+    model1.materials_mut()[0].set_shader(&shader);
+    model2.materials_mut()[0].set_shader(&shader);
 
     let mut frames_counter: i32 = 0;
     let mut rotation = Vector3::new(0.0, 0.0, 0.0); // Model rotation angles
@@ -210,7 +210,7 @@ fn main() {
     // SAFETY: clear the shader handle and the diffuse/emission texture ids in materials[0].
     unsafe {
         for model in [&mut model1, &mut model2] {
-            let mat = model.materials_mut()[0].as_mut();
+            let mat = model.materials_mut()[0].as_raw_mut();
             mat.shader = ffi::Shader {
                 id: 0,
                 locs: std::ptr::null_mut(),

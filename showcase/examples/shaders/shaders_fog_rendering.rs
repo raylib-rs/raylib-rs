@@ -139,17 +139,17 @@ fn main() {
     // Assign texture to default model material
     // SAFETY: copying ffi::Texture2D handle into the material map slot; Texture2D RAII keeps it alive.
     unsafe {
-        let mat = model_a.materials_mut()[0].as_mut();
+        let mat = model_a.materials_mut()[0].as_raw_mut();
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
         .texture = *texture.as_ref();
-        let mat = model_b.materials_mut()[0].as_mut();
+        let mat = model_b.materials_mut()[0].as_raw_mut();
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
         .texture = *texture.as_ref();
-        let mat = model_c.materials_mut()[0].as_mut();
+        let mat = model_c.materials_mut()[0].as_raw_mut();
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
@@ -170,12 +170,12 @@ fn main() {
     unsafe {
         let model_loc = shader.get_shader_location("matModel");
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_MATRIX_MODEL as isize) = model_loc;
         let view_loc = shader.get_shader_location("viewPos");
         *shader
-            .as_mut()
+            .as_raw_mut()
             .locs
             .offset(ffi::ShaderLocationIndex::SHADER_LOC_VECTOR_VIEW as isize) = view_loc;
     }
@@ -199,9 +199,9 @@ fn main() {
     shader.set_shader_value(fog_density_loc, fog_density);
 
     // NOTE: All models share the same shader
-    model_a.materials_mut()[0].as_mut().shader = *shader.as_ref();
-    model_b.materials_mut()[0].as_mut().shader = *shader.as_ref();
-    model_c.materials_mut()[0].as_mut().shader = *shader.as_ref();
+    model_a.materials_mut()[0].set_shader(&shader);
+    model_b.materials_mut()[0].set_shader(&shader);
+    model_c.materials_mut()[0].set_shader(&shader);
 
     // Using just 1 point lights
     let _ = create_light(
@@ -299,23 +299,21 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind shader from models so UnloadModel doesn't try to free our owned Shader.
-    model_a.materials_mut()[0].as_mut().shader = ffi::Shader {
-        id: 0,
-        locs: std::ptr::null_mut(),
-    };
-    model_b.materials_mut()[0].as_mut().shader = ffi::Shader {
-        id: 0,
-        locs: std::ptr::null_mut(),
-    };
-    model_c.materials_mut()[0].as_mut().shader = ffi::Shader {
-        id: 0,
-        locs: std::ptr::null_mut(),
-    };
+    // SAFETY: shader is an inline value field — writing it cannot corrupt maps pointer.
+    unsafe {
+        let null_shader = ffi::Shader {
+            id: 0,
+            locs: std::ptr::null_mut(),
+        };
+        model_a.materials_mut()[0].as_raw_mut().shader = null_shader;
+        model_b.materials_mut()[0].as_raw_mut().shader = null_shader;
+        model_c.materials_mut()[0].as_raw_mut().shader = null_shader;
+    }
     // Also unbind texture (Texture2D RAII still owns the GL texture).
     // SAFETY: zero out the texture handle so UnloadMaterial doesn't double-free.
     unsafe {
         for m in [&mut model_a, &mut model_b, &mut model_c] {
-            let mat = m.materials_mut()[0].as_mut();
+            let mat = m.materials_mut()[0].as_raw_mut();
             (*mat
                 .maps
                 .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
