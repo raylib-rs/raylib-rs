@@ -1,8 +1,10 @@
 # Pins the Rust toolchain for this repo. rustup reads this automatically.
-# MSRV for raylib-rs 6.0 is 1.85 (the floor for edition 2024); dev builds on the
-# same version so MSRV violations surface locally. CI adds a `stable` job in WS6.
+# Project MSRV is 1.88 (edition 2024 itself only needs 1.85; the floor is
+# driven by transitive deps — wasip2 requires 1.87 — plus let-chains). Dev
+# builds on the same version so MSRV violations surface locally; CI's
+# `stable` jobs cover the other end.
 [toolchain]
-channel = "1.85.0"
+channel = "1.88.0"
 components = ["rustfmt", "clippy"]
 # thumbv7em-none-eabihf: no-std proof target for raylib-sys (check.yml `no-std` job)
 targets = ["wasm32-unknown-emscripten", "thumbv7em-none-eabihf"]

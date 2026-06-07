@@ -40,7 +40,7 @@ jobs:
       - name: Install macOS build deps
         if: runner.os == 'macOS'
         run: brew install cmake
-      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: dtolnay/rust-toolchain@1.88.0
       # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
@@ -101,7 +101,7 @@ jobs:
         run: emcc --version
       - name: Export bindgen sysroot for wasm32-emscripten
         run: echo "BINDGEN_EXTRA_CLANG_ARGS=--sysroot=$EMSDK/upstream/emscripten/cache/sysroot" >> $GITHUB_ENV
-      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: dtolnay/rust-toolchain@1.88.0
         with:
           targets: wasm32-unknown-emscripten
       # - uses: mozilla-actions/sccache-action@v0.0.6  # TODO(re-enable): GHA artifact-cache outage 2026-06-02

@@ -4,7 +4,7 @@ raylib-rs builds on Linux using the system GCC or Clang toolchain. You need the 
 
 ## Prerequisites
 
-1. **Rust 1.85+** — install via [rustup](https://rustup.rs/).
+1. **Rust 1.88+** — install via [rustup](https://rustup.rs/).
 
 2. **CMake 3.15+** and **build essentials** — see the distribution-specific instructions below.
 

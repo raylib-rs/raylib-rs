@@ -4,7 +4,7 @@ raylib-rs builds on Windows using the MSVC toolchain (Visual Studio Build Tools)
 
 ## Prerequisites
 
-1. **Rust 1.85+** — install via [rustup](https://rustup.rs/). When rustup asks which toolchain to install, choose `stable-x86_64-pc-windows-msvc` (the default on Windows).
+1. **Rust 1.88+** — install via [rustup](https://rustup.rs/). When rustup asks which toolchain to install, choose `stable-x86_64-pc-windows-msvc` (the default on Windows).
 
 2. **Visual Studio Build Tools 2019 or newer** — download the [Build Tools for Visual Studio](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) installer. During setup, select the **"Desktop development with C++"** workload. This provides `cl.exe`, the Windows SDK headers, and the linker.
 
