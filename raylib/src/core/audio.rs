@@ -10,6 +10,7 @@ use std::path::Path;
 
 use super::error::ExportWaveError;
 
+// SOUNDNESS: readonly — P2 (Drop=UnloadWave frees data); no Rust-side slice trusts frameCount.
 make_thin_wrapper_lifetime!(
     /// CPU-side waveform data loaded into RAM.
     ///
@@ -21,9 +22,11 @@ make_thin_wrapper_lifetime!(
     Wave,
     ffi::Wave,
     RaylibAudio,
-    ffi::UnloadWave
+    ffi::UnloadWave,
+    readonly
 );
 
+// SOUNDNESS: readonly — P2 (Drop=UnloadSound frees stream.buffer/processor). Closes the gap #277 originally targeted.
 make_thin_wrapper_lifetime!(
     /// Audio-device-ready playable sound sample.
     ///
@@ -49,8 +52,9 @@ make_thin_wrapper_lifetime!(
     ffi::Sound,
     RaylibAudio,
     (ffi::UnloadSound),
-    true
+    readonly
 );
+// SOUNDNESS: readonly — P2 (Drop=UnloadMusicStream frees stream + ctxData).
 make_thin_wrapper_lifetime!(
     /// Streamed audio for long-form playback.
     ///
@@ -64,8 +68,10 @@ make_thin_wrapper_lifetime!(
     Music,
     ffi::Music,
     RaylibAudio,
-    ffi::UnloadMusicStream
+    ffi::UnloadMusicStream,
+    readonly
 );
+// SOUNDNESS: readonly — P2 (Drop=UnloadAudioStream frees buffer/processor).
 make_thin_wrapper_lifetime!(
     /// Low-level raw PCM streaming primitive.
     ///
@@ -93,7 +99,8 @@ make_thin_wrapper_lifetime!(
     AudioStream,
     ffi::AudioStream,
     RaylibAudio,
-    ffi::UnloadAudioStream
+    ffi::UnloadAudioStream,
+    readonly
 );
 
 /// Owned buffer of decoded PCM samples for a [`Wave`], freed via `UnloadWaveSamples` on drop.

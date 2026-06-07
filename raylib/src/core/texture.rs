@@ -11,7 +11,9 @@ use std::mem::{ManuallyDrop, MaybeUninit};
 
 use super::error::{InvalidImageError, LoadTextureError, UpdateTextureError};
 
+// SOUNDNESS: rslice — Box mut-half removed (mem::take would double-free); element access via as_mut_slice.
 make_rslice!(ImagePalette, Color, ffi::UnloadImagePalette);
+// SOUNDNESS: rslice — Box mut-half removed (mem::take would double-free); element access via as_mut_slice.
 make_rslice!(ImageColors, Color, ffi::UnloadImageColors);
 
 /// NPatchInfo, n-patch layout info
@@ -58,6 +60,7 @@ impl From<&NPatchInfo> for ffi::NPatchInfo {
 }
 
 fn no_drop<T>(_thing: T) {}
+// SOUNDNESS: readonly — P1 (pixel readers trust width/height/format to size data) + P2 (Drop=UnloadImage frees data).
 make_thin_wrapper!(
     /// CPU-side pixel buffer.
     ///
@@ -87,8 +90,10 @@ make_thin_wrapper!(
     /// ```
     Image,
     ffi::Image,
-    ffi::UnloadImage
+    ffi::UnloadImage,
+    readonly
 );
+// SOUNDNESS: full deref — inline id/width/height/mipmaps/format; corrupting them confuses raylib C-side only, no Rust-side UB.
 make_thin_wrapper!(
     /// GPU-side texture stored in VRAM.
     ///
@@ -114,15 +119,18 @@ make_thin_wrapper!(
     /// ```
     Texture2D,
     ffi::Texture2D,
-    ffi::UnloadTexture
+    ffi::UnloadTexture,
+    true
 );
-make_thin_wrapper!(WeakTexture2D, ffi::Texture2D, no_drop);
+// SOUNDNESS: full deref — same inline-only fields as Texture2D.
+make_thin_wrapper!(WeakTexture2D, ffi::Texture2D, no_drop, true);
 #[allow(clippy::derivable_impls)] // Cannot use #[derive(Default)] on a macro-generated struct
 impl Default for WeakTexture2D {
     fn default() -> Self {
         Self(ffi::Texture::default())
     }
 }
+// SOUNDNESS: full deref — id + two inline Texture structs; no trusted counts, no owned CPU pointers.
 make_thin_wrapper!(
     /// Off-screen GPU framebuffer for render-to-texture.
     ///
@@ -156,9 +164,11 @@ make_thin_wrapper!(
     /// ```
     RenderTexture2D,
     ffi::RenderTexture2D,
-    ffi::UnloadRenderTexture
+    ffi::UnloadRenderTexture,
+    true
 );
-make_thin_wrapper!(WeakRenderTexture2D, ffi::RenderTexture2D, no_drop);
+// SOUNDNESS: full deref — same inline-only fields as RenderTexture2D.
+make_thin_wrapper!(WeakRenderTexture2D, ffi::RenderTexture2D, no_drop, true);
 
 // Weak things can be clone
 impl Clone for WeakTexture2D {

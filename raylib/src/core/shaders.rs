@@ -9,6 +9,7 @@ use std::ffi::CString;
 use std::os::raw::c_void;
 
 fn no_drop<T>(_thing: T) {}
+// SOUNDNESS: readonly — P1 (locs slice trusts the locs pointer) + P2 (Drop=UnloadShader frees locs).
 make_thin_wrapper!(
     /// GLSL shader program (vertex + fragment).
     ///
@@ -49,9 +50,11 @@ make_thin_wrapper!(
     /// ```
     Shader,
     ffi::Shader,
-    ffi::UnloadShader
+    ffi::UnloadShader,
+    readonly
 );
-make_thin_wrapper!(WeakShader, ffi::Shader, no_drop);
+// SOUNDNESS: readonly — P1 (same locs accessor); no_drop removes P2.
+make_thin_wrapper!(WeakShader, ffi::Shader, no_drop, readonly);
 
 // #[cfg(feature = "nightly")]
 // impl !Send for Shader {}
@@ -393,7 +396,7 @@ impl RaylibShader for Shader {}
 ///
 /// - [`Shader`] — owning shader handle.
 /// - [`ShaderV`] — values that can be uploaded as uniforms.
-pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
+pub trait RaylibShader: AsRef<ffi::Shader> + crate::core::AsRawMut<ffi::Shader> {
     /// Shader locations array (RL_MAX_SHADER_LOCATIONS)
     #[inline]
     #[must_use]
@@ -405,7 +408,9 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     #[inline]
     #[must_use]
     fn locs_mut(&mut self) -> &mut [i32] {
-        unsafe { std::slice::from_raw_parts_mut(self.as_mut().locs, 32) }
+        // SAFETY: raw mut access: this method upholds the wrapper invariants itself
+        // (reads the locs pointer to build a fixed-length slice — does not corrupt the pointer).
+        unsafe { std::slice::from_raw_parts_mut(self.as_raw_mut().locs, 32) }
     }
 
     /// Gets shader uniform location by name.
@@ -427,9 +432,11 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     /// Sets shader uniform value
     #[inline]
     fn set_shader_value<S: ShaderV>(&mut self, uniform_loc: i32, value: S) {
+        // SAFETY: SetShaderValue uploads a uniform; does not corrupt the locs pointer
+        // (the only trusted field) — invariants upheld.
         unsafe {
             ffi::SetShaderValue(
-                *self.as_mut(),
+                *self.as_raw_mut(),
                 uniform_loc,
                 value.value(),
                 (S::UNIFORM_TYPE as u32) as i32,
@@ -440,9 +447,11 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     /// Set shader uniform value vector
     #[inline]
     fn set_shader_value_v<S: ShaderV>(&mut self, uniform_loc: i32, value: &[S]) {
+        // SAFETY: SetShaderValueV uploads a uniform array; does not corrupt the locs pointer
+        // (the only trusted field) — invariants upheld.
         unsafe {
             ffi::SetShaderValueV(
-                *self.as_mut(),
+                *self.as_raw_mut(),
                 uniform_loc,
                 value.as_ptr() as *const ::std::os::raw::c_void,
                 (S::UNIFORM_TYPE as u32) as i32,
@@ -454,16 +463,20 @@ pub trait RaylibShader: AsRef<ffi::Shader> + AsMut<ffi::Shader> {
     /// Sets shader uniform value (matrix 4x4).
     #[inline]
     fn set_shader_value_matrix(&mut self, uniform_loc: i32, mat: impl Into<Matrix>) {
+        // SAFETY: SetShaderValueMatrix uploads a matrix uniform; does not corrupt the locs pointer
+        // (the only trusted field) — invariants upheld.
         unsafe {
-            ffi::SetShaderValueMatrix(*self.as_mut(), uniform_loc, mat.into());
+            ffi::SetShaderValueMatrix(*self.as_raw_mut(), uniform_loc, mat.into());
         }
     }
 
     /// Sets shader uniform value (matrix 4x4).
     #[inline]
     fn set_shader_value_texture(&mut self, uniform_loc: i32, texture: impl AsRef<ffi::Texture2D>) {
+        // SAFETY: SetShaderValueTexture uploads a texture uniform; does not corrupt the locs pointer
+        // (the only trusted field) — invariants upheld.
         unsafe {
-            ffi::SetShaderValueTexture(*self.as_mut(), uniform_loc, *texture.as_ref());
+            ffi::SetShaderValueTexture(*self.as_raw_mut(), uniform_loc, *texture.as_ref());
         }
     }
 }
