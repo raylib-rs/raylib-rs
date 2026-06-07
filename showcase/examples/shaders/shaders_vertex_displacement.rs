@@ -135,13 +135,7 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind shader from model.material so Drop doesn't double-free.
-    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
-    unsafe {
-        plane_model.materials_mut()[0].as_raw_mut().shader = ffi::Shader {
-            id: 0,
-            locs: std::ptr::null_mut(),
-        };
-    }
+    plane_model.materials_mut()[0].clear_shader();
     // UnloadShader / UnloadModel / UnloadTexture / CloseWindow handled by RAII drops.
     //--------------------------------------------------------------------------------------
 }

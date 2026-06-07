@@ -278,26 +278,14 @@ fn main() {
     let car_emission = rl
         .load_texture(&thread, "resources/shaders/old_car_e.png")
         .unwrap();
-    // SAFETY: copy ffi::Texture2D handles into car.materials[0].maps[*].texture; lifetimes managed by Texture2D RAII.
-    unsafe {
-        let mat = car.materials_mut()[0].as_raw_mut();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *car_albedo.as_ref();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_METALNESS as isize))
-        .texture = *car_mra.as_ref();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_NORMAL as isize))
-        .texture = *car_normal.as_ref();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION as isize))
-        .texture = *car_emission.as_ref();
-    }
+    car.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &car_albedo);
+    car.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_METALNESS, &car_mra);
+    car.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_NORMAL, &car_normal);
+    car.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION, &car_emission);
 
     // Load floor model mesh and assign material parameters
     let mut floor = rl
@@ -324,22 +312,12 @@ fn main() {
     let floor_normal = rl
         .load_texture(&thread, "resources/shaders/road_n.png")
         .unwrap();
-    // SAFETY: copy ffi::Texture2D handles into floor.materials[0].maps[*].texture; lifetimes managed by Texture2D RAII.
-    unsafe {
-        let mat = floor.materials_mut()[0].as_raw_mut();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *floor_albedo.as_ref();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_METALNESS as isize))
-        .texture = *floor_mra.as_ref();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_NORMAL as isize))
-        .texture = *floor_normal.as_ref();
-    }
+    floor.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &floor_albedo);
+    floor.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_METALNESS, &floor_mra);
+    floor.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_NORMAL, &floor_normal);
 
     // Models texture tiling parameter can be stored in the Material struct if required (CURRENTLY NOT USED)
     // NOTE: Material.params[4] are available for generic parameters storage (float)
@@ -567,15 +545,8 @@ fn main() {
     //--------------------------------------------------------------------------------------
     // Unbind (disconnect) shader from car.material[0] / floor.material[0] before they drop —
     // RAII drop of `shader` would otherwise be aliased by the materials' shader field.
-    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
-    unsafe {
-        let null_shader = ffi::Shader {
-            id: 0,
-            locs: std::ptr::null_mut(),
-        };
-        car.materials_mut()[0].as_raw_mut().shader = null_shader;
-        floor.materials_mut()[0].as_raw_mut().shader = null_shader;
-    }
+    car.materials_mut()[0].clear_shader();
+    floor.materials_mut()[0].clear_shader();
     // The Texture2D RAII handles still own the GPU textures; unbind from the material maps so
     // car/floor's Drop (UnloadModel → UnloadMaterial) doesn't double-free.
     // SAFETY: zero out the .texture fields of materials[0].maps so UnloadMaterial doesn't free.

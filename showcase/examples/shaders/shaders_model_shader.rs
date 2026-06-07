@@ -70,15 +70,9 @@ fn main() {
         )),
     );
 
-    // SAFETY: assign shader and diffuse texture into material[0]; both kept alive by RAII guards.
-    unsafe {
-        let mat = model.materials_mut()[0].as_raw_mut();
-        mat.shader = *shader.as_ref(); // Set shader effect to 3d model
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *texture.as_ref(); // Bind texture to model
-    }
+    model.materials_mut()[0].set_shader(&shader); // Set shader effect to 3d model
+    model.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &texture); // Bind texture to model
 
     let position = Vector3::new(0.0, 0.0, 0.0); // Set model position
 
@@ -128,13 +122,10 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind so model Drop doesn't double-free what RAII guards own.
-    // SAFETY: clear the shader+diffuse texture handles in material[0].
+    model.materials_mut()[0].clear_shader();
+    // SAFETY: zero out the texture id so UnloadMaterial doesn't double-free.
     unsafe {
         let mat = model.materials_mut()[0].as_raw_mut();
-        mat.shader = ffi::Shader {
-            id: 0,
-            locs: std::ptr::null_mut(),
-        };
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))

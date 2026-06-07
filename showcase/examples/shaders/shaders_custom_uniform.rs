@@ -60,14 +60,8 @@ fn main() {
     let texture = rl
         .load_texture(&thread, "resources/shaders/models/barracks_diffuse.png")
         .unwrap(); // Load model texture (diffuse map)
-    // SAFETY: copy ffi::Texture2D handle into materials[0].maps[ALBEDO/DIFFUSE].texture; Texture2D RAII keeps it alive.
-    unsafe {
-        let mat = model.materials_mut()[0].as_raw_mut();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *texture.as_ref(); // Set model diffuse texture
-    }
+    model.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &texture); // Set model diffuse texture
 
     let position = Vector3::new(0.0, 0.0, 0.0); // Set model position
 

@@ -137,24 +137,12 @@ fn main() {
         .unwrap();
 
     // Assign texture to default model material
-    // SAFETY: copying ffi::Texture2D handle into the material map slot; Texture2D RAII keeps it alive.
-    unsafe {
-        let mat = model_a.materials_mut()[0].as_raw_mut();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *texture.as_ref();
-        let mat = model_b.materials_mut()[0].as_raw_mut();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *texture.as_ref();
-        let mat = model_c.materials_mut()[0].as_raw_mut();
-        (*mat
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *texture.as_ref();
-    }
+    model_a.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &texture);
+    model_b.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &texture);
+    model_c.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &texture);
 
     // Load shader and set up some uniforms
     let mut shader = rl.load_shader(
@@ -299,16 +287,9 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind shader from models so UnloadModel doesn't try to free our owned Shader.
-    // SAFETY: shader is an inline value field — writing it cannot corrupt maps pointer.
-    unsafe {
-        let null_shader = ffi::Shader {
-            id: 0,
-            locs: std::ptr::null_mut(),
-        };
-        model_a.materials_mut()[0].as_raw_mut().shader = null_shader;
-        model_b.materials_mut()[0].as_raw_mut().shader = null_shader;
-        model_c.materials_mut()[0].as_raw_mut().shader = null_shader;
-    }
+    model_a.materials_mut()[0].clear_shader();
+    model_b.materials_mut()[0].clear_shader();
+    model_c.materials_mut()[0].clear_shader();
     // Also unbind texture (Texture2D RAII still owns the GL texture).
     // SAFETY: zero out the texture handle so UnloadMaterial doesn't double-free.
     unsafe {

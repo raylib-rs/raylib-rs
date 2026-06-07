@@ -627,15 +627,8 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind shader from materials so UnloadModel doesn't double-unload it (gbuffer_shader RAII owns it).
-    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
-    unsafe {
-        let null_shader = ffi::Shader {
-            id: 0,
-            locs: std::ptr::null_mut(),
-        };
-        model.materials_mut()[0].as_raw_mut().shader = null_shader;
-        cube.materials_mut()[0].as_raw_mut().shader = null_shader;
-    }
+    model.materials_mut()[0].clear_shader();
+    cube.materials_mut()[0].clear_shader();
 
     // Unload geometry buffer and all attached textures
     // SAFETY: matched against the rlgl loaders above.

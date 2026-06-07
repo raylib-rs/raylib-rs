@@ -60,14 +60,8 @@ fn main() {
     let texture = rl
         .load_texture(&thread, "resources/shaders/cubicmap_atlas.png")
         .unwrap();
-    // SAFETY: install diffuse texture into model.material[0]; Texture2D RAII keeps id alive.
-    unsafe {
-        (*model.materials_mut()[0]
-            .as_raw_mut()
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *texture.as_ref();
-    }
+    model.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &texture);
 
     // Set the texture tiling using a shader
     let tiling = [3.0f32, 3.0f32];
@@ -135,13 +129,10 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind shader and external diffuse texture so model Drop doesn't double-free.
-    // SAFETY: clear shader handle + diffuse texture id in materials[0].
+    model.materials_mut()[0].clear_shader();
+    // SAFETY: zero out the texture id so UnloadMaterial doesn't double-free.
     unsafe {
         let mat = model.materials_mut()[0].as_raw_mut();
-        mat.shader = ffi::Shader {
-            id: 0,
-            locs: std::ptr::null_mut(),
-        };
         (*mat
             .maps
             .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))

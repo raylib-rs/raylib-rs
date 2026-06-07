@@ -84,38 +84,20 @@ fn main() {
     let tex_diffuse = rl
         .load_texture(&thread, "resources/shaders/plasma.png")
         .unwrap();
-    // SAFETY: install diffuse texture into both models' material[0]; Texture2D RAII keeps id alive.
-    unsafe {
-        (*model1.materials_mut()[0]
-            .as_raw_mut()
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *tex_diffuse.as_ref();
-        (*model2.materials_mut()[0]
-            .as_raw_mut()
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))
-        .texture = *tex_diffuse.as_ref();
-    }
+    model1.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &tex_diffuse);
+    model2.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, &tex_diffuse);
 
     // Using MATERIAL_MAP_EMISSION as a spare slot to use for 2nd texture
     // NOTE: Don't use MATERIAL_MAP_IRRADIANCE, MATERIAL_MAP_PREFILTER or  MATERIAL_MAP_CUBEMAP as they are bound as cube maps
     let tex_mask = rl
         .load_texture(&thread, "resources/shaders/mask.png")
         .unwrap();
-    // SAFETY: install mask texture into both models' MATERIAL_MAP_EMISSION slot; Texture2D RAII keeps id alive.
-    unsafe {
-        (*model1.materials_mut()[0]
-            .as_raw_mut()
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION as isize))
-        .texture = *tex_mask.as_ref();
-        (*model2.materials_mut()[0]
-            .as_raw_mut()
-            .maps
-            .offset(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION as isize))
-        .texture = *tex_mask.as_ref();
-    }
+    model1.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION, &tex_mask);
+    model2.materials_mut()[0]
+        .set_material_texture(ffi::MaterialMapIndex::MATERIAL_MAP_EMISSION, &tex_mask);
     let mask_loc = shader.get_shader_location("mask");
     // SAFETY: write shader.locs[SHADER_LOC_MAP_EMISSION] for the active shader.
     unsafe {
@@ -207,14 +189,13 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind shader and external textures from materials so model Drop doesn't double-free.
-    // SAFETY: clear the shader handle and the diffuse/emission texture ids in materials[0].
+    for model in [&mut model1, &mut model2] {
+        model.materials_mut()[0].clear_shader();
+    }
+    // SAFETY: zero out the texture ids so UnloadMaterial doesn't double-free.
     unsafe {
         for model in [&mut model1, &mut model2] {
             let mat = model.materials_mut()[0].as_raw_mut();
-            mat.shader = ffi::Shader {
-                id: 0,
-                locs: std::ptr::null_mut(),
-            };
             (*mat
                 .maps
                 .offset(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO as isize))

@@ -1082,6 +1082,22 @@ pub trait RaylibMaterial: AsRef<ffi::Material> + crate::core::AsRawMut<ffi::Mate
         }
     }
 
+    /// Reset the material's shader to "none" (`id: 0`, no locations array).
+    ///
+    /// Used when tearing down a material whose shader is owned elsewhere, so
+    /// the material no longer references it.
+    #[inline]
+    fn clear_shader(&mut self) {
+        // SAFETY: shader is an inline value field — writing it cannot
+        // corrupt the maps pointer (the only field the safe API trusts).
+        unsafe {
+            self.as_raw_mut().shader = ffi::Shader {
+                id: 0,
+                locs: std::ptr::null_mut(),
+            };
+        }
+    }
+
     /// Set one material map's color (e.g. albedo tint).
     ///
     /// # Panics

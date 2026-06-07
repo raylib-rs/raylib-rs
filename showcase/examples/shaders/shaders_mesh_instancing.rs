@@ -253,13 +253,7 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Clear external shader handle from the instancing material so its Drop won't free our shader twice.
-    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
-    unsafe {
-        mat_instances.as_raw_mut().shader = ffi::Shader {
-            id: 0,
-            locs: std::ptr::null_mut(),
-        };
-    }
+    mat_instances.clear_shader();
     // Materials are WeakMaterial — they don't auto-unload. Leak is benign at shutdown
     // (matches the C source which also doesn't explicitly UnloadMaterial here).
     // UnloadShader / CloseWindow handled by RAII drops.

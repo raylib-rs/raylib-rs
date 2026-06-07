@@ -1,6 +1,7 @@
 //! Contains code related to audio. [`RaylibAudio`] plays sounds and music.
 
 use crate::{
+    core::AsRawMut,
     error::{AudioInitError, LoadSoundError, UpdateAudioStreamError},
     ffi,
 };
@@ -703,6 +704,15 @@ impl Music<'_> {
     #[inline]
     pub fn set_pan(&self, pan: f32) {
         unsafe { ffi::SetMusicPan(self.0, pan) }
+    }
+
+    /// Set whether the music stream loops when it reaches the end.
+    #[inline]
+    pub fn set_looping(&mut self, looping: bool) {
+        // SAFETY: looping is an inline bool — not a trusted count or owned pointer.
+        unsafe {
+            self.as_raw_mut().looping = looping;
+        }
     }
 
     /// Checks if a music stream is valid (context and buffers initialized)

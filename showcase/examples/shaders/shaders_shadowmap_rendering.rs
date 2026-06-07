@@ -364,17 +364,10 @@ fn main() {
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unbind shader from materials so model Drop doesn't double-free.
-    // SAFETY: shader is an inline value field — writing it cannot corrupt the maps pointer.
-    unsafe {
-        let null_shader = ffi::Shader {
-            id: 0,
-            locs: std::ptr::null_mut(),
-        };
-        cube.materials_mut()[0].as_raw_mut().shader = null_shader;
-        let mat_count = robot.materials().len();
-        for i in 0..mat_count {
-            robot.materials_mut()[i].as_raw_mut().shader = null_shader;
-        }
+    cube.materials_mut()[0].clear_shader();
+    let mat_count = robot.materials().len();
+    for i in 0..mat_count {
+        robot.materials_mut()[i].clear_shader();
     }
     let _ = &mut anims; // ModelAnimations are unloaded via RAII drop
     unload_shadowmap_render_texture(&shadow_map);
