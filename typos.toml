@@ -16,6 +16,10 @@ easer = "easer"
 # `mis` appears as a token boundary in valid hyphenated English ("mis-wire",
 # "mis-routing") that typos splits on the hyphen. Allow the prefix through.
 mis = "mis"
+# raylib's MATERIAL_MAP_METALNESS / PBR "metalness" is standard PBR
+# terminology and the upstream enum name (typos suggests "metallicity",
+# which is astronomy, not graphics).
+metalness = "metalness"
 
 [type.fs]
 extend-glob = ["*.fs"]
