@@ -149,7 +149,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest] # macOS + Windows added incrementally once Linux is green
+        os: [ubuntu-latest, macos-latest] # Windows added once these are green
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -182,4 +182,22 @@ jobs:
         env:
           RUSTFLAGS: "-L native=${{ runner.temp }}/raylib/lib"
           LD_LIBRARY_PATH: "${{ runner.temp }}/raylib/lib"
+        run: cargo nextest run -p raylib-sys --no-default-features --features nobuild -E 'binary(raymath_wrappers) + binary(symbol_presence)'
+      - name: Download prebuilt raylib 6.0 (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -sSL -o raylib.tar.gz https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_macos.tar.gz
+          mkdir -p "$RUNNER_TEMP/raylib"
+          tar -xzf raylib.tar.gz --strip-components=1 -C "$RUNNER_TEMP/raylib"
+          echo "::group::extracted lib dir"
+          ls -R "$RUNNER_TEMP/raylib/lib"
+          echo "::endgroup::"
+      # Belt-and-suspenders for dyld: bake an rpath into the test binaries AND set
+      # DYLD_LIBRARY_PATH, since macOS strips DYLD_* in some spawn paths and the
+      # prebuilt dylib's install_name may or may not be @rpath-relative.
+      - name: Run window-independent tests against the prebuilt dylib (macOS)
+        if: runner.os == 'macOS'
+        env:
+          RUSTFLAGS: "-L native=${{ runner.temp }}/raylib/lib -C link-arg=-Wl,-rpath,${{ runner.temp }}/raylib/lib"
+          DYLD_LIBRARY_PATH: "${{ runner.temp }}/raylib/lib"
         run: cargo nextest run -p raylib-sys --no-default-features --features nobuild -E 'binary(raymath_wrappers) + binary(symbol_presence)'
