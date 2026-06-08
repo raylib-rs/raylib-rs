@@ -149,7 +149,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest] # Windows added once these are green
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -201,3 +201,25 @@ jobs:
           RUSTFLAGS: "-L native=${{ runner.temp }}/raylib/lib -C link-arg=-Wl,-rpath,${{ runner.temp }}/raylib/lib"
           DYLD_LIBRARY_PATH: "${{ runner.temp }}/raylib/lib"
         run: cargo nextest run -p raylib-sys --no-default-features --features nobuild -E 'binary(raymath_wrappers) + binary(symbol_presence)'
+      - name: Download prebuilt raylib 6.0 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_win64_msvc16.zip -OutFile raylib.zip
+          Expand-Archive raylib.zip -DestinationPath "$env:RUNNER_TEMP/raylib_extract" -Force
+          $root = (Get-ChildItem "$env:RUNNER_TEMP/raylib_extract" -Directory | Select-Object -First 1).FullName
+          # Link dynamically via the DLL import lib: the `dylib=raylib` directive
+          # resolves `raylib.lib`, so overwrite it with `raylibdll.lib`. The static
+          # raylib.lib would instead pull rcore.obj -> winmm/user32/gdi32 symbols
+          # that nobuild's link() does not emit. raylib.dll goes on PATH at runtime.
+          Copy-Item "$root/lib/raylibdll.lib" "$root/lib/raylib.lib" -Force
+          "RAYLIB_PREBUILT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "lib dir:"; Get-ChildItem "$root/lib" | Select-Object Name
+      - name: Run window-independent tests against the prebuilt dll (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          RUSTFLAGS: "-L native=${{ env.RAYLIB_PREBUILT }}/lib"
+        run: |
+          $env:PATH = "$env:RAYLIB_PREBUILT/lib;" + $env:PATH
+          cargo nextest run -p raylib-sys --no-default-features --features nobuild -E 'binary(raymath_wrappers) + binary(symbol_presence)'
