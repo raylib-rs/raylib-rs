@@ -549,9 +549,26 @@ fn main() {
 
     #[cfg(not(feature = "nobuild"))]
     {
+        // utils_log.c backs setLogCallbackWrapper(), which is itself
+        // nobuild-gated in raylib/src/core/callbacks.rs. So TraceLog-callback
+        // registration is intentionally unavailable under nobuild; leaving this
+        // gated keeps the link surface minimal for prebuilt-link consumers.
         gen_utils();
-        gen_raymath();
     }
+
+    // The raymath shim (binding/raymath_shim.c, compiled with
+    // RAYMATH_IMPLEMENTATION) provides Vector2Add/Vector3Add/... as real
+    // linkable symbols; raylib's own library exports them only as `static
+    // inline`. The safe crate's Vector operators and raylib-sys's
+    // raymath_wrappers tests call them, so they must exist even under `nobuild`
+    // (linking against a prebuilt raylib). Gate on `not(nobindgen)` rather than
+    // `not(nobuild)`: `nobindgen` is the codebase's cross-target-compile-only
+    // marker (only ever paired with `nobuild` on thumbv7em), where invoking
+    // `cc` to cross-compile the shim would need an arm-none-eabi C toolchain the
+    // runner lacks. The shim is self-contained (raymath.h -> math.h only;
+    // independent of libraylib), so it compiles on any host target.
+    #[cfg(not(feature = "nobindgen"))]
+    gen_raymath();
 
     // ENABLE_UBSAN: the C side is instrumented via cmake's CompilerFlags.cmake
     // (-fsanitize=undefined). The Rust link step needs `-lubsan` explicitly because
