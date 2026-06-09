@@ -66,7 +66,7 @@ A good way to do this is by looking at the `/// # Safety` docs of each `unsafe` 
   fn sound_incr(n: u8) -> NonZeroU8 {
       let m: u8 = n + 1;
       // SAFETY: `m` is at least 1 (overflow would panic).
-      unsafe { NonZeroU8::new_unchecked() };
+      unsafe { NonZeroU8::new_unchecked(m) };
   }
   ```
   This alternative version looks like it would be the same, except it isn't.
@@ -75,7 +75,7 @@ A good way to do this is by looking at the `/// # Safety` docs of each `unsafe` 
       // SAFETY: `AddOne` has no preconditions
       let m: u8 = unsafe { AddOne(n) }; // `AddOne` just adds 1 to `n`
       // SAFETY: `m` is at least 1 (overflow would panic).
-      unsafe { NonZeroU8::new_unchecked() };
+      unsafe { NonZeroU8::new_unchecked(m) };
   }
   ```
   In `unsound_incr`, `AddOne` has no *preconditions*, but does not give the same protections as Rust would. If `n` is 255, `sound_incr` would panic, but `unsound_incr` would return **an invalid `NonZeroU8` containing 0**.
