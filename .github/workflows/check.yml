@@ -4,6 +4,9 @@ on:
   push:
     branches: [6.0-rc, unstable]
   pull_request:
+  # Required so the merge queue's required checks actually run on the
+  # merge_group event (the queue hangs otherwise — no workflow fired for it).
+  merge_group:
 
 env:
   CARGO_TERM_COLOR: always

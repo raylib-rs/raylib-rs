@@ -4,6 +4,9 @@ on:
   push:
     branches: [6.0-rc, unstable, master]
   pull_request:
+  # Required so the merge queue's required check (book `build`) runs on the
+  # merge_group event.
+  merge_group:
   workflow_dispatch:
 
 env:
