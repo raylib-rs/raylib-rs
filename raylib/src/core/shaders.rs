@@ -199,100 +199,53 @@ pub trait ShaderV {
     unsafe fn value(&self) -> *const c_void;
 }
 
-impl ShaderV for f32 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_FLOAT;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const f32 as *const c_void
-    }
+// The `ShaderV` impls below were a block of ~12 near-identical hand-written
+// impls (resolves #269). They collapse into two `macro_rules!` by their only
+// real difference — how `value()` obtains the data pointer:
+//   * `by_ref`: scalar/struct uniforms point at `self` directly.
+//   * `by_ptr`: contiguous uniforms (arrays / slices) use `self.as_ptr()`.
+// Original repetitive impls + the macro idea by @AmityWilder (PR #270);
+// re-derived here against the current 6.0 impl set (paste-free).
+macro_rules! impl_shader_v_by_ref {
+    ($( $ty:ty => $variant:ident ),* $(,)?) => {$(
+        impl ShaderV for $ty {
+            const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::$variant;
+            #[inline]
+            unsafe fn value(&self) -> *const c_void {
+                self as *const Self as *const c_void
+            }
+        }
+    )*};
 }
 
-impl ShaderV for Vector2 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC2;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const Vector2 as *const c_void
-    }
+macro_rules! impl_shader_v_by_ptr {
+    ($( $ty:ty => $variant:ident ),* $(,)?) => {$(
+        impl ShaderV for $ty {
+            const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::$variant;
+            #[inline]
+            unsafe fn value(&self) -> *const c_void {
+                self.as_ptr() as *const c_void
+            }
+        }
+    )*};
 }
 
-impl ShaderV for Vector3 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC3;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const Vector3 as *const c_void
-    }
+impl_shader_v_by_ref! {
+    f32 => SHADER_UNIFORM_FLOAT,
+    Vector2 => SHADER_UNIFORM_VEC2,
+    Vector3 => SHADER_UNIFORM_VEC3,
+    Vector4 => SHADER_UNIFORM_VEC4,
+    i32 => SHADER_UNIFORM_INT,
 }
 
-impl ShaderV for Vector4 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC4;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const Vector4 as *const c_void
-    }
-}
-
-impl ShaderV for i32 {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_INT;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self as *const i32 as *const c_void
-    }
-}
-
-impl ShaderV for [i32; 2] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC2;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for [i32; 3] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC3;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for [i32; 4] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_IVEC4;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for [f32; 2] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC2;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for [f32; 3] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC3;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for [f32; 4] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_VEC4;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
-}
-
-impl ShaderV for &[i32] {
-    const UNIFORM_TYPE: ShaderUniformDataType = ShaderUniformDataType::SHADER_UNIFORM_SAMPLER2D;
-    #[inline]
-    unsafe fn value(&self) -> *const c_void {
-        self.as_ptr() as *const c_void
-    }
+impl_shader_v_by_ptr! {
+    [i32; 2] => SHADER_UNIFORM_IVEC2,
+    [i32; 3] => SHADER_UNIFORM_IVEC3,
+    [i32; 4] => SHADER_UNIFORM_IVEC4,
+    [f32; 2] => SHADER_UNIFORM_VEC2,
+    [f32; 3] => SHADER_UNIFORM_VEC3,
+    [f32; 4] => SHADER_UNIFORM_VEC4,
+    &[i32] => SHADER_UNIFORM_SAMPLER2D,
 }
 
 impl Shader {
@@ -478,5 +431,41 @@ pub trait RaylibShader: AsRef<ffi::Shader> + crate::core::AsRawMut<ffi::Shader> 
         unsafe {
             ffi::SetShaderValueTexture(*self.as_raw_mut(), uniform_loc, *texture.as_ref());
         }
+    }
+}
+
+#[cfg(test)]
+mod shader_v_tests {
+    use super::*;
+
+    // Guards the macro_rules! refactor of the ShaderV impls (#269/#270): the
+    // generated impls must keep the exact UNIFORM_TYPE tag and value() pointer
+    // semantics of the previous hand-written blocks.
+    #[test]
+    fn shader_v_uniform_types_and_value_pointers() {
+        // by_ref arm: scalar/struct uniforms.
+        assert!(<f32 as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_FLOAT);
+        assert!(<i32 as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_INT);
+        assert!(<Vector2 as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_VEC2);
+        assert!(<Vector3 as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_VEC3);
+        assert!(<Vector4 as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_VEC4);
+        // by_ptr arm: contiguous uniforms.
+        assert!(<[i32; 2] as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_IVEC2);
+        assert!(<[i32; 3] as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_IVEC3);
+        assert!(<[i32; 4] as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_IVEC4);
+        assert!(<[f32; 2] as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_VEC2);
+        assert!(<[f32; 3] as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_VEC3);
+        assert!(<[f32; 4] as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_VEC4);
+        assert!(
+            <&[i32] as ShaderV>::UNIFORM_TYPE == ShaderUniformDataType::SHADER_UNIFORM_SAMPLER2D
+        );
+
+        // value() pointer: by_ref points at self; by_ptr points at the first element.
+        let v = Vector2 { x: 1.0, y: 2.0 };
+        assert_eq!(unsafe { v.value() }, std::ptr::from_ref(&v).cast());
+        let arr = [7i32, 8, 9];
+        assert_eq!(unsafe { arr.value() }, arr.as_ptr().cast());
+        let s: &[i32] = &arr;
+        assert_eq!(unsafe { s.value() }, s.as_ptr().cast());
     }
 }
