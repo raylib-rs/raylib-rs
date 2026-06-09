@@ -134,3 +134,95 @@ jobs:
       # complete.md when the workstream closes.
       # - name: Doctests (software_renderer)
       #   run: cargo test -p raylib --doc --no-default-features --features software_renderer,SUPPORT_MODULE_RTEXTURES,SUPPORT_MODULE_RSHAPES,SUPPORT_MODULE_RTEXT,SUPPORT_MODULE_RMODELS,SUPPORT_MODULE_RAUDIO,SUPPORT_IMAGE_GENERATION,SUPPORT_MESH_GENERATION,SUPPORT_FILEFORMAT_TTF
+
+  # Proves the `nobuild` feature links + runs against the PREBUILT raylib 6.0
+  # release libraries (not the vendored cmake build). nobuild's link() emits only
+  # `dylib=raylib`, so the link-search path and the runtime loader path are
+  # supplied here from the downloaded archive. Tier-2 headless is impossible
+  # against stock prebuilt raylib (release archives have no Memory/rlsw
+  # platform), so this runs only the window-independent raylib-sys tests, which
+  # exercise the raymath shim symbols nobuild must provide (raymath_wrappers)
+  # plus a link-presence guard for raylib's exported fns (symbol_presence).
+  # ADDED, non-required: deliberately not wired into the unstable branch ruleset.
+  nobuild-prebuilt:
+    name: nobuild-prebuilt (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # nobuild still runs bindgen against the vendored headers (-Iraylib/src).
+          submodules: recursive
+      # The prebuilt libraylib.so is dynamically loaded at process start (we link
+      # dylib=raylib), so its own deps (X11/GL/ALSA) must be present even though
+      # the tests only call raymath/shim symbols. No cmake — nobuild skips it.
+      - name: Install Linux runtime deps for prebuilt libraylib.so
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libasound2-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test-nobuild-prebuilt-${{ matrix.os }}
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+      - name: Download prebuilt raylib 6.0 (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          # -f so an HTTP 504 is a retryable failure, not a saved error page.
+          curl -fsSL --retry 8 --retry-delay 10 --retry-all-errors --retry-max-time 180 -o raylib.tar.gz https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_linux_amd64.tar.gz
+          mkdir -p "$RUNNER_TEMP/raylib"
+          tar -xzf raylib.tar.gz --strip-components=1 -C "$RUNNER_TEMP/raylib"
+          echo "::group::extracted lib dir"
+          ls -R "$RUNNER_TEMP/raylib/lib"
+          echo "::endgroup::"
+      - name: Run window-independent tests against the prebuilt dylib (Linux)
+        if: runner.os == 'Linux'
+        env:
+          RUSTFLAGS: "-L native=${{ runner.temp }}/raylib/lib"
+          LD_LIBRARY_PATH: "${{ runner.temp }}/raylib/lib"
+        run: cargo nextest run -p raylib-sys --no-default-features --features nobuild -E 'binary(raymath_wrappers) + binary(symbol_presence)'
+      - name: Download prebuilt raylib 6.0 (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -fsSL --retry 8 --retry-delay 10 --retry-all-errors --retry-max-time 180 -o raylib.tar.gz https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_macos.tar.gz
+          mkdir -p "$RUNNER_TEMP/raylib"
+          tar -xzf raylib.tar.gz --strip-components=1 -C "$RUNNER_TEMP/raylib"
+          echo "::group::extracted lib dir"
+          ls -R "$RUNNER_TEMP/raylib/lib"
+          echo "::endgroup::"
+      # Belt-and-suspenders for dyld: bake an rpath into the test binaries AND set
+      # DYLD_LIBRARY_PATH, since macOS strips DYLD_* in some spawn paths and the
+      # prebuilt dylib's install_name may or may not be @rpath-relative.
+      - name: Run window-independent tests against the prebuilt dylib (macOS)
+        if: runner.os == 'macOS'
+        env:
+          RUSTFLAGS: "-L native=${{ runner.temp }}/raylib/lib -C link-arg=-Wl,-rpath,${{ runner.temp }}/raylib/lib"
+          DYLD_LIBRARY_PATH: "${{ runner.temp }}/raylib/lib"
+        run: cargo nextest run -p raylib-sys --no-default-features --features nobuild -E 'binary(raymath_wrappers) + binary(symbol_presence)'
+      - name: Download prebuilt raylib 6.0 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # curl.exe (built into windows-latest) has --retry; Invoke-WebRequest
+          # does not, and the GitHub release CDN intermittently 504s.
+          curl.exe -fsSL --retry 8 --retry-delay 10 --retry-all-errors --retry-max-time 180 -o raylib.zip https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_win64_msvc16.zip
+          Expand-Archive raylib.zip -DestinationPath "$env:RUNNER_TEMP/raylib_extract" -Force
+          $root = (Get-ChildItem "$env:RUNNER_TEMP/raylib_extract" -Directory | Select-Object -First 1).FullName
+          # Link dynamically via the DLL import lib: the `dylib=raylib` directive
+          # resolves `raylib.lib`, so overwrite it with `raylibdll.lib`. The static
+          # raylib.lib would instead pull rcore.obj -> winmm/user32/gdi32 symbols
+          # that nobuild's link() does not emit. raylib.dll goes on PATH at runtime.
+          Copy-Item "$root/lib/raylibdll.lib" "$root/lib/raylib.lib" -Force
+          "RAYLIB_PREBUILT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "lib dir:"; Get-ChildItem "$root/lib" | Select-Object Name
+      - name: Run window-independent tests against the prebuilt dll (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          RUSTFLAGS: "-L native=${{ env.RAYLIB_PREBUILT }}/lib"
+        run: |
+          $env:PATH = "$env:RAYLIB_PREBUILT/lib;" + $env:PATH
+          cargo nextest run -p raylib-sys --no-default-features --features nobuild -E 'binary(raymath_wrappers) + binary(symbol_presence)'
