@@ -4,6 +4,18 @@ use crate::ffi;
 use crate::core::RaylibHandle;
 use std::ffi::{CStr, CString, OsString, c_char};
 
+/// Build a [`CString`] from any [`OsString`]-convertible value, stripping any
+/// interior NUL bytes first.
+///
+/// `to_string_lossy` only repairs invalid UTF-8 — a NUL byte is valid UTF-8, so
+/// it is *not* removed and would otherwise make `CString::new` fail and panic on
+/// `.unwrap()` for a path containing an interior NUL (see #220). Stripping NULs up
+/// front keeps construction infallible.
+fn os_to_cstring(s: impl Into<OsString>) -> CString {
+    let stripped = s.into().to_string_lossy().replace('\0', "");
+    CString::new(stripped).expect("interior NUL bytes are stripped above")
+}
+
 /// Borrowed iterator over the UTF-8 paths in a [`FilePathList`] or [`DroppedFilePathList`].
 ///
 /// Returned by `FilePathList::iter` / `DroppedFilePathList::iter`. Yields `&str` slices that
@@ -207,8 +219,8 @@ impl RaylibHandle {
     where
         A: Into<OsString>,
     {
-        let file_name = CString::new(file_name.into().to_string_lossy().as_bytes()).unwrap();
-        let file_ext = CString::new(file_ext.into().to_string_lossy().as_bytes()).unwrap();
+        let file_name = os_to_cstring(file_name);
+        let file_ext = os_to_cstring(file_ext);
         unsafe { ffi::IsFileExtension(file_name.as_ptr(), file_ext.as_ptr()) }
     }
     /// Get the directory of the running application.
@@ -224,26 +236,24 @@ impl RaylibHandle {
 
     /// Get file length in bytes.
     ///
-    /// # Errors
-    /// This function will return an error if the supplied bytes contain an internal 0 byte. The NulError returned will contain the bytes as well as the position of the nul byte.
+    /// Any interior NUL bytes in `filename` are stripped before the FFI call.
     pub fn get_file_length<A>(&self, filename: A) -> i32
     where
         A: Into<OsString>,
     {
-        let c_str = CString::new(filename.into().to_string_lossy().as_bytes()).unwrap();
+        let c_str = os_to_cstring(filename);
         unsafe { ffi::GetFileLength(c_str.as_ptr()) }
     }
 
     /// Check if a given path is a file or a directory
     ///
-    /// # Errors
-    /// This function will return an error if the supplied bytes contain an internal 0 byte. The NulError returned will contain the bytes as well as the position of the nul byte.
+    /// Any interior NUL bytes in `filename` are stripped before the FFI call.
     #[must_use]
     pub fn is_path_file<A>(&self, filename: A) -> bool
     where
         A: Into<OsString>,
     {
-        let c_str = CString::new(filename.into().to_string_lossy().as_bytes()).unwrap();
+        let c_str = os_to_cstring(filename);
         unsafe { ffi::IsPathFile(c_str.as_ptr()) }
     }
 
@@ -253,7 +263,7 @@ impl RaylibHandle {
         A: Into<OsString>,
     {
         unsafe {
-            let c_str = CString::new(dir_path.into().to_string_lossy().as_bytes()).unwrap(); // .unwrap() is okay here because any nul bytes placed into the actual string should be cleared out by to_string_lossy.
+            let c_str = os_to_cstring(dir_path);
             FilePathList(ffi::LoadDirectoryFiles(c_str.as_ptr()))
         }
     }
@@ -269,8 +279,8 @@ impl RaylibHandle {
         A: Into<OsString>,
     {
         unsafe {
-            let dir_c_str = CString::new(dir_path.into().to_string_lossy().as_bytes()).unwrap(); // .unwrap() is okay here because any nul bytes placed into the actual string should be cleared out by to_string_lossy.
-            let filter_c_str = CString::new(filter.replace("\0", "").as_bytes()).unwrap();
+            let dir_c_str = os_to_cstring(dir_path);
+            let filter_c_str = CString::new(filter.replace('\0', "")).unwrap();
             FilePathList(ffi::LoadDirectoryFilesEx(
                 dir_c_str.as_ptr(),
                 filter_c_str.as_ptr(),
@@ -290,6 +300,16 @@ impl RaylibHandle {
 mod tests {
     use super::*;
     use std::mem::ManuallyDrop;
+
+    #[test]
+    fn os_to_cstring_strips_interior_nul() {
+        // `to_string_lossy` keeps NUL bytes (they are valid UTF-8), so the
+        // previous `CString::new(...).unwrap()` panicked on a path containing an
+        // interior NUL (#220). The helper must strip NULs and never panic.
+        assert_eq!(os_to_cstring("a\0b\0c").to_str().unwrap(), "abc");
+        assert_eq!(os_to_cstring("clean/path").to_str().unwrap(), "clean/path");
+        assert_eq!(os_to_cstring("\0").to_str().unwrap(), "");
+    }
 
     #[test]
     #[should_panic(expected = "file path array cannot be null")]
