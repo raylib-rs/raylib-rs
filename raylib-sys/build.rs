@@ -353,6 +353,15 @@ fn gen_bindings() {
         builder = builder.clang_arg("-D__STDC__");
     }
 
+    // MinGW cross builds: without an explicit `--target`, bindgen's libclang
+    // defaults to the *host* triple and mis-parses the MinGW system headers
+    // (e.g. `__mingw_ldbl_type_t`). Pin clang to the build target so it uses the
+    // right headers/ABI. Scoped to `*-windows-gnu` so host/MSVC/other targets
+    // are unaffected. Resolves #324; original workaround by @jgabaut (#325).
+    if target.ends_with("-windows-gnu") {
+        builder = builder.clang_arg(format!("--target={target}"));
+    }
+
     // nobuild bindings may be consumed cross-target via nobindgen +
     // RAYLIB_BINDGEN_LOCATION (e.g. the no-std CI leg compile-checks a
     // host-generated binding for thumbv7em). bindgen's layout asserts
