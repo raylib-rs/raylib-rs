@@ -1,30 +1,37 @@
 # raylib-rs Changelog
 
-## Unreleased
+## 6.0.0 — 2026-06-09
 
-### Added
+Upgrade from raylib 5.x to **raylib 6.0**. MSRV is **1.88** (edition 2024).
 
-- Opt-in `log` feature: `RaylibBuilder::log_to_rust()` forwards raylib's
-  `TraceLog` output into the [`log`](https://docs.rs/log) facade (target
-  `"raylib"`), making `RUST_LOG`-style filtering the single source of
-  truth. Levels map `TRACE/DEBUG/INFO/WARNING→trace/debug/info/warn`,
-  `ERROR`+`FATAL→error`. See the *Callbacks and logging* book chapter.
-- `raylib-sys` is now unconditionally `#![no_std]` (adopts community PR
-  [#251](https://github.com/raylib-rs/raylib-rs/pull/251) by @nbe1233,
-  adapted for 6.0). Zero feature changes — std consumers and
-  `default-features = false` users are unaffected. The crate now builds for
-  no-std targets (CI-checked against `thumbv7em-none-eabihf` via the
-  `nobuild`/`nobindgen` escape hatches; the `mint` adapter feature is included
-  in that check). `glam`/`serde` currently require a std-capable target.
-  `nobuild` bindings are generated without bindgen layout assertions so they
-  can be compile-checked cross-target; hosted default builds keep them.
-- `Vector2`/`Vector3`/`Vector4` gain `From` conversions from tuples and arrays
-  (`(f32, f32)`/`[f32; 2]`, etc.), matching `Color`'s existing tuple `From`.
-  Combined with the `impl Into<Vector2>` draw-API parameters this lets call
-  sites pass coordinates directly, e.g. `d.draw_pixel_v((10.0, 20.0), c)`.
+### Highlights
+
+- raylib C source bumped to 6.0; bindings regenerated. `raylib-sys` compiles against 6.0 without modification.
+- Math types are now native `#[repr(C)]` Rust structs (`Vector2`/`Vector3`/`Vector4`, `Matrix`, `Quaternion`) with **zero math-crate dependencies by default**. `mint`, `glam`, `serde` are opt-in features.
+- Skeletal-animation API redesigned around RAII (`ModelAnimations` collection; the singular `UnloadModelAnimation` is gone in 6.0, making per-item ownership unsound).
+- New `software_renderer` feature wires raylib's `rlsw` (Platform::Memory) backend for fully headless rendering — no GPU or window required.
+- raygui at 6.0 parity (57/57 functions, module split into grouped sub-traits, `impl AsRef<str>` + thread-local scratch buffer); new safe immediate-mode `rlgl` module (`RlMatrix`/`RlImmediate` RAII guards, `&Texture2D`/`&Shader` bind helpers).
+- Layered CI: `check.yml` / `test.yml` / `web.yml` / `sanitizers.yml` / `book.yml`; quality hard-gates (fmt, clippy `-Dwarnings`, `deny(missing_docs)`, cargo-deny, pinned-MSRV build) fail on violation.
+- mdBook docs at `book/` — 28 chapters covering quickstart, platform build guides, core concepts, and per-module chapters. WS9 added per-module "See also" footers + a new Showcase examples appendix.
+- **WS9 showcase finale** — new `showcase` workspace crate at `showcase/` ports **229** raylib examples (217 raylib core + 12 raygui) to idiomatic raylib-rs under a visual-parity rule. Each port carries an in-canvas F1 source-viewer overlay with C-vs-Rust tabs and a "Source on GitHub" deep-link footer (URLs derived at build time from `.gitmodules` + submodule SHAs). Deployed as a Pages gallery at <https://raylib-rs.github.io/raylib-rs/> with thumbnail tiles, per-tile C/Rust GitHub links, name filter, and per-example emscripten output wrapped in gallery chrome via a shared `example_shell.html`. CI matrix gate is `WS9_STRICT_PAIRING=1` — missing pairs escalate to build break, not warn-only noise.
 
 ### Breaking
 
+- **MSRV is now 1.88** (edition 2024). See *Changed* below for the bump rationale and the lock-step pinning sites.
+- `MintVec2`/`MintVec3`/`MintVec4`/`MintMatrix`/`MintQuat` are `#[deprecated]` — use the native types directly. The `mint` feature opt-in remains.
+- `glam`/`mint`/`serde` are **no longer default-on** for `raylib-sys`; enable them explicitly as optional features.
+- **raygui** module split into grouped sub-traits (`RaylibGuiState`, `RaylibGuiContainers`, `RaylibGuiControls`, `RaylibGuiAdvanced`, `RaylibGuiIcons`); control-label parameters are now `impl AsRef<str>` (no `CStr` required).
+- **Skeletal-animation loading** returns a `ModelAnimations` RAII wrapper (owns the heap array; frees all frames on drop). The old per-animation owning pattern is removed.
+- **Removed in 6.0:** `DrawModelPoints` / `DrawModelPointsEx` (no 6.0 replacement); `UpdateModelAnimationBones` (superseded by redesigned `UpdateModelAnimation(model, anim, frame: f32)`); the singular `unload_model_animation`; `FilePathList::capacity` (removed from the C struct); the `custom_audio_stream_callback` trampoline (`set_audio_stream_callback` on `RaylibHandle`; the generic callback in `callbacks/` is the live path).
+- **`SUPPORT_*` feature flag set reconciled with raylib 6.0 `config.h`:** removed `SUPPORT_GIF_RECORDING`, `SUPPORT_IMAGE_MANIPULATION`, `SUPPORT_DEFAULT_FONT`, `SUPPORT_FONT_ATLAS_WHITE_REC`, `SUPPORT_TEXT_MANIPULATION`, `SUPPORT_STANDARD_FILEIO` (unconditional in 6.0), `SUPPORT_DISTORTION_SHADER`, `SUPPORT_FONT_TEXTURE`, `SUPPORT_VR_SIMULATOR` from the feature list; added `SUPPORT_FILEFORMAT_PNM` and `SUPPORT_GPU_SKINNING` (both default-off in 6.0).
+- **Signature changes (6.0 ABI):** `DrawCircleGradient` takes a `Vector2` center instead of separate `i32 x, y`; `UpdateModelAnimation` `frame` is now `f32`; `LoadFontData` gained a trailing `glyphCount` out-parameter; `SaveFileTextCallback` trampoline `text` is now `*const i8`; `DecodeDataBase64` input is `*const i8`.
+- `Image::gen_image_*` family is now cfg-gated on `SUPPORT_IMAGE_GENERATION` (MSVC link fix).
+- **`samples/` directory removed.** Migration: see [`showcase/`](./showcase) for runnable Rust ports of raylib's C examples. Anyone running `cd samples && cargo run --bin <name>` against the pre-release 6.0-rc branch should switch to `showcase/` instead. The WS9 finale of the 6.0 effort completes the port of all upstream examples and publishes the gallery as a GitHub Pages site.
+- `RaylibGuiIcons::gui_get_icons_raw` removed; use `gui_get_icons` / `gui_get_icons_mut`.
+- `RaylibGuiIcons::gui_load_icons_raw` removed; use `gui_load_icons` / `gui_load_icons_with_names`.
+- `SetLogError` (core/callbacks) is replaced by `SetCallbackError` in `core::error` — a `thiserror` struct without the artificial lifetime parameter. The ~10 `set_*_callback` functions/methods now return `Result<(), SetCallbackError>`.
+- `RaylibError` is now `#[non_exhaustive]` and gained `#[from]` variants for `UpdateAudioStreamError`, `InvalidMeshError`, `GenMeshError`, `Base64Error`, `LoadIconsError`, `LoadStyleFromMemoryError`, `PixelColorError`, and `SetCallbackError` — every leaf error now composes via `?`. Exhaustive matches on `RaylibError` need a wildcard arm.
+- The identity `impl From<&Color> for Color` is removed — `&Color` no longer satisfies `Into<Color>` bounds (e.g. on draw functions). Dereference instead: `d.draw_x(.., *c)`. `Color` is `Copy`; no other type had such an impl.
 - **Wrapper soundness (resolves [#276](https://github.com/raylib-rs/raylib-rs/issues/276), supersedes #277 by @AmityWilder):**
   `DerefMut`/`AsMut<ffi::T>` are removed from wrappers whose safe API trusts
   raw fields — `Image`, `Mesh`, `Model`, `Material`, `Font`, `Shader`,
@@ -42,71 +49,6 @@
   `update_model_animation_ex` now take `impl AsRef<ffi::Model>` (they pass
   the model by value to C). Additional safe setters: `RaylibMaterial::clear_shader`,
   `Music::set_looping`.
-
-### Changed
-
-- **MSRV raised 1.85 → 1.88.** Driver: transitive deps now require newer
-  toolchains (`wasip2` needs 1.87 on wasi targets); 1.88 also stabilizes
-  let-chains for edition 2024. All pinning sites bumped lock-step
-  (`rust-toolchain.toml`, `rust-version` in all three crates, the CI `msrv`
-  gate, the `pages`/`showcase` toolchain pins, README + book install pages).
-  Policy recorded in `CLAUDE.md`: the floor may rise in minor releases when
-  deps or meaningful language features demand it, staying roughly a year
-  behind stable.
-- Removed the unmaintained [`paste`](https://rustsec.org/advisories/RUSTSEC-2024-0436)
-  dependency: the audio-callback trampoline pool is now built with const
-  generics + the existing `seq-macro` (zero new deps). Behavior is unchanged;
-  the thirty `callback_0`…`callback_29` `no_mangle` symbols the old macro
-  exported are no longer emitted (they were never reachable Rust API, only
-  linker-namespace pollution). The matching `deny.toml` advisory ignore was
-  retired.
-
-### Fixed
-
-- `nobindgen` now actually skips running bindgen in `build.rs` (previously it
-  only ignored the output), and `nobuild` bindgen finds the vendored raylib
-  headers again (`-I../raylib/src` resolved outside the package — broken on
-  any host without a system-wide raylib, likely including docs.rs).
-
-## 6.0.0-rc.2 — 2026-06-02
-
-Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.88** (edition 2024; the rc.2 snapshot itself shipped declaring 1.85 — see Unreleased → Changed).
-
-> Release candidate 2 for the 6.0 line — published as `6.0.0-rc.2` to
-> get wider eyes on the canonical merge before the final `6.0.0` cut.
-> The headings under this block describe what will ship in `6.0.0`
-> final; `rc.2` is the verbatim source snapshot of the current canonical
-> `unstable` HEAD. The final-cut commit will flip this header to
-> `## 6.0.0 — YYYY-MM-DD` and bump the Cargo.toml versions accordingly.
-
-### Highlights
-
-- raylib C source bumped to 6.0; bindings regenerated. `raylib-sys` compiles against 6.0 without modification.
-- Math types are now native `#[repr(C)]` Rust structs (`Vector2`/`Vector3`/`Vector4`, `Matrix`, `Quaternion`) with **zero math-crate dependencies by default**. `mint`, `glam`, `serde` are opt-in features.
-- Skeletal-animation API redesigned around RAII (`ModelAnimations` collection; the singular `UnloadModelAnimation` is gone in 6.0, making per-item ownership unsound).
-- New `software_renderer` feature wires raylib's `rlsw` (Platform::Memory) backend for fully headless rendering — no GPU or window required.
-- raygui at 6.0 parity (57/57 functions, module split into grouped sub-traits, `impl AsRef<str>` + thread-local scratch buffer); new safe immediate-mode `rlgl` module (`RlMatrix`/`RlImmediate` RAII guards, `&Texture2D`/`&Shader` bind helpers).
-- Layered CI: `check.yml` / `test.yml` / `web.yml` / `sanitizers.yml` / `book.yml`; quality hard-gates (fmt, clippy `-Dwarnings`, `deny(missing_docs)`, cargo-deny, pinned-MSRV build) fail on violation.
-- mdBook docs at `book/` — 28 chapters covering quickstart, platform build guides, core concepts, and per-module chapters. WS9 added per-module "See also" footers + a new Showcase examples appendix.
-- **WS9 showcase finale** — new `showcase` workspace crate at `showcase/` ports **229** raylib examples (217 raylib core + 12 raygui) to idiomatic raylib-rs under a visual-parity rule. Each port carries an in-canvas F1 source-viewer overlay with C-vs-Rust tabs and a "Source on GitHub" deep-link footer (URLs derived at build time from `.gitmodules` + submodule SHAs). Deployed as a Pages gallery at <https://raylib-rs.github.io/raylib-rs/> with thumbnail tiles, per-tile C/Rust GitHub links, name filter, and per-example emscripten output wrapped in gallery chrome via a shared `example_shell.html`. CI matrix gate is `WS9_STRICT_PAIRING=1` — missing pairs escalate to build break, not warn-only noise.
-
-### Breaking
-
-- **MSRV is now 1.88** (edition 2024; raised from the rc-line's 1.85 pre-final — see Unreleased → Changed).
-- `MintVec2`/`MintVec3`/`MintVec4`/`MintMatrix`/`MintQuat` are `#[deprecated]` — use the native types directly. The `mint` feature opt-in remains.
-- `glam`/`mint`/`serde` are **no longer default-on** for `raylib-sys`; enable them explicitly as optional features.
-- **raygui** module split into grouped sub-traits (`RaylibGuiState`, `RaylibGuiContainers`, `RaylibGuiControls`, `RaylibGuiAdvanced`, `RaylibGuiIcons`); control-label parameters are now `impl AsRef<str>` (no `CStr` required).
-- **Skeletal-animation loading** returns a `ModelAnimations` RAII wrapper (owns the heap array; frees all frames on drop). The old per-animation owning pattern is removed.
-- **Removed in 6.0:** `DrawModelPoints` / `DrawModelPointsEx` (no 6.0 replacement); `UpdateModelAnimationBones` (superseded by redesigned `UpdateModelAnimation(model, anim, frame: f32)`); the singular `unload_model_animation`; `FilePathList::capacity` (removed from the C struct); the `custom_audio_stream_callback` trampoline (`set_audio_stream_callback` on `RaylibHandle`; the generic callback in `callbacks/` is the live path).
-- **`SUPPORT_*` feature flag set reconciled with raylib 6.0 `config.h`:** removed `SUPPORT_GIF_RECORDING`, `SUPPORT_IMAGE_MANIPULATION`, `SUPPORT_DEFAULT_FONT`, `SUPPORT_FONT_ATLAS_WHITE_REC`, `SUPPORT_TEXT_MANIPULATION`, `SUPPORT_STANDARD_FILEIO` (unconditional in 6.0), `SUPPORT_DISTORTION_SHADER`, `SUPPORT_FONT_TEXTURE`, `SUPPORT_VR_SIMULATOR` from the feature list; added `SUPPORT_FILEFORMAT_PNM` and `SUPPORT_GPU_SKINNING` (both default-off in 6.0).
-- **Signature changes (6.0 ABI):** `DrawCircleGradient` takes a `Vector2` center instead of separate `i32 x, y`; `UpdateModelAnimation` `frame` is now `f32`; `LoadFontData` gained a trailing `glyphCount` out-parameter; `SaveFileTextCallback` trampoline `text` is now `*const i8`; `DecodeDataBase64` input is `*const i8`.
-- `Image::gen_image_*` family is now cfg-gated on `SUPPORT_IMAGE_GENERATION` (MSVC link fix).
-- **`samples/` directory removed.** Migration: see [`showcase/`](./showcase) for runnable Rust ports of raylib's C examples. Anyone running `cd samples && cargo run --bin <name>` against the pre-release 6.0-rc branch should switch to `showcase/` instead. The WS9 finale of the 6.0 effort completes the port of all upstream examples and publishes the gallery as a GitHub Pages site.
-- `RaylibGuiIcons::gui_get_icons_raw` removed; use `gui_get_icons` / `gui_get_icons_mut`.
-- `RaylibGuiIcons::gui_load_icons_raw` removed; use `gui_load_icons` / `gui_load_icons_with_names`.
-- `SetLogError` (core/callbacks) is replaced by `SetCallbackError` in `core::error` — a `thiserror` struct without the artificial lifetime parameter. The ~10 `set_*_callback` functions/methods now return `Result<(), SetCallbackError>`.
-- `RaylibError` is now `#[non_exhaustive]` and gained `#[from]` variants for `UpdateAudioStreamError`, `InvalidMeshError`, `GenMeshError`, `Base64Error`, `LoadIconsError`, `LoadStyleFromMemoryError`, `PixelColorError`, and `SetCallbackError` — every leaf error now composes via `?`. Exhaustive matches on `RaylibError` need a wildcard arm.
-- The identity `impl From<&Color> for Color` is removed — `&Color` no longer satisfies `Into<Color>` bounds (e.g. on draw functions). Dereference instead: `d.draw_x(.., *c)`. `Color` is `Copy`; no other type had such an impl.
 
 ### Added
 
@@ -177,11 +119,44 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.88** (edition 2024
   - `RaylibGuiState::gui_load_style_from_memory` — safe wrapper around `GuiLoadStyleFromMemory` (PR #296's intent; upstream raygui#549).
   - Public constants `raylib::rgui::RAYGUI_ICON_MAX_ICONS` (= 256) and `raylib::rgui::RAYGUI_ICON_DATA_ELEMENTS` (= 8).
   - Error enums `LoadIconsError` and `LoadStyleFromMemoryError` in `raylib::core::error` (`thiserror`-based).
+- Opt-in `log` feature: `RaylibBuilder::log_to_rust()` forwards raylib's
+  `TraceLog` output into the [`log`](https://docs.rs/log) facade (target
+  `"raylib"`), making `RUST_LOG`-style filtering the single source of
+  truth. Levels map `TRACE/DEBUG/INFO/WARNING→trace/debug/info/warn`,
+  `ERROR`+`FATAL→error`. See the *Callbacks and logging* book chapter.
+- `raylib-sys` is now unconditionally `#![no_std]` (adopts community PR
+  [#251](https://github.com/raylib-rs/raylib-rs/pull/251) by @nbe1233,
+  adapted for 6.0). Zero feature changes — std consumers and
+  `default-features = false` users are unaffected. The crate now builds for
+  no-std targets (CI-checked against `thumbv7em-none-eabihf` via the
+  `nobuild`/`nobindgen` escape hatches; the `mint` adapter feature is included
+  in that check). `glam`/`serde` currently require a std-capable target.
+  `nobuild` bindings are generated without bindgen layout assertions so they
+  can be compile-checked cross-target; hosted default builds keep them.
+- `Vector2`/`Vector3`/`Vector4` gain `From` conversions from tuples and arrays
+  (`(f32, f32)`/`[f32; 2]`, etc.), matching `Color`'s existing tuple `From`.
+  Combined with the `impl Into<Vector2>` draw-API parameters this lets call
+  sites pass coordinates directly, e.g. `d.draw_pixel_v((10.0, 20.0), c)`.
 
 ### Changed
 
 - raygui (vendored at `raylib-sys/binding/raygui.h`) hand-patched to expose `GuiLoadStyleFromMemory` (raysan5/raygui#549 is merged upstream but unreleased; last tagged raygui release is v4.0 / 2023-09-11).
 - raygui now shares raylib's allocator: `RAYGUI_MALLOC` / `_CALLOC` / `_FREE` route through `RL_MALLOC` / `_CALLOC` / `_FREE` via `binding/rgui_wrapper.c`.
+- **MSRV raised 1.85 → 1.88.** Driver: transitive deps now require newer
+  toolchains (`wasip2` needs 1.87 on wasi targets); 1.88 also stabilizes
+  let-chains for edition 2024. All pinning sites bumped lock-step
+  (`rust-toolchain.toml`, `rust-version` in all three crates, the CI `msrv`
+  gate, the `pages`/`showcase` toolchain pins, README + book install pages).
+  Policy recorded in `CLAUDE.md`: the floor may rise in minor releases when
+  deps or meaningful language features demand it, staying roughly a year
+  behind stable.
+- Removed the unmaintained [`paste`](https://rustsec.org/advisories/RUSTSEC-2024-0436)
+  dependency: the audio-callback trampoline pool is now built with const
+  generics + the existing `seq-macro` (zero new deps). Behavior is unchanged;
+  the thirty `callback_0`…`callback_29` `no_mangle` symbols the old macro
+  exported are no longer emitted (they were never reachable Rust API, only
+  linker-namespace pollution). The matching `deny.toml` advisory ignore was
+  retired.
 
 ### Fixed
 
@@ -202,6 +177,10 @@ Upgrade from raylib 5.x to **raylib 6.0**. MSRV bumped to **1.88** (edition 2024
 - **Issue #291** — broken `RaylibHandle::draw` API in docs: resolved by PR #152 (already merged before 6.0 work); confirmed by `RUSTDOCFLAGS=-Dwarnings` CI gate.
 - **Issue #290** — broken docs.rs links: resolved by MSRV bump to Rust 1.85 (rustdoc re-export path fix) + `RUSTDOCFLAGS=-Dwarnings` CI gate.
 - **Audio:** `DetachAudioStreamProcessor` lifecycle — the user-data audio stream processor wrapper (`stream_processor_with_user_data_wrapper.rs`) now calls the C-side `DetachAudioStreamProcessor` with the matching trampoline pointer *before* clearing the closure slot. Previously only the slot was freed, leaving raylib iterating its processor list against dangling state.
+- `nobindgen` now actually skips running bindgen in `build.rs` (previously it
+  only ignored the output), and `nobuild` bindgen finds the vendored raylib
+  headers again (`-I../raylib/src` resolved outside the package — broken on
+  any host without a system-wide raylib, likely including docs.rs).
 
 ### Deferred (tracked, not in 6.0.0)
 

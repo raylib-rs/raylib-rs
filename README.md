@@ -77,7 +77,7 @@ Per-OS install guides live in [the book](./book/src/getting-started/) — Window
 
 ```toml
 [dependencies]
-raylib = "6.0.0-rc.2"
+raylib = "6.0"
 ```
 
 2. Open a window and draw:
