@@ -11,12 +11,12 @@ raylib-rs targets `wasm32-unknown-emscripten`, which compiles your game to WebAs
    rustup target add wasm32-unknown-emscripten
    ```
 
-3. **emsdk 3.1.64+** — the Emscripten SDK provides `emcc`, the compiler that cross-compiles C to WebAssembly. Follow the [official emsdk install instructions](https://emscripten.org/docs/getting_started/downloads.html):
+3. **emsdk 3.1.74+** — the Emscripten SDK provides `emcc`, the compiler that cross-compiles C to WebAssembly. 3.1.74+ bundles Binaryen ≥ 121, required by the wasm features rustc 1.88 emits (older emsdk fails the link with `Unknown option '--enable-bulk-memory-opt'`). Follow the [official emsdk install instructions](https://emscripten.org/docs/getting_started/downloads.html):
    ```text
    git clone https://github.com/emscripten-core/emsdk.git
    cd emsdk
-   ./emsdk install 3.1.64
-   ./emsdk activate 3.1.64
+   ./emsdk install 3.1.74
+   ./emsdk activate 3.1.74
    source ./emsdk_env.sh   # add emcc to PATH for this shell session
    ```
 
