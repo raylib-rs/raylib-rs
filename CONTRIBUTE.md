@@ -63,22 +63,26 @@ A good way to do this is by looking at the `/// # Safety` docs of each `unsafe` 
   ```
   **WARNING: `ffi` functions are `unsafe` because Rust cannot give the same guarantees for them as it could if they were written in Rust. Do not assume an `ffi` function is safe just because it does something that would be safe in Rust. Anything that would cause a panic in rust will cause Undefined Behavior or crash in C.**
   ```rs
-  fn sound_incr(n: u8) -> NonZeroU8 {
-      let m: u8 = n + 1;
-      // SAFETY: `m` is at least 1 (overflow would panic).
-      unsafe { NonZeroU8::new_unchecked() };
+  fn sound_incr(n: u8) -> Option<NonZeroU8> {
+      let m: u8 = n.checked_add(1)?;
+      // SAFETY: `checked_add` yields `Some` only when `n + 1` did not overflow,
+      // so `m` is in `1..=255`, i.e. non-zero.
+      Some(unsafe { NonZeroU8::new_unchecked(m) })
   }
   ```
   This alternative version looks like it would be the same, except it isn't.
   ```rs
   fn unsound_incr(n: u8) -> NonZeroU8 {
-      // SAFETY: `AddOne` has no preconditions
-      let m: u8 = unsafe { AddOne(n) }; // `AddOne` just adds 1 to `n`
-      // SAFETY: `m` is at least 1 (overflow would panic).
-      unsafe { NonZeroU8::new_unchecked() };
+      // SAFETY: `AddOne` has no preconditions.
+      let m: u8 = unsafe { ffi::AddOne(n) }; // `AddOne` just adds 1 to `n`
+      // UNSOUND: nothing here proves `m != 0`. C's `x + 1` wraps on overflow
+      // (`255 + 1 == 0`), so this can construct an invalid `NonZeroU8`.
+      unsafe { NonZeroU8::new_unchecked(m) }
   }
   ```
-  In `unsound_incr`, `AddOne` has no *preconditions*, but does not give the same protections as Rust would. If `n` is 255, `sound_incr` would panic, but `unsound_incr` would return **an invalid `NonZeroU8` containing 0**.
+  In `unsound_incr`, `AddOne` has no *preconditions*, but does not give the same protections as Rust would. If `n` is 255, `sound_incr` returns `None`, but `unsound_incr` returns **an invalid `NonZeroU8` containing 0** — instant UB.
+
+  > **Note:** derive the proof from a *total* operation, not from "overflow would panic." Rust's `+` only panics on overflow in **debug** builds; in release it wraps by default, so `let m = n + 1; NonZeroU8::new_unchecked(m)` would itself be unsound in release. `checked_add` (or `if n == u8::MAX { … }`) is total in both profiles.
 
 - If the unsafe API you're calling has a **multi-clause safety contract** (especially something like `slice::from_raw_parts` or a `DataBuf::slice_from_raw`-style wrapper around a raylib-allocated buffer), don't summarize. Enumerate each precondition the API lists, then for each one, point at the line of FFI/C code that guarantees it. Methodology:
 
