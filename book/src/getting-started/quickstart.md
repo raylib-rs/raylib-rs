@@ -8,10 +8,8 @@ In your `Cargo.toml`:
 
 ```toml
 [dependencies]
-raylib = "6.0.0-rc.2"
+raylib = "6.0"
 ```
-
-> **Note:** `6.0.0-rc.2` is the published release-candidate of the 6.0 line on crates.io while the canonical merge gets additional review. The headings under this book chapter describe what is shipping in the eventual `6.0.0` final release; cargo will not pick up a pre-release tag from `raylib = "6.0"` alone, so the exact `6.0.0-rc.2` pin is intentional.
 
 ## Open a window
 

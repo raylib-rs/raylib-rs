@@ -1,6 +1,6 @@
 [package]
 name = "raylib"
-version = "6.0.0-rc.2"
+version = "6.0.0"
 authors = ["raylib-rs team <https://github.com/raylib-rs/raylib-rs>"]
 license = "Zlib"
 readme = "../README.md"
@@ -14,7 +14,7 @@ rust-version = "1.88"
 autoexamples = false
 
 [dependencies]
-raylib-sys = { version = "6.0.0-rc.2", path = "../raylib-sys", default-features = false }
+raylib-sys = { version = "6.0.0", path = "../raylib-sys", default-features = false }
 serde = { version = "1.0.125", features = ["derive"], optional = true }
 serde_json = { version = "1.0.64", optional = true }
 
