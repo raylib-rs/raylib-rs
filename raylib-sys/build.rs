@@ -187,7 +187,6 @@ fn build_with_cmake(src_path: &str) {
         Platform::Desktop => {
             #[cfg(feature = "sdl")]
             {
-                println!("cargo:rustc-link-lib=SDL2");
                 conf.define("PLATFORM", "SDL")
             }
             #[cfg(not(feature = "sdl"))]
