@@ -97,7 +97,7 @@ sdl = []
 # CPU software renderer + windowless Memory platform (raylib 6.0 PLATFORM=Memory).
 # Mutually exclusive with every opengl_* backend and with `drm` (enforced in build.rs).
 software_renderer = []
-wayland = []
+wayland = ["GLFW_BUILD_WAYLAND"]
 
 # Curated "max capability" set for CI lint/test + users who want everything.
 # default + ecosystem adapters + raygui + every capability flag, EXCLUDING the
