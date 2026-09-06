@@ -845,7 +845,7 @@ impl AudioStream<'_> {
         }
     }
 
-    /// Sets pitch for audio stream (`1.0` is base level).
+    /// Check if any audio stream buffers requires refill
     #[inline]
     #[must_use]
     pub fn is_processed(&self) -> bool {
