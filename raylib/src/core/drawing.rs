@@ -1862,7 +1862,7 @@ pub trait RaylibDraw {
             ffi::DrawTextCodepoints(
                 *font.as_ref(),
                 u,
-                text.len() as i32,
+                len,
                 position.into(),
                 font_size,
                 spacing,
