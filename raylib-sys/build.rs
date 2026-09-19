@@ -50,7 +50,8 @@ struct SerdeOnMath;
 impl bindgen::callbacks::ParseCallbacks for SerdeOnMath {
     fn add_derives(&self, info: &bindgen::callbacks::DeriveInfo) -> Vec<String> {
         match info.name {
-            "Vector2" | "Vector3" | "Vector4" | "Matrix" => vec![
+            "Vector2" | "Vector3" | "Vector4" | "Matrix" | "Transform"
+            | "BlendMode" | "CameraMode" | "CameraProjection" | "ConfigFlags" | "CubemapLayout" | "GamepadAxis" | "GamepadButton" | "Gesture" | "KeyboardKey" | "MaterialMapIndex" | "MouseButton" | "MouseCursor" | "NPatchLayout" | "PixelFormat" | "ShaderLocationIndex" | "ShaderUniformDataType" | "TextureFilter" | "TextureWrap" | "TraceLogLevel" => vec![
                 "serde::Serialize".to_string(),
                 "serde::Deserialize".to_string(),
             ],
