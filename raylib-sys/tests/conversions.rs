@@ -267,7 +267,13 @@ mod glam_tests {
 
 #[cfg(feature = "serde")]
 mod serde_tests {
-    use raylib_sys::{BlendMode, CameraMode, CameraProjection, Color, ConfigFlags, CubemapLayout, GamepadAxis, GamepadButton, Gesture, KeyboardKey, MaterialMapIndex, Matrix, MouseButton, MouseCursor, NPatchLayout, PixelFormat, Quaternion, Rectangle, ShaderLocationIndex, ShaderUniformDataType, TextureFilter, TextureWrap, TraceLogLevel, Transform, Vector2, Vector3, Vector4};
+    use raylib_sys::{
+        BlendMode, CameraMode, CameraProjection, Color, ConfigFlags, CubemapLayout, GamepadAxis,
+        GamepadButton, Gesture, KeyboardKey, MaterialMapIndex, Matrix, MouseButton, MouseCursor,
+        NPatchLayout, PixelFormat, Quaternion, Rectangle, ShaderLocationIndex,
+        ShaderUniformDataType, TextureFilter, TextureWrap, TraceLogLevel, Transform, Vector2,
+        Vector3, Vector4,
+    };
 
     #[test]
     fn serde_vector2_roundtrip() {
@@ -351,7 +357,7 @@ mod serde_tests {
         let b = BlendMode::BLEND_ADDITIVE;
         let j = serde_json::to_string(&b).unwrap();
         assert_eq!(serde_json::from_str::<BlendMode>(&j).unwrap(), b);
-        
+
         let c = CameraMode::CAMERA_CUSTOM;
         let j = serde_json::to_string(&c).unwrap();
         assert_eq!(serde_json::from_str::<CameraMode>(&j).unwrap(), c);
@@ -367,59 +373,62 @@ mod serde_tests {
         let l = CubemapLayout::CUBEMAP_LAYOUT_AUTO_DETECT;
         let j = serde_json::to_string(&l).unwrap();
         assert_eq!(serde_json::from_str::<CubemapLayout>(&j).unwrap(), l);
-        
+
         let a = GamepadAxis::GAMEPAD_AXIS_LEFT_X;
         let j = serde_json::to_string(&a).unwrap();
         assert_eq!(serde_json::from_str::<GamepadAxis>(&j).unwrap(), a);
-        
+
         let b = GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_DOWN;
         let j = serde_json::to_string(&b).unwrap();
         assert_eq!(serde_json::from_str::<GamepadButton>(&j).unwrap(), b);
-        
+
         let g = Gesture::GESTURE_DOUBLETAP;
         let j = serde_json::to_string(&g).unwrap();
         assert_eq!(serde_json::from_str::<Gesture>(&j).unwrap(), g);
-        
+
         let k = KeyboardKey::KEY_BACK;
         let j = serde_json::to_string(&k).unwrap();
         assert_eq!(serde_json::from_str::<KeyboardKey>(&j).unwrap(), k);
-        
+
         let i = MaterialMapIndex::MATERIAL_MAP_ALBEDO;
         let j = serde_json::to_string(&i).unwrap();
         assert_eq!(serde_json::from_str::<MaterialMapIndex>(&j).unwrap(), i);
-        
+
         let b = MouseButton::MOUSE_BUTTON_LEFT;
         let j = serde_json::to_string(&b).unwrap();
         assert_eq!(serde_json::from_str::<MouseButton>(&j).unwrap(), b);
-        
+
         let c = MouseCursor::MOUSE_CURSOR_DEFAULT;
         let j = serde_json::to_string(&c).unwrap();
         assert_eq!(serde_json::from_str::<MouseCursor>(&j).unwrap(), c);
-        
+
         let l = NPatchLayout::NPATCH_NINE_PATCH;
         let j = serde_json::to_string(&l).unwrap();
         assert_eq!(serde_json::from_str::<NPatchLayout>(&j).unwrap(), l);
-        
+
         let f = PixelFormat::PIXELFORMAT_COMPRESSED_ASTC_4x4_RGBA;
         let j = serde_json::to_string(&f).unwrap();
         assert_eq!(serde_json::from_str::<PixelFormat>(&j).unwrap(), f);
-        
+
         let i = ShaderLocationIndex::SHADER_LOC_COLOR_AMBIENT;
         let j = serde_json::to_string(&i).unwrap();
         assert_eq!(serde_json::from_str::<ShaderLocationIndex>(&j).unwrap(), i);
-        
+
         let t = ShaderUniformDataType::SHADER_UNIFORM_FLOAT;
         let j = serde_json::to_string(&t).unwrap();
-        assert_eq!(serde_json::from_str::<ShaderUniformDataType>(&j).unwrap(), t);
-        
+        assert_eq!(
+            serde_json::from_str::<ShaderUniformDataType>(&j).unwrap(),
+            t
+        );
+
         let f = TextureFilter::TEXTURE_FILTER_ANISOTROPIC_16X;
         let j = serde_json::to_string(&f).unwrap();
         assert_eq!(serde_json::from_str::<TextureFilter>(&j).unwrap(), f);
-        
+
         let w = TextureWrap::TEXTURE_WRAP_CLAMP;
         let j = serde_json::to_string(&w).unwrap();
         assert_eq!(serde_json::from_str::<TextureWrap>(&j).unwrap(), w);
-        
+
         let l = TraceLogLevel::LOG_ALL;
         let j = serde_json::to_string(&l).unwrap();
         assert_eq!(serde_json::from_str::<TraceLogLevel>(&j).unwrap(), l);
